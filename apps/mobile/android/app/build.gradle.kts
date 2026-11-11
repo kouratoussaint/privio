@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.privio.app"
-    compileSdk = flutter.compileSdkVersion
+    // SDK 37 exigé par permission_handler_android 14.x. N'affecte que les API disponibles
+    // à la compilation : minSdk (24) et targetSdk (défaut Flutter) restent inchangés.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
