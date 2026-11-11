@@ -50,7 +50,7 @@ jobs:
         run: supabase stop --no-backup
 
   mobile:
-    name: Flutter — analyse, tests, APK de debug
+    name: Flutter — analyse, tests, APK de test
     needs: garde-fous
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -75,20 +75,29 @@ jobs:
         run: flutter analyze --fatal-infos
       - name: Tests unitaires et widgets
         run: flutter test --coverage
-      - name: APK de debug (staging)
+      - name: APK de test (staging, release découpé par processeur)
         # Valeurs PUBLIQUES (variables de dépôt, pas des secrets). Sans elles, l'APK
         # se compile mais affiche un écran « configuration absente ».
+        # Signature : clé de debug du runner (test uniquement ; clé stable à l'étape 6).
         run: >
-          flutter build apk --debug
+          flutter build apk --release --split-per-abi
+          --obfuscate --split-debug-info=build/symboles
           --dart-define=SUPABASE_URL=${{ vars.STAGING_SUPABASE_URL }}
           --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}
           --dart-define=PRIVIO_ENV=staging
           --dart-define=APP_VERSION=0.1.0+${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
-          name: privio-debug-apk-${{ github.run_number }}
-          path: apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 14
+          name: privio-apk-arm64-${{ github.run_number }}
+          path: apps/mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: privio-apk-32bits-${{ github.run_number }}
+          path: apps/mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          retention-days: 7
+          compression-level: 0
       - uses: actions/upload-artifact@v4
         with:
           name: couverture-tests-${{ github.run_number }}

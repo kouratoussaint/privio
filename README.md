@@ -29,7 +29,7 @@ docs/                 décisions v1.1, ADR, rapport d'étape, dossier de référ
    activer **Phone**, désactiver **Email** ; ajouter les numéros de test
    (`22670000001=123456`…) avec une date d'expiration. Ne **jamais** utiliser
    `supabase config push`.
-6. Chaque push sur `main`/`develop` produit l'artefact `privio-debug-apk-<n>` (onglet Actions).
+6. Chaque push sur `main`/`develop` produit les artefacts `privio-apk-arm64-<n>` et `privio-apk-32bits-<n>` (onglet Actions).
 
 ## Développement local
 ```bash

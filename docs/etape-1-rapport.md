@@ -13,7 +13,7 @@
 - **Identité visuelle** : recréation vectorielle **provisoire** du logo n° 1 (`docs/brand/`),
   icône adaptative, icône de notification, écran de lancement. **À valider.**
 - **CI** : garde-fous, tests SQL sur Supabase réel, test d'intégration Auth, Flutter
-  (format, analyse, tests), APK de debug en artefact ; déploiement manuel des migrations.
+  (format, analyse, tests), APK de test (arm64 et 32 bits) en artefacts ; déploiement manuel des migrations.
 
 ## Résultats de tests (exécutés le 11/11/2026 dans l'environnement de développement)
 | Suite | Résultat |
