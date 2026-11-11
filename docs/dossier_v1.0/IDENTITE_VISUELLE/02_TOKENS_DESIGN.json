@@ -1,0 +1,32 @@
+{
+  "brand": {
+    "navy": "#111A42",
+    "purple": "#8A35F2",
+    "blue": "#315BEE",
+    "lilac": "#C879FF"
+  },
+  "surface": {
+    "light": "#F7F6FC",
+    "dark": "#10152D"
+  },
+  "text": {
+    "primary": "#17182D",
+    "inverse": "#FFFFFF"
+  },
+  "radius": {
+    "small": 8,
+    "medium": 12,
+    "large": 20
+  },
+  "spacing_dp": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "minimum_touch_target_dp": 48,
+  "font": "Inter",
+  "note": "Palette indicative, à vérifier contre la référence raster et WCAG AA"
+}

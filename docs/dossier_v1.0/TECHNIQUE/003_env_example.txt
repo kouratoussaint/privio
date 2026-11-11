@@ -1,0 +1,7 @@
+# Noms indicatifs : NE JAMAIS COMMETTRE LES VALEURS REELLES
+SUPABASE_URL=https://example.supabase.co
+SUPABASE_ANON_KEY=public-anon-or-publishable-key
+# Secrets serveur UNIQUEMENT dans Supabase Edge Function secrets / GitHub Actions secrets
+SUPABASE_SERVICE_ROLE_KEY=DO_NOT_PUT_IN_MOBILE_OR_WEB
+FCM_SERVICE_ACCOUNT_JSON=DO_NOT_PUT_IN_MOBILE_OR_WEB
+# Firebase client config Android n'est pas un secret serveur; appliquer restrictions et protections adaptées.

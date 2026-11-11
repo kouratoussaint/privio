@@ -1,0 +1,96 @@
+name: CI Privio
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.8"
+  SUPABASE_CLI_VERSION: "2.122.1"
+
+jobs:
+  garde-fous:
+    name: Garde-fous de conformité
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/guards.sh
+
+  base-de-donnees:
+    name: Migrations, RLS et Auth (Supabase local)
+    needs: garde-fous
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Démarrer Supabase (base, Auth, API)
+        run: >
+          supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Tests pgTAP (sécurité, profils, recherche, appareils, politiques)
+        run: supabase test db
+      - name: Test de concurrence (scénario AUTH n°4)
+        run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_handle_test.sh
+      - name: Test d'intégration Auth téléphone + RPC + révocation d'appareil
+        run: scripts/ci/auth_smoke_test.sh
+      - name: Lint SQL
+        run: supabase db lint --level error --fail-on error
+      - if: always()
+        run: supabase stop --no-backup
+
+  mobile:
+    name: Flutter — analyse, tests, APK de debug
+    needs: garde-fous
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Formatage
+        run: dart format --line-length 100 --output=none --set-exit-if-changed lib test
+      - name: Analyse statique
+        run: flutter analyze --fatal-infos
+      - name: Tests unitaires et widgets
+        run: flutter test --coverage
+      - name: APK de debug (staging)
+        # Valeurs PUBLIQUES (variables de dépôt, pas des secrets). Sans elles, l'APK
+        # se compile mais affiche un écran « configuration absente ».
+        run: >
+          flutter build apk --debug
+          --dart-define=SUPABASE_URL=${{ vars.STAGING_SUPABASE_URL }}
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          --dart-define=PRIVIO_ENV=staging
+          --dart-define=APP_VERSION=0.1.0+${{ github.run_number }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: privio-debug-apk-${{ github.run_number }}
+          path: apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couverture-tests-${{ github.run_number }}
+          path: apps/mobile/coverage/lcov.info
+          retention-days: 14

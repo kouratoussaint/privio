@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+<defs>
+  <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#F1E4FF"/>
+    <stop offset="0.8" stop-color="#C879FF"/><stop offset="1" stop-color="#8A35F2"/>
+  </linearGradient>
+  <linearGradient id="bubble" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#1B2A78"/><stop offset="1" stop-color="#2B3FB0"/>
+  </linearGradient>
+  <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8A35F2"/><stop offset="1" stop-color="#5B1FB8"/>
+  </linearGradient>
+  <radialGradient id="glowTL" cx="0" cy="0" r="0.75">
+    <stop offset="0" stop-color="#8A35F2" stop-opacity="0.95"/>
+    <stop offset="0.45" stop-color="#8A35F2" stop-opacity="0.35"/>
+    <stop offset="1" stop-color="#8A35F2" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="glowBR" cx="1" cy="1" r="0.7">
+    <stop offset="0" stop-color="#8A35F2" stop-opacity="0.9"/>
+    <stop offset="0.4" stop-color="#315BEE" stop-opacity="0.35"/>
+    <stop offset="1" stop-color="#315BEE" stop-opacity="0"/>
+  </radialGradient>
+</defs><rect width="108" height="108" rx="0" fill="#111A42"/><rect width="108" height="108" rx="0" fill="url(#glowTL)"/><rect width="108" height="108" rx="0" fill="url(#glowBR)"/><clipPath id="clip108"><rect width="108" height="108" rx="0"/></clipPath><g clip-path="url(#clip108)" transform="scale(0.10547)"><path d="M0 420 C70 200 230 60 470 0 L330 0 C170 50 60 160 0 300 Z" fill="#8A35F2" opacity="0.55"/><path d="M1024 640 C960 830 820 960 600 1024 L760 1024 C900 960 990 860 1024 760 Z" fill="#8A35F2" opacity="0.6"/><path d="M1024 760 C980 880 900 970 800 1024 L1024 1024 Z" fill="#315BEE" opacity="0.5"/></g></svg>

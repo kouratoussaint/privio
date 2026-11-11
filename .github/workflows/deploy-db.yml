@@ -1,0 +1,36 @@
+name: Déployer les migrations (manuel)
+
+# Applique UNIQUEMENT les migrations SQL (`supabase db push`) au projet choisi.
+# Ne pousse JAMAIS config.toml (les numéros OTP de test resteraient actifs 10 ans).
+on:
+  workflow_dispatch:
+    inputs:
+      environnement:
+        description: "Environnement cible"
+        required: true
+        default: staging
+        type: choice
+        options: [staging]
+
+permissions:
+  contents: read
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environnement }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/guards.sh
+      - uses: supabase/setup-cli@v1
+        with:
+          version: "2.122.1"
+      - name: Lier le projet
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
+      - name: Migrations en attente (aperçu)
+        run: supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
+      - name: Appliquer les migrations
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"

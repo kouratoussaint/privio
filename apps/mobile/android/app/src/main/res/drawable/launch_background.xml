@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Écran de lancement natif : fond bleu nuit + symbole Privio (évite le flash blanc). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/privio_navy" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/launch_symbol" />
+    </item>
+</layer-list>

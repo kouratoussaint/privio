@@ -1,0 +1,29 @@
+# Secrets et clés : JAMAIS dans le dépôt
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.pem
+google-services.json
+supabase/.temp/
+supabase/.branches/
+signing_keys.json
+
+# Flutter / Android
+apps/mobile/build/
+apps/mobile/.dart_tool/
+apps/mobile/coverage/
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/app/debug/
+apps/mobile/android/app/profile/
+apps/mobile/android/app/release/
+*.iml
+.idea/
+.vscode/
+
+# Node (console, étape 5)
+node_modules/
+dist/
