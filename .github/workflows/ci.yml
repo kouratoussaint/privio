@@ -48,6 +48,12 @@ jobs:
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_messaging_test.sh
       - name: Test d'intégration Auth téléphone + RPC + messagerie entre deux comptes
         run: scripts/ci/auth_smoke_test.sh
+      - name: Preuve — purge planifiée et canal temps réel privé installés
+        run: |
+          DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          test "$(psql "$DB" -tAc "select schedule from cron.job where jobname='privio_purge_expired'")" = "* * * * *"
+          test "$(psql "$DB" -tAc "select count(*) from pg_policies where schemaname='realtime' and policyname='privio_own_user_topic'")" = "1"
+          echo "✅ purge pg_cron chaque minute ; ✅ politique Realtime « user:<id> » active"
       - name: Lint SQL
         run: supabase db lint --level error --fail-on error
       - if: always()

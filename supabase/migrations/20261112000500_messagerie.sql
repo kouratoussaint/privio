@@ -801,12 +801,6 @@ set search_path = ''
 as $$
 declare
   r record;
-  allowed text[] := array[
-    'private.session_is_active()',
-    'private.is_member(uuid,uuid)',
-    'private.shares_conversation(uuid,uuid)'
-  ];
-  f text;
 begin
   for r in
     select p.oid::regprocedure as sig, n.nspname
@@ -821,11 +815,10 @@ begin
       execute format('revoke all on function %s from authenticated', r.sig);
     end if;
   end loop;
-  foreach f in array allowed loop
-    if to_regprocedure(f) is not null then
-      execute format('grant execute on function %s to authenticated', f);
-    end if;
-  end loop;
+  -- Liste blanche explicite (fonctions utilisées dans des politiques RLS).
+  grant execute on function private.session_is_active() to authenticated;
+  grant execute on function private.is_member(uuid, uuid) to authenticated;
+  grant execute on function private.shares_conversation(uuid, uuid) to authenticated;
   execute 'revoke all on all tables in schema private from public, anon, authenticated';
 end;
 $$;
