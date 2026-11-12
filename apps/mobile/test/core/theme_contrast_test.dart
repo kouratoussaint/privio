@@ -47,10 +47,17 @@ void main() {
       );
       test(
         'heure dans la bulle envoyée',
-        () => expectAA('bubbleOutMeta', p.bubbleOutMeta, p.bubbleOut),
+        () => expectAA('bubbleOutMeta', blendOver(p.bubbleOutMeta, p.bubbleOut), p.bubbleOut),
       );
       test('bulle reçue', () => expectAA('onBubbleIn', p.onBubbleIn, p.bubbleIn));
-      test('heure dans la bulle reçue', () => expectAA('bubbleInMeta', p.bubbleInMeta, p.bubbleIn));
+      test(
+        'heure dans la bulle reçue (semi-transparente, couleur perçue)',
+        () => expectAA('bubbleInMeta', blendOver(p.bubbleInMeta, p.bubbleIn), p.bubbleIn),
+      );
+      test('l\'heure est plus discrète que le texte du message', () {
+        expect(p.bubbleOutMeta.a, lessThan(1));
+        expect(p.bubbleInMeta.a, lessThan(1));
+      });
       test(
         'texte d\'accent sur la feuille',
         () => expectAA('accentText/sheet', p.accentText, p.sheet),
@@ -64,6 +71,13 @@ void main() {
     for (final c in PrivioColors.avatars) {
       expectAA('avatar ${c.toARGB32().toRadixString(16)}', Colors.white, c);
     }
+  });
+
+  test('polices réduites de 8 %, plancher de 12 sp', () {
+    expect(PrivioTheme.scaled(16), 14.5);
+    expect(PrivioTheme.scaled(28), 26);
+    expect(PrivioTheme.scaled(12), 12);
+    expect(PrivioTheme.light.textTheme.bodyLarge!.fontSize, 14.5);
   });
 
   test('pastilles de filtre sélectionnées', () {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_failure.dart';
 import '../core/util/ids.dart';
+import '../core/util/time_format.dart';
 import '../data/services/messaging_api.dart';
 import '../data/services/realtime_service.dart';
 import '../domain/models/messaging.dart';
@@ -152,7 +153,7 @@ class ChatController extends AsyncNotifier<ChatState> {
 
   /// Envoi avec affichage immédiat ; en cas d'échec, le message reste « à renvoyer »
   /// avec le MÊME identifiant client (pas de doublon côté serveur).
-  Future<void> send(String text, {String? clientId, String? replyToId}) async {
+  Future<void> send(String text, {String? clientId, String? replyToId, int? ttlSeconds}) async {
     final body = text.trim();
     if (body.isEmpty) return;
     final id = clientId ?? uuidV4();
@@ -173,6 +174,7 @@ class ChatController extends AsyncNotifier<ChatState> {
             clientMsgId: id,
             body: body,
             replyToId: replyToId,
+            ttlSeconds: ttlSeconds,
           );
       final now = state.value ?? current;
       // La réponse affiche tout de suite la citation (le serveur la renverra ensuite).
@@ -224,6 +226,12 @@ class ChatController extends AsyncNotifier<ChatState> {
     }
   }
 
+  /// Durée des nouveaux messages de la discussion (annoncée aux deux personnes).
+  Future<void> setTtl(int seconds) async {
+    await _act((api) => api.setConversationTtl(conversationId, seconds));
+    ref.invalidate(conversationsProvider);
+  }
+
   Future<void> edit(String messageId, String body) =>
       _act((api) => api.editMessage(messageId, body.trim()));
 
@@ -266,14 +274,26 @@ class MessagingRules {
   const MessagingRules({
     this.editWindow = const Duration(minutes: 60),
     this.deleteForAllWindow = const Duration(hours: 72),
+    this.minTtlSeconds = 300,
+    this.maxTtlSeconds = 72 * 3600,
   });
 
   final Duration editWindow;
   final Duration deleteForAllWindow;
+  final int minTtlSeconds;
+  final int maxTtlSeconds;
+
+  /// Durées proposées dans les bornes du serveur, éventuellement plafonnées.
+  List<int> ttlChoices({int? cap}) => [
+    for (final s in kTtlChoices)
+      if (s >= minTtlSeconds && s <= maxTtlSeconds && (cap == null || s <= cap)) s,
+  ];
 
   factory MessagingRules.fromPolicies(Map<String, Object?> v) => MessagingRules(
     editWindow: Duration(minutes: (v['message_edit_window_minutes'] as num?)?.toInt() ?? 60),
     deleteForAllWindow: Duration(hours: (v['message_delete_for_all_hours'] as num?)?.toInt() ?? 72),
+    minTtlSeconds: ((v['message_ttl_min_minutes'] as num?)?.toInt() ?? 5) * 60,
+    maxTtlSeconds: ((v['message_ttl_hours'] as num?)?.toInt() ?? 72) * 3600,
   );
 
   bool canEdit(ChatMessage m, DateTime now) =>

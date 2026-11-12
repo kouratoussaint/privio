@@ -80,13 +80,26 @@ abstract final class PrivioTheme {
 
   static ThemeData get dark => _build(darkScheme, PrivioPalette.dark);
 
-  /// Échelle du guide : titres 24–28, sous-titres 18–20, corps 14–16, légendes 12.
+  /// Réduction globale des polices (retour du 12/11/2026 : « un peu grosses »), −8 %.
+  static const textScale = 0.92;
+
+  /// Plancher de lisibilité : aucune légende sous 12 sp (exception documentée : l'heure
+  /// et la minuterie des bulles, 11 sp, contraste ≥ 4,5:1 vérifié par les tests).
+  static const minReadableSize = 12.0;
+
+  static double scaled(double size) {
+    final v = (size * textScale * 2).round() / 2;
+    return v < minReadableSize ? minReadableSize : v;
+  }
+
+  /// Échelle du guide (titres 24–28, sous-titres 18–20, corps 14–16, légendes 12),
+  /// réduite de 8 %.
   static TextTheme _textTheme(ColorScheme s) {
     TextStyle style(double size, FontWeight weight, {Color? color, double height = 1.3}) =>
         TextStyle(
           fontFamily: fontFamily,
           fontFamilyFallback: fallbackFonts,
-          fontSize: size,
+          fontSize: scaled(size),
           fontWeight: weight,
           height: height,
           color: color ?? s.onSurface,
@@ -97,8 +110,8 @@ abstract final class PrivioTheme {
       titleLarge: style(20, FontWeight.w600),
       titleMedium: style(18, FontWeight.w600),
       titleSmall: style(16, FontWeight.w600),
-      bodyLarge: style(16, FontWeight.w400, height: 1.45),
-      bodyMedium: style(14, FontWeight.w400, height: 1.45),
+      bodyLarge: style(16, FontWeight.w400, height: 1.4),
+      bodyMedium: style(14, FontWeight.w400, height: 1.4),
       bodySmall: style(12, FontWeight.w400, color: s.onSurfaceVariant),
       labelLarge: style(16, FontWeight.w600),
       labelMedium: style(14, FontWeight.w500),

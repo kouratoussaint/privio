@@ -82,6 +82,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Aujourd’hui'), findsOneWidget);
     expect(find.byKey(const Key('chat.expiry_notice')), findsOneWidget);
-    expect(find.textContaining('72 heures'), findsOneWidget);
+    expect(find.textContaining('s’effacent 72 h'), findsOneWidget);
   });
 }

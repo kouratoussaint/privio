@@ -27,6 +27,7 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
     required this.success,
     required this.notice,
     required this.navigation,
+    required this.pattern,
   });
 
   final Color header;
@@ -50,6 +51,9 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
   final Color notice;
   final Color navigation;
 
+  /// Motif « confidentialité » du fond des discussions (opacité très réduite).
+  final Color pattern;
+
   static const light = PrivioPalette(
     header: PrivioColors.purpleDeep,
     onHeader: Colors.white,
@@ -58,10 +62,10 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
     chatBackground: PrivioColors.chatLight,
     bubbleIn: Colors.white,
     onBubbleIn: PrivioColors.textPrimary,
-    bubbleInMeta: PrivioColors.textSecondaryLight,
+    bubbleInMeta: Color(0x9E17182D), // 62 % de #17182D
     bubbleOut: PrivioColors.purpleDeep,
     onBubbleOut: Colors.white,
-    bubbleOutMeta: Color(0xFFE5D6FF),
+    bubbleOutMeta: Color(0xADFFFFFF), // 68 % de blanc
     quoteIn: PrivioColors.chatLight,
     quoteOut: Color(0x29FFFFFF),
     accentText: PrivioColors.purpleText,
@@ -71,6 +75,7 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
     success: PrivioColors.success,
     notice: Color(0xFFEAE1FB),
     navigation: PrivioColors.surfaceLight,
+    pattern: Color(0x125B1FB8), // 7 %
   );
 
   static const dark = PrivioPalette(
@@ -81,10 +86,10 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
     chatBackground: PrivioColors.chatDark,
     bubbleIn: PrivioColors.surfaceContainerDark,
     onBubbleIn: Colors.white,
-    bubbleInMeta: PrivioColors.textSecondaryDark,
+    bubbleInMeta: Color(0x99FFFFFF), // 60 % de blanc
     bubbleOut: PrivioColors.purpleText,
     onBubbleOut: Colors.white,
-    bubbleOutMeta: Color(0xFFEADCFF),
+    bubbleOutMeta: Color(0xD1FFFFFF), // 82 % de blanc
     quoteIn: Color(0xFF232B52),
     quoteOut: Color(0x29FFFFFF),
     accentText: PrivioColors.lilac,
@@ -94,6 +99,7 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
     success: PrivioColors.successDark,
     notice: PrivioColors.surfaceContainerDark,
     navigation: Color(0xFF141B38),
+    pattern: Color(0x0FC879FF), // 6 %
   );
 
   static PrivioPalette of(BuildContext context) =>

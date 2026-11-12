@@ -26,6 +26,8 @@ enum FailureCode {
   editWindowExpired,
   deleteWindowExpired,
   reactionInvalid,
+  ttlInvalid,
+  messageNotEditable,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -61,6 +63,8 @@ class AppFailure implements Exception {
     FailureCode.editWindowExpired => 'Le délai pour modifier ce message est dépassé (60 minutes).',
     FailureCode.deleteWindowExpired => 'Le délai pour supprimer ce message pour tous est dépassé.',
     FailureCode.reactionInvalid => 'Choisissez un emoji.',
+    FailureCode.ttlInvalid => 'Cette durée n\'est pas autorisée.',
+    FailureCode.messageNotEditable => 'Ce message ne peut pas être modifié.',
     FailureCode.otpInvalidOrExpired => 'Code incorrect ou expiré.',
     FailureCode.smsRateLimited =>
       'Trop de codes demandés. Patientez avant de demander un nouveau code.',
@@ -97,6 +101,8 @@ const _serverCodes = <String, FailureCode>{
   'EDIT_WINDOW_EXPIRED': FailureCode.editWindowExpired,
   'DELETE_WINDOW_EXPIRED': FailureCode.deleteWindowExpired,
   'REACTION_INVALID': FailureCode.reactionInvalid,
+  'TTL_INVALID': FailureCode.ttlInvalid,
+  'MESSAGE_NOT_EDITABLE': FailureCode.messageNotEditable,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

@@ -48,3 +48,23 @@ Validé sur maquettes (canevas « PRIVIO — Maquettes lot 2.D ») :
   une feuille claire à coins arrondis. Sombre : bleu nuit `#0C1438`.
 - Navigation inchangée : Discussions / Groupes / Paramètres. Logo n° 1 uniquement.
 - Aucun bouton non livré n'est affiché (photo, vocal, emoji, appel) : ils apparaissent avec leur lot.
+
+## Amendement 3 — Retours sur le design et durée configurable (12 novembre 2026)
+Demandés par le commanditaire après test sur téléphone :
+- **Polices réduites de 8 %** sur toute l'application (le corps passe de 16 à 14,5 sp ; titres
+  réduits d'autant). Plancher conservé à 12 sp, sauf l'heure et la minuterie des bulles (11 sp).
+  Modifie l'échelle typographique du guide de marque.
+- **Informations hors message** (heure, minuterie, « modifié », accusés) plus petites et
+  semi-transparentes ; contraste perçu ≥ 4,5:1 vérifié par les tests.
+- **Réactions** : petite pastille sans contour, accrochée au coin inférieur de la bulle, sans
+  recouvrir le texte ni le message suivant.
+- **Fond des discussions** : motif original « vie privée » (cadenas, bouclier, clé, œil barré,
+  minuterie, empreinte, bulle) à 6-7 % d'opacité. Dessin propre à Privio, sans reprise d'un
+  motif existant.
+- **Nouvelle fonctionnalité — durée d'expiration configurable** (ajout au cahier des charges) :
+  - par discussion : 5 min, 1 h, 8 h, 24 h ou 72 h ; réglable par chaque membre ; s'applique
+    aux nouveaux messages ; un message système annonce le changement aux deux personnes ;
+  - par message : choisie dans la zone de saisie pour le prochain message seulement, jamais
+    plus longue que la durée de la discussion ;
+  - bornes : minimum administrable (`message_ttl_min_minutes`, 5 min par défaut), maximum =
+    invariant 72 h (`message_ttl_hours`), toujours imposé par le serveur.

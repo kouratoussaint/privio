@@ -135,6 +135,8 @@ class FakeMessagingApi implements MessagingApi {
   final List<String> handleSearches = [];
   final List<String> sentClientIds = [];
   bool failNextSend = false;
+  int conversationTtl = 72 * 3600;
+  final List<int?> sentTtls = [];
   DateTime? peerReadUpTo;
   DateTime? peerDeliveredUpTo;
   final Set<String> hiddenForMe = {};
@@ -158,6 +160,7 @@ class FakeMessagingApi implements MessagingApi {
     List<Reaction>? reactions,
   }) => ChatMessage(
     id: m.id,
+    kind: m.kind,
     senderId: m.senderId,
     body: clearBody ? null : (body ?? m.body),
     replyToId: m.replyToId,
@@ -179,6 +182,24 @@ class FakeMessagingApi implements MessagingApi {
     messageId,
     (m) => _copy(m, clearBody: true, deletedAt: DateTime.now(), reactions: const []),
   );
+
+  @override
+  Future<int> setConversationTtl(String conversationId, int seconds) async {
+    conversationTtl = seconds;
+    final now = DateTime.now();
+    (messages[conversationId] ??= []).add(
+      ChatMessage(
+        id: 'sys-${_seq++}',
+        kind: 'system',
+        senderId: me,
+        body: 'ttl:$seconds',
+        sentAt: now,
+        expiresAt: now.add(Duration(seconds: seconds)),
+        updatedAt: now,
+      ),
+    );
+    return seconds;
+  }
 
   @override
   Future<void> deleteForMe(String messageId) async => hiddenForMe.add(messageId);
@@ -223,6 +244,8 @@ class FakeMessagingApi implements MessagingApi {
       lastBody: last?.body,
       lastSentAt: last?.sentAt,
       lastExpiresAt: last?.expiresAt,
+      lastKind: last?.kind ?? 'text',
+      ttlSeconds: conversationTtl,
       peerReadUpTo: peerReadUpTo,
       peerDeliveredUpTo: peerDeliveredUpTo,
     );
@@ -277,6 +300,7 @@ class FakeMessagingApi implements MessagingApi {
         else
           ChatMessage(
             id: m.id,
+            kind: m.kind,
             senderId: m.senderId,
             body: m.body,
             replyToId: m.replyToId,
@@ -305,8 +329,10 @@ class FakeMessagingApi implements MessagingApi {
     required String clientMsgId,
     required String body,
     String? replyToId,
+    int? ttlSeconds,
   }) async {
     sentClientIds.add(clientMsgId);
+    sentTtls.add(ttlSeconds);
     if (failNextSend) {
       failNextSend = false;
       throw const AppFailure(FailureCode.network);
@@ -319,7 +345,13 @@ class FakeMessagingApi implements MessagingApi {
       body: body.trim(),
       replyToId: replyToId,
       sentAt: now,
-      expiresAt: now.add(const Duration(hours: 72)),
+      expiresAt: now.add(
+        Duration(
+          seconds: ttlSeconds == null || ttlSeconds > conversationTtl
+              ? conversationTtl
+              : ttlSeconds,
+        ),
+      ),
       updatedAt: now,
     );
     final list = messages[conversationId] ??= [];

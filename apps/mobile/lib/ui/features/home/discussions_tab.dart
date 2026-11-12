@@ -319,6 +319,8 @@ class _ConversationTile extends ConsumerWidget {
       ConversationSummary(blocked: true) => 'Contact bloqué',
       ConversationSummary(lastMessageId: null) => 'Aucun message',
       ConversationSummary(lastDeleted: true) => 'Message supprimé',
+      ConversationSummary(lastKind: 'system') =>
+        'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
       _ => '${mine ? 'Vous : ' : ''}${summary.lastBody ?? ''}',
     };
     final secondary = theme.colorScheme.onSurfaceVariant;

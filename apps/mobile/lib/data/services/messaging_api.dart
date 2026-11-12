@@ -16,7 +16,9 @@ abstract interface class MessagingApi {
     required String clientMsgId,
     required String body,
     String? replyToId,
+    int? ttlSeconds,
   });
+  Future<int> setConversationTtl(String conversationId, int seconds);
   Future<void> markConversation(
     String conversationId, {
     DateTime? deliveredUpTo,
@@ -91,12 +93,14 @@ class SupabaseMessagingApi implements MessagingApi {
     required String clientMsgId,
     required String body,
     String? replyToId,
+    int? ttlSeconds,
   }) async {
     final row = (await _rows('send_message', {
       'p_conversation_id': conversationId,
       'p_client_msg_id': clientMsgId,
       'p_body': body,
       'p_reply_to_id': replyToId,
+      'p_ttl_seconds': ttlSeconds,
     })).single;
     final sentAt = DateTime.parse(row['sent_at'] as String);
     return ChatMessage(
@@ -124,6 +128,14 @@ class SupabaseMessagingApi implements MessagingApi {
         'p_read_up_to': readUpTo?.toUtc().toIso8601String(),
       },
     ),
+  );
+
+  @override
+  Future<int> setConversationTtl(String conversationId, int seconds) => _guard(
+    () async => (await _client.rpc<dynamic>(
+      'set_conversation_ttl',
+      params: {'p_conversation_id': conversationId, 'p_ttl_seconds': seconds},
+    ) as num).toInt(),
   );
 
   Future<void> _call(String fn, Map<String, dynamic> params) =>

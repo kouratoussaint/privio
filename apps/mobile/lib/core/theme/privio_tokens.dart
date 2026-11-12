@@ -85,3 +85,6 @@ double contrastRatio(Color a, Color b) {
   final lo = math.min(la, lb);
   return (hi + 0.05) / (lo + 0.05);
 }
+
+/// Couleur réellement perçue d'une couleur semi-transparente posée sur un fond opaque.
+Color blendOver(Color foreground, Color background) => Color.alphaBlend(foreground, background);

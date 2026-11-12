@@ -27,7 +27,13 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
 | 2.D-1 | Maquettes clair/sombre (accueil, discussions, conversation, paramètres) | Validation visuelle | ✅ 12/11/2026 — bulles B, en-tête violet profond |
-| 2.D-2 | Intégration dans l'application, captures avant/après | Parcourir l'app en clair et en sombre | 🧪 12/11/2026 |
+| 2.D-2 | Intégration dans l'application, captures avant/après | Parcourir l'app en clair et en sombre | ✅ 12/11/2026 (retours intégrés au 2.D-3) |
+| 2.D-3 | Corrections : polices −8 %, heure discrète, réactions compactes, motif « vie privée » | Lire une conversation | 🔨 |
+
+## Lot 2.E — Durée d'expiration configurable (ajout du 12/11/2026)
+| Lot | Contenu | Vos tests | Statut |
+|---|---|---|---|
+| 2.E | Durée par discussion (5 min à 72 h, annonce aux deux) et par message (jamais plus que la discussion) | Régler 1 h, envoyer un message de 5 min | 🔨 |
 
 ## Étape 3 — Médias et groupes
 | Lot | Contenu | Statut |
