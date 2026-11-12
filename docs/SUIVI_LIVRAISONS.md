@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : lots 2.D-3 et 2.E livrés le 12/11/2026. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : lot 2.4 livré le 12/11/2026. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -20,7 +20,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | 2.1 | Serveur : conversations, messages, expiration 72 h + purge automatique, accusés, réactions, réponses, modification (60 min), suppression pour tous (jusqu'à l'expiration), blocage, temps réel | Aucun (preuve : CI + déploiement staging) | 🧪 12/11/2026 |
 | 2.2 | App : liste des discussions, recherche d'une personne, démarrer une discussion, conversation de base (texte, temps réel), fiche contact, bloquer | Trouver l'autre compte, échanger des messages, bloquer/débloquer | 🧪 12/11/2026 — correctif temps réel livré avec le lot 2.3 |
 | 2.3 | App : accusés envoyé/reçu/lu, réponses citées, réactions, modification (60 min), suppression pour moi / pour tous, accessibilité des bulles | Appui long sur un message, accusés entre les deux téléphones | 🧪 12/11/2026 |
-| 2.4 | App : stockage local chiffré, envoi hors ligne, effacement local à expiration même hors ligne, recherche, épinglage, archivage, indicateur « en train d'écrire » | Mode avion : écrire, puis se reconnecter | 🔨 |
+| 2.4 | App : stockage local chiffré, envoi hors ligne, effacement local à expiration même hors ligne, recherche, épinglage, archivage, indicateur « en train d'écrire » | Mode avion : écrire, puis se reconnecter | 🧪 12/11/2026 |
 | 2.5 | Signalement, suppression de compte, page d'aide | Signaler un message, supprimer un compte de test | ⏳ |
 
 ## Lot 2.D — Design (inséré avant le lot 2.4)
