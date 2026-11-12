@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -225,6 +226,7 @@ class FakeMessagingApi implements MessagingApi {
     durationMs: clearBody ? null : m.durationMs,
     width: clearBody ? null : m.width,
     height: clearBody ? null : m.height,
+    senderName: m.senderName,
   );
 
   @override
@@ -342,6 +344,7 @@ class FakeMessagingApi implements MessagingApi {
       peerReadUpTo: peerReadUpTo,
       peerDeliveredUpTo: peerDeliveredUpTo,
       peerAvatarPath: blocked.contains(bob.id) ? null : bobAvatarPath,
+      mutedUntil: muted[id],
     );
   }
 
@@ -372,12 +375,16 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   Future<List<ConversationSummary>> _listRaw() async => [
-    for (final id in conversations.keys) _summary(id),
+    for (final id in conversations.keys)
+      if (!groups.containsKey(id)) _summary(id),
+    for (final g in groups.values)
+      if (g.roles.containsKey(me)) _groupSummary(g),
   ];
 
   @override
   Future<FoundUser?> findByHandle(String handle) async {
     handleSearches.add(handle);
+    if (handle == awa.handle) return awa;
     return handle == bob.handle && !blocked.contains(bob.id) ? bob : null;
   }
 
@@ -398,6 +405,8 @@ class FakeMessagingApi implements MessagingApi {
   @override
   Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50}) async {
     _net();
+    final g = groups[conversationId];
+    if (g != null && !g.roles.containsKey(me)) throw const AppFailure(FailureCode.notMember);
     return _messagesFor(conversationId);
   }
 
@@ -425,6 +434,7 @@ class FakeMessagingApi implements MessagingApi {
             durationMs: m.durationMs,
             width: m.width,
             height: m.height,
+            senderName: m.senderName,
           ),
   ];
 
@@ -461,7 +471,15 @@ class FakeMessagingApi implements MessagingApi {
       failNextSend = false;
       throw const AppFailure(FailureCode.network);
     }
-    if (blocked.contains(bob.id)) throw const AppFailure(FailureCode.blocked);
+    final g = groups[conversationId];
+    if (g != null) {
+      if (!g.roles.containsKey(me)) throw const AppFailure(FailureCode.notMember);
+      if (g.posting == 'admins' && !g.isAdmin(me)) {
+        throw const AppFailure(FailureCode.postingRestricted);
+      }
+    } else if (blocked.contains(bob.id)) {
+      throw const AppFailure(FailureCode.blocked);
+    }
     final now = DateTime.now();
     final m = ChatMessage(
       id: 'srv-$clientMsgId',
@@ -677,6 +695,316 @@ class FakeMessagingApi implements MessagingApi {
 
   @override
   Future<void> unblockUser(String userId) async => blocked.remove(userId);
+
+  // -------------------------------------------------------------------------
+  // Groupes
+  // -------------------------------------------------------------------------
+  static const awa = FoundUser(id: 'u3', handle: 'awa_s', displayName: 'Awa');
+  static const names = {me: 'Toussaint', 'u2': 'Bob', 'u3': 'Awa', 'u4': 'Issa'};
+
+  final Map<String, FakeGroup> groups = {};
+  final List<GroupInvitation> invitations = [];
+  final Map<String, DateTime?> muted = {};
+
+  FakeGroup _group(String id) {
+    final g = groups[id];
+    if (g == null) throw const AppFailure(FailureCode.notGroup);
+    if (!g.roles.containsKey(me)) throw const AppFailure(FailureCode.notMember);
+    return g;
+  }
+
+  FakeGroup _adminGroup(String id) {
+    final g = _group(id);
+    if (!g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+    return g;
+  }
+
+  /// Ajoute un événement de groupe ({e, a, t, v}) comme le fait le serveur.
+  void groupEvent(String id, String e, {String actor = me, String? target, String? value}) {
+    final now = DateTime.now();
+    (messages[id] ??= []).add(
+      ChatMessage(
+        id: 'sys-${_seq++}',
+        kind: 'system',
+        senderId: actor,
+        senderName: names[actor],
+        body: jsonEncode({
+          'e': e,
+          'a': names[actor],
+          't': target == null ? null : names[target],
+          'v': value,
+        }),
+        sentAt: now,
+        expiresAt: now.add(Duration(seconds: conversationTtl)),
+        updatedAt: now,
+      ),
+    );
+  }
+
+  /// Crée un groupe dont [owner] est propriétaire, avec [members] (rôle membre).
+  FakeGroup seedGroup(
+    String id,
+    String title, {
+    String owner = me,
+    Map<String, String> members = const {},
+    String posting = 'all',
+    String infoEditing = 'admins',
+    String? description,
+  }) {
+    final g = FakeGroup(id, title, description: description)
+      ..posting = posting
+      ..infoEditing = infoEditing
+      ..roles[owner] = 'owner'
+      ..roles.addAll(members);
+    groups[id] = g;
+    messages.putIfAbsent(id, () => []);
+    return g;
+  }
+
+  /// Simule un message reçu dans un groupe.
+  ChatMessage receiveInGroup(String id, String senderId, String body) {
+    final now = DateTime.now();
+    final m = ChatMessage(
+      id: 'srv-${_seq++}',
+      senderId: senderId,
+      senderName: names[senderId],
+      body: body,
+      sentAt: now,
+      expiresAt: now.add(const Duration(hours: 72)),
+      updatedAt: now,
+    );
+    (messages[id] ??= []).add(m);
+    return m;
+  }
+
+  ConversationSummary _groupSummary(FakeGroup g) {
+    final list = messages[g.id] ?? const <ChatMessage>[];
+    final last = list.isEmpty ? null : list.last;
+    return ConversationSummary(
+      id: g.id,
+      kind: 'group',
+      peerId: null,
+      peerHandle: null,
+      peerDisplayName: null,
+      peerDeleted: false,
+      blocked: false,
+      unreadCount: list.where((m) => m.senderId != me && !m.isSystem).length,
+      sortAt: last?.sentAt ?? g.createdAt,
+      lastMessageId: last?.id,
+      lastSenderId: last?.senderId,
+      lastSenderName: last?.senderId == me ? null : last?.senderName,
+      lastBody: last?.body,
+      lastSentAt: last?.sentAt,
+      lastExpiresAt: last?.expiresAt,
+      lastKind: last?.kind ?? 'text',
+      ttlSeconds: conversationTtl,
+      pinned: false,
+      archived: false,
+      mutedUntil: muted[g.id],
+      groupTitle: g.title,
+      groupDescription: g.description,
+      groupAvatarPath: g.avatarPath,
+      memberCount: g.roles.length,
+      myRole: g.roles[me],
+      posting: g.posting,
+      infoEditing: g.infoEditing,
+    );
+  }
+
+  @override
+  Future<String> createGroup({
+    required String title,
+    String? description,
+    List<String> inviteeIds = const [],
+  }) async {
+    _net();
+    if (title.trim().isEmpty || title.trim().length > 60) {
+      throw const AppFailure(FailureCode.groupTitleInvalid);
+    }
+    final id = 'grp-${_seq++}';
+    seedGroup(id, title.trim(), description: description).invited.addAll(inviteeIds);
+    groupEvent(id, 'created', value: title.trim());
+    return id;
+  }
+
+  @override
+  Future<int> inviteToGroup(String conversationId, List<String> userIds) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    var n = 0;
+    for (final u in userIds) {
+      if (g.roles.containsKey(u) || g.invited.contains(u)) continue;
+      g.invited.add(u);
+      n++;
+    }
+    return n;
+  }
+
+  @override
+  Future<List<GroupInvitation>> listInvitations() async {
+    _net();
+    return List.of(invitations);
+  }
+
+  @override
+  Future<String?> respondToInvitation(String invitationId, {required bool accept}) async {
+    _net();
+    final i = invitations.indexWhere((x) => x.id == invitationId);
+    if (i < 0) throw const AppFailure(FailureCode.invitationNotFound);
+    final inv = invitations.removeAt(i);
+    if (!accept) return null;
+    final g =
+        groups[inv.conversationId] ??
+        seedGroup(inv.conversationId, inv.title, owner: bob.id, description: inv.description);
+    g.roles[me] = 'member';
+    groupEvent(inv.conversationId, 'joined');
+    return inv.conversationId;
+  }
+
+  @override
+  Future<List<GroupMember>> getMembers(String conversationId) async {
+    _net();
+    final g = _group(conversationId);
+    const order = {'owner': 0, 'admin': 1, 'member': 2};
+    final active = g.roles.entries.toList()
+      ..sort((a, b) => order[a.value]!.compareTo(order[b.value]!));
+    return [
+      for (final e in active)
+        GroupMember(userId: e.key, displayName: names[e.key] ?? e.key, role: e.value),
+      if (g.isAdmin(me))
+        for (final u in g.invited)
+          GroupMember(userId: u, displayName: names[u] ?? u, role: 'member', invited: true),
+    ];
+  }
+
+  @override
+  Future<void> setMemberRole(String conversationId, String userId, {required bool admin}) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    if (!admin && g.roles[me] != 'owner') throw const AppFailure(FailureCode.notOwner);
+    if (g.roles[userId] == null || g.roles[userId] == 'owner') {
+      throw const AppFailure(FailureCode.roleInvalid);
+    }
+    g.roles[userId] = admin ? 'admin' : 'member';
+    groupEvent(conversationId, admin ? 'admin_added' : 'admin_removed', target: userId);
+  }
+
+  @override
+  Future<void> transferOwnership(String conversationId, String userId) async {
+    _net();
+    final g = _group(conversationId);
+    if (g.roles[me] != 'owner') throw const AppFailure(FailureCode.notOwner);
+    g.roles[me] = 'admin';
+    g.roles[userId] = 'owner';
+    groupEvent(conversationId, 'owner_changed', target: userId);
+  }
+
+  @override
+  Future<void> removeMember(String conversationId, String userId) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    final role = g.roles[userId];
+    if (role == 'owner' || (role == 'admin' && g.roles[me] != 'owner')) {
+      throw const AppFailure(FailureCode.roleInvalid);
+    }
+    g.roles.remove(userId);
+    g.invited.remove(userId);
+    groupEvent(conversationId, 'removed', target: userId);
+  }
+
+  @override
+  Future<void> leaveGroup(String conversationId) async {
+    _net();
+    final g = _group(conversationId);
+    final wasOwner = g.roles.remove(me) == 'owner';
+    groupEvent(conversationId, 'left');
+    if (wasOwner && g.roles.isNotEmpty) {
+      final next = g.roles.entries.firstWhere(
+        (e) => e.value == 'admin',
+        orElse: () => g.roles.entries.first,
+      );
+      g.roles[next.key] = 'owner';
+    }
+  }
+
+  @override
+  Future<void> updateGroupInfo(String conversationId, {String? title, String? description}) async {
+    _net();
+    final g = _group(conversationId);
+    if (g.infoEditing == 'admins' && !g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+    if (title != null && title.trim() != g.title) {
+      if (title.trim().isEmpty) throw const AppFailure(FailureCode.groupTitleInvalid);
+      g.title = title.trim();
+      groupEvent(conversationId, 'title', value: g.title);
+    }
+    if (description != null && description.trim() != (g.description ?? '')) {
+      g.description = description.trim().isEmpty ? null : description.trim();
+      groupEvent(conversationId, 'description');
+    }
+  }
+
+  @override
+  Future<void> setGroupSettings(
+    String conversationId, {
+    String? posting,
+    String? infoEditing,
+  }) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    if (posting != null && posting != g.posting) {
+      g.posting = posting;
+      groupEvent(conversationId, 'posting', value: posting);
+    }
+    if (infoEditing != null && infoEditing != g.infoEditing) {
+      g.infoEditing = infoEditing;
+      groupEvent(conversationId, 'info_editing', value: infoEditing);
+    }
+  }
+
+  @override
+  Future<void> setMute(String conversationId, DateTime? until) async {
+    _net();
+    muted[conversationId] = until;
+  }
+
+  @override
+  Future<void> setGroupAvatar(String conversationId, Uint8List jpeg) async {
+    _net();
+    final g = _group(conversationId);
+    if (g.infoEditing == 'admins' && !g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+    final path = 'groups/$conversationId/${_seq++}.jpg';
+    storedAvatars[path] = jpeg;
+    g.avatarPath = path;
+    groupEvent(conversationId, 'photo');
+  }
+
+  @override
+  Future<void> removeGroupAvatar(String conversationId) async {
+    _net();
+    final g = _group(conversationId);
+    if (g.infoEditing == 'admins' && !g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+    g.avatarPath = null;
+    groupEvent(conversationId, 'photo_removed');
+  }
+}
+
+/// État d'un groupe dans le faux serveur.
+class FakeGroup {
+  FakeGroup(this.id, this.title, {this.description});
+
+  final String id;
+  String title;
+  String? description;
+  String? avatarPath;
+  String posting = 'all';
+  String infoEditing = 'admins';
+  final DateTime createdAt = DateTime.now();
+
+  /// Membres actifs : identifiant → rôle (owner, admin, member).
+  final Map<String, String> roles = {};
+  final Set<String> invited = {};
+
+  bool isAdmin(String userId) => roles[userId] == 'owner' || roles[userId] == 'admin';
 }
 
 /// Petite photo JPEG valide (40 × 30) pour les tests.

@@ -16,7 +16,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
 
-enum ConversationFilter { all, unread, pinned }
+enum ConversationFilter { all, unread, pinned, groups }
 
 /// Seuil d'affichage du rappel « s'efface dans … » sur une ligne.
 const kExpiringSoon = Duration(hours: 12);
@@ -74,6 +74,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
             ConversationFilter.all => true,
             ConversationFilter.unread => c.unreadCount > 0,
             ConversationFilter.pinned => c.pinned,
+            ConversationFilter.groups => c.isGroup,
           };
     }).toList();
   }
@@ -155,6 +156,13 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
                   selected: _filter == ConversationFilter.pinned,
                   onTap: () => setState(() => _filter = ConversationFilter.pinned),
                 ),
+                _FilterChip(
+                  key: const Key('filter.groups'),
+                  label: 'Groupes',
+                  icon: Icons.groups_outlined,
+                  selected: _filter == ConversationFilter.groups,
+                  onTap: () => setState(() => _filter = ConversationFilter.groups),
+                ),
               ],
             ),
           ),
@@ -196,6 +204,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
 
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -422,16 +431,38 @@ class ConversationTile extends ConsumerWidget {
         summary.lastExpiresAt != null &&
         !summary.blocked &&
         summary.lastExpiresAt!.difference(now) < kExpiringSoon;
+    // Qui a écrit : « Vous : », ou le nom de l'expéditeur dans un groupe.
+    final who = mine
+        ? 'Vous : '
+        : (summary.isGroup && summary.lastSenderName != null ? '${summary.lastSenderName} : ' : '');
     final preview = switch (summary) {
       ConversationSummary(blocked: true) => 'Contact bloqué',
-      ConversationSummary(lastMessageId: null) => 'Aucun message',
+      ConversationSummary(lastMessageId: null) =>
+        summary.isGroup
+            ? '${summary.memberCount} membre${summary.memberCount > 1 ? 's' : ''}'
+            : 'Aucun message',
       ConversationSummary(lastDeleted: true) => 'Message supprimé',
+      ConversationSummary(lastKind: 'system', :final lastBody)
+          when (lastBody ?? '').startsWith('{') =>
+        groupEventText(
+              ChatMessage(
+                id: summary.lastMessageId!,
+                kind: 'system',
+                senderId: summary.lastSenderId,
+                body: lastBody,
+                sentAt: summary.sortAt,
+                expiresAt: summary.lastExpiresAt ?? summary.sortAt,
+                updatedAt: summary.sortAt,
+              ),
+              me: me,
+            ) ??
+            '',
       ConversationSummary(lastKind: 'system') =>
         'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
-      ConversationSummary(lastKind: 'voice') => '${mine ? 'Vous : ' : ''}🎤 Message vocal',
+      ConversationSummary(lastKind: 'voice') => '$who🎤 Message vocal',
       ConversationSummary(lastKind: 'photo', :final lastBody) =>
-        '${mine ? 'Vous : ' : ''}📷 ${lastBody == null || lastBody.isEmpty ? 'Photo' : lastBody}',
-      _ => '${mine ? 'Vous : ' : ''}${summary.lastBody ?? ''}',
+        '$who📷 ${lastBody == null || lastBody.isEmpty ? 'Photo' : lastBody}',
+      _ => '$who${summary.lastBody ?? ''}',
     };
     final typing = !summary.blocked && ref.watch(typingProvider).contains(summary.id);
     final secondary = theme.colorScheme.onSurfaceVariant;
@@ -446,8 +477,9 @@ class ConversationTile extends ConsumerWidget {
           children: [
             UserAvatar(
               name: summary.title,
-              avatarPath: summary.peerAvatarPath,
+              avatarPath: summary.avatarPath,
               seed: summary.peerId ?? summary.id,
+              icon: summary.isGroup ? Icons.groups_rounded : null,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -518,6 +550,16 @@ class ConversationTile extends ConsumerWidget {
                                 color: p.warn,
                                 fontWeight: FontWeight.w600,
                               ),
+                            ),
+                          ],
+                          if (summary.isMuted(now)) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.notifications_off_outlined,
+                              key: Key('muted.${summary.id}'),
+                              size: 16,
+                              color: secondary,
+                              semanticLabel: 'En sourdine',
                             ),
                           ],
                           if (summary.pinned) ...[

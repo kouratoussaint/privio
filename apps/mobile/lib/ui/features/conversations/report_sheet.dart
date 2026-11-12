@@ -17,9 +17,10 @@ const kReportReasons = [
 
 /// Signaler un message (si [messageId]) ou un contact. La copie du message n'est jointe
 /// qu'avec l'accord explicite de la personne (case cochée), conservée 90 jours.
+/// [reportedUserId] null : signalement d'un groupe entier ([conversationId]).
 Future<void> showReportSheet(
   BuildContext context, {
-  required String reportedUserId,
+  required String? reportedUserId,
   required String reportedName,
   String? conversationId,
   String? messageId,
@@ -43,7 +44,7 @@ class _ReportSheet extends ConsumerStatefulWidget {
     this.messageId,
   });
 
-  final String reportedUserId;
+  final String? reportedUserId;
   final String reportedName;
   final String? conversationId;
   final String? messageId;
@@ -83,7 +84,8 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
             details: _details.text.trim().isEmpty ? null : _details.text.trim(),
             includeMessage: widget.messageId != null && _includeMessage,
           );
-      if (_block) await setBlocked(ref, widget.reportedUserId, blocked: true);
+      final target = widget.reportedUserId;
+      if (_block && target != null) await setBlocked(ref, target, blocked: true);
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
@@ -165,14 +167,15 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                     'Lue uniquement par l’équipe de modération, effacée après 90 jours.',
                   ),
                 ),
-              CheckboxListTile(
-                key: const Key('report.block'),
-                value: _block,
-                onChanged: (v) => setState(() => _block = v ?? false),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text('Bloquer aussi ${widget.reportedName}'),
-              ),
+              if (widget.reportedUserId != null)
+                CheckboxListTile(
+                  key: const Key('report.block'),
+                  value: _block,
+                  onChanged: (v) => setState(() => _block = v ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text('Bloquer aussi ${widget.reportedName}'),
+                ),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: PrivioSpacing.s),

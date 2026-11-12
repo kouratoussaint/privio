@@ -81,4 +81,5 @@ echo "$R" | grep -qiE 'permission denied|42501' && pass "anonyme : aucune lectur
 python3 "$(dirname "$0")/realtime_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV"
 python3 "$(dirname "$0")/voice_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "${DB_URL:?DB_URL introuvable}"
 python3 "$(dirname "$0")/photo_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos : OK"
+python3 "$(dirname "$0")/group_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes : OK"

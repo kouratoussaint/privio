@@ -74,3 +74,20 @@ lit le code dans `FunctionException.details`. Le téléchargement d'un son refus
 | `USER_NOT_FOUND` | 404 | `prepare_avatar_upload` | profil absent ou supprimé |
 
 Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_VERSION_CONFLICT`.
+
+### Groupes (lot 3.3)
+| Code | Origine | Signification |
+|---|---|---|
+| `NOT_GROUP` | fonctions de groupe | la discussion n'est pas un groupe |
+| `NOT_ADMIN` | inviter, retirer, rôles, réglages, infos | réservé aux administrateurs (ou réglage « administrateurs ») |
+| `NOT_OWNER` | `set_member_role` (retrait), `transfer_group_ownership` | réservé au propriétaire |
+| `ROLE_INVALID` | rôles, retrait | rôle inconnu, propriétaire visé, administrateur retiré par un non-propriétaire |
+| `SETTING_INVALID` | `set_group_settings` | valeur autre que `all` / `admins` |
+| `GROUP_FULL` | `create_group`, `invite_to_group`, `respond_to_invitation` | `group_max_members` atteint (100 provisoire, B2), invitations en attente comprises |
+| `GROUP_TITLE_INVALID` | `create_group`, `update_group_info` | nom vide ou > 60 caractères |
+| `GROUP_DESCRIPTION_INVALID` | idem | description > 300 caractères |
+| `INVITATION_NOT_FOUND` | `respond_to_invitation` | invitation absente, expirée ou déjà traitée |
+| `POSTING_RESTRICTED` | envoi (texte, vocal, photo) | envoi réservé aux administrateurs |
+| `NOT_MEMBER` | toutes | pas (ou plus) membre du groupe — HTTP 403 dans `avatar-set` |
+| `RATE_LIMITED` | `create_group`, `invite_to_group` | trop de groupes créés ou d'invitations envoyées |
+

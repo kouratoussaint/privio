@@ -440,6 +440,12 @@ class ChatController extends AsyncNotifier<ChatState> {
     } on Object catch (e) {
       // Hors connexion : on garde l'affichage local (toujours filtré par expiration).
       if (_isNetwork(e)) ref.read(offlineProvider.notifier).report(offline: true);
+      // Retiré d'un groupe (ou parti) : plus rien n'est affiché ni gardé.
+      if (toAppFailure(e).code == FailureCode.notMember) {
+        state = AsyncError(toAppFailure(e), StackTrace.current);
+        await _cache.putMessages(conversationId, const []);
+        ref.invalidate(conversationsProvider);
+      }
     }
   }
 
@@ -751,3 +757,48 @@ final avatarBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>
   await cache.putMedia(key, bytes, DateTime.now().add(const Duration(days: 7)));
   return bytes;
 });
+
+// ------------------------------------------------------------------------
+// Groupes (lot 3.3)
+// ------------------------------------------------------------------------
+/// Invitations reçues (à accepter ou refuser), mises à jour en temps réel.
+final invitationsProvider = FutureProvider.autoDispose<List<GroupInvitation>>((ref) {
+  if (ref.watch(currentUserIdProvider) == null) return const [];
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    if (next.value?.event == 'invitation') ref.invalidateSelf();
+  });
+  return ref.watch(messagingApiProvider).listInvitations();
+});
+
+/// Membres d'un groupe (et invitations en attente pour les administrateurs).
+final groupMembersProvider = FutureProvider.autoDispose.family<List<GroupMember>, String>((
+  ref,
+  conversationId,
+) {
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    final s = next.value;
+    if (s != null && s.event != 'typing' && s.conversationId == conversationId) {
+      ref.invalidateSelf();
+    }
+  });
+  return ref.watch(messagingApiProvider).getMembers(conversationId);
+});
+
+/// Action sur un groupe : appel serveur, puis rafraîchissement de la liste, des membres
+/// et de la discussion (qui affiche le message système de l'événement).
+Future<T> groupAction<T>(
+  WidgetRef ref,
+  String conversationId,
+  Future<T> Function(MessagingApi api) run,
+) async {
+  try {
+    return await run(ref.read(messagingApiProvider));
+  } on Object catch (e) {
+    throw toAppFailure(e);
+  } finally {
+    ref
+      ..invalidate(conversationsProvider)
+      ..invalidate(groupMembersProvider(conversationId))
+      ..invalidate(chatProvider(conversationId));
+  }
+}

@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../state/session_controller.dart';
 import '../ui/features/auth/otp_screen.dart';
 import '../ui/features/conversations/chat_screen.dart';
-import '../ui/features/conversations/contact_screen.dart';
 import '../ui/features/conversations/new_conversation_screen.dart';
 import '../ui/features/auth/phone_screen.dart';
 import '../ui/features/auth/welcome_screen.dart';
+import '../ui/features/groups/group_screens.dart';
 import '../ui/features/home/archived_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
 import '../ui/features/home/groups_tab.dart';
@@ -48,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.profileSetup, builder: (_, _) => const ProfileSetupScreen()),
       GoRoute(path: Routes.permissions, builder: (_, _) => const PermissionsScreen()),
       GoRoute(path: Routes.newConversation, builder: (_, _) => const NewConversationScreen()),
+      GoRoute(path: Routes.newGroup, builder: (_, _) => const NewGroupScreen()),
       GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
       GoRoute(path: Routes.archived, builder: (_, _) => const ArchivedScreen()),
       GoRoute(path: Routes.help, builder: (_, _) => const HelpScreen()),
@@ -58,7 +59,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'contact',
-            builder: (_, state) => ContactScreen(conversationId: state.pathParameters['id']!),
+            builder: (_, state) =>
+                ConversationInfoScreen(conversationId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'invite',
+            builder: (_, state) => InviteMembersScreen(conversationId: state.pathParameters['id']!),
           ),
         ],
       ),

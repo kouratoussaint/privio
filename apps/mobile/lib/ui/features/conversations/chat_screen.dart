@@ -260,7 +260,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       MaterialPageRoute<void>(
         builder: (_) => PhotoViewerScreen(
           bytes: bytes,
-          title: m.senderId == me ? 'Vous' : (peerName ?? 'Photo'),
+          title: m.senderId == me ? 'Vous' : (m.senderName ?? peerName ?? 'Photo'),
           caption: m.body,
           sentAt: m.sentAt,
         ),
@@ -384,6 +384,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final now = DateTime.now();
     final me = ref.read(currentUserIdProvider);
     final myReaction = m.reactions.where((r) => r.userId == me).firstOrNull?.emoji;
+    final summary = ref.read(conversationSummaryProvider(widget.conversationId));
+    final adminDelete = !mine && (summary?.isGroup ?? false) && (summary?.isAdmin ?? false);
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -434,7 +436,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 title: const Text('Signaler'),
                 onTap: () => Navigator.pop(ctx, 'report'),
               ),
-            if (mine && rules.canDeleteForAll(m, now))
+            if ((mine && rules.canDeleteForAll(m, now)) || adminDelete)
               ListTile(
                 key: const Key('action.delete_all'),
                 leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
@@ -465,12 +467,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
       _focus.requestFocus();
     } else if (action == 'report') {
-      final summary = ref.read(conversationSummaryProvider(widget.conversationId));
       if (m.senderId == null) return;
       await showReportSheet(
         context,
         reportedUserId: m.senderId!,
-        reportedName: summary?.title ?? 'ce contact',
+        reportedName: m.senderName ?? summary?.title ?? 'ce contact',
         conversationId: widget.conversationId,
         messageId: m.id,
       );
@@ -481,7 +482,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Supprimer pour tout le monde ?'),
-          content: const Text('Le message sera effacé chez vous et chez votre correspondant.'),
+          content: Text(
+            adminDelete
+                ? 'Le message de ${m.senderName ?? 'ce membre'} sera effacé pour tous les membres du groupe.'
+                : (summary?.isGroup ?? false)
+                ? 'Le message sera effacé pour tous les membres du groupe.'
+                : 'Le message sera effacé chez vous et chez votre correspondant.',
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
             FilledButton(
@@ -505,6 +512,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final p = PrivioPalette.of(context);
     final now = DateTime.now();
     final title = summary?.title ?? 'Discussion';
+    final isGroup = summary?.isGroup ?? false;
+    // Groupe : la durée est réglable par qui peut modifier le groupe ; on ne peut écrire
+    // que si l'envoi n'est pas réservé aux administrateurs.
+    final canPost = summary?.canPost ?? true;
+    final canSetTtl = !(summary?.blocked ?? false) && (!isGroup || summary!.canEditInfo);
     final typing =
         !(summary?.blocked ?? false) && ref.watch(typingProvider).contains(widget.conversationId);
     final offline = ref.watch(offlineProvider);
@@ -527,7 +539,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             }),
             icon: Icon(_searching ? Icons.close : Icons.search),
           ),
-          if (!(summary?.blocked ?? false) && !_searching)
+          if (canSetTtl && !_searching)
             IconButton(
               key: const Key('chat.ttl'),
               tooltip: 'Durée des messages : ${formatTtl(summary?.ttlSeconds ?? 259200)}',
@@ -555,7 +567,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             : InkWell(
                 key: const Key('chat.contact'),
                 borderRadius: BorderRadius.circular(PrivioRadius.medium),
-                onTap: summary?.peerId == null
+                onTap: summary == null || (!isGroup && summary.peerId == null)
                     ? null
                     : () => context.push(Routes.contact(widget.conversationId)),
                 child: Padding(
@@ -564,10 +576,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     children: [
                       UserAvatar(
                         name: title,
-                        avatarPath: summary?.peerAvatarPath,
-                        seed: summary?.peerId ?? widget.conversationId,
+                        avatarPath: summary?.avatarPath,
+                        seed: isGroup
+                            ? widget.conversationId
+                            : (summary?.peerId ?? widget.conversationId),
                         radius: 20,
                         ring: p.onHeaderMuted,
+                        icon: isGroup ? Icons.groups_rounded : null,
                       ),
                       const SizedBox(width: PrivioSpacing.m),
                       Expanded(
@@ -578,10 +593,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             Text(title, overflow: TextOverflow.ellipsis),
                             if (typing)
                               Text(
-                                'en train d’écrire…',
+                                isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
                                 key: const Key('chat.typing'),
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: p.onHeaderMuted, fontStyle: FontStyle.italic),
+                              )
+                            else if (isGroup)
+                              Text(
+                                '${summary!.memberCount} membre${summary.memberCount > 1 ? 's' : ''}',
+                                key: const Key('chat.members'),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: p.onHeaderMuted),
                               )
                             else if (summary?.peerHandle != null)
                               Text(
@@ -632,7 +654,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
                   ttlSeconds: summary?.ttlSeconds ?? 259200,
                   peerName: summary?.title ?? 'Votre correspondant',
-                  onTtlTap: () => _chooseConversationTtl(summary),
+                  onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
+                  isGroup: isGroup,
                 ),
                 AsyncError(:final error) => ErrorView(
                   message: toAppFailure(error).message,
@@ -641,7 +664,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _ => const LoadingView(),
               },
             ),
-            if (summary?.blocked ?? false)
+            if (chat case AsyncError(:final error)
+                when toAppFailure(error).code == FailureCode.notMember)
+              const Padding(
+                padding: EdgeInsets.all(PrivioSpacing.l),
+                child: NoticeBanner(
+                  key: Key('chat.not_member'),
+                  message: 'Vous ne faites plus partie de ce groupe.',
+                ),
+              )
+            else if (isGroup && !canPost)
+              const Padding(
+                padding: EdgeInsets.all(PrivioSpacing.l),
+                child: NoticeBanner(
+                  key: Key('chat.posting_restricted'),
+                  message: 'Seuls les administrateurs peuvent envoyer des messages dans ce groupe.',
+                ),
+              )
+            else if (summary?.blocked ?? false)
               const Padding(
                 padding: EdgeInsets.all(PrivioSpacing.l),
                 child: NoticeBanner(
@@ -743,8 +783,10 @@ class _MessageList extends StatelessWidget {
     required this.onOpenPhoto,
     this.searching = false,
     this.offline = false,
+    this.isGroup = false,
   });
 
+  final bool isGroup;
   final void Function(AppFailure failure) onVoiceError;
   final void Function(ChatMessage message, Uint8List bytes) onOpenPhoto;
   final bool searching;
@@ -752,7 +794,7 @@ class _MessageList extends StatelessWidget {
 
   final int ttlSeconds;
   final String peerName;
-  final VoidCallback onTtlTap;
+  final VoidCallback? onTtlTap;
   final List<ChatMessage> messages;
   final List<PendingMessage> pending;
   final String? me;
@@ -772,10 +814,12 @@ class _MessageList extends StatelessWidget {
       );
     }
     if (messages.isEmpty && pending.isEmpty) {
-      return const EmptyView(
+      return EmptyView(
         icon: Icons.timer_outlined,
         title: 'Aucun message',
-        message: 'Les messages de cette discussion s\'effacent 72 heures après leur envoi.',
+        message: isGroup
+            ? 'Les messages de ce groupe s\'effacent ${formatTtl(ttlSeconds)} après leur envoi.'
+            : 'Les messages de cette discussion s\'effacent 72 heures après leur envoi.',
       );
     }
     final items = <Widget>[];
@@ -789,12 +833,16 @@ class _MessageList extends StatelessWidget {
       if (m.isSystem) {
         final ttl = m.systemTtlSeconds;
         if (ttl != null) {
-          final who = m.senderId == me ? 'Vous avez' : '$peerName a';
+          final who = m.senderId == me ? 'Vous avez' : '${m.senderName ?? peerName} a';
           items.add(
             _SystemNotice(
               key: Key('system.${m.id}'),
               text: '$who réglé la durée des messages sur ${formatTtl(ttl)}.',
             ),
+          );
+        } else if (groupEventText(m, me: me) case final text?) {
+          items.add(
+            _SystemNotice(key: Key('system.${m.id}'), text: text, icon: Icons.groups_outlined),
           );
         }
         continue;
@@ -803,6 +851,7 @@ class _MessageList extends StatelessWidget {
         _Bubble(
           key: Key('message.${m.id}'),
           outgoing: m.senderId == me,
+          sender: isGroup && m.senderId != me ? (m.senderName ?? 'Ancien membre') : null,
           text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
           content: m.hasPlayableVoice
               ? VoiceMessageContent(message: m, outgoing: m.senderId == me, onError: onVoiceError)
@@ -854,7 +903,9 @@ class _MessageList extends StatelessWidget {
         ),
       );
     }
-    if (!searching) items.add(_ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap));
+    if (!searching) {
+      items.add(_ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap, isGroup: isGroup));
+    }
     return ListView(
       reverse: true,
       padding: const EdgeInsets.fromLTRB(
@@ -889,10 +940,11 @@ class _DayChip extends StatelessWidget {
 
 /// Carte de sécurité du guide : rappel de la durée de vie, touchable pour la régler.
 class _ExpiryNotice extends StatelessWidget {
-  const _ExpiryNotice({required this.ttlSeconds, required this.onTap});
+  const _ExpiryNotice({required this.ttlSeconds, required this.onTap, this.isGroup = false});
 
   final int ttlSeconds;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -919,8 +971,9 @@ class _ExpiryNotice extends StatelessWidget {
                     const SizedBox(width: PrivioSpacing.s),
                     Flexible(
                       child: Text(
-                        'Les messages de cette discussion s’effacent ${formatTtl(ttlSeconds)} '
-                        'après leur envoi. Toucher pour modifier.',
+                        'Les messages de ${isGroup ? 'ce groupe' : 'cette discussion'} '
+                        's’effacent ${formatTtl(ttlSeconds)} après leur envoi.'
+                        '${onTap == null ? '' : ' Toucher pour modifier.'}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface,
                         ),
@@ -939,9 +992,10 @@ class _ExpiryNotice extends StatelessWidget {
 
 /// Message système (ex. changement de durée), centré et discret.
 class _SystemNotice extends StatelessWidget {
-  const _SystemNotice({super.key, required this.text});
+  const _SystemNotice({super.key, required this.text, this.icon = Icons.timer_outlined});
 
   final String text;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -956,7 +1010,7 @@ class _SystemNotice extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.timer_outlined, size: 14, color: p.accentText),
+            Icon(icon, size: 14, color: p.accentText),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -972,6 +1026,17 @@ class _SystemNotice extends StatelessWidget {
   }
 }
 
+/// Bulle à la largeur de son contenu le plus large (utile quand une ligne s'aligne à gauche).
+class _FitWidth extends StatelessWidget {
+  const _FitWidth({required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => enabled ? IntrinsicWidth(child: child) : child;
+}
+
 /// Taille des informations hors message (heure, minuterie, « modifié ») : plus petite
 /// et plus discrète que le texte (contraste ≥ 4,5:1 vérifié par les tests).
 const double kBubbleMetaSize = 11;
@@ -981,6 +1046,7 @@ class _Bubble extends StatelessWidget {
     super.key,
     required this.outgoing,
     required this.text,
+    this.sender,
     this.content,
     this.time,
     this.edited = false,
@@ -999,6 +1065,9 @@ class _Bubble extends StatelessWidget {
 
   final bool outgoing;
   final String text;
+
+  /// Nom de l'auteur, affiché en tête des messages reçus dans un groupe.
+  final String? sender;
 
   /// Contenu autre que du texte (vocal) ; remplace [text] s'il est fourni.
   final Widget? content;
@@ -1059,68 +1128,89 @@ class _Bubble extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 7, 10, 5),
           // Une bulle = une annonce TalkBack complète (texte, heure, état).
           child: MergeSemantics(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (quote != null)
-                  Container(
-                    key: const Key('bubble.quote'),
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: outgoing ? p.quoteOut : p.quoteIn,
-                      borderRadius: BorderRadius.circular(PrivioRadius.small + 2),
-                    ),
-                    child: Text(
-                      quote!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(color: meta),
-                    ),
-                  ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: 1,
-                  child:
-                      content ??
-                      Text(
-                        text,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: fg,
-                          fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+            // Groupe : le nom de l'auteur reste à gauche sans élargir la bulle.
+            child: _FitWidth(
+              enabled: sender != null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (sender != null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          sender!,
+                          key: const Key('bubble.sender'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: p.accentText,
+                          ),
                         ),
                       ),
-                ),
-                const SizedBox(height: 2),
-                if (status != null)
-                  Text(status!, style: metaStyle)
-                else
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('${time ?? ''}${edited ? ' · modifié' : ''}', style: metaStyle),
-                      if (remaining != null) ...[
-                        const SizedBox(width: 5),
-                        Icon(Icons.timer_outlined, size: 11, color: meta),
-                        const SizedBox(width: 2),
+                    ),
+                  if (quote != null)
+                    Container(
+                      key: const Key('bubble.quote'),
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: outgoing ? p.quoteOut : p.quoteIn,
+                        borderRadius: BorderRadius.circular(PrivioRadius.small + 2),
+                      ),
+                      child: Text(
+                        quote!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(color: meta),
+                      ),
+                    ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child:
+                        content ??
                         Text(
-                          remaining!,
-                          semanticsLabel: 'expire dans $remaining',
-                          style: metaStyle,
+                          text,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: fg,
+                            fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+                          ),
                         ),
-                      ],
-                      if (delivery != null) ...[
-                        const SizedBox(width: 4),
-                        _DeliveryIcon(
-                          delivery: delivery!,
-                          color: meta,
-                          readColor: outgoing ? p.onBubbleOut : p.accentText,
-                        ),
-                      ],
-                    ],
                   ),
-              ],
+                  const SizedBox(height: 2),
+                  if (status != null)
+                    Text(status!, style: metaStyle)
+                  else
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${time ?? ''}${edited ? ' · modifié' : ''}', style: metaStyle),
+                        if (remaining != null) ...[
+                          const SizedBox(width: 5),
+                          Icon(Icons.timer_outlined, size: 11, color: meta),
+                          const SizedBox(width: 2),
+                          Text(
+                            remaining!,
+                            semanticsLabel: 'expire dans $remaining',
+                            style: metaStyle,
+                          ),
+                        ],
+                        if (delivery != null) ...[
+                          const SizedBox(width: 4),
+                          _DeliveryIcon(
+                            delivery: delivery!,
+                            color: meta,
+                            readColor: outgoing ? p.onBubbleOut : p.accentText,
+                          ),
+                        ],
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ),

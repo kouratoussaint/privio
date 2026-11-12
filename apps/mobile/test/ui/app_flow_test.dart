@@ -59,13 +59,16 @@ void main() {
 
     // 08 — trois onglets, aucune « communauté »
     expect(find.text('Aucune discussion pour l\'instant'), findsOneWidget);
-    expect(find.text('Discussions'), findsOneWidget);
-    expect(find.text('Groupes'), findsOneWidget);
-    expect(find.text('Paramètres'), findsOneWidget);
+    Finder tab(String label) =>
+        find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+    expect(tab('Discussions'), findsOneWidget);
+    expect(tab('Groupes'), findsOneWidget);
+    expect(tab('Paramètres'), findsOneWidget);
+    expect(find.byKey(const Key('filter.groups')), findsOneWidget);
     expect(find.textContaining(RegExp('communaut', caseSensitive: false)), findsNothing);
 
     // Paramètres : profil créé, découvrabilité désactivée par défaut
-    await tester.tap(find.text('Paramètres'));
+    await tester.tap(tab('Paramètres'));
     await tester.pumpAndSettle();
     expect(find.text('Toussaint'), findsOneWidget);
     expect(find.text('@toussaint_bf'), findsOneWidget); // carte de profil

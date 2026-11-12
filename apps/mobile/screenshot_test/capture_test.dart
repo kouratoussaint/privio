@@ -178,6 +178,34 @@ TestDeps _ready() {
     ..storedAvatars['u2/bob.jpg'] = _portrait()
     ..bobAvatarPath = 'u2/bob.jpg';
   deps.photos.photo = _landscape();
+  // Lot 3.3 — un groupe actif et une invitation en attente.
+  final g = deps.messaging.seedGroup(
+    'g-fam',
+    'Famille Kouraogo',
+    members: {'u2': 'admin', 'u3': 'member', 'u4': 'member'},
+    description: 'Les nouvelles de la famille, entre nous.',
+  );
+  deps.messaging
+    ..storedAvatars['groups/g-fam/a.jpg'] = _landscape(w: 256, h: 256)
+    ..groupEvent('g-fam', 'created', value: 'Famille Kouraogo')
+    ..groupEvent('g-fam', 'joined', actor: 'u2')
+    ..groupEvent('g-fam', 'joined', actor: 'u3')
+    ..groupEvent('g-fam', 'admin_added', target: 'u2')
+    ..receiveInGroup('g-fam', 'u3', 'Bonjour à tous ! Qui vient dimanche ?')
+    ..receiveInGroup('g-fam', 'u2', 'Moi, avec les enfants.')
+    ..groupEvent('g-fam', 'joined', actor: 'u4')
+    ..receiveInGroup('g-fam', 'u4', 'Je serai là vers midi.')
+    ..invitations.add(
+      const GroupInvitation(
+        id: 'i1',
+        conversationId: 'g-foot',
+        title: 'Foot du jeudi',
+        description: 'Match à 18 h au stade municipal.',
+        memberCount: 8,
+        inviterName: 'Issa',
+      ),
+    );
+  g.avatarPath = 'groups/g-fam/a.jpg';
   return deps;
 }
 
@@ -301,6 +329,32 @@ void main() {
       await tester.tap(find.text('Paramètres'));
       await tester.pumpAndSettle();
       await _shot(tester, '22_parametres_$suffix');
+
+      // 17 — groupes (lot 3.3) : invitation et liste ; 18 — création ; 19 — discussion ; 20 — infos
+      await tester.tap(
+        find.descendant(of: find.byType(NavigationBar), matching: find.text('Groupes')),
+      );
+      await tester.pumpAndSettle();
+      await _shot(tester, '17_groupes_$suffix');
+      await tester.tap(find.byKey(const Key('groups.new')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('group.title')), 'Voisins du secteur 15');
+      await tester.tap(find.byKey(const Key('picker.user.u2')));
+      await tester.pumpAndSettle();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await _shot(tester, '18_nouveau_groupe_$suffix');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('conversation.g-fam')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '19_groupe_conversation_$suffix');
+      await tester.tap(find.byKey(const Key('chat.contact')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '20_groupe_infos_$suffix');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await _shot(tester, '20_groupe_membres_$suffix');
     });
   }
 }

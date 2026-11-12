@@ -38,7 +38,7 @@ docs/                 décisions v1.1, ADR, rapport d'étape, dossier de référ
 # Base de données (Docker requis)
 supabase start
 supabase test db
-scripts/ci/auth_smoke_test.sh        # inclut les tests bout à bout des vocaux et des photos (Storage + fonctions)
+scripts/ci/auth_smoke_test.sh        # inclut les tests bout à bout des vocaux, des photos et des groupes (Storage + fonctions)
 
 # Sans Docker (PostgreSQL + pgTAP + pg_prove installés)
 scripts/db/run_local_tests.sh

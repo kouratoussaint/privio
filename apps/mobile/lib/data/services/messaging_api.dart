@@ -54,6 +54,33 @@ abstract interface class MessagingApi {
 
   /// Compteur de photos du jour.
   Future<PhotoQuota> getPhotoQuota();
+
+  // ---------------------------------------------------------------- groupes (lot 3.3)
+  /// Crée un groupe (on en devient propriétaire) et invite ces personnes.
+  Future<String> createGroup({
+    required String title,
+    String? description,
+    List<String> inviteeIds = const [],
+  });
+
+  /// Invite des personnes (administrateurs) ; renvoie le nombre d'invitations envoyées.
+  Future<int> inviteToGroup(String conversationId, List<String> userIds);
+  Future<List<GroupInvitation>> listInvitations();
+
+  /// Accepter (renvoie l'identifiant du groupe) ou refuser une invitation.
+  Future<String?> respondToInvitation(String invitationId, {required bool accept});
+  Future<List<GroupMember>> getMembers(String conversationId);
+  Future<void> setMemberRole(String conversationId, String userId, {required bool admin});
+  Future<void> transferOwnership(String conversationId, String userId);
+  Future<void> removeMember(String conversationId, String userId);
+  Future<void> leaveGroup(String conversationId);
+  Future<void> updateGroupInfo(String conversationId, {String? title, String? description});
+  Future<void> setGroupSettings(String conversationId, {String? posting, String? infoEditing});
+
+  /// Sourdine jusqu'à [until] (null : levée). Groupes et discussions 1:1.
+  Future<void> setMute(String conversationId, DateTime? until);
+  Future<void> setGroupAvatar(String conversationId, Uint8List jpeg);
+  Future<void> removeGroupAvatar(String conversationId);
   Future<int> setConversationTtl(String conversationId, int seconds);
   Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived});
   Future<void> signalTyping(String conversationId);
@@ -248,6 +275,100 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<Uint8List> downloadAvatar(String avatarPath) =>
       _guard(() => _client.storage.from('avatars').download(avatarPath));
+
+  @override
+  Future<String> createGroup({
+    required String title,
+    String? description,
+    List<String> inviteeIds = const [],
+  }) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'create_group',
+      params: {'p_title': title, 'p_description': description, 'p_invitee_ids': inviteeIds},
+    ) as String,
+  );
+
+  @override
+  Future<int> inviteToGroup(String conversationId, List<String> userIds) => _guard(
+    () async => (await _client.rpc<dynamic>(
+      'invite_to_group',
+      params: {'p_conversation_id': conversationId, 'p_user_ids': userIds},
+    ) as num).toInt(),
+  );
+
+  @override
+  Future<List<GroupInvitation>> listInvitations() async =>
+      (await _rows('list_my_invitations')).map(GroupInvitation.fromJson).toList();
+
+  @override
+  Future<String?> respondToInvitation(String invitationId, {required bool accept}) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'respond_to_invitation',
+      params: {'p_invitation_id': invitationId, 'p_accept': accept},
+    ) as String?,
+  );
+
+  @override
+  Future<List<GroupMember>> getMembers(String conversationId) async => (await _rows(
+    'get_conversation_members',
+    {'p_conversation_id': conversationId},
+  )).map(GroupMember.fromJson).toList();
+
+  @override
+  Future<void> setMemberRole(String conversationId, String userId, {required bool admin}) =>
+      _call('set_member_role', {
+        'p_conversation_id': conversationId,
+        'p_user_id': userId,
+        'p_role': admin ? 'admin' : 'member',
+      });
+
+  @override
+  Future<void> transferOwnership(String conversationId, String userId) =>
+      _call('transfer_group_ownership', {'p_conversation_id': conversationId, 'p_user_id': userId});
+
+  @override
+  Future<void> removeMember(String conversationId, String userId) =>
+      _call('remove_group_member', {'p_conversation_id': conversationId, 'p_user_id': userId});
+
+  @override
+  Future<void> leaveGroup(String conversationId) =>
+      _call('leave_group', {'p_conversation_id': conversationId});
+
+  @override
+  Future<void> updateGroupInfo(String conversationId, {String? title, String? description}) =>
+      _call('update_group_info', {
+        'p_conversation_id': conversationId,
+        'p_title': title,
+        'p_description': description,
+      });
+
+  @override
+  Future<void> setGroupSettings(String conversationId, {String? posting, String? infoEditing}) =>
+      _call('set_group_settings', {
+        'p_conversation_id': conversationId,
+        'p_posting': posting,
+        'p_info_editing': infoEditing,
+      });
+
+  @override
+  Future<void> setMute(String conversationId, DateTime? until) => _call('set_conversation_mute', {
+    'p_conversation_id': conversationId,
+    'p_until': until?.toUtc().toIso8601String(),
+  });
+
+  @override
+  Future<void> setGroupAvatar(String conversationId, Uint8List jpeg) => _guard(() async {
+    await _client.functions.invoke(
+      'avatar-set',
+      body: jpeg,
+      headers: const {'Content-Type': 'image/jpeg'},
+      queryParameters: {'conversation_id': conversationId},
+    );
+  });
+
+  @override
+  Future<void> removeGroupAvatar(String conversationId) =>
+      _call('remove_group_avatar', {'p_conversation_id': conversationId});
 
   @override
   Future<PhotoQuota> getPhotoQuota() => _guard(

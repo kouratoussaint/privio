@@ -12,12 +12,14 @@ abstract final class Routes {
   static const groups = '/groups';
   static const settings = '/settings';
   static const newConversation = '/new-conversation';
+  static const newGroup = '/new-group';
   static const blockedUsers = '/blocked-users';
   static const archived = '/archived';
   static const help = '/help';
   static const deleteAccount = '/delete-account';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
+  static String groupInvite(String conversationId) => '/chat/$conversationId/invite';
 
   static const signedOutRoutes = {welcome, phone, otp};
   static const homeRoutes = {discussions, groups, settings};
