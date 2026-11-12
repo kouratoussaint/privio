@@ -66,6 +66,7 @@ void main() {
 
     deps.messaging.offline = true;
     await tester.enterText(find.byKey(const Key('chat.input')), 'Écrit sans réseau');
+    await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(find.textContaining('En attente du réseau'), findsOneWidget);

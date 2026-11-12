@@ -30,6 +30,14 @@ enum FailureCode {
   messageNotEditable,
   reportInvalid,
   confirmationRequired,
+  voiceTooLong,
+  voiceTooShort,
+  mediaInvalid,
+  mediaTooLarge,
+  mediaNotFound,
+  mediaUnavailable,
+  microphoneUnavailable,
+  microphoneDenied,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -70,6 +78,15 @@ class AppFailure implements Exception {
     FailureCode.reportInvalid =>
       'Ce signalement n\'a pas pu être enregistré. Vérifiez les informations.',
     FailureCode.confirmationRequired => 'Confirmation requise.',
+    FailureCode.voiceTooLong => 'Le message vocal dépasse 30 secondes.',
+    FailureCode.voiceTooShort => 'Message vocal trop court. Maintenez le micro pour parler.',
+    FailureCode.mediaInvalid => 'Ce message vocal n\'a pas pu être lu. Enregistrez-le à nouveau.',
+    FailureCode.mediaTooLarge => 'Ce message vocal est trop volumineux.',
+    FailureCode.mediaNotFound => 'Ce message vocal n\'est plus disponible.',
+    FailureCode.mediaUnavailable =>
+      'Le service des messages vocaux est momentanément indisponible. Réessayez.',
+    FailureCode.microphoneUnavailable => 'Le micro n\'est pas disponible.',
+    FailureCode.microphoneDenied => 'Privio a besoin du micro pour enregistrer un message vocal.',
     FailureCode.otpInvalidOrExpired => 'Code incorrect ou expiré.',
     FailureCode.smsRateLimited =>
       'Trop de codes demandés. Patientez avant de demander un nouveau code.',
@@ -110,6 +127,12 @@ const _serverCodes = <String, FailureCode>{
   'MESSAGE_NOT_EDITABLE': FailureCode.messageNotEditable,
   'REPORT_INVALID': FailureCode.reportInvalid,
   'CONFIRMATION_REQUIRED': FailureCode.confirmationRequired,
+  'VOICE_TOO_LONG': FailureCode.voiceTooLong,
+  'VOICE_TOO_SHORT': FailureCode.voiceTooShort,
+  'MEDIA_INVALID': FailureCode.mediaInvalid,
+  'MEDIA_TOO_LARGE': FailureCode.mediaTooLarge,
+  'MEDIA_NOT_FOUND': FailureCode.mediaNotFound,
+  'STORAGE_UNAVAILABLE': FailureCode.mediaUnavailable,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).
@@ -119,6 +142,26 @@ AppFailure toAppFailure(Object error) {
     return AppFailure(_serverCodes[error.message.trim()] ?? FailureCode.unknown);
   }
   if (error is AuthRetryableFetchException) return const AppFailure(FailureCode.network);
+  // Fonctions (envoi d'un vocal) : code métier dans le corps JSON { "error": "CODE" }.
+  // Requête qui n'a pas abouti (pas de réseau, coupure) : on réessaiera.
+  if (error is FunctionsFetchException) return const AppFailure(FailureCode.network);
+  if (error is FunctionException) {
+    final details = error.details;
+    final code = details is Map ? details['error'] : null;
+    if (code is String && _serverCodes[code] != null) return AppFailure(_serverCodes[code]!);
+    if (error.status == 401) return const AppFailure(FailureCode.authRequired);
+    if (error.status == 429) return const AppFailure(FailureCode.rateLimited);
+    if (error.status >= 500) return const AppFailure(FailureCode.mediaUnavailable);
+    return const AppFailure(FailureCode.unknown);
+  }
+  // Stockage (téléchargement d'un vocal) : 400/404 = expiré, supprimé ou non autorisé.
+  if (error is StorageException) {
+    return switch (error.statusCode) {
+      '400' || '403' || '404' => const AppFailure(FailureCode.mediaNotFound),
+      '401' => const AppFailure(FailureCode.authRequired),
+      _ => const AppFailure(FailureCode.mediaUnavailable),
+    };
+  }
   if (error is AuthException) {
     switch (error.code) {
       case 'otp_expired':

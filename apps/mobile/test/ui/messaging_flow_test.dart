@@ -52,6 +52,7 @@ void main() {
 
     // Envoi
     await tester.enterText(find.byKey(const Key('chat.input')), '  Bonjour Bob  ');
+    await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(find.text('Bonjour Bob'), findsOneWidget);
@@ -74,6 +75,7 @@ void main() {
     // identifiant (pas de doublon)
     deps.messaging.failNextSend = true;
     await tester.enterText(find.byKey(const Key('chat.input')), 'Tu es là ?');
+    await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(find.textContaining('En attente du réseau'), findsOneWidget);

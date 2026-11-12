@@ -1,6 +1,7 @@
 name: Déployer les migrations (manuel)
 
-# Applique UNIQUEMENT les migrations SQL (`supabase db push`) au projet choisi.
+# Applique les migrations SQL (`supabase db push`) puis déploie les fonctions serveur
+# (voice-send, media-purge) au projet choisi.
 # Ne pousse JAMAIS config.toml (les numéros OTP de test resteraient actifs 10 ans).
 on:
   workflow_dispatch:
@@ -34,3 +35,18 @@ jobs:
         run: supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
       - name: Appliquer les migrations
         run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+      - name: Déployer les fonctions (envoi des vocaux, effacement des sons)
+        # Authentification vérifiée par la base (jeton utilisateur / jeton de purge).
+        run: >
+          supabase functions deploy voice-send media-purge --use-api --no-verify-jwt
+          --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+      - name: Déclarer l'adresse des fonctions à la base (purge planifiée)
+        # media-purge appelée sans jeton : elle enregistre son adresse et ne fait rien d'autre.
+        run: |
+          URL="https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/media-purge"
+          for i in 1 2 3 4 5 6; do
+            R=$(curl -sS -X POST "$URL" -H "apikey: ${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}" || true)
+            echo "$R" | grep -q '"registered":true' && { echo "✅ fonctions déployées et adresse déclarée"; exit 0; }
+            sleep 10
+          done
+          echo "::error::media-purge ne répond pas : $R"; exit 1

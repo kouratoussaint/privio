@@ -36,6 +36,7 @@ Future<TestDeps> _openChatWithBob(WidgetTester tester, {Map<String, Object?>? po
 
 Future<void> _send(WidgetTester tester, String text) async {
   await tester.enterText(find.byKey(const Key('chat.input')), text);
+  await tester.pump(); // le bouton « Envoyer » remplace le micro
   await tester.tap(find.byKey(const Key('chat.send')));
   await tester.pumpAndSettle();
 }
@@ -87,6 +88,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Modifier le message'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('chat.input')), 'Bonjour à toi');
+    await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(find.text('Bonjour à toi'), findsOneWidget);

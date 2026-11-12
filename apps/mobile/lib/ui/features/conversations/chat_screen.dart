@@ -9,14 +9,17 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../core/util/time_format.dart';
+import '../../../data/services/audio/voice_recorder.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/voice_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/privacy_pattern.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
 import 'report_sheet.dart';
+import 'voice_widgets.dart';
 
 /// Réactions proposées (une seule par personne et par message).
 const kQuickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -35,6 +38,7 @@ Delivery deliveryOf(ChatMessage m, ConversationSummary? s) {
 /// Écran 10 — conversation. Appui long sur un message : réagir, répondre, modifier
 /// (60 min), supprimer pour moi ou pour tout le monde. Volontairement AUCUNE action
 /// « copier » ni « transférer » (SEC-007/SEC-008) et aucun texte sélectionnable.
+/// Micro (champ vide) : message vocal de 30 s au plus, toujours préécouté avant envoi.
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.conversationId});
 
@@ -56,10 +60,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _searchCtrl = TextEditingController();
 
   ChatController get _chat => ref.read(chatProvider(widget.conversationId).notifier);
+  VoiceRecorderController get _voice => ref.read(voiceRecorderControllerProvider.notifier);
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
+    // Application mise en arrière-plan pendant un enregistrement : arrêt et préécoute.
+    _lifecycle = AppLifecycleListener(
+      onHide: () {
+        if (ref.read(voiceRecorderControllerProvider) is VoiceRecording) {
+          unawaited(_voice.stop().then(_afterVoiceStop));
+        }
+      },
+    );
     // Expiration à la seconde près côté affichage, même sans réseau.
     _tick = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) setState(() {});
@@ -73,6 +87,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _tick?.cancel();
     _poll?.cancel();
     _composer.dispose();
@@ -192,6 +207,116 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _retry(PendingMessage p) => _guard(() => _chat.retry(p.clientId));
+
+  // ---------------------------------------------------------------- vocaux
+  Future<void> _startVoice({required bool locked}) async {
+    FocusScope.of(context).unfocus();
+    try {
+      final permission = await _voice.start(locked: locked);
+      if (!mounted) return;
+      switch (permission) {
+        case MicPermission.granted:
+          break;
+        case MicPermission.denied:
+          _toast(const AppFailure(FailureCode.microphoneDenied).message);
+        case MicPermission.permanentlyDenied:
+          await _askMicrophoneSettings();
+      }
+    } on Object catch (e) {
+      if (mounted) _toast(toAppFailure(e).message);
+    }
+  }
+
+  Future<void> _releaseVoice() async => _afterVoiceStop(await _voice.release());
+
+  void _afterVoiceStop(VoiceStopResult result) {
+    if (!mounted) return;
+    if (result == VoiceStopResult.tooShort) {
+      _toast(const AppFailure(FailureCode.voiceTooShort).message);
+    } else if (result == VoiceStopResult.failed) {
+      _toast(const AppFailure(FailureCode.microphoneUnavailable).message);
+    }
+  }
+
+  Future<void> _askMicrophoneSettings() async {
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Autoriser le micro'),
+        content: const Text(
+          'Le micro est désactivé pour Privio. Activez-le dans les réglages du téléphone '
+          'pour enregistrer des messages vocaux. Le reste de l\'application fonctionne sans.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Plus tard')),
+          FilledButton(
+            key: const Key('voice.open_settings'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ouvrir les réglages'),
+          ),
+        ],
+      ),
+    );
+    if (open == true) await openMicrophoneSettings();
+  }
+
+  Future<void> _sendVoice() async {
+    final preview = await _voice.take();
+    if (preview == null || !mounted) return;
+    final replyTo = _replyTo;
+    final ttl = _nextTtl;
+    setState(() {
+      _replyTo = null;
+      _nextTtl = null;
+    });
+    await _guard(
+      () => _chat.sendVoice(
+        preview.audio,
+        durationMs: preview.duration.inMilliseconds,
+        replyToId: replyTo?.id,
+        ttlSeconds: ttl,
+      ),
+    );
+  }
+
+  /// Bouton de droite : envoyer (texte saisi ou modification), micro (champ vide),
+  /// ou arrêter (enregistrement verrouillé). Le micro garde la même place pendant un
+  /// enregistrement maintenu, pour ne pas interrompre le geste.
+  Widget _trailing(TextEditingValue value, VoiceRecState rec, bool dark) {
+    if (rec is VoiceRecording && rec.locked) {
+      return SizedBox(
+        width: 50,
+        height: 50,
+        child: IconButton.filled(
+          key: const Key('voice.stop'),
+          tooltip: 'Arrêter et écouter',
+          style: IconButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => unawaited(_voice.stop().then(_afterVoiceStop)),
+          icon: const Icon(Icons.stop_rounded),
+        ),
+      );
+    }
+    if (rec is VoiceRecording || (value.text.trim().isEmpty && _editing == null)) {
+      return MicButton(onStart: _startVoice, onRelease: _releaseVoice);
+    }
+    return SizedBox(
+      width: 50,
+      height: 50,
+      child: IconButton.filled(
+        key: const Key('chat.send'),
+        tooltip: _editing != null ? 'Enregistrer la modification' : 'Envoyer',
+        style: IconButton.styleFrom(
+          backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
+          foregroundColor: dark ? PrivioColors.navy : Colors.white,
+        ),
+        onPressed: _submit,
+        icon: Icon(_editing != null ? Icons.check : Icons.send),
+      ),
+    );
+  }
 
   Future<void> _showActions(ChatMessage m, {required bool mine}) async {
     if (m.isDeleted) return;
@@ -324,6 +449,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         !(summary?.blocked ?? false) && ref.watch(typingProvider).contains(widget.conversationId);
     final offline = ref.watch(offlineProvider);
     final query = _searchCtrl.text.trim().toLowerCase();
+    final voice = ref.watch(voiceRecorderControllerProvider);
+    _voice.onAutoStop = _afterVoiceStop;
 
     return Scaffold(
       backgroundColor: p.chatBackground,
@@ -440,6 +567,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onRetry: _retry,
                   onLongPress: (m) => _showActions(m, mine: m.senderId == me),
                   onReactionTap: (m, emoji) => _guard(() => _chat.toggleReaction(m.id, emoji)),
+                  onVoiceError: (f) => _toast(f.message),
                   ttlSeconds: summary?.ttlSeconds ?? 259200,
                   peerName: summary?.title ?? 'Votre correspondant',
                   onTtlTap: () => _chooseConversationTtl(summary),
@@ -464,7 +592,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (_replyTo != null || _editing != null)
                 _ComposerContext(
                   label: _editing != null ? 'Modifier le message' : 'Répondre à',
-                  text: (_editing ?? _replyTo)!.body ?? '',
+                  text: (_editing ?? _replyTo)!.isVoice
+                      ? 'Message vocal (${formatVoiceDuration(Duration(milliseconds: _replyTo!.durationMs ?? 0))})'
+                      : (_editing ?? _replyTo)!.body ?? '',
                   onCancel: () => setState(() {
                     if (_editing != null) _composer.clear();
                     _editing = null;
@@ -480,15 +610,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       '${formatTtl(_nextTtl!)} (au lieu de ${formatTtl(summary?.ttlSeconds ?? 259200)})',
                   onCancel: () => setState(() => _nextTtl = null),
                 ),
-              _Composer(
-                controller: _composer,
-                focusNode: _focus,
-                editing: _editing != null,
-                onSend: _submit,
-                onChanged: (_) => _chat.notifyTyping(),
-                onTtlTap: _editing != null ? null : () => _chooseMessageTtl(summary),
-                ttlActive: _nextTtl != null,
-              ),
+              if (voice is VoicePreview)
+                VoicePreviewBar(
+                  preview: voice,
+                  onSend: _sendVoice,
+                  onError: (f) => _toast(f.message),
+                )
+              else
+                _Composer(
+                  controller: _composer,
+                  focusNode: _focus,
+                  onChanged: (_) => _chat.notifyTyping(),
+                  onTtlTap: _editing != null || voice is VoiceRecording
+                      ? null
+                      : () => _chooseMessageTtl(summary),
+                  ttlActive: _nextTtl != null,
+                  strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
+                  trailing: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _composer,
+                    builder: (context, value, _) =>
+                        _trailing(value, voice, Theme.of(context).brightness == Brightness.dark),
+                  ),
+                ),
             ],
           ],
         ),
@@ -520,10 +663,12 @@ class _MessageList extends StatelessWidget {
     required this.ttlSeconds,
     required this.peerName,
     required this.onTtlTap,
+    required this.onVoiceError,
     this.searching = false,
     this.offline = false,
   });
 
+  final void Function(AppFailure failure) onVoiceError;
   final bool searching;
   final bool offline;
 
@@ -581,8 +726,11 @@ class _MessageList extends StatelessWidget {
           key: Key('message.${m.id}'),
           outgoing: m.senderId == me,
           text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
+          content: m.hasPlayableVoice
+              ? VoiceMessageContent(message: m, outgoing: m.senderId == me, onError: onVoiceError)
+              : null,
           italic: m.isDeleted,
-          quote: m.isDeleted ? null : m.replyPreview,
+          quote: m.isDeleted ? null : (m.replyKind == 'voice' ? 'Message vocal' : m.replyPreview),
           time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
           edited: m.editedAt != null && !m.isDeleted,
           remaining: formatRemaining(m.expiresAt, now: now),
@@ -600,6 +748,7 @@ class _MessageList extends StatelessWidget {
           key: Key('pending.${pm.clientId}'),
           outgoing: true,
           text: pm.body,
+          content: pm.isVoice ? PendingVoiceContent(durationMs: pm.durationMs) : null,
           status: pm.failed
               ? 'Échec de l\'envoi · toucher pour réessayer'
               : (offline ? 'En attente du réseau · toucher pour réessayer' : 'Envoi…'),
@@ -735,6 +884,7 @@ class _Bubble extends StatelessWidget {
     super.key,
     required this.outgoing,
     required this.text,
+    this.content,
     this.time,
     this.edited = false,
     this.remaining,
@@ -752,6 +902,9 @@ class _Bubble extends StatelessWidget {
 
   final bool outgoing;
   final String text;
+
+  /// Contenu autre que du texte (vocal) ; remplace [text] s'il est fourni.
+  final Widget? content;
   final String? time;
   final bool edited;
   final String? remaining;
@@ -832,13 +985,15 @@ class _Bubble extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   widthFactor: 1,
-                  child: Text(
-                    text,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: fg,
-                      fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-                    ),
-                  ),
+                  child:
+                      content ??
+                      Text(
+                        text,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: fg,
+                          fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+                        ),
+                      ),
                 ),
                 const SizedBox(height: 2),
                 if (status != null)
@@ -1038,14 +1193,15 @@ class _ComposerContext extends StatelessWidget {
   }
 }
 
-/// Zone de saisie : durée du prochain message, champ arrondi, bouton d'envoi. Photo,
-/// vocal et emojis apparaîtront avec leurs lots (aucun bouton non livré n'est affiché).
+/// Zone de saisie : durée du prochain message, champ arrondi (ou bandeau
+/// d'enregistrement), bouton de droite (envoyer, micro ou arrêter). Photo et emojis
+/// apparaîtront avec leurs lots (aucun bouton non livré n'est affiché).
 class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
     required this.focusNode,
-    required this.editing,
-    required this.onSend,
+    required this.trailing,
+    this.strip,
     this.onTtlTap,
     this.ttlActive = false,
     this.onChanged,
@@ -1054,8 +1210,10 @@ class _Composer extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextEditingController controller;
   final FocusNode focusNode;
-  final bool editing;
-  final Future<void> Function() onSend;
+  final Widget trailing;
+
+  /// Bandeau affiché à la place du champ (enregistrement en cours).
+  final Widget? strip;
   final VoidCallback? onTtlTap;
   final bool ttlActive;
 
@@ -1091,65 +1249,56 @@ class _Composer extends StatelessWidget {
                           ),
                         ],
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (onTtlTap != null)
-                      IconButton(
-                        key: const Key('composer.ttl'),
-                        tooltip: 'Durée de ce message',
-                        isSelected: ttlActive,
-                        onPressed: onTtlTap,
-                        icon: Icon(
-                          Icons.timer_outlined,
-                          color: ttlActive ? p.accentText : theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    Expanded(
-                      child: TextField(
-                        key: const Key('chat.input'),
-                        controller: controller,
-                        onChanged: onChanged,
-                        focusNode: focusNode,
-                        minLines: 1,
-                        maxLines: 5,
-                        maxLength: 4000,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(
-                          hintText: 'Écrire un message',
-                          counterText: '',
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.fromLTRB(
-                            onTtlTap == null ? 20 : 4,
-                            14,
-                            20,
-                            14,
+                child: strip != null
+                    ? SizedBox(height: 52, child: strip)
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (onTtlTap != null)
+                            IconButton(
+                              key: const Key('composer.ttl'),
+                              tooltip: 'Durée de ce message',
+                              isSelected: ttlActive,
+                              onPressed: onTtlTap,
+                              icon: Icon(
+                                Icons.timer_outlined,
+                                color: ttlActive
+                                    ? p.accentText
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          Expanded(
+                            child: TextField(
+                              key: const Key('chat.input'),
+                              controller: controller,
+                              onChanged: onChanged,
+                              focusNode: focusNode,
+                              minLines: 1,
+                              maxLines: 5,
+                              maxLength: 4000,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(
+                                hintText: 'Écrire un message',
+                                counterText: '',
+                                filled: false,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.fromLTRB(
+                                  onTtlTap == null ? 20 : 4,
+                                  14,
+                                  20,
+                                  14,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(width: PrivioSpacing.s),
-            SizedBox(
-              width: 50,
-              height: 50,
-              child: IconButton.filled(
-                key: const Key('chat.send'),
-                tooltip: editing ? 'Enregistrer la modification' : 'Envoyer',
-                style: IconButton.styleFrom(
-                  backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
-                  foregroundColor: dark ? PrivioColors.navy : Colors.white,
-                ),
-                onPressed: onSend,
-                icon: Icon(editing ? Icons.check : Icons.send),
-              ),
-            ),
+            trailing,
           ],
         ),
       ),

@@ -9,7 +9,7 @@ transfert ni de copie, captures d'écran bloquées sur Android. Pas de chiffreme
 apps/mobile/          Application Flutter Android (com.privio.app)
 apps/admin/           Console React/TypeScript (étape 5)
 packages/contracts/   Contrats client ↔ serveur (codes d'erreur)
-supabase/             config.toml (local), migrations SQL, tests pgTAP
+supabase/             config.toml (local), migrations SQL, tests pgTAP, fonctions (voice-send, media-purge)
 scripts/              garde-fous CI, tests SQL locaux, test d'intégration Auth
 tools/brand/          générateur reproductible du logo provisoire
 docs/                 décisions v1.1, ADR, rapport d'étape, dossier de référence v1.0
@@ -24,7 +24,9 @@ docs/                 décisions v1.1, ADR, rapport d'étape, dossier de référ
 3. *Settings → Environments → New environment* `staging`, avec les **secrets** :
    - `SUPABASE_ACCESS_TOKEN` (jeton personnel Supabase), `SUPABASE_PROJECT_REF`,
      `SUPABASE_DB_PASSWORD`
-4. *Actions → « Déployer les migrations (manuel) »* → staging.
+4. *Actions → « Déployer les migrations (manuel) »* → staging (migrations, puis fonctions
+   `voice-send` et `media-purge` ; aucun secret supplémentaire : la clé de service n'existe
+   que dans l'environnement des fonctions).
 5. Dans le tableau de bord Supabase staging : *Authentication → Sign In / Providers* :
    activer **Phone**, désactiver **Email** ; ajouter les numéros de test
    (`22670000001=123456`…) avec une date d'expiration. Ne **jamais** utiliser
@@ -36,7 +38,7 @@ docs/                 décisions v1.1, ADR, rapport d'étape, dossier de référ
 # Base de données (Docker requis)
 supabase start
 supabase test db
-scripts/ci/auth_smoke_test.sh
+scripts/ci/auth_smoke_test.sh        # inclut le test bout à bout des vocaux (Storage + fonctions)
 
 # Sans Docker (PostgreSQL + pgTAP + pg_prove installés)
 scripts/db/run_local_tests.sh

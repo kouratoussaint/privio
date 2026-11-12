@@ -5,11 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config/env.dart';
 import 'data/services/account_api.dart';
+import 'data/services/audio/audio_engine.dart';
+import 'data/services/audio/voice_recorder.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/messaging_api.dart';
 import 'data/services/realtime_service.dart';
 import 'data/storage/local_flags.dart';
 import 'data/storage/local_store.dart';
+import 'data/storage/media_vault.dart';
 import 'data/storage/secure_session_storage.dart';
 import 'state/messaging_providers.dart';
 import 'state/providers.dart';
@@ -53,6 +56,9 @@ Future<void> main() async {
         accountApiProvider.overrideWithValue(SupabaseAccountApi(client)),
         localFlagsProvider.overrideWithValue(SharedPrefsLocalFlags()),
         localStoreProvider.overrideWithValue(EncryptedFileStore()),
+        mediaVaultProvider.overrideWithValue(EncryptedMediaVault()),
+        voiceRecorderProvider.overrideWithValue(DeviceVoiceRecorder()),
+        audioEngineProvider.overrideWithValue(DeviceAudioEngine()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
       ],

@@ -28,7 +28,7 @@ jobs:
       - run: scripts/guards.sh
 
   base-de-donnees:
-    name: Migrations, RLS, Auth et messagerie (Supabase local)
+    name: Migrations, RLS, Auth, messagerie et vocaux (Supabase local)
     needs: garde-fous
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -37,16 +37,16 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
-      - name: Démarrer Supabase (base, Auth, API)
+      - name: Démarrer Supabase (base, Auth, API, Storage, fonctions)
         run: >
-          supabase start -x storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
-      - name: Tests pgTAP (sécurité, profils, recherche, appareils, politiques)
+          supabase start -x imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
+      - name: Tests pgTAP (sécurité, profils, recherche, appareils, politiques, messagerie, vocaux)
         run: supabase test db
       - name: Test de concurrence (scénario AUTH n°4)
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_handle_test.sh
       - name: Test de concurrence (messagerie)
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_messaging_test.sh
-      - name: Test d'intégration Auth téléphone + RPC + messagerie + temps réel
+      - name: Test d'intégration Auth téléphone + RPC + messagerie + temps réel + vocaux (Storage, fonctions)
         run: |
           pip install --quiet websockets==15.0.1
           scripts/ci/auth_smoke_test.sh
@@ -55,7 +55,10 @@ jobs:
           DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
           test "$(psql "$DB" -tAc "select schedule from cron.job where jobname='privio_purge_expired'")" = "* * * * *"
           test "$(psql "$DB" -tAc "select count(*) from pg_policies where schemaname='realtime' and policyname='privio_own_user_topic'")" = "1"
+          test "$(psql "$DB" -tAc "select schedule from cron.job where jobname='privio_media_purge'")" = "* * * * *"
+          test "$(psql "$DB" -tAc "select public from storage.buckets where id='voice'")" = "f"
           echo "✅ purge pg_cron chaque minute ; ✅ politique Realtime « user:<id> » active"
+          echo "✅ effacement physique des sons planifié chaque minute ; ✅ bucket « voice » privé"
       - name: Lint SQL
         run: supabase db lint --level error --fail-on error
       - if: always()

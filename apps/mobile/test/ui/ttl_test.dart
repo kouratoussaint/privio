@@ -47,6 +47,7 @@ void main() {
     expect(find.textContaining('s’effacent 1 h'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('chat.input')), 'Message court');
+    await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(deps.messaging.sentTtls.last, isNull, reason: 'la durée de la discussion s’applique');
@@ -63,6 +64,7 @@ void main() {
     expect(find.byKey(const Key('composer.ttl_chip')), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('chat.input')), 'Très sensible');
+    await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(deps.messaging.sentTtls.last, 300);

@@ -98,9 +98,11 @@ Future<void> _loadFonts() async {
   }
 }
 
-Future<void> _shot(WidgetTester tester, String name) async {
+Future<void> _shot(WidgetTester tester, String name, {bool settle = true}) async {
   await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
-  await tester.pumpAndSettle();
+  // Enregistrement en cours : animation continue, on capture l'image telle quelle.
+  if (settle) await tester.pumpAndSettle();
+  if (!settle) await tester.pump();
   final boundary = _boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
   final image = (await tester.runAsync(() => boundary.toImage(pixelRatio: 2)))!;
   final bytes = (await tester.runAsync(() => image.toByteData(format: ui.ImageByteFormat.png)))!;
@@ -170,6 +172,7 @@ void main() {
       final m = deps.messaging;
       m.receive('conv-bob', 'Bonjour Toussaint !');
       await tester.enterText(find.byKey(const Key('chat.input')), 'Bonjour Bob ! Ça va ?');
+      await tester.pump();
       await tester.tap(find.byKey(const Key('chat.send')));
       await tester.pumpAndSettle();
       final q = m.receive('conv-bob', 'Très bien. As-tu fini le dossier du projet ?');
@@ -189,6 +192,28 @@ void main() {
       deps.realtime.emit('conv-bob');
       await tester.pumpAndSettle();
       await _shot(tester, '10_conversation_$suffix');
+
+      // 14 — vocaux (lot 3.1) : enregistrement, préécoute, bulles avec lecture
+      m.receiveVoice('conv-bob', durationMs: 12000);
+      deps.realtime.emit('conv-bob');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('chat.mic')));
+      await tester.pump();
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await _shot(tester, '14_vocal_enregistrement_$suffix', settle: false);
+      await tester.tap(find.byKey(const Key('voice.stop')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '14_vocal_preecoute_$suffix');
+      await tester.tap(find.byKey(const Key('voice.send')));
+      await tester.pumpAndSettle();
+      final heard = m.messages['conv-bob']!.firstWhere((x) => x.isVoice && x.senderId != 'u1');
+      await tester.tap(find.byKey(Key('voice.play.${heard.id}')));
+      await tester.pumpAndSettle();
+      deps.audio.emitPosition(const Duration(seconds: 5));
+      await tester.pump();
+      await _shot(tester, '14_vocal_conversation_$suffix');
 
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();

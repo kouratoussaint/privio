@@ -428,6 +428,7 @@ class ConversationTile extends ConsumerWidget {
       ConversationSummary(lastDeleted: true) => 'Message supprimé',
       ConversationSummary(lastKind: 'system') =>
         'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
+      ConversationSummary(lastKind: 'voice') => '${mine ? 'Vous : ' : ''}🎤 Message vocal',
       _ => '${mine ? 'Vous : ' : ''}${summary.lastBody ?? ''}',
     };
     final typing = !summary.blocked && ref.watch(typingProvider).contains(summary.id);

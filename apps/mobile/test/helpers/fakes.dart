@@ -7,10 +7,13 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:privio/core/errors/app_failure.dart';
 import 'package:privio/core/theme/privio_theme.dart';
 import 'package:privio/data/services/account_api.dart';
+import 'package:privio/data/services/audio/audio_engine.dart';
+import 'package:privio/data/services/audio/voice_recorder.dart';
 import 'package:privio/data/services/auth_service.dart';
 import 'package:privio/data/services/messaging_api.dart';
 import 'package:privio/data/services/realtime_service.dart';
 import 'package:privio/data/storage/local_store.dart';
+import 'package:privio/data/storage/media_vault.dart';
 import 'package:privio/data/services/permission_gateway.dart';
 import 'package:privio/data/storage/local_flags.dart';
 import 'package:privio/domain/models/account.dart';
@@ -183,6 +186,9 @@ class FakeMessagingApi implements MessagingApi {
     deletedAt: deletedAt ?? m.deletedAt,
     updatedAt: DateTime.now(),
     reactions: reactions ?? m.reactions,
+    // Supprimé pour tous : plus de son (comme le serveur).
+    mediaPath: clearBody ? null : m.mediaPath,
+    durationMs: clearBody ? null : m.durationMs,
   );
 
   @override
@@ -368,14 +374,26 @@ class FakeMessagingApi implements MessagingApi {
             body: m.body,
             replyToId: m.replyToId,
             replyPreview: _findBody(m.replyToId!),
+            replyKind: _findKind(m.replyToId!),
             sentAt: m.sentAt,
             expiresAt: m.expiresAt,
             editedAt: m.editedAt,
             deletedAt: m.deletedAt,
             updatedAt: m.updatedAt,
             reactions: m.reactions,
+            mediaPath: m.mediaPath,
+            durationMs: m.durationMs,
           ),
   ];
+
+  String? _findKind(String id) {
+    for (final list in messages.values) {
+      for (final m in list) {
+        if (m.id == id) return m.isDeleted ? null : m.kind;
+      }
+    }
+    return null;
+  }
 
   String? _findBody(String id) {
     for (final list in messages.values) {
@@ -423,6 +441,85 @@ class FakeMessagingApi implements MessagingApi {
     return m;
   }
 
+  /// Sons déposés côté « serveur » (chemin → octets) et téléchargements effectués.
+  final Map<String, Uint8List> storedVoices = {};
+  final List<String> downloads = [];
+  AppFailure? voiceFailure;
+
+  @override
+  Future<ChatMessage> sendVoice({
+    required String conversationId,
+    required String clientMsgId,
+    required Uint8List audio,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    sentClientIds.add(clientMsgId);
+    sentTtls.add(ttlSeconds);
+    _net();
+    if (voiceFailure != null) throw voiceFailure!;
+    if (blocked.contains(bob.id)) throw const AppFailure(FailureCode.blocked);
+    final list = messages[conversationId] ??= [];
+    final existing = list.where((m) => m.id == 'srv-$clientMsgId').firstOrNull;
+    if (existing != null) return existing;
+    final now = DateTime.now();
+    final path = '$conversationId/$clientMsgId.m4a';
+    storedVoices[path] = audio;
+    final m = ChatMessage(
+      id: 'srv-$clientMsgId',
+      kind: 'voice',
+      senderId: me,
+      replyToId: replyToId,
+      sentAt: now,
+      expiresAt: now.add(
+        Duration(
+          seconds: ttlSeconds == null || ttlSeconds > conversationTtl
+              ? conversationTtl
+              : ttlSeconds,
+        ),
+      ),
+      updatedAt: now,
+      mediaPath: path,
+      durationMs: 5000,
+    );
+    list.add(m);
+    return m;
+  }
+
+  @override
+  Future<Uint8List> downloadVoice(String mediaPath) async {
+    downloads.add(mediaPath);
+    _net();
+    final bytes = storedVoices[mediaPath];
+    if (bytes == null) throw const AppFailure(FailureCode.mediaNotFound);
+    return bytes;
+  }
+
+  /// Simule un vocal reçu de Bob.
+  ChatMessage receiveVoice(
+    String conversationId, {
+    int durationMs = 12000,
+    DateTime? expiresAt,
+    List<int> audio = const [1, 2, 3, 4],
+  }) {
+    final now = DateTime.now();
+    final id = 'srv-${_seq++}';
+    final path = '$conversationId/$id.m4a';
+    storedVoices[path] = Uint8List.fromList(audio);
+    final m = ChatMessage(
+      id: id,
+      kind: 'voice',
+      senderId: bob.id,
+      sentAt: now,
+      expiresAt: expiresAt ?? now.add(const Duration(hours: 72)),
+      updatedAt: now,
+      mediaPath: path,
+      durationMs: durationMs,
+    );
+    (messages[conversationId] ??= []).add(m);
+    return m;
+  }
+
   @override
   Future<void> markConversation(
     String conversationId, {
@@ -441,6 +538,81 @@ class FakeMessagingApi implements MessagingApi {
 
   @override
   Future<void> unblockUser(String userId) async => blocked.remove(userId);
+}
+
+/// Faux micro : enregistre « instantanément » les octets [audio].
+class FakeVoiceRecorder implements VoiceRecorder {
+  MicPermission permission = MicPermission.granted;
+  Uint8List audio = Uint8List.fromList(List<int>.generate(64, (i) => i));
+  bool recording = false;
+  int starts = 0;
+  int cancels = 0;
+
+  @override
+  Future<MicPermission> ensurePermission() async => permission;
+
+  @override
+  Future<void> start() async {
+    starts++;
+    recording = true;
+  }
+
+  @override
+  Future<Uint8List?> stop() async {
+    if (!recording) return null;
+    recording = false;
+    return audio;
+  }
+
+  @override
+  Future<void> cancel() async {
+    cancels++;
+    recording = false;
+  }
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// Faux lecteur : retient ce qui est joué ; [finish] simule la fin du son.
+class FakeAudioEngine implements AudioEngine {
+  final _position = StreamController<Duration>.broadcast();
+  final _completed = StreamController<void>.broadcast();
+  final List<Uint8List> played = [];
+  bool playing = false;
+  double speed = 1.0;
+  Duration? seekedTo;
+
+  void emitPosition(Duration d) => _position.add(d);
+  void finish() {
+    playing = false;
+    _completed.add(null);
+  }
+
+  @override
+  Stream<Duration> get position => _position.stream;
+  @override
+  Stream<void> get completed => _completed.stream;
+
+  @override
+  Future<void> play(Uint8List bytes, {double speed = 1.0}) async {
+    played.add(bytes);
+    this.speed = speed;
+    playing = true;
+  }
+
+  @override
+  Future<void> pause() async => playing = false;
+  @override
+  Future<void> resume() async => playing = true;
+  @override
+  Future<void> seek(Duration position) async => seekedTo = position;
+  @override
+  Future<void> setSpeed(double speed) async => this.speed = speed;
+  @override
+  Future<void> stop() async => playing = false;
+  @override
+  Future<void> dispose() async {}
 }
 
 class FakeRealtimeService implements RealtimeService {
@@ -489,7 +661,10 @@ class TestDeps {
 
   /// Stockage local partagé (permet de simuler un redémarrage de l'application).
   final store = MemoryLocalStore();
+  final vault = MemoryMediaVault();
   final realtime = FakeRealtimeService();
+  final recorder = FakeVoiceRecorder();
+  final audio = FakeAudioEngine();
 
   List<Override> get overrides => [
     authServiceProvider.overrideWithValue(auth),
@@ -499,7 +674,10 @@ class TestDeps {
     appVersionProvider.overrideWithValue('0.1.0-test'),
     messagingApiProvider.overrideWithValue(messaging),
     localStoreProvider.overrideWithValue(store),
+    mediaVaultProvider.overrideWithValue(vault),
     realtimeServiceProvider.overrideWithValue(realtime),
+    voiceRecorderProvider.overrideWithValue(recorder),
+    audioEngineProvider.overrideWithValue(audio),
   ];
 
   /// Conteneur dont le contrôleur de session reste écouté, comme dans l'application.

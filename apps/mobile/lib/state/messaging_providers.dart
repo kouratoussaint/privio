@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -96,9 +97,9 @@ class OutboxController extends Notifier<List<OutboxItem>> {
     }
   }
 
-  Future<void> enqueue(OutboxItem item) async {
+  Future<void> enqueue(OutboxItem item, {List<int>? media}) async {
     await _cache.ensureLoaded();
-    await _cache.addOutbox(item);
+    await _cache.addOutbox(item, media: media);
     state = _cache.outbox;
     _schedule();
   }
@@ -113,15 +114,35 @@ class OutboxController extends Notifier<List<OutboxItem>> {
   /// Refus du serveur : marqué en échec et l'erreur est relancée.
   Future<ChatMessage?> sendOne(OutboxItem item) async {
     try {
-      final sent = await ref
-          .read(messagingApiProvider)
-          .sendMessage(
-            conversationId: item.conversationId,
-            clientMsgId: item.clientId,
-            body: item.body,
-            replyToId: item.replyToId,
-            ttlSeconds: item.ttlSeconds,
-          );
+      final api = ref.read(messagingApiProvider);
+      final ChatMessage sent;
+      if (item.isVoice) {
+        final audio = await _cache.readMedia(LocalCache.outboxMediaKey(item.clientId));
+        if (audio == null) {
+          // Son perdu (coffre effacé) : l'envoi ne peut plus aboutir.
+          await _cache.removeOutbox(item.clientId);
+          state = _cache.outbox;
+          _schedule();
+          throw const AppFailure(FailureCode.mediaNotFound);
+        }
+        sent = await api.sendVoice(
+          conversationId: item.conversationId,
+          clientMsgId: item.clientId,
+          audio: audio,
+          replyToId: item.replyToId,
+          ttlSeconds: item.ttlSeconds,
+        );
+        // L'expéditeur réécoute son vocal sans le retélécharger.
+        await _cache.putMedia(LocalCache.messageMediaKey(sent.id), audio, sent.expiresAt);
+      } else {
+        sent = await api.sendMessage(
+          conversationId: item.conversationId,
+          clientMsgId: item.clientId,
+          body: item.body,
+          replyToId: item.replyToId,
+          ttlSeconds: item.ttlSeconds,
+        );
+      }
       await _cache.removeOutbox(item.clientId);
       state = _cache.outbox;
       _schedule();
@@ -132,6 +153,9 @@ class OutboxController extends Notifier<List<OutboxItem>> {
         ref.read(offlineProvider.notifier).report(offline: true);
         _schedule();
         return null;
+      }
+      if (toAppFailure(e).code == FailureCode.mediaNotFound && item.isVoice) {
+        throw toAppFailure(e);
       }
       await _cache.updateOutbox(item.copyWith(failed: true));
       state = _cache.outbox;
@@ -292,10 +316,16 @@ class PendingMessage {
     this.failed = false,
     this.replyToId,
     this.ttlSeconds,
+    this.kind = 'text',
+    this.durationMs,
   });
 
   final String clientId;
   final String body;
+  final String kind;
+  final int? durationMs;
+
+  bool get isVoice => kind == 'voice';
 
   /// Refusé par le serveur (sinon : simplement en attente du réseau).
   final bool failed;
@@ -336,6 +366,8 @@ class ChatController extends AsyncNotifier<ChatState> {
           failed: o.failed,
           replyToId: o.replyToId,
           ttlSeconds: o.ttlSeconds,
+          kind: o.kind,
+          durationMs: o.durationMs,
         ),
   ];
 
@@ -424,22 +456,59 @@ class ChatController extends AsyncNotifier<ChatState> {
     await outbox.enqueue(item);
     final sent = await outbox.sendOne(item);
     if (sent == null) return;
+    await _showSent(sent, item.replyToId);
+  }
+
+  /// Vocal : même parcours que le texte (file chiffrée, puis envoi, puis reprise
+  /// automatique hors connexion avec le MÊME identifiant client).
+  Future<void> sendVoice(
+    Uint8List audio, {
+    required int durationMs,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    final item = OutboxItem(
+      clientId: uuidV4(),
+      conversationId: conversationId,
+      body: '',
+      createdAt: DateTime.now(),
+      replyToId: replyToId,
+      ttlSeconds: ttlSeconds,
+      kind: 'voice',
+      durationMs: durationMs,
+    );
+    final outbox = ref.read(outboxProvider.notifier);
+    await outbox.enqueue(item, media: audio);
+    final sent = await outbox.sendOne(item);
+    if (sent == null) return;
+    await _showSent(sent, item.replyToId);
+  }
+
+  /// Affiche aussitôt le message accepté par le serveur (la réponse montre déjà sa
+  /// citation ; le serveur la renverra ensuite).
+  Future<void> _showSent(ChatMessage sent, String? replyToId) async {
     final now = state.value ?? const ChatState(messages: []);
-    // La réponse affiche tout de suite la citation (le serveur la renverra ensuite).
-    final quoted = item.replyToId == null
+    final quoted = replyToId == null
         ? null
-        : now.messages.where((m) => m.id == item.replyToId && !m.isDeleted).firstOrNull?.body;
+        : now.messages.where((m) => m.id == replyToId && !m.isDeleted).firstOrNull;
+    final preview = quoted?.body;
     final shown = quoted == null
         ? sent
         : ChatMessage(
             id: sent.id,
+            kind: sent.kind,
             senderId: sent.senderId,
             body: sent.body,
-            replyToId: item.replyToId,
-            replyPreview: quoted.length > 120 ? quoted.substring(0, 120) : quoted,
+            replyToId: replyToId,
+            replyPreview: preview == null || preview.length <= 120
+                ? preview
+                : preview.substring(0, 120),
+            replyKind: quoted.kind,
             sentAt: sent.sentAt,
             expiresAt: sent.expiresAt,
             updatedAt: sent.updatedAt,
+            mediaPath: sent.mediaPath,
+            durationMs: sent.durationMs,
           );
     final messages = [...now.messages.where((m) => m.id != sent.id), shown];
     state = AsyncData(now.copyWith(messages: messages));
@@ -447,10 +516,15 @@ class ChatController extends AsyncNotifier<ChatState> {
     ref.invalidate(conversationsProvider);
   }
 
-  Future<void> retry(String clientId) {
+  Future<void> retry(String clientId) async {
     final item = ref.read(outboxProvider).where((o) => o.clientId == clientId).firstOrNull;
-    if (item == null) return Future.value();
-    return send(item.body, clientId: clientId);
+    if (item == null) return;
+    if (!item.isVoice) return send(item.body, clientId: clientId);
+    final outbox = ref.read(outboxProvider.notifier);
+    final again = item.copyWith(failed: false);
+    await outbox.enqueue(again);
+    final sent = await outbox.sendOne(again);
+    if (sent != null) await _showSent(sent, again.replyToId);
   }
 
   Future<void> _act(Future<void> Function(MessagingApi api) run) async {
@@ -475,14 +549,14 @@ class ChatController extends AsyncNotifier<ChatState> {
   Future<void> deleteForEveryone(String messageId) =>
       _act((api) => api.deleteForEveryone(messageId));
 
-  /// Masquage immédiat à l'écran et sur le téléphone, puis confirmation serveur.
+  /// Masquage immédiat à l'écran et sur le téléphone (son compris), puis confirmation.
   Future<void> deleteForMe(String messageId) async {
     final now = state.value;
     if (now != null) {
       final messages = now.messages.where((m) => m.id != messageId).toList();
       state = AsyncData(now.copyWith(messages: messages));
-      await _cache.putMessages(conversationId, messages);
     }
+    await _cache.removeMessage(conversationId, messageId);
     return _act((api) => api.deleteForMe(messageId));
   }
 
@@ -508,8 +582,11 @@ class MessagingRules {
     this.deleteForAllWindow = const Duration(hours: 72),
     this.minTtlSeconds = 300,
     this.maxTtlSeconds = 72 * 3600,
+    this.voiceMax = const Duration(seconds: 30),
   });
 
+  /// Durée maximale d'un vocal (le serveur la mesure et refuse au-delà).
+  final Duration voiceMax;
   final Duration editWindow;
   final Duration deleteForAllWindow;
   final int minTtlSeconds;
@@ -526,10 +603,11 @@ class MessagingRules {
     deleteForAllWindow: Duration(hours: (v['message_delete_for_all_hours'] as num?)?.toInt() ?? 72),
     minTtlSeconds: ((v['message_ttl_min_minutes'] as num?)?.toInt() ?? 5) * 60,
     maxTtlSeconds: ((v['message_ttl_hours'] as num?)?.toInt() ?? 72) * 3600,
+    voiceMax: Duration(seconds: (v['voice_max_seconds'] as num?)?.toInt() ?? 30),
   );
 
   bool canEdit(ChatMessage m, DateTime now) =>
-      !m.isDeleted && now.isBefore(m.sentAt.add(editWindow));
+      m.kind == 'text' && !m.isDeleted && now.isBefore(m.sentAt.add(editWindow));
   bool canDeleteForAll(ChatMessage m, DateTime now) =>
       !m.isDeleted && now.isBefore(m.sentAt.add(deleteForAllWindow));
 }

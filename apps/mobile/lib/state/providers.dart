@@ -2,11 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config/env.dart';
 import '../data/services/account_api.dart';
+import '../data/services/audio/audio_engine.dart';
+import '../data/services/audio/voice_recorder.dart';
 import '../data/services/auth_service.dart';
 import '../data/services/permission_gateway.dart';
 import '../data/storage/local_cache.dart';
 import '../data/storage/local_flags.dart';
 import '../data/storage/local_store.dart';
+import '../data/storage/media_vault.dart';
 
 /// Dépendances injectées dans main.dart (implémentations réelles) ou dans les tests (faux).
 final authServiceProvider = Provider<AuthService>(
@@ -26,5 +29,18 @@ final appVersionProvider = Provider<String>((ref) => Env.appVersion);
 /// Stockage local chiffré (fichier AES-GCM en production, mémoire dans les tests).
 final localStoreProvider = Provider<LocalStore>((ref) => MemoryLocalStore());
 
-/// Cache local des discussions et messages (purgé à expiration, même hors ligne).
-final localCacheProvider = Provider<LocalCache>((ref) => LocalCache(ref.watch(localStoreProvider)));
+/// Coffre chiffré des sons (un fichier AES-GCM par son en production, mémoire en test).
+final mediaVaultProvider = Provider<MediaVault>((ref) => MemoryMediaVault());
+
+/// Cache local des discussions, messages et sons (purgé à expiration, même hors ligne).
+final localCacheProvider = Provider<LocalCache>(
+  (ref) => LocalCache(ref.watch(localStoreProvider), media: ref.watch(mediaVaultProvider)),
+);
+
+/// Micro et lecteur (implémentations Android dans main.dart, faux dans les tests).
+final voiceRecorderProvider = Provider<VoiceRecorder>(
+  (ref) => throw UnimplementedError('voiceRecorderProvider doit être surchargé'),
+);
+final audioEngineProvider = Provider<AudioEngine>(
+  (ref) => throw UnimplementedError('audioEngineProvider doit être surchargé'),
+);

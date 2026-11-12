@@ -39,4 +39,13 @@ check "FLAG_SECURE présent dans MainActivity" \
 check "Sauvegardes Android désactivées" \
   bash -c "grep -q 'android:allowBackup=\"false\"' apps/mobile/android/app/src/main/AndroidManifest.xml || echo 'allowBackup non désactivé'"
 
+check "Médias : aucune URL publique ou signée dans l'application (lecture avec le jeton uniquement)" \
+  grep -rnE "getPublicUrl|createSignedUrl" apps/mobile/lib
+
+check "Médias : aucun bucket Storage public dans les migrations" \
+  bash -c "grep -rniE \"insert into storage.buckets\" -A2 supabase/migrations | grep -iE \"'[a-z_]+', *true\" || true"
+
+check "Clé de service uniquement dans les fonctions serveur (jamais dans l'app ni la console)" \
+  bash -c "grep -rln 'SUPABASE_SERVICE_ROLE_KEY\|SUPABASE_SECRET_KEYS' apps packages 2>/dev/null || true"
+
 exit $FAIL

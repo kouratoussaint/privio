@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
@@ -18,6 +20,20 @@ abstract interface class MessagingApi {
     String? replyToId,
     int? ttlSeconds,
   });
+
+  /// Vocal : envoyé à la fonction voice-send, qui MESURE le son avant de le publier.
+  /// Idempotent par [clientMsgId] (un renvoi renvoie le même message).
+  Future<ChatMessage> sendVoice({
+    required String conversationId,
+    required String clientMsgId,
+    required Uint8List audio,
+    String? replyToId,
+    int? ttlSeconds,
+  });
+
+  /// Son d'un vocal, téléchargé du stockage privé avec le jeton de l'utilisateur
+  /// (refusé si le message a expiré, a été supprimé, ou si l'on n'est pas membre).
+  Future<Uint8List> downloadVoice(String mediaPath);
   Future<int> setConversationTtl(String conversationId, int seconds);
   Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived});
   Future<void> signalTyping(String conversationId);
@@ -128,6 +144,44 @@ class SupabaseMessagingApi implements MessagingApi {
       updatedAt: sentAt,
     );
   }
+
+  @override
+  Future<ChatMessage> sendVoice({
+    required String conversationId,
+    required String clientMsgId,
+    required Uint8List audio,
+    String? replyToId,
+    int? ttlSeconds,
+  }) => _guard(() async {
+    final res = await _client.functions.invoke(
+      'voice-send',
+      body: audio,
+      headers: const {'Content-Type': 'audio/mp4'},
+      queryParameters: {
+        'conversation_id': conversationId,
+        'client_msg_id': clientMsgId,
+        'reply_to_id': ?replyToId,
+        if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
+      },
+    );
+    final row = Map<String, dynamic>.from(res.data as Map);
+    final sentAt = DateTime.parse(row['sent_at'] as String);
+    return ChatMessage(
+      id: row['id'] as String,
+      kind: 'voice',
+      senderId: _client.auth.currentUser?.id,
+      replyToId: replyToId,
+      sentAt: sentAt,
+      expiresAt: DateTime.parse(row['expires_at'] as String),
+      updatedAt: sentAt,
+      mediaPath: row['media_path'] as String?,
+      durationMs: (row['media_duration_ms'] as num?)?.toInt(),
+    );
+  });
+
+  @override
+  Future<Uint8List> downloadVoice(String mediaPath) =>
+      _guard(() => _client.storage.from('voice').download(mediaPath));
 
   @override
   Future<void> markConversation(

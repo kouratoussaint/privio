@@ -20,24 +20,25 @@ abstract interface class LocalKeySource {
 }
 
 class SecureStorageKeySource implements LocalKeySource {
-  SecureStorageKeySource({FlutterSecureStorage? storage})
+  SecureStorageKeySource({FlutterSecureStorage? storage, this.keyName = 'privio.local_store_key'})
     : _storage = storage ?? const FlutterSecureStorage();
 
-  static const _name = 'privio.local_store_key';
+  /// Nom de l'entrée du Keystore (une clé distincte par usage).
+  final String keyName;
   final FlutterSecureStorage _storage;
 
   @override
   Future<List<int>> loadOrCreate() async {
-    final existing = await _storage.read(key: _name);
+    final existing = await _storage.read(key: keyName);
     if (existing != null) return base64Decode(existing);
     final random = Random.secure();
     final key = List<int>.generate(32, (_) => random.nextInt(256));
-    await _storage.write(key: _name, value: base64Encode(key));
+    await _storage.write(key: keyName, value: base64Encode(key));
     return key;
   }
 
   @override
-  Future<void> delete() => _storage.delete(key: _name);
+  Future<void> delete() => _storage.delete(key: keyName);
 }
 
 /// Fichier chiffré en AES-256-GCM (authentifié : toute altération est détectée).

@@ -400,6 +400,14 @@ port = 54327
 backend = "postgres"
 
 # Experimental features may be deprecated any time
+# PRIVIO (lot 3.1) : l'authentification est vérifiée par la base (jeton utilisateur pour
+# voice-send, jeton de purge pour media-purge) ; la passerelle ne filtre pas en amont.
+[functions.voice-send]
+verify_jwt = false
+
+[functions.media-purge]
+verify_jwt = false
+
 [experimental]
 # Configures S3 bucket URL, eg. <bucket_name>.s3-<region>.amazonaws.com
 s3_host = "env(S3_HOST)"

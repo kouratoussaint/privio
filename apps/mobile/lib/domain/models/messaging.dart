@@ -168,6 +168,9 @@ class ChatMessage {
     this.editedAt,
     this.deletedAt,
     this.reactions = const [],
+    this.replyKind,
+    this.mediaPath,
+    this.durationMs,
   });
 
   final String id;
@@ -183,8 +186,19 @@ class ChatMessage {
   final DateTime updatedAt;
   final List<Reaction> reactions;
 
+  /// Type du message cité (« text » ou « voice »), s'il est encore visible.
+  final String? replyKind;
+
+  /// Vocal : chemin opaque du son dans le stockage privé, et durée mesurée par le serveur.
+  final String? mediaPath;
+  final int? durationMs;
+
   bool get isDeleted => deletedAt != null;
   bool get isSystem => kind == 'system';
+  bool get isVoice => kind == 'voice';
+
+  /// Vocal encore écoutable (ni supprimé, ni sans fichier).
+  bool get hasPlayableVoice => isVoice && !isDeleted && mediaPath != null;
 
   /// Message système « durée réglée » : nouvelle durée en secondes, sinon null.
   int? get systemTtlSeconds =>
@@ -205,6 +219,9 @@ class ChatMessage {
     'reactions': [
       for (final r in reactions) {'user_id': r.userId, 'emoji': r.emoji},
     ],
+    'reply_kind': replyKind,
+    'media_path': mediaPath,
+    'media_duration_ms': durationMs,
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -228,6 +245,9 @@ class ChatMessage {
         for (final r in (j['reactions'] as List<dynamic>? ?? const []))
           Reaction(userId: (r as Map)['user_id'] as String, emoji: r['emoji'] as String),
       ],
+      replyKind: j['reply_kind'] as String?,
+      mediaPath: j['media_path'] as String?,
+      durationMs: (j['media_duration_ms'] as num?)?.toInt(),
     );
   }
 }
