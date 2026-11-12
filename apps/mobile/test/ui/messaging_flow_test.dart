@@ -70,17 +70,18 @@ void main() {
     expect(find.text('Salut Toussaint !'), findsOneWidget);
     expect(find.text('Message expiré'), findsNothing);
 
-    // Échec réseau puis nouvel essai avec le MÊME identifiant (pas de doublon)
+    // Coupure réseau : le message attend (file locale), puis repart avec le MÊME
+    // identifiant (pas de doublon)
     deps.messaging.failNextSend = true;
     await tester.enterText(find.byKey(const Key('chat.input')), 'Tu es là ?');
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Échec de l\'envoi'), findsOneWidget);
+    expect(find.textContaining('En attente du réseau'), findsOneWidget);
     await tester.tap(find.text('Tu es là ?'));
     await tester.pumpAndSettle();
     final ids = deps.messaging.sentClientIds;
     expect(ids[ids.length - 1], ids[ids.length - 2]);
-    expect(find.textContaining('Échec de l\'envoi'), findsNothing);
+    expect(find.textContaining('En attente du réseau'), findsNothing);
     expect(find.text('Tu es là ?'), findsOneWidget);
 
     // Fiche contact → bloquer

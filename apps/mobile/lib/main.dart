@@ -9,6 +9,7 @@ import 'data/services/auth_service.dart';
 import 'data/services/messaging_api.dart';
 import 'data/services/realtime_service.dart';
 import 'data/storage/local_flags.dart';
+import 'data/storage/local_store.dart';
 import 'data/storage/secure_session_storage.dart';
 import 'state/messaging_providers.dart';
 import 'state/providers.dart';
@@ -51,6 +52,7 @@ Future<void> main() async {
         authServiceProvider.overrideWithValue(SupabaseAuthService(client.auth)),
         accountApiProvider.overrideWithValue(SupabaseAccountApi(client)),
         localFlagsProvider.overrideWithValue(SharedPrefsLocalFlags()),
+        localStoreProvider.overrideWithValue(EncryptedFileStore()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
       ],

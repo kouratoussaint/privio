@@ -7,7 +7,9 @@ import '../core/util/ids.dart';
 import '../core/util/time_format.dart';
 import '../data/services/messaging_api.dart';
 import '../data/services/realtime_service.dart';
+import '../data/storage/local_cache.dart';
 import '../domain/models/messaging.dart';
+import 'providers.dart';
 import 'session_controller.dart';
 
 final messagingApiProvider = Provider<MessagingApi>(
@@ -37,8 +39,169 @@ final realtimeStatusProvider = Provider<RealtimeService>(
   (ref) => ref.watch(realtimeServiceProvider),
 );
 
+bool _isNetwork(Object e) => toAppFailure(e).code == FailureCode.network;
+
 // ------------------------------------------------------------------------
-// Liste des discussions (écran 08)
+// Hors connexion
+// ------------------------------------------------------------------------
+/// Vrai quand le dernier échange avec le serveur a échoué faute de réseau.
+final offlineProvider = NotifierProvider<OfflineController, bool>(OfflineController.new);
+
+class OfflineController extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void report({required bool offline}) {
+    if (state == offline) return;
+    state = offline;
+    // Retour du réseau : les messages en attente partent aussitôt.
+    if (!offline) unawaited(ref.read(outboxProvider.notifier).flush());
+  }
+}
+
+// ------------------------------------------------------------------------
+// File d'envoi hors ligne (persistée, chiffrée)
+// ------------------------------------------------------------------------
+final outboxProvider = NotifierProvider<OutboxController, List<OutboxItem>>(OutboxController.new);
+
+class OutboxController extends Notifier<List<OutboxItem>> {
+  static const retryEvery = Duration(seconds: 15);
+  Timer? _timer;
+  bool _flushing = false;
+
+  LocalCache get _cache => ref.read(localCacheProvider);
+
+  @override
+  List<OutboxItem> build() {
+    ref.watch(currentUserIdProvider);
+    ref.onDispose(() => _timer?.cancel());
+    // Reconnexion temps réel ou retour dans l'app : nouvel essai.
+    ref.listen(realtimeSignalsProvider, (_, next) {
+      final e = next.value?.event;
+      if (e == 'reconnected' || e == 'resume') unawaited(flush());
+    });
+    unawaited(
+      _cache.ensureLoaded().then((_) {
+        state = _cache.outbox;
+        _schedule();
+      }),
+    );
+    return const [];
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    if (state.any((o) => !o.failed)) {
+      _timer = Timer.periodic(retryEvery, (_) => unawaited(flush()));
+    }
+  }
+
+  Future<void> enqueue(OutboxItem item) async {
+    await _cache.ensureLoaded();
+    await _cache.addOutbox(item);
+    state = _cache.outbox;
+    _schedule();
+  }
+
+  Future<void> discard(String clientId) async {
+    await _cache.removeOutbox(clientId);
+    state = _cache.outbox;
+    _schedule();
+  }
+
+  /// Envoie un message de la file. Réseau absent : il reste en attente (null).
+  /// Refus du serveur : marqué en échec et l'erreur est relancée.
+  Future<ChatMessage?> sendOne(OutboxItem item) async {
+    try {
+      final sent = await ref
+          .read(messagingApiProvider)
+          .sendMessage(
+            conversationId: item.conversationId,
+            clientMsgId: item.clientId,
+            body: item.body,
+            replyToId: item.replyToId,
+            ttlSeconds: item.ttlSeconds,
+          );
+      await _cache.removeOutbox(item.clientId);
+      state = _cache.outbox;
+      _schedule();
+      ref.read(offlineProvider.notifier).report(offline: false);
+      return sent;
+    } on Object catch (e) {
+      if (_isNetwork(e)) {
+        ref.read(offlineProvider.notifier).report(offline: true);
+        _schedule();
+        return null;
+      }
+      await _cache.updateOutbox(item.copyWith(failed: true));
+      state = _cache.outbox;
+      _schedule();
+      throw toAppFailure(e);
+    }
+  }
+
+  /// Renvoie tout ce qui attend (même identifiant client : jamais de doublon).
+  Future<void> flush() async {
+    if (_flushing) return;
+    _flushing = true;
+    try {
+      for (final item in List.of(state.where((o) => !o.failed))) {
+        try {
+          final sent = await sendOne(item);
+          if (sent == null) break; // toujours hors connexion
+          // La conversation concernée se recharge d'elle-même (elle observe la file).
+          unawaited(ref.read(conversationsProvider.notifier).refresh());
+        } on AppFailure {
+          // Marqué en échec : l'utilisateur décidera (réessayer ou abandonner).
+        }
+      }
+    } finally {
+      _flushing = false;
+    }
+  }
+}
+
+// ------------------------------------------------------------------------
+// « En train d'écrire… » (signal temps réel sans contenu, 5 s)
+// ------------------------------------------------------------------------
+const kTypingVisible = Duration(seconds: 5);
+
+final typingProvider = NotifierProvider<TypingController, Set<String>>(TypingController.new);
+
+class TypingController extends Notifier<Set<String>> {
+  final Map<String, Timer> _timers = {};
+
+  @override
+  Set<String> build() {
+    ref.onDispose(() {
+      for (final t in _timers.values) {
+        t.cancel();
+      }
+    });
+    ref.listen(realtimeSignalsProvider, (_, next) {
+      final s = next.value;
+      if (s == null) return;
+      final id = s.conversationId;
+      if (id == null) return;
+      if (s.event == 'typing') {
+        _timers[id]?.cancel();
+        _timers[id] = Timer(kTypingVisible, () => _clear(id));
+        state = {...state, id};
+      } else if (s.event == 'message') {
+        _clear(id); // le message est arrivé : l'indicateur disparaît
+      }
+    });
+    return const {};
+  }
+
+  void _clear(String id) {
+    _timers.remove(id)?.cancel();
+    if (state.contains(id)) state = {...state}..remove(id);
+  }
+}
+
+// ------------------------------------------------------------------------
+// Liste des discussions (écran 08) — d'abord le cache local, puis le serveur
 // ------------------------------------------------------------------------
 final conversationsProvider =
     AsyncNotifierProvider<ConversationsController, List<ConversationSummary>>(
@@ -46,27 +209,67 @@ final conversationsProvider =
     );
 
 class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
+  static const purgeEvery = Duration(seconds: 30);
+
   @override
   Future<List<ConversationSummary>> build() async {
     // Changement de compte : la liste est reconstruite (aucune fuite entre comptes).
     if (ref.watch(currentUserIdProvider) == null) return const [];
-    ref.listen(realtimeSignalsProvider, (_, _) => ref.invalidateSelf());
-    final api = ref.watch(messagingApiProvider);
-    final list = await api.listConversations();
-    // Accusé « reçu » : les messages listés sont arrivés sur cet appareil.
-    for (final c in list) {
-      if (c.unreadCount > 0 && c.lastSentAt != null) {
-        unawaited(
-          api.markConversation(c.id, deliveredUpTo: c.lastSentAt).catchError((Object _) {}),
-        );
-      }
-    }
-    return list.where((c) => !c.archived).toList();
+    final cache = ref.watch(localCacheProvider);
+    await cache.ensureLoaded();
+    ref.listen(realtimeSignalsProvider, (_, next) {
+      if (next.value?.event == 'typing') return;
+      unawaited(refresh());
+    });
+    // Effacement local des messages expirés, même sans réseau.
+    final purge = Timer.periodic(purgeEvery, (_) => unawaited(cache.purgeExpired()));
+    ref.onDispose(purge.cancel);
+    ref.read(outboxProvider);
+    unawaited(Future<void>.microtask(refresh));
+    return cache.conversations;
   }
 
+  /// Synchronise avec le serveur ; hors connexion, la liste locale reste affichée.
   Future<void> refresh() async {
-    ref.invalidateSelf();
-    await future;
+    final api = ref.read(messagingApiProvider);
+    try {
+      final list = await api.listConversations();
+      state = AsyncData(list);
+      await ref.read(localCacheProvider).putConversations(list);
+      ref.read(offlineProvider.notifier).report(offline: false);
+      // Accusé « reçu » : les messages listés sont arrivés sur cet appareil.
+      for (final c in list) {
+        if (c.unreadCount > 0 && c.lastSentAt != null) {
+          unawaited(
+            api.markConversation(c.id, deliveredUpTo: c.lastSentAt).catchError((Object _) {}),
+          );
+        }
+      }
+    } on Object catch (e) {
+      if (_isNetwork(e)) {
+        ref.read(offlineProvider.notifier).report(offline: true);
+      } else if (!state.hasValue || (state.value?.isEmpty ?? true)) {
+        state = AsyncError(e, StackTrace.current);
+      }
+    }
+  }
+
+  /// Épingler / archiver (état personnel), affiché aussitôt puis confirmé.
+  Future<void> setFlags(String conversationId, {bool? pinned, bool? archived}) async {
+    final before = state.value ?? const [];
+    state = AsyncData([
+      for (final c in before)
+        c.id == conversationId ? c.copyWith(pinned: pinned, archived: archived) : c,
+    ]);
+    try {
+      await ref
+          .read(messagingApiProvider)
+          .setConversationFlags(conversationId, pinned: pinned, archived: archived);
+      await refresh();
+    } on Object {
+      state = AsyncData(before);
+      rethrow;
+    }
   }
 }
 
@@ -80,7 +283,7 @@ final conversationSummaryProvider = Provider.family<ConversationSummary?, String
 });
 
 // ------------------------------------------------------------------------
-// Conversation (écran 10, version de base du lot 2.2)
+// Conversation (écran 10) — cache local, file d'envoi, synchronisation
 // ------------------------------------------------------------------------
 class PendingMessage {
   const PendingMessage({
@@ -88,12 +291,16 @@ class PendingMessage {
     required this.body,
     this.failed = false,
     this.replyToId,
+    this.ttlSeconds,
   });
 
   final String clientId;
   final String body;
+
+  /// Refusé par le serveur (sinon : simplement en attente du réseau).
   final bool failed;
   final String? replyToId;
+  final int? ttlSeconds;
 }
 
 class ChatState {
@@ -114,16 +321,48 @@ class ChatController extends AsyncNotifier<ChatState> {
   ChatController(this.conversationId);
 
   final String conversationId;
+  DateTime? _lastTypingSent;
+
+  static const typingThrottle = Duration(seconds: 4);
+
+  LocalCache get _cache => ref.read(localCacheProvider);
+
+  List<PendingMessage> _pendingFrom(List<OutboxItem> outbox) => [
+    for (final o in outbox)
+      if (o.conversationId == conversationId)
+        PendingMessage(
+          clientId: o.clientId,
+          body: o.body,
+          failed: o.failed,
+          replyToId: o.replyToId,
+          ttlSeconds: o.ttlSeconds,
+        ),
+  ];
 
   @override
   Future<ChatState> build() async {
+    final cache = ref.watch(localCacheProvider);
+    await cache.ensureLoaded();
     ref.listen(realtimeSignalsProvider, (_, next) {
       final signal = next.value;
-      if (signal == null || signal.conversationId == conversationId) unawaited(reload());
+      if (signal == null || signal.event == 'typing') return;
+      if (signal.conversationId == null || signal.conversationId == conversationId) {
+        unawaited(reload());
+      }
     });
-    final messages = await ref.watch(messagingApiProvider).getMessages(conversationId);
-    _markRead(messages);
-    return ChatState(messages: messages, pending: state.value?.pending ?? const []);
+    ref.listen(outboxProvider, (prev, next) {
+      int mine(List<OutboxItem>? l) =>
+          (l ?? const <OutboxItem>[]).where((o) => o.conversationId == conversationId).length;
+      final current = state.value;
+      if (current != null) state = AsyncData(current.copyWith(pending: _pendingFrom(next)));
+      // Un message en attente vient de partir : on affiche la version du serveur.
+      if (mine(next) < mine(prev)) unawaited(reload());
+    });
+    unawaited(Future<void>.microtask(reload));
+    return ChatState(
+      messages: cache.messages(conversationId),
+      pending: _pendingFrom(ref.read(outboxProvider)),
+    );
   }
 
   void _markRead(List<ChatMessage> messages) {
@@ -145,75 +384,73 @@ class ChatController extends AsyncNotifier<ChatState> {
       final messages = await ref.read(messagingApiProvider).getMessages(conversationId);
       final current = state.value ?? const ChatState(messages: []);
       state = AsyncData(current.copyWith(messages: messages));
+      await _cache.putMessages(conversationId, messages);
+      ref.read(offlineProvider.notifier).report(offline: false);
       _markRead(messages);
-    } on Object {
-      // Réseau indisponible : on garde l'affichage actuel (filtré par expiration).
+    } on Object catch (e) {
+      // Hors connexion : on garde l'affichage local (toujours filtré par expiration).
+      if (_isNetwork(e)) ref.read(offlineProvider.notifier).report(offline: true);
     }
   }
 
-  /// Envoi avec affichage immédiat ; en cas d'échec, le message reste « à renvoyer »
-  /// avec le MÊME identifiant client (pas de doublon côté serveur).
+  /// Signale « en train d'écrire » au plus toutes les 4 s (sans contenu).
+  void notifyTyping() {
+    final now = DateTime.now();
+    if (_lastTypingSent != null && now.difference(_lastTypingSent!) < typingThrottle) return;
+    _lastTypingSent = now;
+    unawaited(
+      ref.read(messagingApiProvider).signalTyping(conversationId).catchError((Object _) {}),
+    );
+  }
+
+  /// Envoi : le message entre d'abord dans la file locale chiffrée (il survit à une
+  /// coupure ou à la fermeture de l'app), puis part ; hors connexion il attend et
+  /// repart seul, avec le MÊME identifiant client (pas de doublon côté serveur).
   Future<void> send(String text, {String? clientId, String? replyToId, int? ttlSeconds}) async {
     final body = text.trim();
     if (body.isEmpty) return;
-    final id = clientId ?? uuidV4();
-    final current = state.value ?? const ChatState(messages: []);
-    state = AsyncData(
-      current.copyWith(
-        pending: [
-          ...current.pending.where((p) => p.clientId != id),
-          PendingMessage(clientId: id, body: body, replyToId: replyToId),
-        ],
-      ),
-    );
-    try {
-      final sent = await ref
-          .read(messagingApiProvider)
-          .sendMessage(
-            conversationId: conversationId,
-            clientMsgId: id,
-            body: body,
-            replyToId: replyToId,
-            ttlSeconds: ttlSeconds,
+    final outbox = ref.read(outboxProvider.notifier);
+    final existing = ref.read(outboxProvider).where((o) => o.clientId == clientId).firstOrNull;
+    final item =
+        existing?.copyWith(failed: false) ??
+        OutboxItem(
+          clientId: clientId ?? uuidV4(),
+          conversationId: conversationId,
+          body: body,
+          createdAt: DateTime.now(),
+          replyToId: replyToId,
+          ttlSeconds: ttlSeconds,
+        );
+    await outbox.enqueue(item);
+    final sent = await outbox.sendOne(item);
+    if (sent == null) return;
+    final now = state.value ?? const ChatState(messages: []);
+    // La réponse affiche tout de suite la citation (le serveur la renverra ensuite).
+    final quoted = item.replyToId == null
+        ? null
+        : now.messages.where((m) => m.id == item.replyToId && !m.isDeleted).firstOrNull?.body;
+    final shown = quoted == null
+        ? sent
+        : ChatMessage(
+            id: sent.id,
+            senderId: sent.senderId,
+            body: sent.body,
+            replyToId: item.replyToId,
+            replyPreview: quoted.length > 120 ? quoted.substring(0, 120) : quoted,
+            sentAt: sent.sentAt,
+            expiresAt: sent.expiresAt,
+            updatedAt: sent.updatedAt,
           );
-      final now = state.value ?? current;
-      // La réponse affiche tout de suite la citation (le serveur la renverra ensuite).
-      final quoted = replyToId == null
-          ? null
-          : now.messages.where((m) => m.id == replyToId && !m.isDeleted).firstOrNull?.body;
-      final shown = quoted == null
-          ? sent
-          : ChatMessage(
-              id: sent.id,
-              senderId: sent.senderId,
-              body: sent.body,
-              replyToId: replyToId,
-              replyPreview: quoted.length > 120 ? quoted.substring(0, 120) : quoted,
-              sentAt: sent.sentAt,
-              expiresAt: sent.expiresAt,
-              updatedAt: sent.updatedAt,
-            );
-      state = AsyncData(
-        ChatState(
-          messages: [...now.messages.where((m) => m.id != sent.id), shown],
-          pending: now.pending.where((p) => p.clientId != id).toList(),
-        ),
-      );
-      ref.invalidate(conversationsProvider);
-    } on Object catch (e) {
-      final now = state.value ?? current;
-      state = AsyncData(
-        now.copyWith(
-          pending: [
-            for (final p in now.pending)
-              p.clientId == id
-                  ? PendingMessage(clientId: id, body: body, failed: true, replyToId: replyToId)
-                  : p,
-          ],
-        ),
-      );
-      throw toAppFailure(e);
-    }
+    final messages = [...now.messages.where((m) => m.id != sent.id), shown];
+    state = AsyncData(now.copyWith(messages: messages));
+    await _cache.putMessages(conversationId, messages);
+    ref.invalidate(conversationsProvider);
+  }
+
+  Future<void> retry(String clientId) {
+    final item = ref.read(outboxProvider).where((o) => o.clientId == clientId).firstOrNull;
+    if (item == null) return Future.value();
+    return send(item.body, clientId: clientId);
   }
 
   Future<void> _act(Future<void> Function(MessagingApi api) run) async {
@@ -238,13 +475,13 @@ class ChatController extends AsyncNotifier<ChatState> {
   Future<void> deleteForEveryone(String messageId) =>
       _act((api) => api.deleteForEveryone(messageId));
 
-  /// Masquage immédiat à l'écran, puis confirmation serveur.
-  Future<void> deleteForMe(String messageId) {
+  /// Masquage immédiat à l'écran et sur le téléphone, puis confirmation serveur.
+  Future<void> deleteForMe(String messageId) async {
     final now = state.value;
     if (now != null) {
-      state = AsyncData(
-        now.copyWith(messages: now.messages.where((m) => m.id != messageId).toList()),
-      );
+      final messages = now.messages.where((m) => m.id != messageId).toList();
+      state = AsyncData(now.copyWith(messages: messages));
+      await _cache.putMessages(conversationId, messages);
     }
     return _act((api) => api.deleteForMe(messageId));
   }
@@ -260,13 +497,8 @@ class ChatController extends AsyncNotifier<ChatState> {
     );
   }
 
-  void discardPending(String clientId) {
-    final now = state.value;
-    if (now == null) return;
-    state = AsyncData(
-      now.copyWith(pending: now.pending.where((p) => p.clientId != clientId).toList()),
-    );
-  }
+  Future<void> discardPending(String clientId) =>
+      ref.read(outboxProvider.notifier).discard(clientId);
 }
 
 /// Règles affichées côté client (le serveur reste l'autorité et refuse au-delà).

@@ -19,6 +19,8 @@ abstract interface class MessagingApi {
     int? ttlSeconds,
   });
   Future<int> setConversationTtl(String conversationId, int seconds);
+  Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived});
+  Future<void> signalTyping(String conversationId);
   Future<void> markConversation(
     String conversationId, {
     DateTime? deliveredUpTo,
@@ -137,6 +139,16 @@ class SupabaseMessagingApi implements MessagingApi {
       params: {'p_conversation_id': conversationId, 'p_ttl_seconds': seconds},
     ) as num).toInt(),
   );
+
+  @override
+  Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived}) => _call(
+    'set_conversation_flags',
+    {'p_conversation_id': conversationId, 'p_pinned': pinned, 'p_archived': archived},
+  );
+
+  @override
+  Future<void> signalTyping(String conversationId) =>
+      _call('signal_typing', {'p_conversation_id': conversationId});
 
   Future<void> _call(String fn, Map<String, dynamic> params) =>
       _guard(() => _client.rpc<dynamic>(fn, params: params));

@@ -28,7 +28,8 @@ class BrandScaffold extends StatelessWidget {
       floatingActionButton: floatingActionButton,
       body: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(PrivioRadius.large + 4)),
-        child: ColoredBox(
+        // Material (et non ColoredBox) : l’effet du toucher reste visible sur les listes.
+        child: Material(
           color: p.sheet,
           child: SizedBox.expand(child: body),
         ),

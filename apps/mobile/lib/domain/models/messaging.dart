@@ -63,6 +63,63 @@ class ConversationSummary {
 
   String get title => peerDeleted ? 'Compte supprimé' : (peerDisplayName ?? 'Inconnu');
 
+  Map<String, dynamic> toJson() => {
+    'conversation_id': id,
+    'peer_id': peerId,
+    'peer_handle': peerHandle,
+    'peer_display_name': peerDisplayName,
+    'peer_deleted': peerDeleted,
+    'blocked': blocked,
+    'unread_count': unreadCount,
+    'pinned': pinned,
+    'archived': archived,
+    'sort_at': sortAt.toUtc().toIso8601String(),
+    'last_message_id': lastMessageId,
+    'last_sender_id': lastSenderId,
+    'last_body': lastBody,
+    'last_deleted': lastDeleted,
+    'last_sent_at': lastSentAt?.toUtc().toIso8601String(),
+    'last_expires_at': lastExpiresAt?.toUtc().toIso8601String(),
+    'last_kind': lastKind,
+    'ttl_seconds': ttlSeconds,
+    'peer_delivered_up_to': peerDeliveredUpTo?.toUtc().toIso8601String(),
+    'peer_read_up_to': peerReadUpTo?.toUtc().toIso8601String(),
+  };
+
+  /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
+  ConversationSummary withoutExpiredLast(DateTime now) {
+    if (lastExpiresAt == null || lastExpiresAt!.isAfter(now)) return this;
+    return copyWith(clearLast: true, unreadCount: 0);
+  }
+
+  ConversationSummary copyWith({
+    bool? pinned,
+    bool? archived,
+    int? unreadCount,
+    bool clearLast = false,
+  }) => ConversationSummary(
+    id: id,
+    peerId: peerId,
+    peerHandle: peerHandle,
+    peerDisplayName: peerDisplayName,
+    peerDeleted: peerDeleted,
+    blocked: blocked,
+    unreadCount: unreadCount ?? this.unreadCount,
+    pinned: pinned ?? this.pinned,
+    archived: archived ?? this.archived,
+    sortAt: sortAt,
+    lastMessageId: clearLast ? null : lastMessageId,
+    lastSenderId: clearLast ? null : lastSenderId,
+    lastBody: clearLast ? null : lastBody,
+    lastDeleted: clearLast ? false : lastDeleted,
+    lastSentAt: clearLast ? null : lastSentAt,
+    lastExpiresAt: clearLast ? null : lastExpiresAt,
+    lastKind: clearLast ? 'text' : lastKind,
+    ttlSeconds: ttlSeconds,
+    peerDeliveredUpTo: peerDeliveredUpTo,
+    peerReadUpTo: peerReadUpTo,
+  );
+
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
 
   factory ConversationSummary.fromJson(Map<String, dynamic> j) => ConversationSummary(
@@ -132,6 +189,23 @@ class ChatMessage {
   /// Message système « durée réglée » : nouvelle durée en secondes, sinon null.
   int? get systemTtlSeconds =>
       isSystem && (body ?? '').startsWith('ttl:') ? int.tryParse(body!.substring(4)) : null;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'kind': kind,
+    'sender_id': senderId,
+    'body': body,
+    'reply_to_id': replyToId,
+    'reply_preview': replyPreview,
+    'sent_at': sentAt.toUtc().toIso8601String(),
+    'expires_at': expiresAt.toUtc().toIso8601String(),
+    'edited_at': editedAt?.toUtc().toIso8601String(),
+    'deleted_at': deletedAt?.toUtc().toIso8601String(),
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+    'reactions': [
+      for (final r in reactions) {'user_id': r.userId, 'emoji': r.emoji},
+    ],
+  };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
   bool isVisibleAt(DateTime now) => expiresAt.isAfter(now);

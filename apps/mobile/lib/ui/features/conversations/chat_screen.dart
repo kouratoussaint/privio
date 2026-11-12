@@ -15,6 +15,7 @@ import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/privacy_pattern.dart';
 import '../../core/widgets/state_views.dart';
+import '../home/discussions_tab.dart' show OfflineBanner;
 
 /// Réactions proposées (une seule par personne et par message).
 const kQuickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -50,6 +51,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ChatMessage? _replyTo;
   ChatMessage? _editing;
   int? _nextTtl;
+  bool _searching = false;
+  final _searchCtrl = TextEditingController();
 
   ChatController get _chat => ref.read(chatProvider(widget.conversationId).notifier);
 
@@ -72,6 +75,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _tick?.cancel();
     _poll?.cancel();
     _composer.dispose();
+    _searchCtrl.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -186,8 +190,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     setState(() => _nextTtl = picked == cap ? null : picked);
   }
 
-  Future<void> _retry(PendingMessage p) =>
-      _guard(() => _chat.send(p.body, clientId: p.clientId, replyToId: p.replyToId));
+  Future<void> _retry(PendingMessage p) => _guard(() => _chat.retry(p.clientId));
 
   Future<void> _showActions(ChatMessage m, {required bool mine}) async {
     if (m.isDeleted) return;
@@ -299,6 +302,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final p = PrivioPalette.of(context);
     final now = DateTime.now();
     final title = summary?.title ?? 'Discussion';
+    final typing =
+        !(summary?.blocked ?? false) && ref.watch(typingProvider).contains(widget.conversationId);
+    final offline = ref.watch(offlineProvider);
+    final query = _searchCtrl.text.trim().toLowerCase();
 
     return Scaffold(
       backgroundColor: p.chatBackground,
@@ -306,7 +313,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         titleSpacing: 0,
         toolbarHeight: 64,
         actions: [
-          if (!(summary?.blocked ?? false))
+          IconButton(
+            key: const Key('chat.search'),
+            tooltip: _searching ? 'Fermer la recherche' : 'Rechercher dans la discussion',
+            onPressed: () => setState(() {
+              _searching = !_searching;
+              _searchCtrl.clear();
+            }),
+            icon: Icon(_searching ? Icons.close : Icons.search),
+          ),
+          if (!(summary?.blocked ?? false) && !_searching)
             IconButton(
               key: const Key('chat.ttl'),
               tooltip: 'Durée des messages : ${formatTtl(summary?.ttlSeconds ?? 259200)}',
@@ -314,52 +330,92 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               icon: const Icon(Icons.timer_outlined),
             ),
         ],
-        title: InkWell(
-          key: const Key('chat.contact'),
-          borderRadius: BorderRadius.circular(PrivioRadius.medium),
-          onTap: summary?.peerId == null
-              ? null
-              : () => context.push(Routes.contact(widget.conversationId)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
-            child: Row(
-              children: [
-                InitialAvatar(
-                  name: title,
-                  seed: summary?.peerId ?? widget.conversationId,
-                  radius: 20,
-                  ring: p.onHeaderMuted,
+        title: _searching
+            ? TextField(
+                key: const Key('chat.search_input'),
+                controller: _searchCtrl,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                style: TextStyle(color: p.onHeader),
+                cursorColor: p.onHeader,
+                decoration: InputDecoration(
+                  hintText: 'Rechercher dans les messages',
+                  hintStyle: TextStyle(color: p.onHeaderMuted),
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                 ),
-                const SizedBox(width: PrivioSpacing.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+              )
+            : InkWell(
+                key: const Key('chat.contact'),
+                borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                onTap: summary?.peerId == null
+                    ? null
+                    : () => context.push(Routes.contact(widget.conversationId)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
+                  child: Row(
                     children: [
-                      Text(title, overflow: TextOverflow.ellipsis),
-                      if (summary?.peerHandle != null)
-                        Text(
-                          '@${summary!.peerHandle}',
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: p.onHeaderMuted),
+                      InitialAvatar(
+                        name: title,
+                        seed: summary?.peerId ?? widget.conversationId,
+                        radius: 20,
+                        ring: p.onHeaderMuted,
+                      ),
+                      const SizedBox(width: PrivioSpacing.m),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(title, overflow: TextOverflow.ellipsis),
+                            if (typing)
+                              Text(
+                                'en train d’écrire…',
+                                key: const Key('chat.typing'),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: p.onHeaderMuted, fontStyle: FontStyle.italic),
+                              )
+                            else if (summary?.peerHandle != null)
+                              Text(
+                                '@${summary!.peerHandle}',
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: p.onHeaderMuted),
+                              ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
       body: PrivacyPattern(
         child: Column(
           children: [
+            if (offline)
+              const Padding(
+                padding: EdgeInsets.only(top: PrivioSpacing.s),
+                child: OfflineBanner(),
+              ),
             Expanded(
               child: switch (chat) {
                 AsyncData(:final value) => _MessageList(
-                  messages: value.messages.where((m) => m.isVisibleAt(now)).toList(),
-                  pending: value.pending,
+                  messages: value.messages
+                      .where((m) => m.isVisibleAt(now))
+                      .where(
+                        (m) =>
+                            query.isEmpty ||
+                            (!m.isDeleted &&
+                                !m.isSystem &&
+                                (m.body ?? '').toLowerCase().contains(query)),
+                      )
+                      .toList(),
+                  searching: query.isNotEmpty,
+                  offline: offline,
+                  pending: query.isEmpty ? value.pending : const [],
                   me: me,
                   now: now,
                   summary: summary,
@@ -411,6 +467,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 focusNode: _focus,
                 editing: _editing != null,
                 onSend: _submit,
+                onChanged: (_) => _chat.notifyTyping(),
                 onTtlTap: _editing != null ? null : () => _chooseMessageTtl(summary),
                 ttlActive: _nextTtl != null,
               ),
@@ -445,7 +502,12 @@ class _MessageList extends StatelessWidget {
     required this.ttlSeconds,
     required this.peerName,
     required this.onTtlTap,
+    this.searching = false,
+    this.offline = false,
   });
+
+  final bool searching;
+  final bool offline;
 
   final int ttlSeconds;
   final String peerName;
@@ -461,6 +523,13 @@ class _MessageList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (searching && messages.isEmpty) {
+      return const EmptyView(
+        icon: Icons.search_off,
+        title: 'Aucun message ne correspond',
+        message: 'La recherche porte sur les messages encore présents sur ce téléphone.',
+      );
+    }
     if (messages.isEmpty && pending.isEmpty) {
       return const EmptyView(
         icon: Icons.timer_outlined,
@@ -513,13 +582,15 @@ class _MessageList extends StatelessWidget {
           key: Key('pending.${pm.clientId}'),
           outgoing: true,
           text: pm.body,
-          status: pm.failed ? 'Échec de l\'envoi · toucher pour réessayer' : 'Envoi…',
+          status: pm.failed
+              ? 'Échec de l\'envoi · toucher pour réessayer'
+              : (offline ? 'En attente du réseau · toucher pour réessayer' : 'Envoi…'),
           failed: pm.failed,
-          onTap: pm.failed ? () => onRetry(pm) : null,
+          onTap: () => onRetry(pm),
         ),
       );
     }
-    items.add(_ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap));
+    if (!searching) items.add(_ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap));
     return ListView(
       reverse: true,
       padding: const EdgeInsets.fromLTRB(
@@ -959,8 +1030,10 @@ class _Composer extends StatelessWidget {
     required this.onSend,
     this.onTtlTap,
     this.ttlActive = false,
+    this.onChanged,
   });
 
+  final ValueChanged<String>? onChanged;
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool editing;
@@ -1018,6 +1091,7 @@ class _Composer extends StatelessWidget {
                       child: TextField(
                         key: const Key('chat.input'),
                         controller: controller,
+                        onChanged: onChanged,
                         focusNode: focusNode,
                         minLines: 1,
                         maxLines: 5,

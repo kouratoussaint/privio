@@ -9,6 +9,7 @@ import '../ui/features/conversations/contact_screen.dart';
 import '../ui/features/conversations/new_conversation_screen.dart';
 import '../ui/features/auth/phone_screen.dart';
 import '../ui/features/auth/welcome_screen.dart';
+import '../ui/features/home/archived_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
 import '../ui/features/home/groups_tab.dart';
 import '../ui/features/home/home_shell.dart';
@@ -46,6 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.permissions, builder: (_, _) => const PermissionsScreen()),
       GoRoute(path: Routes.newConversation, builder: (_, _) => const NewConversationScreen()),
       GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
+      GoRoute(path: Routes.archived, builder: (_, _) => const ArchivedScreen()),
       GoRoute(
         path: '/chat/:id',
         builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']!),

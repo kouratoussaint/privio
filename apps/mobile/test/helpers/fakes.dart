@@ -10,6 +10,7 @@ import 'package:privio/data/services/account_api.dart';
 import 'package:privio/data/services/auth_service.dart';
 import 'package:privio/data/services/messaging_api.dart';
 import 'package:privio/data/services/realtime_service.dart';
+import 'package:privio/data/storage/local_store.dart';
 import 'package:privio/data/services/permission_gateway.dart';
 import 'package:privio/data/storage/local_flags.dart';
 import 'package:privio/domain/models/account.dart';
@@ -136,6 +137,17 @@ class FakeMessagingApi implements MessagingApi {
   final List<String> sentClientIds = [];
   bool failNextSend = false;
   int conversationTtl = 72 * 3600;
+
+  /// Coupure réseau simulée : tout appel échoue comme sans connexion.
+  bool offline = false;
+  bool pinned = false;
+  bool archived = false;
+  int typingSignals = 0;
+
+  void _net() {
+    if (offline) throw const AppFailure(FailureCode.network);
+  }
+
   final List<int?> sentTtls = [];
   DateTime? peerReadUpTo;
   DateTime? peerDeliveredUpTo;
@@ -202,6 +214,16 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   @override
+  Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived}) async {
+    _net();
+    this.pinned = pinned ?? this.pinned;
+    this.archived = archived ?? this.archived;
+  }
+
+  @override
+  Future<void> signalTyping(String conversationId) async => typingSignals++;
+
+  @override
   Future<void> deleteForMe(String messageId) async => hiddenForMe.add(messageId);
 
   @override
@@ -236,8 +258,6 @@ class FakeMessagingApi implements MessagingApi {
       peerDeleted: false,
       blocked: blockedFlag ?? blocked.contains(bob.id),
       unreadCount: list.where((m) => m.senderId != me).length,
-      pinned: false,
-      archived: false,
       sortAt: last?.sentAt ?? DateTime.now(),
       lastMessageId: last?.id,
       lastSenderId: last?.senderId,
@@ -246,6 +266,8 @@ class FakeMessagingApi implements MessagingApi {
       lastExpiresAt: last?.expiresAt,
       lastKind: last?.kind ?? 'text',
       ttlSeconds: conversationTtl,
+      pinned: pinned,
+      archived: archived,
       peerReadUpTo: peerReadUpTo,
       peerDeliveredUpTo: peerDeliveredUpTo,
     );
@@ -267,7 +289,14 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   @override
-  Future<List<ConversationSummary>> listConversations() async => [
+  Future<List<ConversationSummary>> listConversations() async => _list();
+
+  Future<List<ConversationSummary>> _list() async {
+    _net();
+    return _listRaw();
+  }
+
+  Future<List<ConversationSummary>> _listRaw() async => [
     for (final id in conversations.keys) _summary(id),
   ];
 
@@ -292,7 +321,12 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   @override
-  Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50}) async => [
+  Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50}) async {
+    _net();
+    return _messagesFor(conversationId);
+  }
+
+  List<ChatMessage> _messagesFor(String conversationId) => [
     for (final m in messages[conversationId] ?? const <ChatMessage>[])
       if (!hiddenForMe.contains(m.id))
         if (m.replyToId == null)
@@ -333,6 +367,7 @@ class FakeMessagingApi implements MessagingApi {
   }) async {
     sentClientIds.add(clientMsgId);
     sentTtls.add(ttlSeconds);
+    _net();
     if (failNextSend) {
       failNextSend = false;
       throw const AppFailure(FailureCode.network);
@@ -387,8 +422,8 @@ class FakeRealtimeService implements RealtimeService {
   @override
   ValueListenable<RealtimeStatus> get status => _status;
 
-  void emit(String conversationId) =>
-      _controller.add(RealtimeSignal(event: 'message', conversationId: conversationId));
+  void emit(String conversationId, {String event = 'message'}) =>
+      _controller.add(RealtimeSignal(event: event, conversationId: conversationId));
 
   @override
   Stream<RealtimeSignal> get signals => _controller.stream;
@@ -422,6 +457,9 @@ class TestDeps {
   final FakeLocalFlags flags;
   final permissions = FakePermissionGateway();
   final FakeMessagingApi messaging;
+
+  /// Stockage local partagé (permet de simuler un redémarrage de l'application).
+  final store = MemoryLocalStore();
   final realtime = FakeRealtimeService();
 
   List<Override> get overrides => [
@@ -431,6 +469,7 @@ class TestDeps {
     permissionGatewayProvider.overrideWithValue(permissions),
     appVersionProvider.overrideWithValue('0.1.0-test'),
     messagingApiProvider.overrideWithValue(messaging),
+    localStoreProvider.overrideWithValue(store),
     realtimeServiceProvider.overrideWithValue(realtime),
   ];
 

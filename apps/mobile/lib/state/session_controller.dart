@@ -94,6 +94,8 @@ class SessionController extends AsyncNotifier<SessionState> {
       _lastSignedIn = false;
       await auth.signOut();
       await flags.clearAccountScoped();
+      // Compte ouvert ailleurs : plus aucun message lisible sur ce téléphone.
+      await ref.read(localCacheProvider).wipe();
       return SessionState(
         onboardingDone: onboardingDone,
         signedIn: false,
@@ -152,6 +154,8 @@ class SessionController extends AsyncNotifier<SessionState> {
     _lastSignedIn = false;
     await ref.read(authServiceProvider).signOut();
     await ref.read(localFlagsProvider).clearAccountScoped();
+    // Déconnexion : le cache chiffré et sa clé sont détruits.
+    await ref.read(localCacheProvider).wipe();
     _pendingNotice = null;
     await _reload();
   }

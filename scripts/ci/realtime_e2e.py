@@ -67,5 +67,19 @@ async def main():
         ok(inner.get("conversation_id") == CONV, "le signal désigne la bonne discussion", json.dumps(inner))
         ok(texte not in json.dumps(got), "le signal ne contient pas le texte du message", json.dumps(got)[:300])
 
+        # « en train d'écrire » : A écrit → B reçoit « typing » (sans contenu).
+        http("/rest/v1/rpc/signal_typing", {"p_conversation_id": CONV}, tok=TA)
+        typing = None
+        try:
+            while typing is None:
+                m = json.loads(await asyncio.wait_for(ws.recv(), 10))
+                if m["event"] == "broadcast" and m["payload"].get("event") == "typing":
+                    typing = m
+        except asyncio.TimeoutError:
+            pass
+        ok(typing is not None, "B reçoit « en train d'écrire » quand A écrit", "aucun signal en 10 s")
+        ok(typing["payload"].get("payload", {}).get("conversation_id") == CONV,
+           "le signal de saisie désigne la bonne discussion", json.dumps(typing)[:300])
+
 asyncio.run(main())
 print("Test temps réel bout à bout : OK")
