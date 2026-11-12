@@ -20,10 +20,24 @@ void main() {
     expect(redirectFor(SessionStage.needsPermissions, Routes.discussions), Routes.permissions);
   });
 
-  test('prêt : accès aux trois onglets, pas de retour aux écrans de connexion', () {
-    for (final r in [Routes.discussions, Routes.groups, Routes.settings]) {
-      expect(redirectFor(SessionStage.ready, r), isNull);
+  test('prêt : accès aux onglets et aux discussions, pas de retour aux écrans de connexion', () {
+    for (final r in [
+      Routes.discussions,
+      Routes.groups,
+      Routes.settings,
+      Routes.newConversation,
+      Routes.blockedUsers,
+      Routes.chat('abc'),
+      Routes.contact('abc'),
+    ]) {
+      expect(redirectFor(SessionStage.ready, r), isNull, reason: r);
     }
-    expect(redirectFor(SessionStage.ready, Routes.otp), Routes.discussions);
+    for (final r in [Routes.otp, Routes.welcome, Routes.profileSetup, Routes.splash]) {
+      expect(redirectFor(SessionStage.ready, r), Routes.discussions, reason: r);
+    }
+  });
+
+  test('déconnecté : aucune discussion accessible', () {
+    expect(redirectFor(SessionStage.signedOut, Routes.chat('abc')), Routes.welcome);
   });
 }

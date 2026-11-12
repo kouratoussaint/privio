@@ -6,8 +6,11 @@ import 'app.dart';
 import 'core/config/env.dart';
 import 'data/services/account_api.dart';
 import 'data/services/auth_service.dart';
+import 'data/services/messaging_api.dart';
+import 'data/services/realtime_service.dart';
 import 'data/storage/local_flags.dart';
 import 'data/storage/secure_session_storage.dart';
+import 'state/messaging_providers.dart';
 import 'state/providers.dart';
 
 Future<void> main() async {
@@ -48,6 +51,8 @@ Future<void> main() async {
         authServiceProvider.overrideWithValue(SupabaseAuthService(client.auth)),
         accountApiProvider.overrideWithValue(SupabaseAccountApi(client)),
         localFlagsProvider.overrideWithValue(SharedPrefsLocalFlags()),
+        messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
+        realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
       ],
       child: const PrivioApp(),
     ),

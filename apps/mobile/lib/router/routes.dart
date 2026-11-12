@@ -11,9 +11,16 @@ abstract final class Routes {
   static const discussions = '/discussions';
   static const groups = '/groups';
   static const settings = '/settings';
+  static const newConversation = '/new-conversation';
+  static const blockedUsers = '/blocked-users';
+  static String chat(String id) => '/chat/$id';
+  static String contact(String conversationId) => '/chat/$conversationId/contact';
 
   static const signedOutRoutes = {welcome, phone, otp};
   static const homeRoutes = {discussions, groups, settings};
+
+  /// Écrans du parcours d'accès : inaccessibles une fois le compte prêt.
+  static const accessRoutes = {splash, onboarding, welcome, phone, otp, profileSetup, permissions};
 }
 
 /// Redirection pure, testée unitairement. `stage == null` : chargement ou erreur.
@@ -31,7 +38,6 @@ String? redirectFor(SessionStage? stage, String location) {
     case SessionStage.needsPermissions:
       return goTo(Routes.permissions);
     case SessionStage.ready:
-      final inHome = Routes.homeRoutes.any((r) => location == r || location.startsWith('$r/'));
-      return inHome ? null : Routes.discussions;
+      return Routes.accessRoutes.contains(location) ? Routes.discussions : null;
   }
 }

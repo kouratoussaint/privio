@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../router/routes.dart';
 import '../../../state/providers.dart';
 import '../../../state/session_controller.dart';
 
@@ -78,6 +80,13 @@ class SettingsTab extends ConsumerWidget {
               'Les personnes qui connaissent votre numéro pourront vous trouver. '
               'Désactivé par défaut ; votre identifiant Privio suffit pour être trouvé.',
             ),
+          ),
+          ListTile(
+            key: const Key('settings.blocked'),
+            leading: const Icon(Icons.block),
+            title: const Text('Personnes bloquées'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.blockedUsers),
           ),
           const Divider(),
           Text('Appareil', style: theme.textTheme.titleSmall),

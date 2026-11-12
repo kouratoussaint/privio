@@ -21,6 +21,11 @@ abstract final class PhoneNumber {
     return _e164.hasMatch(v) ? v : null;
   }
 
+  /// Une saisie composée uniquement de chiffres (avec + ou espaces) est un numéro ;
+  /// sinon c'est un identifiant Privio.
+  static bool looksLikePhone(String input) =>
+      RegExp(r'^[+0-9\s]+$').hasMatch(input.trim()) && normalize(input) != null;
+
   /// Affichage lisible : « +226 70 00 00 01 » pour le Burkina, E.164 brut sinon.
   static String format(String e164) {
     if (e164.startsWith(defaultCountryCode) && e164.length == 12) {

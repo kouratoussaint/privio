@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../state/session_controller.dart';
 import '../ui/features/auth/otp_screen.dart';
+import '../ui/features/conversations/chat_screen.dart';
+import '../ui/features/conversations/contact_screen.dart';
+import '../ui/features/conversations/new_conversation_screen.dart';
 import '../ui/features/auth/phone_screen.dart';
 import '../ui/features/auth/welcome_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
@@ -12,6 +15,7 @@ import '../ui/features/home/home_shell.dart';
 import '../ui/features/onboarding/onboarding_screen.dart';
 import '../ui/features/permissions/permissions_screen.dart';
 import '../ui/features/profile_setup/profile_setup_screen.dart';
+import '../ui/features/settings/blocked_users_screen.dart';
 import '../ui/features/settings/settings_tab.dart';
 import '../ui/features/splash/splash_screen.dart';
 import 'routes.dart';
@@ -40,6 +44,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.profileSetup, builder: (_, _) => const ProfileSetupScreen()),
       GoRoute(path: Routes.permissions, builder: (_, _) => const PermissionsScreen()),
+      GoRoute(path: Routes.newConversation, builder: (_, _) => const NewConversationScreen()),
+      GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'contact',
+            builder: (_, state) => ContactScreen(conversationId: state.pathParameters['id']!),
+          ),
+        ],
+      ),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(shell: shell),
         branches: [
