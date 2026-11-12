@@ -18,6 +18,8 @@ class OutboxItem {
     this.failed = false,
     this.kind = 'text',
     this.durationMs,
+    this.width,
+    this.height,
   });
 
   final String clientId;
@@ -33,10 +35,16 @@ class OutboxItem {
   /// Vocal : durée mesurée sur le téléphone (affichage ; le serveur mesure à nouveau).
   final int? durationMs;
 
+  /// Photo : dimensions (affichage en attente d'envoi) ; [body] porte la légende.
+  final int? width;
+  final int? height;
+
   /// Refusé par le serveur pour une autre raison que le réseau (ex. blocage).
   final bool failed;
 
   bool get isVoice => kind == 'voice';
+  bool get isPhoto => kind == 'photo';
+  bool get hasMedia => isVoice || isPhoto;
 
   /// Un message jamais parti n'attend pas indéfiniment : 72 h au plus.
   DateTime get staleAt => createdAt.add(const Duration(hours: 72));
@@ -51,6 +59,8 @@ class OutboxItem {
     ttlSeconds: ttlSeconds,
     kind: kind,
     durationMs: durationMs,
+    width: width,
+    height: height,
     failed: failed ?? this.failed,
   );
 
@@ -64,6 +74,8 @@ class OutboxItem {
     'failed': failed,
     'kind': kind,
     'duration_ms': durationMs,
+    'width': width,
+    'height': height,
   };
 
   factory OutboxItem.fromJson(Map<String, dynamic> j) => OutboxItem(
@@ -76,6 +88,8 @@ class OutboxItem {
     failed: j['failed'] as bool? ?? false,
     kind: j['kind'] as String? ?? 'text',
     durationMs: (j['duration_ms'] as num?)?.toInt(),
+    width: (j['width'] as num?)?.toInt(),
+    height: (j['height'] as num?)?.toInt(),
   );
 }
 
@@ -91,6 +105,13 @@ class LocalCache {
 
   static String messageMediaKey(String messageId) => 'msg-$messageId';
   static String outboxMediaKey(String clientId) => 'out-$clientId';
+
+  /// Photo de profil : la clé suit le chemin (une nouvelle photo = un nouveau chemin).
+  static String avatarMediaKey(String avatarPath) {
+    final safe = avatarPath.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final key = 'av-$safe';
+    return key.length <= 80 ? key : key.substring(0, 80);
+  }
 
   final LocalStore _store;
   final MediaVault _vault;
@@ -159,9 +180,9 @@ class LocalCache {
 
   Future<void> putMessages(String conversationId, List<ChatMessage> list) {
     _messages[conversationId] = List.of(list);
-    // Vocal supprimé pour tous : son effacé du téléphone aussitôt.
+    // Vocal ou photo supprimé pour tous : fichier effacé du téléphone aussitôt.
     for (final m in list) {
-      if (m.isVoice && m.isDeleted) _forgetMedia(messageMediaKey(m.id));
+      if ((m.isVoice || m.isPhoto) && m.isDeleted) _forgetMedia(messageMediaKey(m.id));
     }
     return _persist();
   }

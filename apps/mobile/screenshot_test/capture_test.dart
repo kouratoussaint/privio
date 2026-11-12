@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
@@ -110,6 +111,51 @@ Future<void> _shot(WidgetTester tester, String name, {bool settle = true}) async
   File('$_outDir/$name.png').writeAsBytesSync(bytes.buffer.asUint8List());
 }
 
+/// Paysage de démonstration (ciel, soleil, collines) pour les captures photo.
+Uint8List _landscape({int w = 960, int h = 720}) {
+  final image = img.Image(width: w, height: h);
+  for (var y = 0; y < h; y++) {
+    final t = y / h;
+    img.drawLine(
+      image,
+      x1: 0,
+      y1: y,
+      x2: w - 1,
+      y2: y,
+      color: img.ColorRgb8((250 - 60 * t).round(), (170 + 40 * t).round(), (120 + 100 * t).round()),
+    );
+  }
+  img.fillCircle(
+    image,
+    x: (w * 0.7).round(),
+    y: (h * 0.35).round(),
+    radius: 70,
+    color: img.ColorRgb8(255, 236, 160),
+  );
+  img.fillCircle(
+    image,
+    x: (w * 0.2).round(),
+    y: h + 260,
+    radius: 480,
+    color: img.ColorRgb8(70, 120, 80),
+  );
+  img.fillCircle(
+    image,
+    x: (w * 0.85).round(),
+    y: h + 320,
+    radius: 520,
+    color: img.ColorRgb8(50, 95, 65),
+  );
+  return img.encodeJpg(image, quality: 85);
+}
+
+Uint8List _portrait() {
+  final image = img.Image(width: 256, height: 256)..clear(img.ColorRgb8(120, 70, 210));
+  img.fillCircle(image, x: 128, y: 100, radius: 52, color: img.ColorRgb8(250, 215, 180));
+  img.fillCircle(image, x: 128, y: 300, radius: 120, color: img.ColorRgb8(30, 40, 90));
+  return img.encodeJpg(image, quality: 85);
+}
+
 TestDeps _ready() {
   final deps =
       TestDeps(
@@ -121,8 +167,17 @@ TestDeps _ready() {
           userId: 'u1',
           phoneE164: '+22670000001',
           phoneDiscoverable: false,
-          profile: Profile(handle: 'toussaint_bf', displayName: 'Toussaint'),
+          profile: Profile(
+            handle: 'toussaint_bf',
+            displayName: 'Toussaint',
+            avatarPath: 'u1/moi.jpg',
+          ),
         );
+  deps.messaging
+    ..storedAvatars['u1/moi.jpg'] = _portrait()
+    ..storedAvatars['u2/bob.jpg'] = _portrait()
+    ..bobAvatarPath = 'u2/bob.jpg';
+  deps.photos.photo = _landscape();
   return deps;
 }
 
@@ -214,6 +269,30 @@ void main() {
       deps.audio.emitPosition(const Duration(seconds: 5));
       await tester.pump();
       await _shot(tester, '14_vocal_conversation_$suffix');
+      await deps.audio.stop();
+      deps.audio.finish();
+
+      // 13 / 15 — photos (lot 3.2) : choix avec compteur, aperçu et légende, bulle, plein écran
+      await tester.tap(find.byKey(const Key('composer.photo')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '13_photo_choix_$suffix');
+      await tester.tap(find.byKey(const Key('photo.gallery')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('photo.caption')), 'Coucher de soleil à Ouaga');
+      await tester.pumpAndSettle();
+      await _shot(tester, '13_photo_apercu_$suffix');
+      await tester.tap(find.byKey(const Key('photo.send')));
+      await tester.pumpAndSettle();
+      final pic = m.receivePhoto('conv-bob', caption: 'Magnifique ! Voici la vue d\'ici.');
+      m.storedPhotos[pic.mediaPath!] = _landscape(w: 720, h: 960);
+      deps.realtime.emit('conv-bob');
+      await tester.pumpAndSettle();
+      await _shot(tester, '15_photo_conversation_$suffix');
+      await tester.tap(find.byKey(Key('photo.open.msg-${pic.id}')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '15_photo_visionneuse_$suffix');
+      await tester.tap(find.byKey(const Key('photo.viewer.close')));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();

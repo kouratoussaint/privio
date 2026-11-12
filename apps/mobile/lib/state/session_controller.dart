@@ -129,6 +129,9 @@ class SessionController extends AsyncNotifier<SessionState> {
 
   Future<void> onProfileCreated() => _reload();
 
+  /// Profil modifié (ex. photo de profil) : relecture du compte.
+  Future<void> refreshAccount() => _reload();
+
   Future<void> markPermissionsSeen() async {
     await ref.read(localFlagsProvider).setPermissionsSeen();
     await _reload();

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
@@ -11,6 +13,11 @@ abstract interface class AccountApi {
   Future<bool> setPhoneDiscoverable(bool value);
   Future<String> registerDevice({required String appVersion});
   Future<void> unregisterCurrentDevice();
+
+  /// Photo de profil : envoyée à avatar-set (vérifiée, métadonnées retirées) ; renvoie son
+  /// chemin. L'ancienne photo est effacée par le serveur.
+  Future<String> setAvatar(Uint8List jpeg);
+  Future<void> removeAvatar();
 }
 
 class SupabaseAccountApi implements AccountApi {
@@ -54,4 +61,21 @@ class SupabaseAccountApi implements AccountApi {
 
   @override
   Future<void> unregisterCurrentDevice() async => _rpc('unregister_current_device');
+
+  @override
+  Future<String> setAvatar(Uint8List jpeg) async {
+    try {
+      final res = await _client.functions.invoke(
+        'avatar-set',
+        body: jpeg,
+        headers: const {'Content-Type': 'image/jpeg'},
+      );
+      return (res.data as Map)['avatar_path'] as String;
+    } on Object catch (e) {
+      throw toAppFailure(e);
+    }
+  }
+
+  @override
+  Future<void> removeAvatar() async => _rpc('remove_avatar');
 }

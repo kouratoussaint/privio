@@ -1,15 +1,22 @@
 /// Personne trouvée par la recherche (réponse minimale du serveur, sans numéro).
 class FoundUser {
-  const FoundUser({required this.id, required this.handle, required this.displayName});
+  const FoundUser({
+    required this.id,
+    required this.handle,
+    required this.displayName,
+    this.avatarPath,
+  });
 
   final String id;
   final String handle;
   final String displayName;
+  final String? avatarPath;
 
   factory FoundUser.fromJson(Map<String, dynamic> j) => FoundUser(
     id: j['id'] as String,
     handle: j['handle'] as String,
     displayName: j['display_name'] as String,
+    avatarPath: j['avatar_path'] as String?,
   );
 }
 
@@ -36,10 +43,14 @@ class ConversationSummary {
     this.ttlSeconds = 259200,
     this.peerDeliveredUpTo,
     this.peerReadUpTo,
+    this.peerAvatarPath,
   });
 
   final String id;
   final String? peerId;
+
+  /// Photo de profil du correspondant (absente s'il est bloqué ou supprimé).
+  final String? peerAvatarPath;
   final String? peerHandle;
   final String? peerDisplayName;
   final bool peerDeleted;
@@ -84,6 +95,7 @@ class ConversationSummary {
     'ttl_seconds': ttlSeconds,
     'peer_delivered_up_to': peerDeliveredUpTo?.toUtc().toIso8601String(),
     'peer_read_up_to': peerReadUpTo?.toUtc().toIso8601String(),
+    'peer_avatar_path': peerAvatarPath,
   };
 
   /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
@@ -118,6 +130,7 @@ class ConversationSummary {
     ttlSeconds: ttlSeconds,
     peerDeliveredUpTo: peerDeliveredUpTo,
     peerReadUpTo: peerReadUpTo,
+    peerAvatarPath: peerAvatarPath,
   );
 
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
@@ -143,6 +156,7 @@ class ConversationSummary {
     ttlSeconds: (j['ttl_seconds'] as num?)?.toInt() ?? 259200,
     peerDeliveredUpTo: _date(j['peer_delivered_up_to']),
     peerReadUpTo: _date(j['peer_read_up_to']),
+    peerAvatarPath: j['peer_avatar_path'] as String?,
   );
 }
 
@@ -171,6 +185,8 @@ class ChatMessage {
     this.replyKind,
     this.mediaPath,
     this.durationMs,
+    this.width,
+    this.height,
   });
 
   final String id;
@@ -193,9 +209,17 @@ class ChatMessage {
   final String? mediaPath;
   final int? durationMs;
 
+  /// Photo : dimensions mesurées par le serveur (pour réserver la place avant l'affichage).
+  final int? width;
+  final int? height;
+
   bool get isDeleted => deletedAt != null;
   bool get isSystem => kind == 'system';
   bool get isVoice => kind == 'voice';
+  bool get isPhoto => kind == 'photo';
+
+  /// Photo encore affichable (ni supprimée, ni sans fichier).
+  bool get hasViewablePhoto => isPhoto && !isDeleted && mediaPath != null;
 
   /// Vocal encore écoutable (ni supprimé, ni sans fichier).
   bool get hasPlayableVoice => isVoice && !isDeleted && mediaPath != null;
@@ -222,6 +246,8 @@ class ChatMessage {
     'reply_kind': replyKind,
     'media_path': mediaPath,
     'media_duration_ms': durationMs,
+    'media_width': width,
+    'media_height': height,
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -248,8 +274,27 @@ class ChatMessage {
       replyKind: j['reply_kind'] as String?,
       mediaPath: j['media_path'] as String?,
       durationMs: (j['media_duration_ms'] as num?)?.toInt(),
+      width: (j['media_width'] as num?)?.toInt(),
+      height: (j['media_height'] as num?)?.toInt(),
     );
   }
+}
+
+/// Photos du jour (PHOTO-005) : limite, utilisées, restantes, remise à zéro.
+class PhotoQuota {
+  const PhotoQuota({required this.limit, required this.used, this.resetsAt});
+
+  final int limit;
+  final int used;
+  final DateTime? resetsAt;
+
+  int get remaining => (limit - used).clamp(0, limit);
+
+  factory PhotoQuota.fromJson(Map<String, dynamic> j) => PhotoQuota(
+    limit: (j['limit'] as num).toInt(),
+    used: (j['used'] as num).toInt(),
+    resetsAt: j['resets_at'] == null ? null : DateTime.parse(j['resets_at'] as String),
+  );
 }
 
 class BlockedUser {

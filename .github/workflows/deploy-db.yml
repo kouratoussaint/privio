@@ -1,7 +1,7 @@
 name: Déployer les migrations (manuel)
 
 # Applique les migrations SQL (`supabase db push`) puis déploie les fonctions serveur
-# (voice-send, media-purge) au projet choisi.
+# (voice-send, photo-send, avatar-set, media-purge) au projet choisi.
 # Ne pousse JAMAIS config.toml (les numéros OTP de test resteraient actifs 10 ans).
 on:
   workflow_dispatch:
@@ -35,10 +35,10 @@ jobs:
         run: supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
       - name: Appliquer les migrations
         run: supabase db push --password "$SUPABASE_DB_PASSWORD"
-      - name: Déployer les fonctions (envoi des vocaux, effacement des sons)
+      - name: Déployer les fonctions (vocaux, photos, photo de profil, effacement des fichiers)
         # Authentification vérifiée par la base (jeton utilisateur / jeton de purge).
         run: >
-          supabase functions deploy voice-send media-purge --use-api --no-verify-jwt
+          supabase functions deploy voice-send photo-send avatar-set media-purge --use-api --no-verify-jwt
           --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
       - name: Déclarer l'adresse des fonctions à la base (purge planifiée)
         # media-purge appelée sans jeton : elle enregistre son adresse et ne fait rien d'autre.

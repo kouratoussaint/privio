@@ -1,15 +1,19 @@
 /// Profil public minimal (aucune coordonnée privée).
 class Profile {
-  const Profile({required this.handle, required this.displayName, this.about});
+  const Profile({required this.handle, required this.displayName, this.about, this.avatarPath});
 
   final String handle;
   final String displayName;
   final String? about;
 
+  /// Photo de profil (chemin opaque dans le stockage privé), absente par défaut.
+  final String? avatarPath;
+
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
     handle: json['handle'] as String,
     displayName: json['display_name'] as String,
     about: json['about'] as String?,
+    avatarPath: json['avatar_path'] as String?,
   );
 }
 

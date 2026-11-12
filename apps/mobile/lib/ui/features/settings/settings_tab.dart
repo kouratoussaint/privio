@@ -6,6 +6,7 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../data/services/photo_picker.dart';
 import '../../../data/services/realtime_service.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
@@ -48,6 +49,69 @@ class SettingsTab extends ConsumerWidget {
     }
   }
 
+  /// Photo de profil : prendre, choisir ou retirer. Préparée sur le téléphone (carrée,
+  /// sans métadonnées), vérifiée et nettoyée encore par le serveur.
+  Future<void> _editAvatar(BuildContext context, WidgetRef ref, {required bool hasAvatar}) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('avatar.camera'),
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Prendre une photo'),
+              onTap: () => Navigator.pop(ctx, 'camera'),
+            ),
+            ListTile(
+              key: const Key('avatar.gallery'),
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choisir dans la galerie'),
+              onTap: () => Navigator.pop(ctx, 'gallery'),
+            ),
+            if (hasAvatar)
+              ListTile(
+                key: const Key('avatar.remove'),
+                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                title: Text(
+                  'Retirer la photo',
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                ),
+                onTap: () => Navigator.pop(ctx, 'remove'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final api = ref.read(accountApiProvider);
+      if (choice == 'remove') {
+        await api.removeAvatar();
+      } else {
+        final raw = await ref
+            .read(photoPickerProvider)
+            .pick(choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery);
+        if (raw == null) return;
+        final photo = await ref.read(photoPreparerProvider)(raw, avatar: true);
+        await api.setAvatar(photo.bytes);
+      }
+      await ref.read(sessionControllerProvider.notifier).refreshAccount();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            choice == 'remove' ? 'Photo de profil retirée.' : 'Photo de profil mise à jour.',
+          ),
+        ),
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -76,7 +140,39 @@ class SettingsTab extends ConsumerWidget {
                     padding: const EdgeInsets.all(PrivioSpacing.l),
                     child: Row(
                       children: [
-                        InitialAvatar(name: profile.displayName, seed: account!.userId, radius: 30),
+                        Semantics(
+                          button: true,
+                          label: 'Modifier la photo de profil',
+                          child: InkWell(
+                            key: const Key('settings.avatar'),
+                            customBorder: const CircleBorder(),
+                            onTap: () =>
+                                _editAvatar(context, ref, hasAvatar: profile.avatarPath != null),
+                            child: Stack(
+                              children: [
+                                UserAvatar(
+                                  name: profile.displayName,
+                                  avatarPath: profile.avatarPath,
+                                  seed: account!.userId,
+                                  radius: 30,
+                                ),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: CircleAvatar(
+                                    radius: 11,
+                                    backgroundColor: p.accentText,
+                                    child: const Icon(
+                                      Icons.photo_camera,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(

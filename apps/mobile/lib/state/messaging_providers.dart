@@ -9,6 +9,7 @@ import '../core/util/time_format.dart';
 import '../data/services/messaging_api.dart';
 import '../data/services/realtime_service.dart';
 import '../data/storage/local_cache.dart';
+import '../core/media/photo_processing.dart';
 import '../domain/models/messaging.dart';
 import 'providers.dart';
 import 'session_controller.dart';
@@ -116,24 +117,34 @@ class OutboxController extends Notifier<List<OutboxItem>> {
     try {
       final api = ref.read(messagingApiProvider);
       final ChatMessage sent;
-      if (item.isVoice) {
-        final audio = await _cache.readMedia(LocalCache.outboxMediaKey(item.clientId));
-        if (audio == null) {
-          // Son perdu (coffre effacé) : l'envoi ne peut plus aboutir.
+      if (item.hasMedia) {
+        final media = await _cache.readMedia(LocalCache.outboxMediaKey(item.clientId));
+        if (media == null) {
+          // Fichier perdu (coffre effacé) : l'envoi ne peut plus aboutir.
           await _cache.removeOutbox(item.clientId);
           state = _cache.outbox;
           _schedule();
           throw const AppFailure(FailureCode.mediaNotFound);
         }
-        sent = await api.sendVoice(
-          conversationId: item.conversationId,
-          clientMsgId: item.clientId,
-          audio: audio,
-          replyToId: item.replyToId,
-          ttlSeconds: item.ttlSeconds,
-        );
-        // L'expéditeur réécoute son vocal sans le retélécharger.
-        await _cache.putMedia(LocalCache.messageMediaKey(sent.id), audio, sent.expiresAt);
+        sent = item.isVoice
+            ? await api.sendVoice(
+                conversationId: item.conversationId,
+                clientMsgId: item.clientId,
+                audio: media,
+                replyToId: item.replyToId,
+                ttlSeconds: item.ttlSeconds,
+              )
+            : await api.sendPhoto(
+                conversationId: item.conversationId,
+                clientMsgId: item.clientId,
+                jpeg: media,
+                caption: item.body.isEmpty ? null : item.body,
+                replyToId: item.replyToId,
+                ttlSeconds: item.ttlSeconds,
+              );
+        // L'expéditeur revoit / réécoute son envoi sans le retélécharger.
+        await _cache.putMedia(LocalCache.messageMediaKey(sent.id), media, sent.expiresAt);
+        if (item.isPhoto) ref.invalidate(photoQuotaProvider);
       } else {
         sent = await api.sendMessage(
           conversationId: item.conversationId,
@@ -154,7 +165,7 @@ class OutboxController extends Notifier<List<OutboxItem>> {
         _schedule();
         return null;
       }
-      if (toAppFailure(e).code == FailureCode.mediaNotFound && item.isVoice) {
+      if (toAppFailure(e).code == FailureCode.mediaNotFound && item.hasMedia) {
         throw toAppFailure(e);
       }
       await _cache.updateOutbox(item.copyWith(failed: true));
@@ -318,14 +329,19 @@ class PendingMessage {
     this.ttlSeconds,
     this.kind = 'text',
     this.durationMs,
+    this.width,
+    this.height,
   });
 
   final String clientId;
   final String body;
   final String kind;
   final int? durationMs;
+  final int? width;
+  final int? height;
 
   bool get isVoice => kind == 'voice';
+  bool get isPhoto => kind == 'photo';
 
   /// Refusé par le serveur (sinon : simplement en attente du réseau).
   final bool failed;
@@ -368,6 +384,8 @@ class ChatController extends AsyncNotifier<ChatState> {
           ttlSeconds: o.ttlSeconds,
           kind: o.kind,
           durationMs: o.durationMs,
+          width: o.width,
+          height: o.height,
         ),
   ];
 
@@ -484,6 +502,31 @@ class ChatController extends AsyncNotifier<ChatState> {
     await _showSent(sent, item.replyToId);
   }
 
+  /// Photo (PHOTO-002) : légende facultative ; même parcours que le texte et les vocaux.
+  Future<void> sendPhoto(
+    PreparedPhoto photo, {
+    String? caption,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    final item = OutboxItem(
+      clientId: uuidV4(),
+      conversationId: conversationId,
+      body: caption?.trim() ?? '',
+      createdAt: DateTime.now(),
+      replyToId: replyToId,
+      ttlSeconds: ttlSeconds,
+      kind: 'photo',
+      width: photo.width,
+      height: photo.height,
+    );
+    final outbox = ref.read(outboxProvider.notifier);
+    await outbox.enqueue(item, media: photo.bytes);
+    final sent = await outbox.sendOne(item);
+    if (sent == null) return;
+    await _showSent(sent, item.replyToId);
+  }
+
   /// Affiche aussitôt le message accepté par le serveur (la réponse montre déjà sa
   /// citation ; le serveur la renverra ensuite).
   Future<void> _showSent(ChatMessage sent, String? replyToId) async {
@@ -509,6 +552,8 @@ class ChatController extends AsyncNotifier<ChatState> {
             updatedAt: sent.updatedAt,
             mediaPath: sent.mediaPath,
             durationMs: sent.durationMs,
+            width: sent.width,
+            height: sent.height,
           );
     final messages = [...now.messages.where((m) => m.id != sent.id), shown];
     state = AsyncData(now.copyWith(messages: messages));
@@ -519,7 +564,7 @@ class ChatController extends AsyncNotifier<ChatState> {
   Future<void> retry(String clientId) async {
     final item = ref.read(outboxProvider).where((o) => o.clientId == clientId).firstOrNull;
     if (item == null) return;
-    if (!item.isVoice) return send(item.body, clientId: clientId);
+    if (!item.hasMedia) return send(item.body, clientId: clientId);
     final outbox = ref.read(outboxProvider.notifier);
     final again = item.copyWith(failed: false);
     await outbox.enqueue(again);
@@ -639,3 +684,70 @@ Future<void> setBlocked(WidgetRef ref, String userId, {required bool blocked}) a
     ..invalidate(blockedUsersProvider)
     ..invalidate(conversationsProvider);
 }
+
+// ------------------------------------------------------------------------
+// Photos : compteur du jour, fichiers (coffre local chiffré, puis stockage privé)
+// ------------------------------------------------------------------------
+/// Photos restantes aujourd'hui (le serveur reste l'autorité au moment de l'envoi).
+final photoQuotaProvider = FutureProvider.autoDispose<PhotoQuota>(
+  (ref) => ref.watch(messagingApiProvider).getPhotoQuota(),
+);
+
+/// Photo à afficher : message reçu ou envoyé, ou envoi en attente.
+class PhotoRef {
+  PhotoRef.message(ChatMessage m)
+    : key = 'msg-${m.id}',
+      path = m.mediaPath,
+      expiresAt = m.expiresAt;
+  const PhotoRef.pending(String clientId) : key = 'out-$clientId', path = null, expiresAt = null;
+
+  /// Clé du coffre local.
+  final String key;
+  final String? path;
+  final DateTime? expiresAt;
+
+  @override
+  bool operator ==(Object other) => other is PhotoRef && other.key == key && other.path == path;
+  @override
+  int get hashCode => Object.hash(key, path);
+}
+
+/// Octets d'une photo : du coffre local s'ils y sont, sinon téléchargés (avec le jeton)
+/// puis rangés chiffrés jusqu'à l'expiration du message.
+final photoBytesProvider = FutureProvider.autoDispose.family<Uint8List, PhotoRef>((
+  ref,
+  photo,
+) async {
+  final cache = ref.read(localCacheProvider);
+  final local = await cache.readMedia(photo.key);
+  if (local != null) return local;
+  final path = photo.path;
+  final until = photo.expiresAt;
+  if (path == null || until == null) throw const AppFailure(FailureCode.mediaNotFound);
+  if (!until.isAfter(DateTime.now())) throw const AppFailure(FailureCode.messageExpired);
+  try {
+    final bytes = await ref.read(messagingApiProvider).downloadPhoto(path);
+    await cache.putMedia(photo.key, bytes, until);
+    return bytes;
+  } on Object catch (e) {
+    final failure = toAppFailure(e);
+    if (failure.code == FailureCode.network) {
+      ref.read(offlineProvider.notifier).report(offline: true);
+    }
+    throw failure;
+  }
+});
+
+/// Photo de profil : gardée chiffrée 7 jours (le chemin change à chaque nouvelle photo).
+final avatarBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>((ref, path) async {
+  final link = ref.keepAlive();
+  final timer = Timer(const Duration(minutes: 10), link.close);
+  ref.onDispose(timer.cancel);
+  final cache = ref.read(localCacheProvider);
+  final key = LocalCache.avatarMediaKey(path);
+  final local = await cache.readMedia(key);
+  if (local != null) return local;
+  final bytes = await ref.read(messagingApiProvider).downloadAvatar(path);
+  await cache.putMedia(key, bytes, DateTime.now().add(const Duration(days: 7)));
+  return bytes;
+});

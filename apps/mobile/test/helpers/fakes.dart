@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:image/image.dart' as img;
+import 'package:privio/core/media/photo_processing.dart';
 import 'package:privio/core/errors/app_failure.dart';
 import 'package:privio/core/theme/privio_theme.dart';
 import 'package:privio/data/services/account_api.dart';
@@ -15,6 +17,7 @@ import 'package:privio/data/services/realtime_service.dart';
 import 'package:privio/data/storage/local_store.dart';
 import 'package:privio/data/storage/media_vault.dart';
 import 'package:privio/data/services/permission_gateway.dart';
+import 'package:privio/data/services/photo_picker.dart';
 import 'package:privio/data/storage/local_flags.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
@@ -98,6 +101,37 @@ class FakeAccountApi implements AccountApi {
 
   @override
   Future<void> unregisterCurrentDevice() async => unregisteredDevices++;
+
+  /// Photos de profil déposées (chemin → octets ; partagé avec la fausse messagerie).
+  Map<String, Uint8List> avatars = {};
+
+  @override
+  Future<String> setAvatar(Uint8List jpeg) async {
+    final path = 'u1/avatar-${avatars.length + 1}.jpg';
+    avatars[path] = jpeg;
+    final p = account?.profile;
+    if (p != null) {
+      account = Account(
+        userId: account!.userId,
+        phoneE164: account!.phoneE164,
+        phoneDiscoverable: account!.phoneDiscoverable,
+        profile: Profile(handle: p.handle, displayName: p.displayName, avatarPath: path),
+      );
+    }
+    return path;
+  }
+
+  @override
+  Future<void> removeAvatar() async {
+    final p = account?.profile;
+    if (p == null) return;
+    account = Account(
+      userId: account!.userId,
+      phoneE164: account!.phoneE164,
+      phoneDiscoverable: account!.phoneDiscoverable,
+      profile: Profile(handle: p.handle, displayName: p.displayName),
+    );
+  }
 }
 
 class FakeLocalFlags implements LocalFlags {
@@ -189,6 +223,8 @@ class FakeMessagingApi implements MessagingApi {
     // Supprimé pour tous : plus de son (comme le serveur).
     mediaPath: clearBody ? null : m.mediaPath,
     durationMs: clearBody ? null : m.durationMs,
+    width: clearBody ? null : m.width,
+    height: clearBody ? null : m.height,
   );
 
   @override
@@ -305,8 +341,12 @@ class FakeMessagingApi implements MessagingApi {
       archived: archived,
       peerReadUpTo: peerReadUpTo,
       peerDeliveredUpTo: peerDeliveredUpTo,
+      peerAvatarPath: blocked.contains(bob.id) ? null : bobAvatarPath,
     );
   }
+
+  /// Photo de profil de Bob (null : pas de photo).
+  String? bobAvatarPath;
 
   /// Simule un message reçu de Bob.
   ChatMessage receive(String conversationId, String body, {DateTime? expiresAt}) {
@@ -383,6 +423,8 @@ class FakeMessagingApi implements MessagingApi {
             reactions: m.reactions,
             mediaPath: m.mediaPath,
             durationMs: m.durationMs,
+            width: m.width,
+            height: m.height,
           ),
   ];
 
@@ -495,6 +537,103 @@ class FakeMessagingApi implements MessagingApi {
     return bytes;
   }
 
+  // ---------------------------------------------------------------- photos
+  int photoLimit = 5;
+  int photosUsed = 0;
+  final Map<String, Uint8List> storedPhotos = {};
+  final Map<String, Uint8List> storedAvatars = {};
+  final List<String> photoDownloads = [];
+  final List<String?> sentCaptions = [];
+
+  @override
+  Future<PhotoQuota> getPhotoQuota() async {
+    _net();
+    return PhotoQuota(limit: photoLimit, used: photosUsed);
+  }
+
+  @override
+  Future<ChatMessage> sendPhoto({
+    required String conversationId,
+    required String clientMsgId,
+    required Uint8List jpeg,
+    String? caption,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    sentClientIds.add(clientMsgId);
+    sentCaptions.add(caption);
+    _net();
+    final list = messages[conversationId] ??= [];
+    final existing = list.where((m) => m.id == 'srv-$clientMsgId').firstOrNull;
+    if (existing != null) return existing;
+    if (photosUsed >= photoLimit) throw const AppFailure(FailureCode.photoQuotaReached);
+    if (blocked.contains(bob.id)) throw const AppFailure(FailureCode.blocked);
+    photosUsed++;
+    final now = DateTime.now();
+    final path = '$conversationId/$clientMsgId.jpg';
+    storedPhotos[path] = jpeg;
+    final m = ChatMessage(
+      id: 'srv-$clientMsgId',
+      kind: 'photo',
+      senderId: me,
+      body: caption == null || caption.trim().isEmpty ? null : caption.trim(),
+      replyToId: replyToId,
+      sentAt: now,
+      expiresAt: now.add(
+        Duration(
+          seconds: ttlSeconds == null || ttlSeconds > conversationTtl
+              ? conversationTtl
+              : ttlSeconds,
+        ),
+      ),
+      updatedAt: now,
+      mediaPath: path,
+      width: 40,
+      height: 30,
+    );
+    list.add(m);
+    return m;
+  }
+
+  @override
+  Future<Uint8List> downloadPhoto(String mediaPath) async {
+    photoDownloads.add(mediaPath);
+    _net();
+    final bytes = storedPhotos[mediaPath];
+    if (bytes == null) throw const AppFailure(FailureCode.mediaNotFound);
+    return bytes;
+  }
+
+  @override
+  Future<Uint8List> downloadAvatar(String avatarPath) async {
+    _net();
+    final bytes = storedAvatars[avatarPath];
+    if (bytes == null) throw const AppFailure(FailureCode.mediaNotFound);
+    return bytes;
+  }
+
+  /// Simule une photo reçue de Bob.
+  ChatMessage receivePhoto(String conversationId, {String? caption, DateTime? expiresAt}) {
+    final now = DateTime.now();
+    final id = 'srv-${_seq++}';
+    final path = '$conversationId/$id.jpg';
+    storedPhotos[path] = testJpeg();
+    final m = ChatMessage(
+      id: id,
+      kind: 'photo',
+      senderId: bob.id,
+      body: caption,
+      sentAt: now,
+      expiresAt: expiresAt ?? now.add(const Duration(hours: 72)),
+      updatedAt: now,
+      mediaPath: path,
+      width: 40,
+      height: 30,
+    );
+    (messages[conversationId] ??= []).add(m);
+    return m;
+  }
+
   /// Simule un vocal reçu de Bob.
   ChatMessage receiveVoice(
     String conversationId, {
@@ -538,6 +677,26 @@ class FakeMessagingApi implements MessagingApi {
 
   @override
   Future<void> unblockUser(String userId) async => blocked.remove(userId);
+}
+
+/// Petite photo JPEG valide (40 × 30) pour les tests.
+Uint8List testJpeg({int width = 40, int height = 30}) {
+  final image = img.Image(width: width, height: height)..clear(img.ColorRgb8(90, 40, 200));
+  return img.encodeJpg(image, quality: 80);
+}
+
+/// Faux sélecteur : renvoie [photo] (null = la personne renonce).
+class FakePhotoPicker implements PhotoPicker {
+  Uint8List? photo = testJpeg();
+  final List<PhotoSource> sources = [];
+  AppFailure? failure;
+
+  @override
+  Future<Uint8List?> pick(PhotoSource source) async {
+    sources.add(source);
+    if (failure != null) throw failure!;
+    return photo;
+  }
 }
 
 /// Faux micro : enregistre « instantanément » les octets [audio].
@@ -651,7 +810,10 @@ class TestDeps {
   }) : auth = auth ?? FakeAuthService(),
        api = api ?? FakeAccountApi(),
        flags = flags ?? FakeLocalFlags(),
-       messaging = messaging ?? FakeMessagingApi();
+       messaging = messaging ?? FakeMessagingApi() {
+    // Une photo de profil déposée est ensuite téléchargeable, comme sur le serveur.
+    this.api.avatars = this.messaging.storedAvatars;
+  }
 
   final FakeAuthService auth;
   final FakeAccountApi api;
@@ -665,6 +827,7 @@ class TestDeps {
   final realtime = FakeRealtimeService();
   final recorder = FakeVoiceRecorder();
   final audio = FakeAudioEngine();
+  final photos = FakePhotoPicker();
 
   List<Override> get overrides => [
     authServiceProvider.overrideWithValue(auth),
@@ -678,6 +841,13 @@ class TestDeps {
     realtimeServiceProvider.overrideWithValue(realtime),
     voiceRecorderProvider.overrideWithValue(recorder),
     audioEngineProvider.overrideWithValue(audio),
+    photoPickerProvider.overrideWithValue(photos),
+    // Préparation synchrone (pas d'isolat dans les tests de widgets).
+    photoPreparerProvider.overrideWithValue(
+      (raw, {avatar = false}) async =>
+          processPhotoSync(raw, square: avatar, maxSide: avatar ? kAvatarSide : kPhotoMaxSide) ??
+          (throw const AppFailure(FailureCode.mediaInvalid)),
+    ),
   ];
 
   /// Conteneur dont le contrôleur de session reste écouté, comme dans l'application.

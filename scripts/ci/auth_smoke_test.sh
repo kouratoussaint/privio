@@ -80,4 +80,5 @@ R=$(curl -sS "$API/rest/v1/messages?select=body" -H "apikey: $KEY")
 echo "$R" | grep -qiE 'permission denied|42501' && pass "anonyme : aucune lecture de messages" || fail "lecture anonyme des messages" "$R"
 python3 "$(dirname "$0")/realtime_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV"
 python3 "$(dirname "$0")/voice_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "${DB_URL:?DB_URL introuvable}"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux : OK"
+python3 "$(dirname "$0")/photo_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos : OK"

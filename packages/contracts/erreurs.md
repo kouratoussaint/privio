@@ -61,5 +61,16 @@ lit le code dans `FunctionException.details`. Le téléchargement d'un son refus
 | `NOT_MEMBER` / `BLOCKED` | 403 | `prepare_voice_message` | mêmes règles que le texte |
 | `AUTH_REQUIRED` | 401 | toutes | jeton absent ou session révoquée |
 
-Codes prévus aux étapes suivantes (dossier 07) : `PHOTO_QUOTA_REACHED`, `FEATURE_DISABLED`,
-`POLICY_VERSION_CONFLICT`.
+### Photos et photo de profil (lot 3.2)
+`photo-send` et `avatar-set` répondent `{ "error": "<CODE>" }` comme `voice-send`.
+
+| Code | HTTP | Origine | Signification |
+|---|---|---|---|
+| `PHOTO_QUOTA_REACHED` | 429 | `prepare_photo_message` (via `photo-send`) | photos du jour épuisées (`photo_daily_limit`, 5 par défaut) |
+| `MEDIA_INVALID` | 422 | `photo-send`, `avatar-set`, `commit_*` | pas un JPEG accepté, ou dimensions hors limites (photo remboursée) |
+| `MEDIA_TOO_LARGE` | 413 | idem | taille hors limites (photo remboursée) |
+| `BODY_INVALID` | 422 | `send_photo_message` | légende trop longue (`photo_caption_max_chars`, 1000) |
+| `MESSAGE_NOT_EDITABLE` | — | `edit_message` | une photo (ou un vocal) ne se modifie pas |
+| `USER_NOT_FOUND` | 404 | `prepare_avatar_upload` | profil absent ou supprimé |
+
+Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_VERSION_CONFLICT`.

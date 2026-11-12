@@ -70,17 +70,35 @@ export async function rpc<T>(
   return (text ? JSON.parse(text) : null) as T;
 }
 
-let registered = false;
+let registeredAt = 0;
+const REGISTER_EVERY_MS = 10 * 60 * 1000;
 
-/** Déclare l'adresse des fonctions à la base (une fois par instance), pour la purge planifiée. */
+/** Déclare l'adresse des fonctions à la base, pour la purge planifiée. Répété toutes les
+ *  10 minutes par instance : une base restaurée ou réinitialisée la retrouve d'elle-même. */
 export async function registerEndpoint(): Promise<void> {
-  if (registered || !SUPABASE_URL || !SERVICE_KEY) return;
+  if (Date.now() - registeredAt < REGISTER_EVERY_MS || !SUPABASE_URL || !SERVICE_KEY) return;
   try {
     await rpc("media_register_endpoint", { p_functions_url: `${SUPABASE_URL}/functions/v1` }, serviceHeaders());
-    registered = true;
+    registeredAt = Date.now();
   } catch {
     // Sans conséquence sur la requête en cours ; nouvel essai à la prochaine.
   }
+}
+
+/** Dépose un fichier dans un bucket privé (écrase un essai précédent interrompu). */
+export async function uploadObject(
+  bucket: string,
+  path: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<boolean> {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: { ...serviceHeaders(), "Content-Type": contentType, "x-upsert": "true" },
+    body: bytes,
+  });
+  await res.body?.cancel();
+  return res.ok;
 }
 
 export function json(status: number, body: unknown): Response {

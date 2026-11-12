@@ -77,7 +77,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       body: ListView(
         padding: const EdgeInsets.all(PrivioSpacing.xl),
         children: [
-          Center(child: InitialAvatar(name: summary.title, radius: 48)),
+          Center(
+            child: UserAvatar(
+              name: summary.title,
+              avatarPath: summary.peerAvatarPath,
+              seed: peerId,
+              radius: 48,
+            ),
+          ),
           const SizedBox(height: PrivioSpacing.l),
           Text(summary.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
           if (summary.peerHandle != null)

@@ -85,6 +85,10 @@ def stretch_samples(buf, body):
         struct.pack_into(">I", buf, at, struct.unpack_from(">I", buf, at)[0] * 8)
 
 
+# Comme après un déploiement : media-purge appelée sans jeton déclare son adresse.
+status, raw = http("POST", "/functions/v1/media-purge")
+check(status == 200 and b'"registered":true' in raw, "fonctions joignables, adresse déclarée à la base", raw)
+
 # --- Envoi valide ----------------------------------------------------------------
 status, msg, cid = send_voice(TA, FIXTURE)
 check(status == 200 and msg.get("media_path", "").startswith(CONV + "/"),

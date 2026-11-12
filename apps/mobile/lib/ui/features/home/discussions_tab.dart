@@ -429,6 +429,8 @@ class ConversationTile extends ConsumerWidget {
       ConversationSummary(lastKind: 'system') =>
         'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
       ConversationSummary(lastKind: 'voice') => '${mine ? 'Vous : ' : ''}🎤 Message vocal',
+      ConversationSummary(lastKind: 'photo', :final lastBody) =>
+        '${mine ? 'Vous : ' : ''}📷 ${lastBody == null || lastBody.isEmpty ? 'Photo' : lastBody}',
       _ => '${mine ? 'Vous : ' : ''}${summary.lastBody ?? ''}',
     };
     final typing = !summary.blocked && ref.watch(typingProvider).contains(summary.id);
@@ -442,7 +444,11 @@ class ConversationTile extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l, vertical: 10),
         child: Row(
           children: [
-            InitialAvatar(name: summary.title, seed: summary.peerId ?? summary.id),
+            UserAvatar(
+              name: summary.title,
+              avatarPath: summary.peerAvatarPath,
+              seed: summary.peerId ?? summary.id,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: DecoratedBox(

@@ -9,6 +9,7 @@ import 'data/services/audio/audio_engine.dart';
 import 'data/services/audio/voice_recorder.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/messaging_api.dart';
+import 'data/services/photo_picker.dart';
 import 'data/services/realtime_service.dart';
 import 'data/storage/local_flags.dart';
 import 'data/storage/local_store.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
         mediaVaultProvider.overrideWithValue(EncryptedMediaVault()),
         voiceRecorderProvider.overrideWithValue(DeviceVoiceRecorder()),
         audioEngineProvider.overrideWithValue(DeviceAudioEngine()),
+        photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
       ],

@@ -1,11 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config/env.dart';
+import '../core/media/photo_processing.dart';
 import '../data/services/account_api.dart';
 import '../data/services/audio/audio_engine.dart';
 import '../data/services/audio/voice_recorder.dart';
 import '../data/services/auth_service.dart';
 import '../data/services/permission_gateway.dart';
+import '../data/services/photo_picker.dart';
 import '../data/storage/local_cache.dart';
 import '../data/storage/local_flags.dart';
 import '../data/storage/local_store.dart';
@@ -43,4 +47,17 @@ final voiceRecorderProvider = Provider<VoiceRecorder>(
 );
 final audioEngineProvider = Provider<AudioEngine>(
   (ref) => throw UnimplementedError('audioEngineProvider doit être surchargé'),
+);
+
+/// Appareil photo et sélecteur de photos du système.
+final photoPickerProvider = Provider<PhotoPicker>(
+  (ref) => throw UnimplementedError('photoPickerProvider doit être surchargé'),
+);
+
+/// Préparation d'une photo (rotation, taille, JPEG sans métadonnées), hors du fil de
+/// l'interface ; remplaçable dans les tests.
+typedef PhotoPreparer = Future<PreparedPhoto> Function(Uint8List raw, {bool avatar});
+final photoPreparerProvider = Provider<PhotoPreparer>(
+  (ref) =>
+      (raw, {avatar = false}) => avatar ? prepareAvatar(raw) : preparePhoto(raw),
 );

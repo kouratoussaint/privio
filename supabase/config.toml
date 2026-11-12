@@ -408,6 +408,12 @@ verify_jwt = false
 [functions.media-purge]
 verify_jwt = false
 
+[functions.photo-send]
+verify_jwt = false
+
+[functions.avatar-set]
+verify_jwt = false
+
 [experimental]
 # Configures S3 bucket URL, eg. <bucket_name>.s3-<region>.amazonaws.com
 s3_host = "env(S3_HOST)"

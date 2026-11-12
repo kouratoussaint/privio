@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +14,13 @@ import '../../../data/services/audio/voice_recorder.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/providers.dart';
 import '../../../state/voice_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/privacy_pattern.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
+import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
 
@@ -57,6 +60,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ChatMessage? _editing;
   int? _nextTtl;
   bool _searching = false;
+  bool _preparingPhoto = false;
   final _searchCtrl = TextEditingController();
 
   ChatController get _chat => ref.read(chatProvider(widget.conversationId).notifier);
@@ -207,6 +211,62 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _retry(PendingMessage p) => _guard(() => _chat.retry(p.clientId));
+
+  // ---------------------------------------------------------------- photos
+  /// Choisir (appareil photo ou galerie), préparer (rotation, taille, AUCUNE
+  /// métadonnée), aperçu avec légende et compteur, puis envoi.
+  Future<void> _pickPhoto() async {
+    FocusScope.of(context).unfocus();
+    PhotoQuota? quota;
+    try {
+      quota = await ref.read(photoQuotaProvider.future);
+    } on Object {
+      quota = null; // hors connexion : le serveur tranchera à l'envoi
+    }
+    if (!mounted) return;
+    final source = await showPhotoSourceSheet(context, quota: quota);
+    if (source == null || !mounted) return;
+    try {
+      final raw = await ref.read(photoPickerProvider).pick(source);
+      if (raw == null || !mounted) return;
+      setState(() => _preparingPhoto = true);
+      final photo = await ref.read(photoPreparerProvider)(raw);
+      if (!mounted) return;
+      setState(() => _preparingPhoto = false);
+      final caption = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => PhotoComposeScreen(photo: photo, quota: quota),
+        ),
+      );
+      if (caption == null || !mounted) return;
+      final replyTo = _replyTo;
+      final ttl = _nextTtl;
+      setState(() {
+        _replyTo = null;
+        _nextTtl = null;
+      });
+      await _chat.sendPhoto(photo, caption: caption, replyToId: replyTo?.id, ttlSeconds: ttl);
+    } on Object catch (e) {
+      if (mounted) _toast(toAppFailure(e).message);
+    } finally {
+      if (mounted && _preparingPhoto) setState(() => _preparingPhoto = false);
+      if (mounted) ref.invalidate(photoQuotaProvider);
+    }
+  }
+
+  void _openPhoto(ChatMessage m, Uint8List bytes, String? peerName) {
+    final me = ref.read(currentUserIdProvider);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PhotoViewerScreen(
+          bytes: bytes,
+          title: m.senderId == me ? 'Vous' : (peerName ?? 'Photo'),
+          caption: m.body,
+          sentAt: m.sentAt,
+        ),
+      ),
+    );
+  }
 
   // ---------------------------------------------------------------- vocaux
   Future<void> _startVoice({required bool locked}) async {
@@ -502,8 +562,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
                   child: Row(
                     children: [
-                      InitialAvatar(
+                      UserAvatar(
                         name: title,
+                        avatarPath: summary?.peerAvatarPath,
                         seed: summary?.peerId ?? widget.conversationId,
                         radius: 20,
                         ring: p.onHeaderMuted,
@@ -568,6 +629,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onLongPress: (m) => _showActions(m, mine: m.senderId == me),
                   onReactionTap: (m, emoji) => _guard(() => _chat.toggleReaction(m.id, emoji)),
                   onVoiceError: (f) => _toast(f.message),
+                  onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
                   ttlSeconds: summary?.ttlSeconds ?? 259200,
                   peerName: summary?.title ?? 'Votre correspondant',
                   onTtlTap: () => _chooseConversationTtl(summary),
@@ -592,9 +654,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (_replyTo != null || _editing != null)
                 _ComposerContext(
                   label: _editing != null ? 'Modifier le message' : 'Répondre à',
-                  text: (_editing ?? _replyTo)!.isVoice
-                      ? 'Message vocal (${formatVoiceDuration(Duration(milliseconds: _replyTo!.durationMs ?? 0))})'
-                      : (_editing ?? _replyTo)!.body ?? '',
+                  text: switch ((_editing ?? _replyTo)!) {
+                    ChatMessage(isVoice: true, :final durationMs) =>
+                      'Message vocal (${formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))})',
+                    ChatMessage(isPhoto: true, :final body) => quoteLabel('photo', body)!,
+                    final m => m.body ?? '',
+                  },
                   onCancel: () => setState(() {
                     if (_editing != null) _composer.clear();
                     _editing = null;
@@ -624,6 +689,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onTtlTap: _editing != null || voice is VoiceRecording
                       ? null
                       : () => _chooseMessageTtl(summary),
+                  onPhotoTap: _editing != null || voice is VoiceRecording || _preparingPhoto
+                      ? null
+                      : _pickPhoto,
+                  busy: _preparingPhoto,
                   ttlActive: _nextTtl != null,
                   strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
                   trailing: ValueListenableBuilder<TextEditingValue>(
@@ -639,6 +708,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 }
+
+/// Citation d'un message : texte, « Message vocal » ou « 📷 Photo » (avec sa légende).
+String? quoteLabel(String? kind, String? preview) => switch (kind) {
+  'voice' => 'Message vocal',
+  'photo' => preview == null || preview.isEmpty ? '📷 Photo' : '📷 $preview',
+  _ => preview,
+};
 
 /// Libellé du séparateur de jour : « Aujourd'hui », « Hier », sinon la date.
 String dayLabel(DateTime at, DateTime now) {
@@ -664,11 +740,13 @@ class _MessageList extends StatelessWidget {
     required this.peerName,
     required this.onTtlTap,
     required this.onVoiceError,
+    required this.onOpenPhoto,
     this.searching = false,
     this.offline = false,
   });
 
   final void Function(AppFailure failure) onVoiceError;
+  final void Function(ChatMessage message, Uint8List bytes) onOpenPhoto;
   final bool searching;
   final bool offline;
 
@@ -728,9 +806,18 @@ class _MessageList extends StatelessWidget {
           text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
           content: m.hasPlayableVoice
               ? VoiceMessageContent(message: m, outgoing: m.senderId == me, onError: onVoiceError)
+              : m.hasViewablePhoto
+              ? PhotoMessageContent(
+                  photo: PhotoRef.message(m),
+                  width: m.width,
+                  height: m.height,
+                  outgoing: m.senderId == me,
+                  caption: m.body,
+                  onOpen: (bytes) => onOpenPhoto(m, bytes),
+                )
               : null,
           italic: m.isDeleted,
-          quote: m.isDeleted ? null : (m.replyKind == 'voice' ? 'Message vocal' : m.replyPreview),
+          quote: m.isDeleted ? null : quoteLabel(m.replyKind, m.replyPreview),
           time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
           edited: m.editedAt != null && !m.isDeleted,
           remaining: formatRemaining(m.expiresAt, now: now),
@@ -748,7 +835,17 @@ class _MessageList extends StatelessWidget {
           key: Key('pending.${pm.clientId}'),
           outgoing: true,
           text: pm.body,
-          content: pm.isVoice ? PendingVoiceContent(durationMs: pm.durationMs) : null,
+          content: pm.isVoice
+              ? PendingVoiceContent(durationMs: pm.durationMs)
+              : pm.isPhoto
+              ? PhotoMessageContent(
+                  photo: PhotoRef.pending(pm.clientId),
+                  width: pm.width,
+                  height: pm.height,
+                  outgoing: true,
+                  caption: pm.body,
+                )
+              : null,
           status: pm.failed
               ? 'Échec de l\'envoi · toucher pour réessayer'
               : (offline ? 'En attente du réseau · toucher pour réessayer' : 'Envoi…'),
@@ -1193,9 +1290,9 @@ class _ComposerContext extends StatelessWidget {
   }
 }
 
-/// Zone de saisie : durée du prochain message, champ arrondi (ou bandeau
-/// d'enregistrement), bouton de droite (envoyer, micro ou arrêter). Photo et emojis
-/// apparaîtront avec leurs lots (aucun bouton non livré n'est affiché).
+/// Zone de saisie : durée du prochain message, champ arrondi avec bouton photo (ou
+/// bandeau d'enregistrement), bouton de droite (envoyer, micro ou arrêter). Les emojis
+/// apparaîtront avec leur lot (aucun bouton non livré n'est affiché).
 class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
@@ -1203,9 +1300,17 @@ class _Composer extends StatelessWidget {
     required this.trailing,
     this.strip,
     this.onTtlTap,
+    this.onPhotoTap,
+    this.busy = false,
     this.ttlActive = false,
     this.onChanged,
   });
+
+  /// Bouton photo (absent pendant une modification ou un enregistrement).
+  final VoidCallback? onPhotoTap;
+
+  /// Photo en préparation : petit indicateur à la place du bouton.
+  final bool busy;
 
   final ValueChanged<String>? onChanged;
   final TextEditingController controller;
@@ -1287,12 +1392,32 @@ class _Composer extends StatelessWidget {
                                 contentPadding: EdgeInsets.fromLTRB(
                                   onTtlTap == null ? 20 : 4,
                                   14,
-                                  20,
+                                  onPhotoTap == null && !busy ? 20 : 4,
                                   14,
                                 ),
                               ),
                             ),
                           ),
+                          if (busy)
+                            const Padding(
+                              key: Key('composer.photo_busy'),
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          else if (onPhotoTap != null)
+                            IconButton(
+                              key: const Key('composer.photo'),
+                              tooltip: 'Envoyer une photo',
+                              onPressed: onPhotoTap,
+                              icon: Icon(
+                                Icons.photo_camera_outlined,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                         ],
                       ),
               ),

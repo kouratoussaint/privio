@@ -38,6 +38,8 @@ enum FailureCode {
   mediaUnavailable,
   microphoneUnavailable,
   microphoneDenied,
+  photoQuotaReached,
+  cameraUnavailable,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -80,13 +82,16 @@ class AppFailure implements Exception {
     FailureCode.confirmationRequired => 'Confirmation requise.',
     FailureCode.voiceTooLong => 'Le message vocal dépasse 30 secondes.',
     FailureCode.voiceTooShort => 'Message vocal trop court. Maintenez le micro pour parler.',
-    FailureCode.mediaInvalid => 'Ce message vocal n\'a pas pu être lu. Enregistrez-le à nouveau.',
-    FailureCode.mediaTooLarge => 'Ce message vocal est trop volumineux.',
-    FailureCode.mediaNotFound => 'Ce message vocal n\'est plus disponible.',
+    FailureCode.mediaInvalid => 'Ce fichier n\'a pas pu être lu. Choisissez-en un autre.',
+    FailureCode.mediaTooLarge => 'Ce fichier est trop volumineux.',
+    FailureCode.mediaNotFound => 'Ce contenu n\'est plus disponible.',
     FailureCode.mediaUnavailable =>
-      'Le service des messages vocaux est momentanément indisponible. Réessayez.',
+      'L\'envoi des photos et messages vocaux est momentanément indisponible. Réessayez.',
     FailureCode.microphoneUnavailable => 'Le micro n\'est pas disponible.',
     FailureCode.microphoneDenied => 'Privio a besoin du micro pour enregistrer un message vocal.',
+    FailureCode.photoQuotaReached =>
+      'Vous avez envoyé toutes vos photos du jour. De nouvelles photos seront possibles demain.',
+    FailureCode.cameraUnavailable => 'L\'appareil photo ou la galerie n\'est pas disponible.',
     FailureCode.otpInvalidOrExpired => 'Code incorrect ou expiré.',
     FailureCode.smsRateLimited =>
       'Trop de codes demandés. Patientez avant de demander un nouveau code.',
@@ -133,6 +138,7 @@ const _serverCodes = <String, FailureCode>{
   'MEDIA_TOO_LARGE': FailureCode.mediaTooLarge,
   'MEDIA_NOT_FOUND': FailureCode.mediaNotFound,
   'STORAGE_UNAVAILABLE': FailureCode.mediaUnavailable,
+  'PHOTO_QUOTA_REACHED': FailureCode.photoQuotaReached,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

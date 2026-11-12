@@ -34,6 +34,26 @@ abstract interface class MessagingApi {
   /// Son d'un vocal, téléchargé du stockage privé avec le jeton de l'utilisateur
   /// (refusé si le message a expiré, a été supprimé, ou si l'on n'est pas membre).
   Future<Uint8List> downloadVoice(String mediaPath);
+
+  /// Photo : envoyée à photo-send, qui DÉBITE le quota du jour, vérifie la photo et en
+  /// retire les métadonnées avant de la publier. Idempotent par [clientMsgId].
+  Future<ChatMessage> sendPhoto({
+    required String conversationId,
+    required String clientMsgId,
+    required Uint8List jpeg,
+    String? caption,
+    String? replyToId,
+    int? ttlSeconds,
+  });
+
+  /// Photo d'un message (stockage privé, avec le jeton ; refusée après expiration).
+  Future<Uint8List> downloadPhoto(String mediaPath);
+
+  /// Photo de profil d'une personne visible (jamais en cas de blocage).
+  Future<Uint8List> downloadAvatar(String avatarPath);
+
+  /// Compteur de photos du jour.
+  Future<PhotoQuota> getPhotoQuota();
   Future<int> setConversationTtl(String conversationId, int seconds);
   Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived});
   Future<void> signalTyping(String conversationId);
@@ -182,6 +202,59 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<Uint8List> downloadVoice(String mediaPath) =>
       _guard(() => _client.storage.from('voice').download(mediaPath));
+
+  @override
+  Future<ChatMessage> sendPhoto({
+    required String conversationId,
+    required String clientMsgId,
+    required Uint8List jpeg,
+    String? caption,
+    String? replyToId,
+    int? ttlSeconds,
+  }) => _guard(() async {
+    final res = await _client.functions.invoke(
+      'photo-send',
+      body: jpeg,
+      headers: const {'Content-Type': 'image/jpeg'},
+      queryParameters: {
+        'conversation_id': conversationId,
+        'client_msg_id': clientMsgId,
+        if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
+        'reply_to_id': ?replyToId,
+        if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
+      },
+    );
+    final row = Map<String, dynamic>.from(res.data as Map);
+    final sentAt = DateTime.parse(row['sent_at'] as String);
+    return ChatMessage(
+      id: row['id'] as String,
+      kind: 'photo',
+      senderId: _client.auth.currentUser?.id,
+      body: row['body'] as String?,
+      replyToId: replyToId,
+      sentAt: sentAt,
+      expiresAt: DateTime.parse(row['expires_at'] as String),
+      updatedAt: sentAt,
+      mediaPath: row['media_path'] as String?,
+      width: (row['media_width'] as num?)?.toInt(),
+      height: (row['media_height'] as num?)?.toInt(),
+    );
+  });
+
+  @override
+  Future<Uint8List> downloadPhoto(String mediaPath) =>
+      _guard(() => _client.storage.from('photos').download(mediaPath));
+
+  @override
+  Future<Uint8List> downloadAvatar(String avatarPath) =>
+      _guard(() => _client.storage.from('avatars').download(avatarPath));
+
+  @override
+  Future<PhotoQuota> getPhotoQuota() => _guard(
+    () async => PhotoQuota.fromJson(
+      Map<String, dynamic>.from(await _client.rpc<dynamic>('get_photo_quota') as Map),
+    ),
+  );
 
   @override
   Future<void> markConversation(

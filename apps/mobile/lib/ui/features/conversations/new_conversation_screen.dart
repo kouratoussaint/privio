@@ -117,7 +117,11 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
             Card(
               child: ListTile(
                 key: const Key('search.result'),
-                leading: InitialAvatar(name: found.displayName),
+                leading: UserAvatar(
+                  name: found.displayName,
+                  avatarPath: found.avatarPath,
+                  seed: found.id,
+                ),
                 title: Text(found.displayName),
                 subtitle: Text('@${found.handle}'),
                 trailing: FilledButton(
