@@ -408,6 +408,10 @@ verify_jwt = false
 [functions.media-purge]
 verify_jwt = false
 
+# Notifications : appelée par la base (jeton interne vérifié par la base).
+[functions.push-dispatch]
+verify_jwt = false
+
 [functions.photo-send]
 verify_jwt = false
 

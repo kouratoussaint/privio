@@ -14,6 +14,10 @@ abstract interface class AccountApi {
   Future<String> registerDevice({required String appVersion});
   Future<void> unregisterCurrentDevice();
 
+  /// Jeton de notification de CET appareil (lot 4.1).
+  Future<void> registerPushToken(String token);
+  Future<void> unregisterPushToken();
+
   /// Photo de profil : envoyée à avatar-set (vérifiée, métadonnées retirées) ; renvoie son
   /// chemin. L'ancienne photo est effacée par le serveur.
   Future<String> setAvatar(Uint8List jpeg);
@@ -61,6 +65,13 @@ class SupabaseAccountApi implements AccountApi {
 
   @override
   Future<void> unregisterCurrentDevice() async => _rpc('unregister_current_device');
+
+  @override
+  Future<void> registerPushToken(String token) async =>
+      _rpc('register_push_token', {'p_token': token});
+
+  @override
+  Future<void> unregisterPushToken() async => _rpc('unregister_push_token');
 
   @override
   Future<String> setAvatar(Uint8List jpeg) async {

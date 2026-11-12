@@ -6,11 +6,13 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../core/util/reactions.dart';
 import '../../../data/services/photo_picker.dart';
 import '../../../data/services/realtime_service.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
+import '../../../state/push_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
@@ -36,6 +38,33 @@ class SettingsTab extends ConsumerWidget {
       ),
     );
     if (ok == true) await ref.read(sessionControllerProvider.notifier).signOut();
+  }
+
+  Future<void> _chooseQuickReaction(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(quickReactionProvider).value ?? '❤️';
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(PrivioSpacing.l, 0, PrivioSpacing.l, PrivioSpacing.l),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: PrivioSpacing.s,
+            children: [
+              for (final e in kQuickReactions)
+                ChoiceChip(
+                  key: Key('quick.$e'),
+                  selected: e == current,
+                  label: Text(e, style: const TextStyle(fontSize: 22)),
+                  onSelected: (_) => Navigator.pop(ctx, e),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked != null) await ref.read(quickReactionProvider.notifier).set(picked);
   }
 
   Future<void> _toggleDiscoverable(BuildContext context, WidgetRef ref, bool value) async {
@@ -229,6 +258,33 @@ class SettingsTab extends ConsumerWidget {
                     ],
                   ),
                   onTap: () => context.push(Routes.blockedUsers),
+                ),
+              ],
+            ),
+            const _SectionTitle('Notifications et gestes'),
+            _Card(
+              children: [
+                SwitchListTile(
+                  key: const Key('settings.push'),
+                  value: ref.watch(pushProvider).value ?? false,
+                  onChanged: (v) => ref.read(pushProvider.notifier).setEnabled(v),
+                  secondary: Icon(Icons.notifications_outlined, color: p.accentText),
+                  title: const Text('Notifications'),
+                  subtitle: const Text(
+                    'Toujours sans contenu : « Nouveau message », sans nom ni texte.',
+                  ),
+                ),
+                const _Divider(),
+                ListTile(
+                  key: const Key('settings.quick_reaction'),
+                  leading: Icon(Icons.touch_app_outlined, color: p.accentText),
+                  title: const Text('Réaction du double appui'),
+                  subtitle: const Text('Toucher deux fois un message pour réagir.'),
+                  trailing: Text(
+                    ref.watch(quickReactionProvider).value ?? '❤️',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  onTap: () => _chooseQuickReaction(context, ref),
                 ),
               ],
             ),

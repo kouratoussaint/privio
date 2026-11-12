@@ -168,6 +168,11 @@ void main() {
     await _pumpApp(tester, deps);
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Réception instantanée'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Réception instantanée'), findsOneWidget);
     expect(find.text('Connecté'), findsOneWidget);
   });

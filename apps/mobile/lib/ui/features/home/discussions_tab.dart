@@ -15,6 +15,7 @@ import '../../../state/providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/swipe_actions.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -318,7 +319,7 @@ class _List extends StatelessWidget {
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 96),
         itemCount: items.length,
-        itemBuilder: (_, i) => ConversationTile(summary: items[i]),
+        itemBuilder: (_, i) => SwipeableConversationTile(summary: items[i]),
       ),
     );
   }
@@ -362,6 +363,52 @@ class OfflineBanner extends StatelessWidget {
 }
 
 /// Appui long sur une discussion : épingler / archiver (état personnel).
+/// Lot 2.F : glisser à droite = épingler / désépingler ; à gauche = archiver / désarchiver.
+class SwipeableConversationTile extends ConsumerWidget {
+  const SwipeableConversationTile({super.key, required this.summary});
+
+  final ConversationSummary summary;
+
+  Future<void> _flags(BuildContext context, WidgetRef ref, {bool? pinned, bool? archived}) async {
+    // Capturés AVANT l'action : une discussion archivée quitte l'écran, et sa ligne
+    // (avec son ref) disparaît ; « Annuler » doit pourtant rester utilisable.
+    final notifier = ref.read(conversationsProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await notifier.setFlags(summary.id, pinned: pinned, archived: archived);
+      if (archived != null) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(archived ? 'Discussion archivée.' : 'Discussion désarchivée.'),
+            action: SnackBarAction(
+              label: 'Annuler',
+              onPressed: () => notifier.setFlags(summary.id, archived: !archived),
+            ),
+          ),
+        );
+      }
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => SwipeActions(
+    key: Key('swipe.${summary.id}'),
+    right: SwipeAction(
+      icon: summary.pinned ? Icons.push_pin_outlined : Icons.push_pin,
+      label: summary.pinned ? 'Désépingler' : 'Épingler',
+      onTriggered: () => _flags(context, ref, pinned: !summary.pinned),
+    ),
+    left: SwipeAction(
+      icon: summary.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+      label: summary.archived ? 'Désarchiver' : 'Archiver',
+      onTriggered: () => _flags(context, ref, archived: !summary.archived),
+    ),
+    child: ConversationTile(summary: summary),
+  );
+}
+
 Future<void> showConversationActions(
   BuildContext context,
   WidgetRef ref,

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/errors/app_failure.dart';
 import '../domain/models/account.dart';
 import 'providers.dart';
+import 'push_providers.dart';
 
 /// Étape du parcours, dont découle la navigation (voir router/stage_redirect.dart).
 enum SessionStage { onboarding, signedOut, needsProfile, needsPermissions, ready }
@@ -153,6 +154,8 @@ class SessionController extends AsyncNotifier<SessionState> {
   }
 
   Future<void> signOut() async {
+    // Plus aucune notification pour ce téléphone (jeton retiré du serveur et de Firebase).
+    await forgetPushToken(ref, serverSide: true);
     try {
       await ref.read(accountApiProvider).unregisterCurrentDevice();
     } on Object {
@@ -169,6 +172,7 @@ class SessionController extends AsyncNotifier<SessionState> {
 
   /// Après suppression du compte côté serveur : tout effacer sur ce téléphone.
   Future<void> onAccountDeleted() async {
+    await forgetPushToken(ref, serverSide: false);
     _lastSignedIn = false;
     await ref.read(localCacheProvider).wipe();
     await ref.read(authServiceProvider).signOut();

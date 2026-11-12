@@ -18,12 +18,14 @@ import 'package:privio/data/services/realtime_service.dart';
 import 'package:privio/data/storage/local_store.dart';
 import 'package:privio/data/storage/media_vault.dart';
 import 'package:privio/data/services/permission_gateway.dart';
+import 'package:privio/data/services/push_service.dart';
 import 'package:privio/data/services/photo_picker.dart';
 import 'package:privio/data/storage/local_flags.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/state/messaging_providers.dart';
 import 'package:privio/state/providers.dart';
+import 'package:privio/state/push_providers.dart';
 import 'package:privio/state/session_controller.dart';
 
 class FakeAuthService implements AuthService {
@@ -103,6 +105,15 @@ class FakeAccountApi implements AccountApi {
   @override
   Future<void> unregisterCurrentDevice() async => unregisteredDevices++;
 
+  final List<String> pushTokens = [];
+  int pushUnregistered = 0;
+
+  @override
+  Future<void> registerPushToken(String token) async => pushTokens.add(token);
+
+  @override
+  Future<void> unregisterPushToken() async => pushUnregistered++;
+
   /// Photos de profil déposées (chemin → octets ; partagé avec la fausse messagerie).
   Map<String, Uint8List> avatars = {};
 
@@ -136,6 +147,18 @@ class FakeAccountApi implements AccountApi {
 }
 
 class FakeLocalFlags implements LocalFlags {
+  bool push = true;
+  String quick = '❤️';
+
+  @override
+  Future<bool> pushEnabled() async => push;
+  @override
+  Future<void> setPushEnabled(bool value) async => push = value;
+  @override
+  Future<String> quickReaction() async => quick;
+  @override
+  Future<void> setQuickReaction(String emoji) async => quick = emoji;
+
   FakeLocalFlags({this.onboarding = false, this.permissions = false});
 
   bool onboarding;
@@ -1129,6 +1152,35 @@ class FakeRealtimeService implements RealtimeService {
   }
 }
 
+class FakePushService implements PushService {
+  bool available = true;
+  String? currentToken = 'jeton-fcm-de-test-000000000001';
+  String? initial;
+  int deleted = 0;
+  final _refresh = StreamController<String>.broadcast();
+  final _opened = StreamController<String>.broadcast();
+
+  void refreshTo(String token) {
+    currentToken = token;
+    _refresh.add(token);
+  }
+
+  void open(String conversationId) => _opened.add(conversationId);
+
+  @override
+  Future<bool> initialize() async => available;
+  @override
+  Future<String?> token() async => currentToken;
+  @override
+  Stream<String> get tokenRefresh => _refresh.stream;
+  @override
+  Future<void> deleteToken() async => deleted++;
+  @override
+  Future<String?> initialConversation() async => initial;
+  @override
+  Stream<String> get openedConversations => _opened.stream;
+}
+
 class TestDeps {
   TestDeps({
     FakeAuthService? auth,
@@ -1151,6 +1203,7 @@ class TestDeps {
 
   /// Stockage local partagé (permet de simuler un redémarrage de l'application).
   final store = MemoryLocalStore();
+  final push = FakePushService();
   final vault = MemoryMediaVault();
   final realtime = FakeRealtimeService();
   final recorder = FakeVoiceRecorder();
@@ -1165,6 +1218,7 @@ class TestDeps {
     appVersionProvider.overrideWithValue('0.1.0-test'),
     messagingApiProvider.overrideWithValue(messaging),
     localStoreProvider.overrideWithValue(store),
+    pushServiceProvider.overrideWithValue(push),
     mediaVaultProvider.overrideWithValue(vault),
     realtimeServiceProvider.overrideWithValue(realtime),
     voiceRecorderProvider.overrideWithValue(recorder),

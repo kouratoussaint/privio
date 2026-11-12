@@ -35,10 +35,23 @@ jobs:
         run: supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
       - name: Appliquer les migrations
         run: supabase db push --password "$SUPABASE_DB_PASSWORD"
-      - name: Déployer les fonctions (vocaux, photos, photo de profil, effacement des fichiers)
+      - name: Compte de service FCM (notifications), s'il est fourni
+        env:
+          FCM_SA_B64: ${{ secrets.FCM_SERVICE_ACCOUNT_B64 }}
+        run: |
+          if [ -z "$FCM_SA_B64" ]; then
+            echo "::warning::Secret FCM_SERVICE_ACCOUNT_B64 absent : notifications désactivées (rien n'est envoyé)."
+            exit 0
+          fi
+          echo "$FCM_SA_B64" | base64 -d > "$RUNNER_TEMP/fcm.json"
+          supabase secrets set --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
+            FCM_SERVICE_ACCOUNT="$(cat "$RUNNER_TEMP/fcm.json")" > /dev/null
+          rm -f "$RUNNER_TEMP/fcm.json"
+          echo "✅ compte de service FCM transmis aux fonctions"
+      - name: Déployer les fonctions (vocaux, photos, photo de profil, effacement des fichiers, notifications)
         # Authentification vérifiée par la base (jeton utilisateur / jeton de purge).
         run: >
-          supabase functions deploy voice-send photo-send avatar-set media-purge --use-api --no-verify-jwt
+          supabase functions deploy voice-send photo-send avatar-set media-purge push-dispatch --use-api --no-verify-jwt
           --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
       - name: Déclarer l'adresse des fonctions à la base (purge planifiée)
         # media-purge appelée sans jeton : elle enregistre son adresse et ne fait rien d'autre.

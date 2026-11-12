@@ -35,17 +35,22 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 |---|---|---|---|
 | 2.E | Durée par discussion (5 min à 72 h, annonce aux deux) et par message (jamais plus que la discussion) | Régler 1 h, envoyer un message de 5 min | ✅ 12/11/2026 |
 
+## Lot 2.F — Actions rapides (ajout du 12/11/2026)
+| Lot | Contenu | Vos tests | Statut |
+|---|---|---|---|
+| 2.F | Glisser à droite = répondre ; double appui = réaction (❤️, réglable) ; glisser à gauche = supprimer (avec choix) ; toucher une citation = remonter au message ; liste : glisser à droite = épingler, à gauche = archiver (« Annuler ») | Essayer chaque geste sur un message reçu et sur un message envoyé | 🔨 |
+
 ## Étape 3 — Médias et groupes
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
 | 3.1 | Messages vocaux : micro (toucher = mains libres, maintenir = glisser pour annuler ou verrouiller), arrêt automatique à 30 s, préécoute obligatoire, lecture avec vitesse 1×/1,5×/2×, envoi hors ligne ; serveur : stockage privé, durée mesurée, effacement physique à l'expiration (ADR-008) | Envoyer un vocal de 10 s et l'écouter sur l'autre téléphone ; laisser l'enregistrement aller jusqu'à 30 s ; régler 5 min et vérifier qu'il disparaît des deux côtés | 🧪 12/11/2026 |
 | 3.2 | Photos : appareil photo ou galerie (aucune autorisation), aperçu avec légende, compteur du jour (5, groupes inclus, remboursé si l'envoi échoue), visionneuse sans enregistrement ni partage, envoi hors ligne ; métadonnées (GPS…) retirées sur le téléphone ET par le serveur ; photo de profil (Paramètres) visible sauf en cas de blocage (ADR-009) | Envoyer une photo avec légende et l'ouvrir sur l'autre téléphone ; envoyer 5 photos puis vérifier le refus de la 6e ; mettre une photo de profil et la voir chez l'autre ; bloquer puis vérifier qu'elle disparaît | 🧪 12/11/2026 |
-| 3.3 | Groupes : création, invitations à accepter ou refuser, rôles (propriétaire, administrateurs, membres), retrait, départ (groupe confié automatiquement), réglages (qui écrit, qui modifie), nom, description, photo du groupe, sourdine, signalement du groupe, historique visible depuis l'arrivée, filtre « Groupes » ; taille max **100 provisoire** (B2, administrable) (ADR-010) | Créer un groupe et inviter l'autre téléphone ; accepter l'invitation ; échanger texte, vocal et photo ; nommer administrateur ; activer « Seuls les administrateurs écrivent » et vérifier le bandeau chez l'autre ; retirer puis réinviter ; quitter le groupe | 🧪 12/11/2026 — CI verte, staging déployé |
+| 3.3 | Groupes : création, invitations à accepter ou refuser, rôles (propriétaire, administrateurs, membres), retrait, départ (groupe confié automatiquement), réglages (qui écrit, qui modifie), nom, description, photo du groupe, sourdine, signalement du groupe, historique visible depuis l'arrivée, filtre « Groupes » ; taille max **25** (B2, réglable 2–100) (ADR-010) | Créer un groupe et inviter l'autre téléphone ; accepter l'invitation ; échanger texte, vocal et photo ; nommer administrateur ; activer « Seuls les administrateurs écrivent » et vérifier le bandeau chez l'autre ; retirer puis réinviter ; quitter le groupe | 🧪 12/11/2026 — CI verte, staging déployé |
 
 ## Étape 4 — Notifications et confidentialité
 | Lot | Contenu | Statut |
 |---|---|---|
-| 4.1 | Notifications FCM sans contenu (fichier Firebase requis) | ⏳ |
+| 4.1 | Notifications FCM sans contenu ni nom, masquées sur l'écran verrouillé, une par discussion ; ouverture de la discussion au toucher ; interrupteur dans les Paramètres ; pas de notification en sourdine, en cas de blocage ou pour l'expéditeur (ADR-011). **Compte de service FCM requis** (secret `FCM_SERVICE_ACCOUNT_B64`) | 🔨 |
 | 4.2 | Verrouillage de l'app (empreinte/code), états hors ligne et erreurs, économie de données | ⏳ |
 
 ## Étape 5 — Console d'administration
@@ -66,7 +71,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | # | Sujet | Nécessaire avant |
 |---|---|---|
 | B1 | ✅ Modification 60 min, suppression pour tous jusqu'à expiration (12/11/2026) | — |
-| B2 | Taille maximale des groupes — **100 appliqué provisoirement** (administrable), à confirmer | lot 6.2 |
+| B2 | ✅ 25 membres par groupe par défaut, réglable 2–100 (12/11/2026) | — |
 | B3 | ✅ Signalements 90 j, journaux 30 j (appliqué par défaut, administrable) | — |
 | B4/B5 | Connexion admin, hébergement console | lot 5.1 |
 | B6/B7 | Sauvegardes, budget, fournisseur SMS +226 | lot 6.2 |

@@ -22,7 +22,7 @@ class ArchivedScreen extends ConsumerWidget {
               title: 'Aucune discussion archivée',
               message: 'Appui long sur une discussion pour l’archiver.',
             )
-          : ListView(children: [for (final c in archived) ConversationTile(summary: c)]),
+          : ListView(children: [for (final c in archived) SwipeableConversationTile(summary: c)]),
     );
   }
 }

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../router/routes.dart';
+import '../../../state/push_providers.dart';
+
 /// Navigation MVP validée : Discussions / Groupes / Paramètres, et rien d'autre.
-class HomeShell extends StatelessWidget {
+/// Active aussi les notifications (lot 4.1) et ouvre la discussion d'une notification touchée.
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
@@ -26,12 +31,20 @@ class HomeShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: shell,
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: shell.currentIndex,
-      onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-      destinations: destinations,
-    ),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(pushProvider);
+    ref.listen(openConversationRequestProvider, (_, id) {
+      if (id == null) return;
+      ref.read(openConversationRequestProvider.notifier).consume();
+      context.push(Routes.chat(id));
+    });
+    return Scaffold(
+      body: shell,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: shell.currentIndex,
+        onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        destinations: destinations,
+      ),
+    );
+  }
 }

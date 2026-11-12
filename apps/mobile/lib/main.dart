@@ -9,6 +9,7 @@ import 'data/services/audio/audio_engine.dart';
 import 'data/services/audio/voice_recorder.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/messaging_api.dart';
+import 'data/services/push_service.dart';
 import 'data/services/photo_picker.dart';
 import 'data/services/realtime_service.dart';
 import 'data/storage/local_flags.dart';
@@ -17,6 +18,7 @@ import 'data/storage/media_vault.dart';
 import 'data/storage/secure_session_storage.dart';
 import 'state/messaging_providers.dart';
 import 'state/providers.dart';
+import 'state/push_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +59,7 @@ Future<void> main() async {
         accountApiProvider.overrideWithValue(SupabaseAccountApi(client)),
         localFlagsProvider.overrideWithValue(SharedPrefsLocalFlags()),
         localStoreProvider.overrideWithValue(EncryptedFileStore()),
+        pushServiceProvider.overrideWithValue(FirebasePushService()),
         mediaVaultProvider.overrideWithValue(EncryptedMediaVault()),
         voiceRecorderProvider.overrideWithValue(DeviceVoiceRecorder()),
         audioEngineProvider.overrideWithValue(DeviceAudioEngine()),

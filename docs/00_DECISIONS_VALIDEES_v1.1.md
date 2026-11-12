@@ -79,3 +79,14 @@ Demandés par le commanditaire après test sur téléphone :
   effacés chez tous les correspondants ; profil, numéro, appareils, blocages et appartenances
   supprimés ; cache local et clé détruits. Les signalements visant le compte restent jusqu'à
   échéance, sans lien vers le compte.
+
+## Amendement 5 — Groupes, actions rapides, notifications (12 novembre 2026)
+- **B2** : taille maximale d'un groupe **25 membres** par défaut, réglable par l'administration
+  entre 2 et 100 (`group_max_members`). Remplace la valeur provisoire de 100.
+- **Actions rapides (ajout au cahier des charges, lot 2.F)** : glisser un message vers la droite
+  = répondre ; double appui = réaction par défaut (❤️, réglable dans les Paramètres ; pas sur
+  les vocaux, pour ne pas retarder leurs boutons) ; glisser vers la gauche = supprimer, toujours
+  avec choix et confirmation ; toucher une citation = remonter au message d'origine ; dans la
+  liste, glisser à droite = épingler, à gauche = archiver (avec « Annuler »). Toutes ces
+  actions restent disponibles par l'appui long et pour TalkBack.
+- **Notifications (lot 4.1)** : sans contenu ni nom, voir ADR-011.

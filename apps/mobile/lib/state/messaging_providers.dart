@@ -802,3 +802,20 @@ Future<T> groupAction<T>(
       ..invalidate(chatProvider(conversationId));
   }
 }
+
+// ------------------------------------------------------------------------
+// Réaction du double appui (lot 2.F), réglable dans les Paramètres
+// ------------------------------------------------------------------------
+final quickReactionProvider = AsyncNotifierProvider<QuickReactionController, String>(
+  QuickReactionController.new,
+);
+
+class QuickReactionController extends AsyncNotifier<String> {
+  @override
+  Future<String> build() => ref.watch(localFlagsProvider).quickReaction();
+
+  Future<void> set(String emoji) async {
+    await ref.read(localFlagsProvider).setQuickReaction(emoji);
+    state = AsyncData(emoji);
+  }
+}

@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../core/util/reactions.dart';
 import '../../../core/util/time_format.dart';
 import '../../../data/services/audio/voice_recorder.dart';
 import '../../../domain/models/messaging.dart';
@@ -18,14 +19,12 @@ import '../../../state/providers.dart';
 import '../../../state/voice_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/privacy_pattern.dart';
+import '../../core/widgets/swipe_actions.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
 import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
-
-/// Réactions proposées (une seule par personne et par message).
-const kQuickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -378,6 +377,75 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  // ---------------------------------------------------------------- Lot 2.F : gestes
+  void _startReply(ChatMessage m) {
+    if (m.isDeleted || m.isSystem) return;
+    unawaited(HapticFeedback.lightImpact());
+    setState(() {
+      _editing = null;
+      _replyTo = m;
+    });
+    _focus.requestFocus();
+  }
+
+  /// Double appui : réaction par défaut (réglable) ; un second double appui la retire.
+  Future<void> _quickReact(ChatMessage m) async {
+    if (m.isDeleted || m.isSystem) return;
+    unawaited(HapticFeedback.lightImpact());
+    final emoji = ref.read(quickReactionProvider).value ?? '❤️';
+    await _guard(() => _chat.toggleReaction(m.id, emoji));
+  }
+
+  /// Glisser vers la gauche : supprimer, avec choix et confirmation (jamais d'office).
+  Future<void> _swipeDelete(ChatMessage m) async {
+    final mine = m.senderId == ref.read(currentUserIdProvider);
+    final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
+    final forAll = mine && !m.isSystem && rules.canDeleteForAll(m, DateTime.now());
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer ce message ?'),
+        content: Text(
+          forAll
+              ? 'Pour vous seulement, ou pour tout le monde dans cette discussion.'
+              : 'Le message ne sera plus affiché sur votre téléphone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(
+            key: const Key('swipe.delete_me'),
+            onPressed: () => Navigator.pop(ctx, 'me'),
+            child: const Text('Pour moi'),
+          ),
+          if (forAll)
+            FilledButton(
+              key: const Key('swipe.delete_all'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+                foregroundColor: Theme.of(ctx).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.pop(ctx, 'all'),
+              child: const Text('Pour tout le monde'),
+            ),
+        ],
+      ),
+    );
+    if (choice == 'me') await _guard(() => _chat.deleteForMe(m.id));
+    if (choice == 'all') await _guard(() => _chat.deleteForEveryone(m.id));
+  }
+
+  /// Toucher une citation : remonter au message d'origine s'il est encore affiché.
+  void _scrollToMessage(String id) {
+    final target = GlobalObjectKey('msg-$id').currentContext;
+    if (target == null) {
+      _toast('Le message d’origine n’est plus affiché (expiré ou plus ancien).');
+      return;
+    }
+    unawaited(
+      Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 300), alignment: 0.5),
+    );
+  }
+
   Future<void> _showActions(ChatMessage m, {required bool mine}) async {
     if (m.isDeleted) return;
     final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
@@ -454,11 +522,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (action.startsWith('react:')) {
       await _guard(() => _chat.toggleReaction(m.id, action.substring(6)));
     } else if (action == 'reply') {
-      setState(() {
-        _editing = null;
-        _replyTo = m;
-      });
-      _focus.requestFocus();
+      _startReply(m);
     } else if (action == 'edit') {
       setState(() {
         _replyTo = null;
@@ -508,6 +572,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final summary = ref.watch(conversationSummaryProvider(widget.conversationId));
     final chat = ref.watch(chatProvider(widget.conversationId));
     ref.watch(messagingRulesProvider);
+    // Préchargée : le tout premier double appui utilise déjà la réaction choisie.
+    ref.watch(quickReactionProvider);
     final me = ref.watch(currentUserIdProvider);
     final p = PrivioPalette.of(context);
     final now = DateTime.now();
@@ -649,6 +715,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   summary: summary,
                   onRetry: _retry,
                   onLongPress: (m) => _showActions(m, mine: m.senderId == me),
+                  onSwipeReply: _startReply,
+                  onSwipeDelete: _swipeDelete,
+                  onDoubleTap: _quickReact,
+                  onQuoteTap: _scrollToMessage,
                   onReactionTap: (m, emoji) => _guard(() => _chat.toggleReaction(m.id, emoji)),
                   onVoiceError: (f) => _toast(f.message),
                   onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
@@ -768,6 +838,10 @@ String dayLabel(DateTime at, DateTime now) {
 
 class _MessageList extends StatelessWidget {
   const _MessageList({
+    required this.onSwipeReply,
+    required this.onSwipeDelete,
+    required this.onDoubleTap,
+    required this.onQuoteTap,
     required this.messages,
     required this.pending,
     required this.me,
@@ -802,6 +876,10 @@ class _MessageList extends StatelessWidget {
   final ConversationSummary? summary;
   final void Function(PendingMessage) onRetry;
   final void Function(ChatMessage) onLongPress;
+  final void Function(ChatMessage) onSwipeReply;
+  final void Function(ChatMessage) onSwipeDelete;
+  final void Function(ChatMessage) onDoubleTap;
+  final void Function(String messageId) onQuoteTap;
   final void Function(ChatMessage, String) onReactionTap;
 
   @override
@@ -847,34 +925,61 @@ class _MessageList extends StatelessWidget {
         }
         continue;
       }
+      final error = Theme.of(context).colorScheme.error;
       items.add(
-        _Bubble(
-          key: Key('message.${m.id}'),
-          outgoing: m.senderId == me,
-          sender: isGroup && m.senderId != me ? (m.senderName ?? 'Ancien membre') : null,
-          text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
-          content: m.hasPlayableVoice
-              ? VoiceMessageContent(message: m, outgoing: m.senderId == me, onError: onVoiceError)
-              : m.hasViewablePhoto
-              ? PhotoMessageContent(
-                  photo: PhotoRef.message(m),
-                  width: m.width,
-                  height: m.height,
-                  outgoing: m.senderId == me,
-                  caption: m.body,
-                  onOpen: (bytes) => onOpenPhoto(m, bytes),
-                )
-              : null,
-          italic: m.isDeleted,
-          quote: m.isDeleted ? null : quoteLabel(m.replyKind, m.replyPreview),
-          time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
-          edited: m.editedAt != null && !m.isDeleted,
-          remaining: formatRemaining(m.expiresAt, now: now),
-          delivery: m.senderId == me && !m.isDeleted ? deliveryOf(m, summary) : null,
-          reactions: m.reactions,
-          me: me,
-          onLongPress: () => onLongPress(m),
-          onReactionTap: (emoji) => onReactionTap(m, emoji),
+        KeyedSubtree(
+          key: GlobalObjectKey('msg-${m.id}'),
+          child: SwipeActions(
+            right: m.isDeleted
+                ? null
+                : SwipeAction(
+                    icon: Icons.reply,
+                    label: 'Répondre',
+                    onTriggered: () => onSwipeReply(m),
+                  ),
+            left: SwipeAction(
+              icon: Icons.delete_outline,
+              label: 'Supprimer',
+              color: error,
+              onTriggered: () => onSwipeDelete(m),
+            ),
+            child: _Bubble(
+              key: Key('message.${m.id}'),
+              // Pas de double appui sur un vocal : il retarderait de 300 ms ses boutons
+              // (lecture, vitesse) ; on y réagit par l'appui long.
+              onDoubleTap: m.isDeleted || m.hasPlayableVoice ? null : () => onDoubleTap(m),
+              onQuoteTap: m.replyToId == null ? null : () => onQuoteTap(m.replyToId!),
+              outgoing: m.senderId == me,
+              sender: isGroup && m.senderId != me ? (m.senderName ?? 'Ancien membre') : null,
+              text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
+              content: m.hasPlayableVoice
+                  ? VoiceMessageContent(
+                      message: m,
+                      outgoing: m.senderId == me,
+                      onError: onVoiceError,
+                    )
+                  : m.hasViewablePhoto
+                  ? PhotoMessageContent(
+                      photo: PhotoRef.message(m),
+                      width: m.width,
+                      height: m.height,
+                      outgoing: m.senderId == me,
+                      caption: m.body,
+                      onOpen: (bytes) => onOpenPhoto(m, bytes),
+                    )
+                  : null,
+              italic: m.isDeleted,
+              quote: m.isDeleted ? null : quoteLabel(m.replyKind, m.replyPreview),
+              time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
+              edited: m.editedAt != null && !m.isDeleted,
+              remaining: formatRemaining(m.expiresAt, now: now),
+              delivery: m.senderId == me && !m.isDeleted ? deliveryOf(m, summary) : null,
+              reactions: m.reactions,
+              me: me,
+              onLongPress: () => onLongPress(m),
+              onReactionTap: (emoji) => onReactionTap(m, emoji),
+            ),
+          ),
         ),
       );
     }
@@ -1043,6 +1148,8 @@ const double kBubbleMetaSize = 11;
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
+    this.onDoubleTap,
+    this.onQuoteTap,
     super.key,
     required this.outgoing,
     required this.text,
@@ -1083,6 +1190,8 @@ class _Bubble extends StatelessWidget {
   final String? me;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onDoubleTap;
+  final VoidCallback? onQuoteTap;
   final void Function(String emoji)? onReactionTap;
 
   @override
@@ -1123,6 +1232,7 @@ class _Bubble extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
+        onDoubleTap: onDoubleTap,
         borderRadius: radius,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 7, 10, 5),
@@ -1152,20 +1262,23 @@ class _Bubble extends StatelessWidget {
                       ),
                     ),
                   if (quote != null)
-                    Container(
-                      key: const Key('bubble.quote'),
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: outgoing ? p.quoteOut : p.quoteIn,
-                        borderRadius: BorderRadius.circular(PrivioRadius.small + 2),
-                      ),
-                      child: Text(
-                        quote!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(color: meta),
+                    GestureDetector(
+                      onTap: onQuoteTap,
+                      child: Container(
+                        key: const Key('bubble.quote'),
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: outgoing ? p.quoteOut : p.quoteIn,
+                          borderRadius: BorderRadius.circular(PrivioRadius.small + 2),
+                        ),
+                        child: Text(
+                          quote!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(color: meta),
+                        ),
                       ),
                     ),
                   Align(
