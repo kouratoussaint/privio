@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : lot 2.3 livré le 12/11/2026. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : lot 2.D livré le 12/11/2026.3 livré le 12/11/2026. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -8,6 +8,7 @@ Un lot n'est validé qu'après votre retour.
 ## Étape 1 — Fondation
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
+| — | Clé de signature stable (installation par-dessus) | Mise à jour sans désinstaller | ✅ 12/11/2026 |
 | 1.0 | Connexion téléphone + code, profil, appareil unique, politiques, CI, logo provisoire | Inscription, 3 onglets, capture bloquée | ✅ 12/11/2026 |
 
 ## Étape 2 — Discussions 1:1
@@ -26,7 +27,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
 | 2.D-1 | Maquettes clair/sombre (accueil, discussions, conversation, paramètres) | Validation visuelle | ✅ 12/11/2026 — bulles B, en-tête violet profond |
-| 2.D-2 | Intégration dans l'application, captures avant/après | Parcourir l'app en clair et en sombre | 🔨 CI en cours |
+| 2.D-2 | Intégration dans l'application, captures avant/après | Parcourir l'app en clair et en sombre | 🧪 12/11/2026 |
 
 ## Étape 3 — Médias et groupes
 | Lot | Contenu | Statut |
