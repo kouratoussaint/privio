@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : étape 2 validée le 12/11/2026 ; lot 3.1 en cours. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : lot 3.1 livré le 12/11/2026 (étape 2 validée). Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -36,11 +36,11 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | 2.E | Durée par discussion (5 min à 72 h, annonce aux deux) et par message (jamais plus que la discussion) | Régler 1 h, envoyer un message de 5 min | ✅ 12/11/2026 |
 
 ## Étape 3 — Médias et groupes
-| Lot | Contenu | Statut |
-|---|---|---|
-| 3.1 | Messages vocaux (30 s max, préécoute) | 🔨 |
-| 3.2 | Photos (5 par jour, groupes inclus), photo de profil | ⏳ |
-| 3.3 | Groupes : création, rôles, invitations, taille max (décision B2) | ⏳ |
+| Lot | Contenu | Vos tests | Statut |
+|---|---|---|---|
+| 3.1 | Messages vocaux : micro (toucher = mains libres, maintenir = glisser pour annuler ou verrouiller), arrêt automatique à 30 s, préécoute obligatoire, lecture avec vitesse 1×/1,5×/2×, envoi hors ligne ; serveur : stockage privé, durée mesurée, effacement physique à l'expiration (ADR-008) | Envoyer un vocal de 10 s et l'écouter sur l'autre téléphone ; laisser l'enregistrement aller jusqu'à 30 s ; régler 5 min et vérifier qu'il disparaît des deux côtés | 🧪 12/11/2026 |
+| 3.2 | Photos (5 par jour, groupes inclus), photo de profil | | ⏳ |
+| 3.3 | Groupes : création, rôles, invitations, taille max (décision B2) | | ⏳ |
 
 ## Étape 4 — Notifications et confidentialité
 | Lot | Contenu | Statut |
