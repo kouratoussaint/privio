@@ -21,6 +21,19 @@ abstract interface class MessagingApi {
   Future<int> setConversationTtl(String conversationId, int seconds);
   Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived});
   Future<void> signalTyping(String conversationId);
+
+  /// Signaler un message ou un contact ; `reason == 'support'` : demande d'assistance.
+  Future<void> report({
+    required String reason,
+    String? reportedUserId,
+    String? conversationId,
+    String? messageId,
+    String? details,
+    bool includeMessage = false,
+  });
+
+  /// Suppression définitive du compte (confirmation « SUPPRIMER » exigée par le serveur).
+  Future<void> deleteMyAccount();
   Future<void> markConversation(
     String conversationId, {
     DateTime? deliveredUpTo,
@@ -149,6 +162,26 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<void> signalTyping(String conversationId) =>
       _call('signal_typing', {'p_conversation_id': conversationId});
+
+  @override
+  Future<void> report({
+    required String reason,
+    String? reportedUserId,
+    String? conversationId,
+    String? messageId,
+    String? details,
+    bool includeMessage = false,
+  }) => _call('report', {
+    'p_reason': reason,
+    'p_reported_user_id': reportedUserId,
+    'p_conversation_id': conversationId,
+    'p_message_id': messageId,
+    'p_details': details,
+    'p_include_message': includeMessage,
+  });
+
+  @override
+  Future<void> deleteMyAccount() => _call('delete_my_account', {'p_confirmation': 'SUPPRIMER'});
 
   Future<void> _call(String fn, Map<String, dynamic> params) =>
       _guard(() => _client.rpc<dynamic>(fn, params: params));

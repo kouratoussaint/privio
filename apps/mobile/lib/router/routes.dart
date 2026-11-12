@@ -14,6 +14,8 @@ abstract final class Routes {
   static const newConversation = '/new-conversation';
   static const blockedUsers = '/blocked-users';
   static const archived = '/archived';
+  static const help = '/help';
+  static const deleteAccount = '/delete-account';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
 

@@ -68,3 +68,14 @@ Demandés par le commanditaire après test sur téléphone :
     plus longue que la durée de la discussion ;
   - bornes : minimum administrable (`message_ttl_min_minutes`, 5 min par défaut), maximum =
     invariant 72 h (`message_ttl_hours`), toujours imposé par le serveur.
+
+## Amendement 4 — Signalement et suppression de compte (lot 2.5, 12 novembre 2026)
+- **B3 (appliquée par défaut, administrable)** : signalements et copie d'un message signalé
+  conservés **90 jours** (`report_retention_days`), puis effacés par la purge automatique.
+  Journaux techniques : 30 jours, à appliquer avec la console (lot 5).
+- **Copie du message signalé** : jointe uniquement si la personne qui signale coche la case
+  (cochée par défaut, explicitement expliquée) ; lue par la seule équipe de modération.
+- **Suppression de compte** : confirmation par saisie de « SUPPRIMER » ; messages envoyés
+  effacés chez tous les correspondants ; profil, numéro, appareils, blocages et appartenances
+  supprimés ; cache local et clé détruits. Les signalements visant le compte restent jusqu'à
+  échéance, sans lien vers le compte.

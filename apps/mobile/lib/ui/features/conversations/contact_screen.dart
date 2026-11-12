@@ -6,6 +6,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
+import 'report_sheet.dart';
 
 /// Fiche contact (depuis une discussion) : identité publique et blocage.
 /// Le signalement arrive au lot 2.5.
@@ -104,6 +105,20 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               ),
               onTap: () => _toggle(peerId, summary.title, block: !iBlocked),
             ),
+          ListTile(
+            key: const Key('contact.report'),
+            leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
+            title: Text(
+              'Signaler ce contact',
+              style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
+            ),
+            onTap: () => showReportSheet(
+              context,
+              reportedUserId: peerId,
+              reportedName: summary.title,
+              conversationId: widget.conversationId,
+            ),
+          ),
         ],
       ),
     );

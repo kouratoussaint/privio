@@ -21,7 +21,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | 2.2 | App : liste des discussions, recherche d'une personne, démarrer une discussion, conversation de base (texte, temps réel), fiche contact, bloquer | Trouver l'autre compte, échanger des messages, bloquer/débloquer | 🧪 12/11/2026 — correctif temps réel livré avec le lot 2.3 |
 | 2.3 | App : accusés envoyé/reçu/lu, réponses citées, réactions, modification (60 min), suppression pour moi / pour tous, accessibilité des bulles | Appui long sur un message, accusés entre les deux téléphones | 🧪 12/11/2026 |
 | 2.4 | App : stockage local chiffré, envoi hors ligne, effacement local à expiration même hors ligne, recherche, épinglage, archivage, indicateur « en train d'écrire » | Mode avion : écrire, puis se reconnecter | 🧪 12/11/2026 |
-| 2.5 | Signalement, suppression de compte, page d'aide | Signaler un message, supprimer un compte de test | ⏳ |
+| 2.5 | Signalement (message, contact), assistance, suppression de compte, aide | Signaler un message, supprimer un compte de test | 🔨 |
 
 ## Lot 2.D — Design (inséré avant le lot 2.4)
 | Lot | Contenu | Vos tests | Statut |
@@ -67,7 +67,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 |---|---|---|
 | B1 | ✅ Modification 60 min, suppression pour tous jusqu'à expiration (12/11/2026) | — |
 | B2 | Taille maximale des groupes | lot 3.3 |
-| B3 | Conservation des signalements et journaux | lot 2.5 |
+| B3 | ✅ Signalements 90 j, journaux 30 j (appliqué par défaut, administrable) | — |
 | B4/B5 | Connexion admin, hébergement console | lot 5.1 |
 | B6/B7 | Sauvegardes, budget, fournisseur SMS +226 | lot 6.2 |
 | B9/B10 | Numéros recyclés, documents légaux | lot 6.3 |

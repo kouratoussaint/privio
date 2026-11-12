@@ -223,6 +223,35 @@ class FakeMessagingApi implements MessagingApi {
   @override
   Future<void> signalTyping(String conversationId) async => typingSignals++;
 
+  final List<Map<String, Object?>> reports = [];
+  bool accountDeleted = false;
+
+  @override
+  Future<void> report({
+    required String reason,
+    String? reportedUserId,
+    String? conversationId,
+    String? messageId,
+    String? details,
+    bool includeMessage = false,
+  }) async {
+    _net();
+    reports.add({
+      'reason': reason,
+      'user': reportedUserId,
+      'conversation': conversationId,
+      'message': messageId,
+      'details': details,
+      'include': includeMessage,
+    });
+  }
+
+  @override
+  Future<void> deleteMyAccount() async {
+    _net();
+    accountDeleted = true;
+  }
+
   @override
   Future<void> deleteForMe(String messageId) async => hiddenForMe.add(messageId);
 

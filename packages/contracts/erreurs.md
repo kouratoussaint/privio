@@ -39,5 +39,11 @@ Le client les lit dans `PostgrestException.message` (`lib/core/errors/app_failur
 | `TTL_INVALID` | `set_conversation_ttl`, `send_message` | durée hors bornes (minimum administrable, maximum 72 h) |
 | `MESSAGE_NOT_EDITABLE` | modification, suppression pour tous, réaction | message système (annonce de durée) |
 
+### Signalement et compte (lot 2.5)
+| Code | Origine | Signification |
+|---|---|---|
+| `REPORT_INVALID` | `report` | motif inconnu, cible incohérente, auto-signalement, assistance sans texte |
+| `CONFIRMATION_REQUIRED` | `delete_my_account` | confirmation « SUPPRIMER » absente |
+
 Codes prévus aux étapes suivantes (dossier 07) : `PHOTO_QUOTA_REACHED`, `VOICE_TOO_LONG`,
 `FEATURE_DISABLED`, `POLICY_VERSION_CONFLICT`, `MEDIA_NOT_FOUND`.

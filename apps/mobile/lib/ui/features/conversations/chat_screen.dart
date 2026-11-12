@@ -16,6 +16,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/privacy_pattern.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
+import 'report_sheet.dart';
 
 /// Réactions proposées (une seule par personne et par message).
 const kQuickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -241,6 +242,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               title: const Text('Supprimer pour moi'),
               onTap: () => Navigator.pop(ctx, 'delete_me'),
             ),
+            if (!mine)
+              ListTile(
+                key: const Key('action.report'),
+                leading: Icon(Icons.flag_outlined, color: Theme.of(ctx).colorScheme.error),
+                title: const Text('Signaler'),
+                onTap: () => Navigator.pop(ctx, 'report'),
+              ),
             if (mine && rules.canDeleteForAll(m, now))
               ListTile(
                 key: const Key('action.delete_all'),
@@ -271,6 +279,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _composer.text = m.body ?? '';
       });
       _focus.requestFocus();
+    } else if (action == 'report') {
+      final summary = ref.read(conversationSummaryProvider(widget.conversationId));
+      if (m.senderId == null) return;
+      await showReportSheet(
+        context,
+        reportedUserId: m.senderId!,
+        reportedName: summary?.title ?? 'ce contact',
+        conversationId: widget.conversationId,
+        messageId: m.id,
+      );
     } else if (action == 'delete_me') {
       await _guard(() => _chat.deleteForMe(m.id));
     } else if (action == 'delete_all') {

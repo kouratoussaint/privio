@@ -187,6 +187,18 @@ class SettingsTab extends ConsumerWidget {
             _Card(
               children: [
                 ListTile(
+                  key: const Key('settings.help'),
+                  leading: Icon(Icons.help_outline, color: p.accentText),
+                  title: const Text('Aide et assistance'),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  onTap: () => context.push(Routes.help),
+                ),
+              ],
+            ),
+            const SizedBox(height: PrivioSpacing.l),
+            _Card(
+              children: [
+                ListTile(
                   key: const Key('settings.signout'),
                   leading: Icon(Icons.logout, color: theme.colorScheme.error),
                   title: Text(
@@ -194,6 +206,16 @@ class SettingsTab extends ConsumerWidget {
                     style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
                   ),
                   onTap: () => _confirmSignOut(context, ref),
+                ),
+                const _Divider(),
+                ListTile(
+                  key: const Key('settings.delete'),
+                  leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
+                  title: Text(
+                    'Supprimer mon compte',
+                    style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
+                  ),
+                  onTap: () => context.push(Routes.deleteAccount),
                 ),
               ],
             ),

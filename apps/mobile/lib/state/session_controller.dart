@@ -35,6 +35,10 @@ class SessionState {
   }
 }
 
+const kAccountDeletedNotice =
+    'Votre compte Privio a été supprimé, ainsi que vos messages envoyés. Vous pouvez créer '
+    'un nouveau compte à tout moment.';
+
 const kOtherDeviceNotice =
     'Votre compte est maintenant ouvert sur un autre téléphone. Privio ne fonctionne que '
     'sur un seul appareil à la fois : reconnectez-vous pour l\'utiliser ici.';
@@ -157,6 +161,16 @@ class SessionController extends AsyncNotifier<SessionState> {
     // Déconnexion : le cache chiffré et sa clé sont détruits.
     await ref.read(localCacheProvider).wipe();
     _pendingNotice = null;
+    await _reload();
+  }
+
+  /// Après suppression du compte côté serveur : tout effacer sur ce téléphone.
+  Future<void> onAccountDeleted() async {
+    _lastSignedIn = false;
+    await ref.read(localCacheProvider).wipe();
+    await ref.read(authServiceProvider).signOut();
+    await ref.read(localFlagsProvider).clearAccountScoped();
+    _pendingNotice = kAccountDeletedNotice;
     await _reload();
   }
 

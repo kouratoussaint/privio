@@ -28,6 +28,8 @@ enum FailureCode {
   reactionInvalid,
   ttlInvalid,
   messageNotEditable,
+  reportInvalid,
+  confirmationRequired,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -65,6 +67,9 @@ class AppFailure implements Exception {
     FailureCode.reactionInvalid => 'Choisissez un emoji.',
     FailureCode.ttlInvalid => 'Cette durée n\'est pas autorisée.',
     FailureCode.messageNotEditable => 'Ce message ne peut pas être modifié.',
+    FailureCode.reportInvalid =>
+      'Ce signalement n\'a pas pu être enregistré. Vérifiez les informations.',
+    FailureCode.confirmationRequired => 'Confirmation requise.',
     FailureCode.otpInvalidOrExpired => 'Code incorrect ou expiré.',
     FailureCode.smsRateLimited =>
       'Trop de codes demandés. Patientez avant de demander un nouveau code.',
@@ -103,6 +108,8 @@ const _serverCodes = <String, FailureCode>{
   'REACTION_INVALID': FailureCode.reactionInvalid,
   'TTL_INVALID': FailureCode.ttlInvalid,
   'MESSAGE_NOT_EDITABLE': FailureCode.messageNotEditable,
+  'REPORT_INVALID': FailureCode.reportInvalid,
+  'CONFIRMATION_REQUIRED': FailureCode.confirmationRequired,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).
