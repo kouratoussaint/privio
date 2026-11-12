@@ -30,8 +30,7 @@
 2. le test d'intégration `auth_smoke_test.sh` (OTP réel, trigger, révocation d'appareil) ;
 3. la **compilation de l'APK** (pas de SDK Android dans l'environnement de développement).
 
-**Vérification manuelle à faire sur téléphone :** capture d'écran bloquée, aperçu masqué dans
-les applications récentes, icône lisible sur l'écran d'accueil.
+**Validé sur téléphone le 12/11/2026 :** inscription, profil, trois onglets, capture d'écran bloquée.
 
 ## Défauts trouvés et corrigés pendant l'étape
 - Droits par défaut PostgreSQL : un retrait par schéma est sans effet → durcissement explicite
