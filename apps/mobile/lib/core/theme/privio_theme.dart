@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import 'privio_palette.dart';
 import 'privio_tokens.dart';
 
 /// Thèmes clair et sombre : unique source de vérité des couleurs, typographies et
@@ -50,8 +52,33 @@ abstract final class PrivioTheme {
     outlineVariant: PrivioColors.outlineDark,
   );
 
-  static ThemeData get light => _build(lightScheme);
-  static ThemeData get dark => _build(darkScheme);
+  static ThemeData get light => _build(lightScheme, PrivioPalette.light);
+
+  /// Écrans d'entrée (accueil, bienvenue) : fond bleu nuit « premium », quel que soit le
+  /// thème du téléphone, bouton principal violet (maquette validée du lot 2.D).
+  static ThemeData get entry {
+    final base = dark;
+    return base.copyWith(
+      scaffoldBackgroundColor: PrivioColors.navy,
+      appBarTheme: base.appBarTheme.copyWith(backgroundColor: PrivioColors.navy),
+      filledButtonTheme: FilledButtonThemeData(
+        style: (base.filledButtonTheme.style ?? const ButtonStyle()).copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? PrivioColors.surfaceContainerDark
+                : PrivioColors.purple,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? PrivioColors.textSecondaryDark
+                : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  static ThemeData get dark => _build(darkScheme, PrivioPalette.dark);
 
   /// Échelle du guide : titres 24–28, sous-titres 18–20, corps 14–16, légendes 12.
   static TextTheme _textTheme(ColorScheme s) {
@@ -79,7 +106,7 @@ abstract final class PrivioTheme {
     );
   }
 
-  static ThemeData _build(ColorScheme s) {
+  static ThemeData _build(ColorScheme s, PrivioPalette p) {
     final text = _textTheme(s);
     final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(PrivioRadius.medium));
     const buttonPadding = EdgeInsets.symmetric(
@@ -100,13 +127,25 @@ abstract final class PrivioTheme {
       textTheme: text,
       scaffoldBackgroundColor: s.surface,
       materialTapTargetSize: MaterialTapTargetSize.padded,
+      extensions: [p],
       appBarTheme: AppBarTheme(
-        backgroundColor: s.surface,
-        foregroundColor: s.onSurface,
+        backgroundColor: p.header,
+        foregroundColor: p.onHeader,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: text.titleLarge,
+        titleTextStyle: text.titleLarge?.copyWith(color: p.onHeader),
+        iconTheme: IconThemeData(color: p.onHeader),
+        actionsIconTheme: IconThemeData(color: p.onHeader),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: s.brightness == Brightness.light
+            ? PrivioColors.purple
+            : PrivioColors.lilac,
+        foregroundColor: s.brightness == Brightness.light ? Colors.white : PrivioColors.navy,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PrivioRadius.large)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -159,7 +198,8 @@ abstract final class PrivioTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: s.surfaceContainerHighest,
+        backgroundColor: p.navigation,
+        surfaceTintColor: Colors.transparent,
         indicatorColor: s.primaryContainer,
         labelTextStyle: WidgetStatePropertyAll(text.labelSmall?.copyWith(color: s.onSurface)),
       ),
@@ -170,7 +210,7 @@ abstract final class PrivioTheme {
         iconColor: s.onSurfaceVariant,
       ),
       snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: shape),
-      dividerTheme: DividerThemeData(color: s.outlineVariant, space: 1),
+      dividerTheme: DividerThemeData(color: p.divider, space: 1),
     );
   }
 }

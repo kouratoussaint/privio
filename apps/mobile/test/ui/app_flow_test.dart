@@ -68,7 +68,7 @@ void main() {
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
     expect(find.text('Toussaint'), findsOneWidget);
-    expect(find.textContaining('@toussaint_bf'), findsOneWidget);
+    expect(find.text('@toussaint_bf'), findsOneWidget); // carte de profil
     expect(
       tester.widget<SwitchListTile>(find.byKey(const Key('settings.discoverable'))).value,
       isFalse,

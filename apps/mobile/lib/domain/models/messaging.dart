@@ -31,6 +31,7 @@ class ConversationSummary {
     this.lastBody,
     this.lastDeleted = false,
     this.lastSentAt,
+    this.lastExpiresAt,
     this.peerDeliveredUpTo,
     this.peerReadUpTo,
   });
@@ -50,6 +51,7 @@ class ConversationSummary {
   final String? lastBody;
   final bool lastDeleted;
   final DateTime? lastSentAt;
+  final DateTime? lastExpiresAt;
   final DateTime? peerDeliveredUpTo;
   final DateTime? peerReadUpTo;
 
@@ -73,6 +75,7 @@ class ConversationSummary {
     lastBody: j['last_body'] as String?,
     lastDeleted: j['last_deleted'] as bool? ?? false,
     lastSentAt: _date(j['last_sent_at']),
+    lastExpiresAt: _date(j['last_expires_at']),
     peerDeliveredUpTo: _date(j['peer_delivered_up_to']),
     peerReadUpTo: _date(j['peer_read_up_to']),
   );

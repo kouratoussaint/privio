@@ -55,7 +55,8 @@ void main() {
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
     expect(find.text('Bonjour Bob'), findsOneWidget);
-    expect(find.textContaining('expire dans 71 h'), findsOneWidget);
+    // Minuterie discrète « ⏱ 71 h » (TalkBack lit « expire dans 71 h »).
+    expect(find.text('71 h'), findsOneWidget);
 
     // Réception en temps réel ; un message déjà expiré n'est jamais affiché
     deps.messaging.receive('conv-bob', 'Salut Toussaint !');

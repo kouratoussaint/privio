@@ -28,6 +28,30 @@ abstract final class PrivioColors {
   static const outlineDark = Color(0xFF39406A);
   static const errorDark = Color(0xFFFF8FA0);
   static const successDark = Color(0xFF5FD3B2);
+
+  // Lot 2.D (décisions du 12/11/2026) : en-tête violet profond, bulles envoyées pleines.
+  static const purpleDeep = Color(0xFF5B1FB8);
+  static const purpleText = Color(0xFF7A2FD9);
+  static const headerDark = Color(0xFF0C1438);
+  static const chatLight = Color(0xFFF3EEFC);
+  static const chatDark = Color(0xFF0E1430);
+  static const fieldLight = Color(0xFFF1ECFB);
+  static const dividerLight = Color(0xFFECEAF4);
+  static const dividerDark = Color(0xFF2A3157);
+  static const warnLight = Color(0xFFB54708);
+  static const warnDark = Color(0xFFFFB27A);
+
+  /// Pastilles d'initiales : blanc lisible (≥ 4,5:1) sur chacune, et visibles sur fond
+  /// sombre (aucune pastille bleu nuit).
+  static const avatars = [
+    Color(0xFF7A2FD9),
+    Color(0xFF315BEE),
+    Color(0xFF0F766E),
+    Color(0xFFB4235A),
+    Color(0xFFC2410C),
+    Color(0xFF4338CA),
+    Color(0xFF0369A1),
+  ];
 }
 
 /// Grille 4/8 dp.

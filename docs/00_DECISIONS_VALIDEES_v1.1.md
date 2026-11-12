@@ -39,3 +39,12 @@ comptes inactifs après une durée à fixer, et alerte à la reconnexion d'un co
 
 **Nouveau (B10)** : conditions d'utilisation et politique de confidentialité à rédiger avant
 le pilote (l'écran 02 recueille aujourd'hui un consentement aux engagements affichés uniquement).
+
+## Amendement 2 — Design (lot 2.D, 12 novembre 2026)
+Validé sur maquettes (canevas « PRIVIO — Maquettes lot 2.D ») :
+- **Bulles envoyées : violet plein, texte blanc** (variante B). Modifie le guide de marque, qui
+  prévoyait « violet très pâle ». Clair : `#5B1FB8` ; sombre : `#7A2FD9`. Contrastes AA vérifiés.
+- **En-tête : violet profond `#5B1FB8`** (couleur issue du dégradé du logo n° 1), contenu sur
+  une feuille claire à coins arrondis. Sombre : bleu nuit `#0C1438`.
+- Navigation inchangée : Discussions / Groupes / Paramètres. Logo n° 1 uniquement.
+- Aucun bouton non livré n'est affiché (photo, vocal, emoji, appel) : ils apparaissent avec leur lot.

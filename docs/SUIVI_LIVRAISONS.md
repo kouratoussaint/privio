@@ -22,6 +22,12 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | 2.4 | App : stockage local chiffré, envoi hors ligne, effacement local à 72 h même hors ligne, recherche, épinglage, archivage, indicateur « en train d'écrire » | Mode avion : écrire, puis se reconnecter | ⏳ |
 | 2.5 | Signalement, suppression de compte, page d'aide | Signaler un message, supprimer un compte de test | ⏳ |
 
+## Lot 2.D — Design (inséré avant le lot 2.4)
+| Lot | Contenu | Vos tests | Statut |
+|---|---|---|---|
+| 2.D-1 | Maquettes clair/sombre (accueil, discussions, conversation, paramètres) | Validation visuelle | ✅ 12/11/2026 — bulles B, en-tête violet profond |
+| 2.D-2 | Intégration dans l'application, captures avant/après | Parcourir l'app en clair et en sombre | 🔨 CI en cours |
+
 ## Étape 3 — Médias et groupes
 | Lot | Contenu | Statut |
 |---|---|---|

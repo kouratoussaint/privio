@@ -222,6 +222,7 @@ class FakeMessagingApi implements MessagingApi {
       lastSenderId: last?.senderId,
       lastBody: last?.body,
       lastSentAt: last?.sentAt,
+      lastExpiresAt: last?.expiresAt,
       peerReadUpTo: peerReadUpTo,
       peerDeliveredUpTo: peerDeliveredUpTo,
     );
@@ -374,16 +375,21 @@ class FakeRealtimeService implements RealtimeService {
 }
 
 class TestDeps {
-  TestDeps({FakeAuthService? auth, FakeAccountApi? api, FakeLocalFlags? flags})
-    : auth = auth ?? FakeAuthService(),
-      api = api ?? FakeAccountApi(),
-      flags = flags ?? FakeLocalFlags();
+  TestDeps({
+    FakeAuthService? auth,
+    FakeAccountApi? api,
+    FakeLocalFlags? flags,
+    FakeMessagingApi? messaging,
+  }) : auth = auth ?? FakeAuthService(),
+       api = api ?? FakeAccountApi(),
+       flags = flags ?? FakeLocalFlags(),
+       messaging = messaging ?? FakeMessagingApi();
 
   final FakeAuthService auth;
   final FakeAccountApi api;
   final FakeLocalFlags flags;
   final permissions = FakePermissionGateway();
-  final messaging = FakeMessagingApi();
+  final FakeMessagingApi messaging;
   final realtime = FakeRealtimeService();
 
   List<Override> get overrides => [

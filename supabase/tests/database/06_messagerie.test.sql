@@ -81,6 +81,8 @@ set local role authenticated;
 select is((select body from public.get_messages((select v from t where k = 'conv'))), 'Bonjour Bob',
   'B lit le message');
 select is((select unread_count from public.list_conversations()), 1, 'B a 1 message non lu');
+select is((select last_expires_at - last_sent_at from public.list_conversations()), interval '72 hours',
+  'la liste expose l''expiration du dernier message');
 select is((select peer_display_name from public.list_conversations()), 'Alice',
   'la liste affiche le nom du correspondant');
 select lives_ok(format($$ select public.mark_conversation(%L, now(), now()) $$, (select v from t where k = 'conv')),

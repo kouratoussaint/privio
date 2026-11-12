@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/privio_theme.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/privio_brand.dart';
@@ -52,64 +53,71 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      body: FlowLayout(
-        bottom: FilledButton(
-          key: const Key('onboarding.continue'),
-          onPressed: _accepted && !_busy ? _continue : null,
-          child: const Text('Continuer'),
-        ),
-        children: [
-          const SizedBox(height: PrivioSpacing.xl),
-          const Center(child: PrivioSymbol(size: 88)),
-          const SizedBox(height: PrivioSpacing.l),
-          Text(
-            'Bienvenue sur Privio',
-            style: theme.textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: PrivioSpacing.s),
-          Text(
-            'Une messagerie privée et éphémère. Voici ce que Privio fait pour vous :',
-            style: theme.textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: PrivioSpacing.xl),
-          for (final (icon, title, body) in OnboardingScreen.commitments) ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(PrivioSpacing.l),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(icon, color: theme.colorScheme.primary),
-                    const SizedBox(width: PrivioSpacing.m),
-                    Expanded(
-                      child: Column(
+    return Theme(
+      data: PrivioTheme.entry,
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          return Scaffold(
+            body: FlowLayout(
+              bottom: FilledButton(
+                key: const Key('onboarding.continue'),
+                onPressed: _accepted && !_busy ? _continue : null,
+                child: const Text('Continuer'),
+              ),
+              children: [
+                const SizedBox(height: PrivioSpacing.xl),
+                const Center(child: PrivioSymbol(size: 88)),
+                const SizedBox(height: PrivioSpacing.l),
+                Text(
+                  'Bienvenue sur Privio',
+                  style: theme.textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: PrivioSpacing.s),
+                Text(
+                  'Une messagerie privée et éphémère. Voici ce que Privio fait pour vous :',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: PrivioSpacing.xl),
+                for (final (icon, title, body) in OnboardingScreen.commitments) ...[
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(PrivioSpacing.l),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: theme.textTheme.titleSmall),
-                          const SizedBox(height: PrivioSpacing.xs),
-                          Text(body, style: theme.textTheme.bodyMedium),
+                          Icon(icon, color: theme.colorScheme.primary),
+                          const SizedBox(width: PrivioSpacing.m),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(title, style: theme.textTheme.titleSmall),
+                                const SizedBox(height: PrivioSpacing.xs),
+                                Text(body, style: theme.textTheme.bodyMedium),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: PrivioSpacing.m),
+                ],
+                CheckboxListTile(
+                  key: const Key('onboarding.consent'),
+                  value: _accepted,
+                  onChanged: (v) => setState(() => _accepted = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('J\'ai lu et compris ces engagements.'),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: PrivioSpacing.m),
-          ],
-          CheckboxListTile(
-            key: const Key('onboarding.consent'),
-            value: _accepted,
-            onChanged: (v) => setState(() => _accepted = v ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: const Text('J\'ai lu et compris ces engagements.'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
