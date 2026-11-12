@@ -82,11 +82,17 @@ final conversationSummaryProvider = Provider.family<ConversationSummary?, String
 // Conversation (écran 10, version de base du lot 2.2)
 // ------------------------------------------------------------------------
 class PendingMessage {
-  const PendingMessage({required this.clientId, required this.body, this.failed = false});
+  const PendingMessage({
+    required this.clientId,
+    required this.body,
+    this.failed = false,
+    this.replyToId,
+  });
 
   final String clientId;
   final String body;
   final bool failed;
+  final String? replyToId;
 }
 
 class ChatState {
@@ -146,7 +152,7 @@ class ChatController extends AsyncNotifier<ChatState> {
 
   /// Envoi avec affichage immédiat ; en cas d'échec, le message reste « à renvoyer »
   /// avec le MÊME identifiant client (pas de doublon côté serveur).
-  Future<void> send(String text, {String? clientId}) async {
+  Future<void> send(String text, {String? clientId, String? replyToId}) async {
     final body = text.trim();
     if (body.isEmpty) return;
     final id = clientId ?? uuidV4();
@@ -155,18 +161,39 @@ class ChatController extends AsyncNotifier<ChatState> {
       current.copyWith(
         pending: [
           ...current.pending.where((p) => p.clientId != id),
-          PendingMessage(clientId: id, body: body),
+          PendingMessage(clientId: id, body: body, replyToId: replyToId),
         ],
       ),
     );
     try {
       final sent = await ref
           .read(messagingApiProvider)
-          .sendMessage(conversationId: conversationId, clientMsgId: id, body: body);
+          .sendMessage(
+            conversationId: conversationId,
+            clientMsgId: id,
+            body: body,
+            replyToId: replyToId,
+          );
       final now = state.value ?? current;
+      // La réponse affiche tout de suite la citation (le serveur la renverra ensuite).
+      final quoted = replyToId == null
+          ? null
+          : now.messages.where((m) => m.id == replyToId && !m.isDeleted).firstOrNull?.body;
+      final shown = quoted == null
+          ? sent
+          : ChatMessage(
+              id: sent.id,
+              senderId: sent.senderId,
+              body: sent.body,
+              replyToId: replyToId,
+              replyPreview: quoted.length > 120 ? quoted.substring(0, 120) : quoted,
+              sentAt: sent.sentAt,
+              expiresAt: sent.expiresAt,
+              updatedAt: sent.updatedAt,
+            );
       state = AsyncData(
         ChatState(
-          messages: [...now.messages.where((m) => m.id != sent.id), sent],
+          messages: [...now.messages.where((m) => m.id != sent.id), shown],
           pending: now.pending.where((p) => p.clientId != id).toList(),
         ),
       );
@@ -177,12 +204,52 @@ class ChatController extends AsyncNotifier<ChatState> {
         now.copyWith(
           pending: [
             for (final p in now.pending)
-              p.clientId == id ? PendingMessage(clientId: id, body: body, failed: true) : p,
+              p.clientId == id
+                  ? PendingMessage(clientId: id, body: body, failed: true, replyToId: replyToId)
+                  : p,
           ],
         ),
       );
       throw toAppFailure(e);
     }
+  }
+
+  Future<void> _act(Future<void> Function(MessagingApi api) run) async {
+    try {
+      await run(ref.read(messagingApiProvider));
+    } on Object catch (e) {
+      throw toAppFailure(e);
+    } finally {
+      await reload();
+    }
+  }
+
+  Future<void> edit(String messageId, String body) =>
+      _act((api) => api.editMessage(messageId, body.trim()));
+
+  Future<void> deleteForEveryone(String messageId) =>
+      _act((api) => api.deleteForEveryone(messageId));
+
+  /// Masquage immédiat à l'écran, puis confirmation serveur.
+  Future<void> deleteForMe(String messageId) {
+    final now = state.value;
+    if (now != null) {
+      state = AsyncData(
+        now.copyWith(messages: now.messages.where((m) => m.id != messageId).toList()),
+      );
+    }
+    return _act((api) => api.deleteForMe(messageId));
+  }
+
+  /// Toucher l'emoji déjà choisi le retire ; un autre emoji le remplace.
+  Future<void> toggleReaction(String messageId, String emoji) {
+    final me = ref.read(currentUserIdProvider);
+    final message = state.value?.messages.where((m) => m.id == messageId).firstOrNull;
+    final mine = message?.reactions.where((r) => r.userId == me).firstOrNull;
+    return _act(
+      (api) =>
+          mine?.emoji == emoji ? api.removeReaction(messageId) : api.setReaction(messageId, emoji),
+    );
   }
 
   void discardPending(String clientId) {
@@ -193,6 +260,36 @@ class ChatController extends AsyncNotifier<ChatState> {
     );
   }
 }
+
+/// Règles affichées côté client (le serveur reste l'autorité et refuse au-delà).
+class MessagingRules {
+  const MessagingRules({
+    this.editWindow = const Duration(minutes: 60),
+    this.deleteForAllWindow = const Duration(hours: 72),
+  });
+
+  final Duration editWindow;
+  final Duration deleteForAllWindow;
+
+  factory MessagingRules.fromPolicies(Map<String, Object?> v) => MessagingRules(
+    editWindow: Duration(minutes: (v['message_edit_window_minutes'] as num?)?.toInt() ?? 60),
+    deleteForAllWindow: Duration(hours: (v['message_delete_for_all_hours'] as num?)?.toInt() ?? 72),
+  );
+
+  bool canEdit(ChatMessage m, DateTime now) =>
+      !m.isDeleted && now.isBefore(m.sentAt.add(editWindow));
+  bool canDeleteForAll(ChatMessage m, DateTime now) =>
+      !m.isDeleted && now.isBefore(m.sentAt.add(deleteForAllWindow));
+}
+
+final messagingRulesProvider = FutureProvider<MessagingRules>((ref) async {
+  if (ref.watch(currentUserIdProvider) == null) return const MessagingRules();
+  try {
+    return MessagingRules.fromPolicies(await ref.watch(messagingApiProvider).getClientPolicies());
+  } on Object {
+    return const MessagingRules(); // valeurs validées par défaut (B1)
+  }
+});
 
 // ------------------------------------------------------------------------
 // Blocages

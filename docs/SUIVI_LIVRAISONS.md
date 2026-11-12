@@ -17,9 +17,9 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
 | 2.1 | Serveur : conversations, messages, expiration 72 h + purge automatique, accusés, réactions, réponses, modification (60 min), suppression pour tous (jusqu'à l'expiration), blocage, temps réel | Aucun (preuve : CI + déploiement staging) | 🧪 12/11/2026 |
-| 2.2 | App : liste des discussions, recherche d'une personne, démarrer une discussion, conversation de base (texte, temps réel), fiche contact, bloquer | Trouver l'autre compte, échanger des messages, bloquer/débloquer | 🧪 12/11/2026 |
-| 2.3 | App : écran de conversation, envoi en temps réel, accusés, réponses, réactions, modification, suppression, compte à rebours | Échanger des messages entre les deux téléphones | ⏳ |
-| 2.4 | App : stockage local chiffré, envoi hors ligne, effacement local à 72 h même hors ligne, recherche, épinglage, archivage | Mode avion : écrire, puis se reconnecter | ⏳ |
+| 2.2 | App : liste des discussions, recherche d'une personne, démarrer une discussion, conversation de base (texte, temps réel), fiche contact, bloquer | Trouver l'autre compte, échanger des messages, bloquer/débloquer | 🧪 12/11/2026 — correctif temps réel livré avec le lot 2.3 |
+| 2.3 | App : accusés envoyé/reçu/lu, réponses citées, réactions, modification (60 min), suppression pour moi / pour tous, accessibilité des bulles | Appui long sur un message, accusés entre les deux téléphones | 🔨 |
+| 2.4 | App : stockage local chiffré, envoi hors ligne, effacement local à 72 h même hors ligne, recherche, épinglage, archivage, indicateur « en train d'écrire » | Mode avion : écrire, puis se reconnecter | ⏳ |
 | 2.5 | Signalement, suppression de compte, page d'aide | Signaler un message, supprimer un compte de test | ⏳ |
 
 ## Étape 3 — Médias et groupes

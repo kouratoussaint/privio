@@ -135,7 +135,74 @@ class FakeMessagingApi implements MessagingApi {
   final List<String> handleSearches = [];
   final List<String> sentClientIds = [];
   bool failNextSend = false;
+  DateTime? peerReadUpTo;
+  DateTime? peerDeliveredUpTo;
+  final Set<String> hiddenForMe = {};
+  Map<String, Object?> policies = const {'message_edit_window_minutes': 60};
   int _seq = 0;
+
+  ChatMessage _replace(String id, ChatMessage Function(ChatMessage) change) {
+    for (final list in messages.values) {
+      final i = list.indexWhere((m) => m.id == id);
+      if (i >= 0) return list[i] = change(list[i]);
+    }
+    throw const AppFailure(FailureCode.messageNotFound);
+  }
+
+  ChatMessage _copy(
+    ChatMessage m, {
+    String? body,
+    bool clearBody = false,
+    DateTime? editedAt,
+    DateTime? deletedAt,
+    List<Reaction>? reactions,
+  }) => ChatMessage(
+    id: m.id,
+    senderId: m.senderId,
+    body: clearBody ? null : (body ?? m.body),
+    replyToId: m.replyToId,
+    replyPreview: m.replyPreview,
+    sentAt: m.sentAt,
+    expiresAt: m.expiresAt,
+    editedAt: editedAt ?? m.editedAt,
+    deletedAt: deletedAt ?? m.deletedAt,
+    updatedAt: DateTime.now(),
+    reactions: reactions ?? m.reactions,
+  );
+
+  @override
+  Future<void> editMessage(String messageId, String body) async =>
+      _replace(messageId, (m) => _copy(m, body: body, editedAt: DateTime.now()));
+
+  @override
+  Future<void> deleteForEveryone(String messageId) async => _replace(
+    messageId,
+    (m) => _copy(m, clearBody: true, deletedAt: DateTime.now(), reactions: const []),
+  );
+
+  @override
+  Future<void> deleteForMe(String messageId) async => hiddenForMe.add(messageId);
+
+  @override
+  Future<void> setReaction(String messageId, String emoji) async => _replace(
+    messageId,
+    (m) => _copy(
+      m,
+      reactions: [
+        ...m.reactions.where((r) => r.userId != me),
+        Reaction(userId: me, emoji: emoji),
+      ],
+    ),
+  );
+
+  @override
+  Future<void> removeReaction(String messageId) async => _replace(
+    messageId,
+    (m) => _copy(m, reactions: m.reactions.where((r) => r.userId != me).toList()),
+  );
+
+  @override
+  Future<Map<String, Object?>> getClientPolicies() async => policies;
 
   ConversationSummary _summary(String id, {bool? blockedFlag}) {
     final list = messages[id] ?? const <ChatMessage>[];
@@ -155,6 +222,8 @@ class FakeMessagingApi implements MessagingApi {
       lastSenderId: last?.senderId,
       lastBody: last?.body,
       lastSentAt: last?.sentAt,
+      peerReadUpTo: peerReadUpTo,
+      peerDeliveredUpTo: peerDeliveredUpTo,
     );
   }
 
@@ -199,8 +268,35 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   @override
-  Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50}) async =>
-      List.of(messages[conversationId] ?? const <ChatMessage>[]);
+  Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50}) async => [
+    for (final m in messages[conversationId] ?? const <ChatMessage>[])
+      if (!hiddenForMe.contains(m.id))
+        if (m.replyToId == null)
+          m
+        else
+          ChatMessage(
+            id: m.id,
+            senderId: m.senderId,
+            body: m.body,
+            replyToId: m.replyToId,
+            replyPreview: _findBody(m.replyToId!),
+            sentAt: m.sentAt,
+            expiresAt: m.expiresAt,
+            editedAt: m.editedAt,
+            deletedAt: m.deletedAt,
+            updatedAt: m.updatedAt,
+            reactions: m.reactions,
+          ),
+  ];
+
+  String? _findBody(String id) {
+    for (final list in messages.values) {
+      for (final m in list) {
+        if (m.id == id) return m.isDeleted ? null : m.body;
+      }
+    }
+    return null;
+  }
 
   @override
   Future<ChatMessage> sendMessage({
@@ -220,6 +316,7 @@ class FakeMessagingApi implements MessagingApi {
       id: 'srv-$clientMsgId',
       senderId: me,
       body: body.trim(),
+      replyToId: replyToId,
       sentAt: now,
       expiresAt: now.add(const Duration(hours: 72)),
       updatedAt: now,

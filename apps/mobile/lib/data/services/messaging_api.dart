@@ -22,6 +22,12 @@ abstract interface class MessagingApi {
     DateTime? deliveredUpTo,
     DateTime? readUpTo,
   });
+  Future<void> editMessage(String messageId, String body);
+  Future<void> deleteForEveryone(String messageId);
+  Future<void> deleteForMe(String messageId);
+  Future<void> setReaction(String messageId, String emoji);
+  Future<void> removeReaction(String messageId);
+  Future<Map<String, Object?>> getClientPolicies();
   Future<List<BlockedUser>> listBlockedUsers();
   Future<void> blockUser(String userId);
   Future<void> unblockUser(String userId);
@@ -119,6 +125,35 @@ class SupabaseMessagingApi implements MessagingApi {
       },
     ),
   );
+
+  Future<void> _call(String fn, Map<String, dynamic> params) =>
+      _guard(() => _client.rpc<dynamic>(fn, params: params));
+
+  @override
+  Future<void> editMessage(String messageId, String body) =>
+      _call('edit_message', {'p_message_id': messageId, 'p_body': body});
+
+  @override
+  Future<void> deleteForEveryone(String messageId) =>
+      _call('delete_message_for_everyone', {'p_message_id': messageId});
+
+  @override
+  Future<void> deleteForMe(String messageId) =>
+      _call('delete_message_for_me', {'p_message_id': messageId});
+
+  @override
+  Future<void> setReaction(String messageId, String emoji) =>
+      _call('set_reaction', {'p_message_id': messageId, 'p_emoji': emoji});
+
+  @override
+  Future<void> removeReaction(String messageId) =>
+      _call('remove_reaction', {'p_message_id': messageId});
+
+  @override
+  Future<Map<String, Object?>> getClientPolicies() => _guard(() async {
+    final res = await _client.rpc<dynamic>('get_client_policies') as Map;
+    return Map<String, Object?>.from(res['values'] as Map? ?? const {});
+  });
 
   @override
   Future<List<BlockedUser>> listBlockedUsers() async =>
