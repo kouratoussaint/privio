@@ -30,8 +30,8 @@ select is(
   (select string_agg(p.proname::text, ',' order by p.proname::text collate "C")
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute')),
-  'session_is_active',
-  'seule private.session_is_active est exécutable par authenticated');
+  'is_member,session_is_active,shares_conversation',
+  'seules les fonctions privées utilisées par la RLS sont exécutables par authenticated');
 
 select is_empty($$
   select n.nspname || '.' || c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace

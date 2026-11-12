@@ -28,7 +28,7 @@ jobs:
       - run: scripts/guards.sh
 
   base-de-donnees:
-    name: Migrations, RLS et Auth (Supabase local)
+    name: Migrations, RLS, Auth et messagerie (Supabase local)
     needs: garde-fous
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -39,12 +39,14 @@ jobs:
           version: ${{ env.SUPABASE_CLI_VERSION }}
       - name: Démarrer Supabase (base, Auth, API)
         run: >
-          supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          supabase start -x storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - name: Tests pgTAP (sécurité, profils, recherche, appareils, politiques)
         run: supabase test db
       - name: Test de concurrence (scénario AUTH n°4)
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_handle_test.sh
-      - name: Test d'intégration Auth téléphone + RPC + révocation d'appareil
+      - name: Test de concurrence (messagerie)
+        run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_messaging_test.sh
+      - name: Test d'intégration Auth téléphone + RPC + messagerie entre deux comptes
         run: scripts/ci/auth_smoke_test.sh
       - name: Lint SQL
         run: supabase db lint --level error --fail-on error

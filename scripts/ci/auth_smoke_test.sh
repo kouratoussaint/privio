@@ -13,9 +13,10 @@ post() { # post <chemin> <json> [jeton]
   local auth=(); [ -n "${3:-}" ] && auth=(-H "Authorization: Bearer $3")
   curl -sS -X POST "$API$1" -H "apikey: $KEY" -H "Content-Type: application/json" "${auth[@]}" -d "$2"
 }
-login() {
-  post /auth/v1/otp "{\"phone\":\"$PHONE\"}" >/dev/null
-  post /auth/v1/verify "{\"type\":\"sms\",\"phone\":\"$PHONE\",\"token\":\"123456\"}" \
+login() { # login [numéro]
+  local phone="${1:-$PHONE}"
+  post /auth/v1/otp "{\"phone\":\"$phone\"}" >/dev/null
+  post /auth/v1/verify "{\"type\":\"sms\",\"phone\":\"$phone\",\"token\":\"123456\"}" \
     | python3 -c 'import sys,json; print(json.load(sys.stdin).get("access_token",""))'
 }
 
@@ -53,4 +54,28 @@ echo "$R" | grep -qiE 'permission denied|42501|AUTH_REQUIRED' && pass "anonyme r
 R=$(curl -sS "$API/rest/v1/profiles?select=*" -H "apikey: $KEY")
 echo "$R" | grep -qiE 'permission denied|42501|\[\]' && pass "anonyme : aucune lecture de profils" \
   || fail "lecture anonyme des profils" "$R"
-echo "Test d'intégration Auth/RPC : OK"
+
+# ---------------- Lot 2.1 : échange réel entre deux comptes ----------------
+json() { python3 -c "import sys,json; d=json.load(sys.stdin); print($1)"; }
+TB=$(login +22670000002); [ -n "$TB" ] && pass "second compte connecté" || fail "second compte" "pas de jeton"
+post /rest/v1/rpc/create_profile '{"p_handle":"smoke_peer","p_display_name":"Pair CI"}' "$TB" >/dev/null
+post /rest/v1/rpc/register_device '{"p_platform":"android","p_app_version":"ci"}' "$TB" >/dev/null
+
+PEER=$(post /rest/v1/rpc/find_user_by_handle '{"p_handle":"smoke_peer"}' "$T2" | json "d[0]['id']")
+CONV=$(post /rest/v1/rpc/start_direct_conversation "{\"p_other_user_id\":\"$PEER\"}" "$T2" | tr -d '"')
+echo "$CONV" | grep -qE '^[0-9a-f-]{36}$' && pass "discussion démarrée après recherche par identifiant" \
+  || fail "start_direct_conversation" "$CONV"
+
+R=$(post /rest/v1/rpc/send_message "{\"p_conversation_id\":\"$CONV\",\"p_client_msg_id\":\"44444444-4444-4444-4444-444444444444\",\"p_body\":\"Bonjour depuis la CI\"}" "$T2")
+MID=$(echo "$R" | json "d[0]['id']"); EXP=$(echo "$R" | json "d[0]['expires_at']")
+[ -n "$MID" ] && pass "message envoyé (expire le $EXP)" || fail "send_message" "$R"
+
+R=$(post /rest/v1/rpc/get_messages "{\"p_conversation_id\":\"$CONV\"}" "$TB")
+echo "$R" | grep -q "Bonjour depuis la CI" && pass "le destinataire lit le message" || fail "get_messages" "$R"
+R=$(post /rest/v1/rpc/list_conversations '{}' "$TB" | json "d[0]['unread_count']")
+[ "$R" = "1" ] && pass "1 message non lu chez le destinataire" || fail "non lus" "$R"
+R=$(post /rest/v1/rpc/edit_message "{\"p_message_id\":\"$MID\",\"p_body\":\"x\"}" "$TB")
+echo "$R" | grep -q 'NOT_SENDER' && pass "le destinataire ne peut pas modifier le message" || fail "NOT_SENDER" "$R"
+R=$(curl -sS "$API/rest/v1/messages?select=body" -H "apikey: $KEY")
+echo "$R" | grep -qiE 'permission denied|42501' && pass "anonyme : aucune lecture de messages" || fail "lecture anonyme des messages" "$R"
+echo "Test d'intégration Auth/RPC/messagerie : OK"
