@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -250,7 +251,11 @@ class FakeMessagingApi implements MessagingApi {
 
 class FakeRealtimeService implements RealtimeService {
   final _controller = StreamController<RealtimeSignal>.broadcast();
+  final _status = ValueNotifier(const RealtimeStatus(RealtimeState.stopped));
   String? startedFor;
+
+  @override
+  ValueListenable<RealtimeStatus> get status => _status;
 
   void emit(String conversationId) =>
       _controller.add(RealtimeSignal(event: 'message', conversationId: conversationId));
@@ -259,10 +264,16 @@ class FakeRealtimeService implements RealtimeService {
   Stream<RealtimeSignal> get signals => _controller.stream;
 
   @override
-  Future<void> start(String userId) async => startedFor = userId;
+  Future<void> start(String userId) async {
+    startedFor = userId;
+    _status.value = const RealtimeStatus(RealtimeState.connected);
+  }
 
   @override
-  Future<void> stop() async => startedFor = null;
+  Future<void> stop() async {
+    startedFor = null;
+    _status.value = const RealtimeStatus(RealtimeState.stopped);
+  }
 }
 
 class TestDeps {

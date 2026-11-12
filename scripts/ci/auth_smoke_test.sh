@@ -78,4 +78,5 @@ R=$(post /rest/v1/rpc/edit_message "{\"p_message_id\":\"$MID\",\"p_body\":\"x\"}
 echo "$R" | grep -q 'NOT_SENDER' && pass "le destinataire ne peut pas modifier le message" || fail "NOT_SENDER" "$R"
 R=$(curl -sS "$API/rest/v1/messages?select=body" -H "apikey: $KEY")
 echo "$R" | grep -qiE 'permission denied|42501' && pass "anonyme : aucune lecture de messages" || fail "lecture anonyme des messages" "$R"
-echo "Test d'intégration Auth/RPC/messagerie : OK"
+python3 "$(dirname "$0")/realtime_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel : OK"

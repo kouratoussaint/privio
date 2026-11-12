@@ -37,8 +37,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _tick = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) setState(() {});
     });
-    // Filet de sécurité si la connexion temps réel est coupée (réseaux instables).
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) {
+    // Filet de sécurité si la connexion temps réel est coupée (réseaux instables) :
+    // une conversation ouverte reste à jour à 5 secondes près.
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) ref.read(chatProvider(widget.conversationId).notifier).reload();
     });
   }

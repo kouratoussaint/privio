@@ -138,4 +138,33 @@ void main() {
     expect(find.text('Au moins 3 caractères.'), findsOneWidget);
     expect(deps.messaging.handleSearches, isEmpty);
   });
+
+  testWidgets('temps réel coupé : le message reçu apparaît quand même en 5 s', (tester) async {
+    final deps = _readyUser();
+    await _pumpApp(tester, deps);
+    await tester.tap(find.byKey(const Key('discussions.new')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('search.input')), 'bob_ouaga');
+    await tester.tap(find.byKey(const Key('search.submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('search.write')));
+    await tester.pumpAndSettle();
+
+    // Aucun signal temps réel émis : seul le rafraîchissement de secours peut l'afficher.
+    deps.messaging.receive('conv-bob', 'Arrivé sans temps réel');
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Arrivé sans temps réel'), findsNothing);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump();
+    expect(find.text('Arrivé sans temps réel'), findsOneWidget);
+  });
+
+  testWidgets('Paramètres : état de la réception instantanée visible', (tester) async {
+    final deps = _readyUser();
+    await _pumpApp(tester, deps);
+    await tester.tap(find.text('Paramètres'));
+    await tester.pumpAndSettle();
+    expect(find.text('Réception instantanée'), findsOneWidget);
+    expect(find.text('Connecté'), findsOneWidget);
+  });
 }

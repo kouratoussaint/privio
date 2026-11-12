@@ -31,6 +31,11 @@ final realtimeSignalsProvider = StreamProvider<RealtimeSignal>((ref) {
   return service.signals;
 });
 
+/// État de la connexion temps réel (affiché dans Paramètres).
+final realtimeStatusProvider = Provider<RealtimeService>(
+  (ref) => ref.watch(realtimeServiceProvider),
+);
+
 // ------------------------------------------------------------------------
 // Liste des discussions (écran 08)
 // ------------------------------------------------------------------------

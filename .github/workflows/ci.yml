@@ -46,8 +46,10 @@ jobs:
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_handle_test.sh
       - name: Test de concurrence (messagerie)
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_messaging_test.sh
-      - name: Test d'intégration Auth téléphone + RPC + messagerie entre deux comptes
-        run: scripts/ci/auth_smoke_test.sh
+      - name: Test d'intégration Auth téléphone + RPC + messagerie + temps réel
+        run: |
+          pip install --quiet websockets==15.0.1
+          scripts/ci/auth_smoke_test.sh
       - name: Preuve — purge planifiée et canal temps réel privé installés
         run: |
           DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -85,6 +87,23 @@ jobs:
         run: flutter analyze --fatal-infos
       - name: Tests unitaires et widgets
         run: flutter test --coverage
+      - name: Clé de signature stable (secrets GitHub)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::Secret ANDROID_KEYSTORE_BASE64 absent : APK signé avec une clé temporaire (désinstallation nécessaire à chaque version)."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/privio.jks"
+          {
+            echo "PRIVIO_KEYSTORE_PATH=$RUNNER_TEMP/privio.jks"
+            echo "PRIVIO_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "PRIVIO_KEY_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "PRIVIO_KEY_ALIAS=privio"
+          } >> "$GITHUB_ENV"
+          echo "Clé stable chargée."
       - name: APK de test (staging, release découpé par processeur)
         # Valeurs PUBLIQUES (variables de dépôt, pas des secrets). Sans elles, l'APK
         # se compile mais affiche un écran « configuration absente ».

@@ -31,11 +31,27 @@ android {
         versionName = flutter.versionName
     }
 
+    // Clé de signature STABLE fournie par la CI (secrets GitHub), jamais versionnée.
+    // Sans elle (poste de développement), la clé de debug locale est utilisée.
+    val keystorePath = System.getenv("PRIVIO_KEYSTORE_PATH")
+    signingConfigs {
+        if (keystorePath != null) {
+            create("privio") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("PRIVIO_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PRIVIO_KEY_ALIAS")
+                keyPassword = System.getenv("PRIVIO_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Signature de release : workflow distinct, clés dans les secrets GitHub d'un
-            // environnement protégé (étape 6). Aucune clé de production dans le dépôt.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePath != null) {
+                signingConfigs.getByName("privio")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

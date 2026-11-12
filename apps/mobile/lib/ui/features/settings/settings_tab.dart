@@ -6,6 +6,8 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../router/routes.dart';
+import '../../../data/services/realtime_service.dart';
+import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/session_controller.dart';
 
@@ -90,6 +92,15 @@ class SettingsTab extends ConsumerWidget {
           ),
           const Divider(),
           Text('Appareil', style: theme.textTheme.titleSmall),
+          ValueListenableBuilder<RealtimeStatus>(
+            valueListenable: ref.watch(realtimeStatusProvider).status,
+            builder: (_, status, _) => ListTile(
+              key: const Key('settings.realtime'),
+              leading: const Icon(Icons.sync),
+              title: const Text('Réception instantanée'),
+              subtitle: Text(status.label),
+            ),
+          ),
           const ListTile(
             leading: Icon(Icons.phone_android),
             title: Text('Ce téléphone'),

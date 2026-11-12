@@ -27,8 +27,9 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
   @override
   void initState() {
     super.initState();
-    // Les aperçus de messages expirés disparaissent même sans signal réseau.
-    _tick = Timer.periodic(const Duration(minutes: 1), (_) {
+    // Rafraîchissement de secours (temps réel coupé) ; fait aussi disparaître les
+    // aperçus de messages expirés.
+    _tick = Timer.periodic(const Duration(seconds: 20), (_) {
       if (mounted) ref.invalidate(conversationsProvider);
     });
   }
