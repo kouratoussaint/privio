@@ -549,7 +549,15 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   @override
-  Future<List<ConversationSummary>> listConversations() async => _list();
+  Future<List<ConversationSummary>> listConversations() async {
+    // Lot 4.8 : réseau lent simulé (la liste n'arrive qu'à l'ouverture de la barrière).
+    if (listGate != null) await listGate!.future;
+    return _list();
+  }
+
+  /// Lot 4.8 : barrières pour simuler un serveur lent (création, liste des discussions).
+  Completer<void>? createGate;
+  Completer<void>? listGate;
 
   Future<List<ConversationSummary>> _list() async {
     _net();
@@ -1150,6 +1158,7 @@ class FakeMessagingApi implements MessagingApi {
     if (title.trim().isEmpty || title.trim().length > 60) {
       throw const AppFailure(FailureCode.groupTitleInvalid);
     }
+    if (createGate != null) await createGate!.future;
     final id = 'grp-${_seq++}';
     seedGroup(id, title.trim(), description: description).invited.addAll(inviteeIds);
     groupEvent(id, 'created', value: title.trim());

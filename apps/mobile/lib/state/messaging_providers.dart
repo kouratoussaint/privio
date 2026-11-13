@@ -299,6 +299,40 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     }
   }
 
+  /// Lot 4.8 : un groupe tout juste créé apparaît aussitôt (en-tête de la discussion
+  /// correct dès l'ouverture), puis la liste est confirmée par le serveur.
+  void addCreatedGroup({
+    required String id,
+    required String title,
+    String? description,
+    int ttlSeconds = 259200,
+  }) {
+    final before = state.value ?? const <ConversationSummary>[];
+    if (before.any((c) => c.id == id)) return;
+    state = AsyncData([
+      ConversationSummary(
+        id: id,
+        kind: 'group',
+        peerId: null,
+        peerHandle: null,
+        peerDisplayName: null,
+        peerDeleted: false,
+        blocked: false,
+        unreadCount: 0,
+        pinned: false,
+        archived: false,
+        sortAt: DateTime.now(),
+        groupTitle: title,
+        groupDescription: description,
+        memberCount: 1,
+        myRole: 'owner',
+        ttlSeconds: ttlSeconds,
+      ),
+      ...before,
+    ]);
+    unawaited(refresh());
+  }
+
   /// Épingler / archiver (état personnel), affiché aussitôt puis confirmé.
   Future<void> setFlags(String conversationId, {bool? pinned, bool? archived}) async {
     final before = state.value ?? const [];
@@ -784,11 +818,14 @@ final avatarBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>
 // ------------------------------------------------------------------------
 // Groupes (lot 3.3)
 // ------------------------------------------------------------------------
-/// Invitations reçues (à accepter ou refuser), mises à jour en temps réel.
+/// Invitations reçues (à accepter ou refuser). Mises à jour en temps réel, au retour dans
+/// l'app et après une coupure (lot 4.8 : avant, une invitation reçue app fermée
+/// n'apparaissait qu'au redémarrage).
 final invitationsProvider = FutureProvider.autoDispose<List<GroupInvitation>>((ref) {
   if (ref.watch(currentUserIdProvider) == null) return const [];
   ref.listen(realtimeSignalsProvider, (_, next) {
-    if (next.value?.event == 'invitation') ref.invalidateSelf();
+    final e = next.value?.event;
+    if (e == 'invitation' || e == 'resume' || e == 'reconnected') ref.invalidateSelf();
   });
   return ref.watch(messagingApiProvider).listInvitations();
 });

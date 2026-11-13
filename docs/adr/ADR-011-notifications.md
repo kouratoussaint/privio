@@ -39,3 +39,10 @@ désactive les jetons ET un envoi serveur par `fid` : migration à faire d'un se
 **Preuves** : tests SQL (destinataires, sourdine, blocage, révocation, jetons refusés), tests
 Flutter (enregistrement, renouvellement, interrupteur, déconnexion, ouverture), test bout à
 bout en CI (déclencheur → pg_net → fonction → destinataires).
+
+**Complément (lot 4.8, 13/11/2026)** : trois types de notification, tous SANS contenu —
+nouveau message (`message_id`), demande de connexion (`request_id`, lot 4.7) et invitation à
+rejoindre un groupe (`invitation_id`) : « Nouvelle invitation à rejoindre un groupe », sans nom
+de groupe ni de personne ; destinataire calculé par `push_invitation_targets` (invité
+seulement, invitation en attente, sans blocage, appareils actifs). Un appui ouvre l'onglet
+Groupes. Les invitations sont aussi rechargées au retour dans l'app et après une coupure.

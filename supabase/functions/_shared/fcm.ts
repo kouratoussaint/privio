@@ -95,6 +95,17 @@ export function sendRequestEvent(
   });
 }
 
+/** Invitation à rejoindre un groupe (lot 4.8) : ni nom du groupe, ni nom de l'invitant. */
+export const INVITATION_BODY = "Nouvelle invitation à rejoindre un groupe";
+
+export function sendInvitation(sa: ServiceAccount, token: string): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: INVITATION_BODY,
+    data: { type: "invitation" },
+    tag: "privio-invitations",
+  });
+}
+
 async function sendNotification(
   sa: ServiceAccount,
   token: string,

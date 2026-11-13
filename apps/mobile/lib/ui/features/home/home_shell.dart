@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
-import '../../../data/services/push_service.dart' show kRequestsTarget;
+import '../../../data/services/push_service.dart' show kGroupsTarget, kRequestsTarget;
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
@@ -70,7 +70,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ref.listen(openConversationRequestProvider, (_, id) {
       if (id == null) return;
       ref.read(openConversationRequestProvider.notifier).consume();
-      // Notification de demande de connexion (lot 4.7) : l'écran des demandes.
+      // Notification de demande de connexion (lot 4.7) : l'écran des demandes ;
+      // d'invitation de groupe (lot 4.8) : l'onglet Groupes, invitations à jour.
+      if (id == kGroupsTarget) {
+        ref.invalidate(invitationsProvider);
+        context.go(Routes.groups);
+        return;
+      }
       context.push(id == kRequestsTarget ? Routes.requests : Routes.chat(id));
     });
     final shell = widget.shell;

@@ -96,28 +96,49 @@ class GroupsTab extends ConsumerWidget {
           ..invalidate(invitationsProvider),
       );
     }
-    return invitations.isEmpty && groups.isEmpty
-        ? const EmptyView(
-            icon: Icons.groups_outlined,
-            title: 'Aucun groupe pour l’instant',
-            message:
-                'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre\u202F; '
-                'les messages s’effacent comme dans vos discussions.',
-          )
-        : ListView(
-            padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
-            children: [
-              if (invitations.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                  child: Text('Invitations', style: theme.textTheme.titleSmall),
+    // Lot 4.8 : tirer vers le bas recharge les groupes ET les invitations.
+    Future<void> reload() async {
+      await Future.wait([
+        ref.read(conversationsProvider.notifier).refresh(),
+        ref.refresh(invitationsProvider.future).then((_) {}, onError: (Object _) {}),
+      ]);
+    }
+
+    return RefreshIndicator(
+      key: const Key('groups.refresh'),
+      onRefresh: reload,
+      child: invitations.isEmpty && groups.isEmpty
+          ? LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: const EmptyView(
+                    icon: Icons.groups_outlined,
+                    title: 'Aucun groupe pour l’instant',
+                    message:
+                        'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre\u202F; '
+                        'les messages s’effacent comme dans vos discussions.',
+                  ),
                 ),
-                for (final i in invitations) _InvitationCard(invitation: i, onRespond: _respond),
-                const SizedBox(height: PrivioSpacing.m),
+              ),
+            )
+          : ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
+              children: [
+                if (invitations.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                    child: Text('Invitations', style: theme.textTheme.titleSmall),
+                  ),
+                  for (final i in invitations) _InvitationCard(invitation: i, onRespond: _respond),
+                  const SizedBox(height: PrivioSpacing.m),
+                ],
+                for (final g in groups) ConversationTile(summary: g),
               ],
-              for (final g in groups) ConversationTile(summary: g),
-            ],
-          );
+            ),
+    );
   }
 }
 

@@ -14,6 +14,7 @@ import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/privacy_providers.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
@@ -176,6 +177,13 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
   }
 }
 
+/// Confirmation après création (lot 4.8).
+String createdGroupMessage(int invited) => switch (invited) {
+  0 => 'Groupe créé',
+  1 => 'Groupe créé · 1 invitation envoyée',
+  _ => 'Groupe créé · $invited invitations envoyées',
+};
+
 // ---------------------------------------------------------------------------
 // Écran 18 — nouveau groupe
 // ---------------------------------------------------------------------------
@@ -205,17 +213,28 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
       return;
     }
     setState(() => _busy = true);
+    final title = _title.text.trim();
+    final description = _description.text.trim().isEmpty ? null : _description.text.trim();
+    final invited = _selected.length;
     try {
       final id = await ref
           .read(messagingApiProvider)
-          .createGroup(
-            title: _title.text.trim(),
-            description: _description.text.trim().isEmpty ? null : _description.text.trim(),
-            inviteeIds: _selected.keys.toList(),
+          .createGroup(title: title, description: description, inviteeIds: _selected.keys.toList());
+      // Lot 4.8 : le groupe s'affiche tout de suite (plus d'attente de la liste complète).
+      ref
+          .read(conversationsProvider.notifier)
+          .addCreatedGroup(
+            id: id,
+            title: title,
+            description: description,
+            ttlSeconds: ref.read(privacyProvider).value?.defaultTtlSeconds ?? 259200,
           );
-      ref.invalidate(conversationsProvider);
       if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       context.pushReplacement(Routes.chat(id));
+      messenger.showSnackBar(
+        SnackBar(key: const Key('group.created'), content: Text(createdGroupMessage(invited))),
+      );
     } on Object catch (e) {
       if (mounted) _toast(context, toAppFailure(e).message);
     } finally {
@@ -253,11 +272,24 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
         FilledButton(
           key: const Key('group.create'),
           onPressed: _busy ? null : _create,
-          child: Text(
-            _selected.isEmpty
-                ? 'Créer le groupe'
-                : 'Créer et inviter ${_selected.length} personne${_selected.length > 1 ? 's' : ''}',
-          ),
+          child: _busy
+              ? const Row(
+                  key: Key('group.creating'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: PrivioSpacing.m),
+                    Flexible(child: Text('Création du groupe…')),
+                  ],
+                )
+              : Text(
+                  _selected.isEmpty
+                      ? 'Créer le groupe'
+                      : 'Créer et inviter ${_selected.length} personne${_selected.length > 1 ? 's' : ''}',
+                ),
         ),
       ],
     ),
