@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : 12/11/2026 — lots 3.1, 3.2 et 3.3 validés ; lots 2.F et 4.1 en cours. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — lots 3.1 à 3.3 et 4.1 validés ; 2.F : correctif des citations à revérifier. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -38,7 +38,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Lot 2.F — Actions rapides (ajout du 12/11/2026)
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
-| 2.F | Glisser à droite = répondre ; double appui = réaction (❤️, réglable) ; glisser à gauche = supprimer (avec choix) ; toucher une citation = remonter au message ; liste : glisser à droite = épingler, à gauche = archiver (« Annuler ») | Essayer chaque geste sur un message reçu et sur un message envoyé | 🔨 |
+| 2.F | Glisser à droite = répondre ; double appui = réaction (❤️, réglable) ; glisser à gauche = supprimer (avec choix) ; toucher une citation = remonter au message ; liste : glisser à droite = épingler, à gauche = archiver (« Annuler ») | Essayer chaque geste sur un message reçu et sur un message envoyé | 🧪 13/11/2026 — gestes validés ; correctif « toucher une citation » à revérifier |
 
 ## Étape 3 — Médias et groupes
 | Lot | Contenu | Vos tests | Statut |
@@ -50,7 +50,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 4 — Notifications et confidentialité
 | Lot | Contenu | Statut |
 |---|---|---|
-| 4.1 | Notifications FCM sans contenu ni nom, masquées sur l'écran verrouillé, une par discussion ; ouverture de la discussion au toucher ; interrupteur dans les Paramètres ; pas de notification en sourdine, en cas de blocage ou pour l'expéditeur (ADR-011). **Compte de service FCM requis** (secret `FCM_SERVICE_ACCOUNT_B64`) | 🔨 |
+| 4.1 | Notifications FCM sans contenu ni nom, masquées sur l'écran verrouillé, une par discussion ; ouverture de la discussion au toucher ; interrupteur dans les Paramètres ; pas de notification en sourdine, en cas de blocage ou pour l'expéditeur (ADR-011). **Compte de service FCM requis** (secret `FCM_SERVICE_ACCOUNT_B64`, en place sur staging) | ✅ 13/11/2026 |
 | 4.2 | Verrouillage de l'app (empreinte/code), états hors ligne et erreurs, économie de données | ⏳ |
 
 ## Étape 5 — Console d'administration

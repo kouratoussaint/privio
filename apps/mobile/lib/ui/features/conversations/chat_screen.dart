@@ -62,6 +62,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _preparingPhoto = false;
   final _searchCtrl = TextEditingController();
 
+  /// Liste des messages : défilement et clés stables par message (citations).
+  final _listScroll = ScrollController();
+  final _messageKeys = <String, GlobalKey>{};
+  String? _highlightedId;
+  Timer? _highlightTimer;
+
   ChatController get _chat => ref.read(chatProvider(widget.conversationId).notifier);
   VoiceRecorderController get _voice => ref.read(voiceRecorderControllerProvider.notifier);
   late final AppLifecycleListener _lifecycle;
@@ -95,6 +101,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _poll?.cancel();
     _composer.dispose();
     _searchCtrl.dispose();
+    _listScroll.dispose();
+    _highlightTimer?.cancel();
     _focus.dispose();
     super.dispose();
   }
@@ -434,16 +442,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (choice == 'all') await _guard(() => _chat.deleteForEveryone(m.id));
   }
 
-  /// Toucher une citation : remonter au message d'origine s'il est encore affiché.
-  void _scrollToMessage(String id) {
-    final target = GlobalObjectKey('msg-$id').currentContext;
-    if (target == null) {
-      _toast('Le message d’origine n’est plus affiché (expiré ou plus ancien).');
+  /// Toucher une citation : remonter au message d'origine s'il est encore là.
+  ///
+  /// La liste ne construit que les messages proches de l'écran : si l'original est plus
+  /// haut, on remonte par pas jusqu'à ce qu'il soit construit, puis on le centre et on le
+  /// met brièvement en évidence.
+  Future<void> _scrollToMessage(String id) async {
+    final now = DateTime.now();
+    final present = (ref.read(chatProvider(widget.conversationId)).value?.messages ?? const []).any(
+      (m) => m.id == id && m.isVisibleAt(now) && !m.isDeleted,
+    );
+    if (!present) {
+      _toast('Le message d’origine n’est plus affiché (expiré ou supprimé).');
       return;
     }
-    unawaited(
-      Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 300), alignment: 0.5),
+    BuildContext? target = _messageKeys[id]?.currentContext;
+    for (var i = 0; target == null && i < 60 && _listScroll.hasClients; i++) {
+      final pos = _listScroll.position;
+      if (pos.pixels >= pos.maxScrollExtent) break;
+      _listScroll.jumpTo(
+        (pos.pixels + pos.viewportDimension * 0.8).clamp(0, pos.maxScrollExtent).toDouble(),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      target = _messageKeys[id]?.currentContext;
+    }
+    if (target == null || !target.mounted) {
+      _toast('Le message d’origine n’est plus affiché (expiré ou supprimé).');
+      return;
+    }
+    await Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 300),
+      alignment: 0.5,
     );
+    if (!mounted) return;
+    _highlightTimer?.cancel();
+    setState(() => _highlightedId = id);
+    _highlightTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _highlightedId = null);
+    });
   }
 
   Future<void> _showActions(ChatMessage m, {required bool mine}) async {
@@ -718,7 +756,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onSwipeReply: _startReply,
                   onSwipeDelete: _swipeDelete,
                   onDoubleTap: _quickReact,
-                  onQuoteTap: _scrollToMessage,
+                  onQuoteTap: (id) => unawaited(_scrollToMessage(id)),
+                  scrollController: _listScroll,
+                  messageKeys: _messageKeys,
+                  highlightedId: _highlightedId,
                   onReactionTap: (m, emoji) => _guard(() => _chat.toggleReaction(m.id, emoji)),
                   onVoiceError: (f) => _toast(f.message),
                   onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
@@ -842,6 +883,8 @@ class _MessageList extends StatelessWidget {
     required this.onSwipeDelete,
     required this.onDoubleTap,
     required this.onQuoteTap,
+    required this.scrollController,
+    required this.messageKeys,
     required this.messages,
     required this.pending,
     required this.me,
@@ -858,9 +901,16 @@ class _MessageList extends StatelessWidget {
     this.searching = false,
     this.offline = false,
     this.isGroup = false,
+    this.highlightedId,
   });
 
   final bool isGroup;
+  final ScrollController scrollController;
+
+  /// Une clé par message, gardée par l'écran (les clés « objet » comparent l'identité,
+  /// pas le texte : une chaîne recréée ne retrouverait jamais le message).
+  final Map<String, GlobalKey> messageKeys;
+  final String? highlightedId;
   final void Function(AppFailure failure) onVoiceError;
   final void Function(ChatMessage message, Uint8List bytes) onOpenPhoto;
   final bool searching;
@@ -927,8 +977,15 @@ class _MessageList extends StatelessWidget {
       }
       final error = Theme.of(context).colorScheme.error;
       items.add(
-        KeyedSubtree(
-          key: GlobalObjectKey('msg-${m.id}'),
+        AnimatedContainer(
+          key: messageKeys.putIfAbsent(m.id, GlobalKey.new),
+          duration: const Duration(milliseconds: 250),
+          decoration: BoxDecoration(
+            color: m.id == highlightedId
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: SwipeActions(
             right: m.isDeleted
                 ? null
@@ -1012,6 +1069,7 @@ class _MessageList extends StatelessWidget {
       items.add(_ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap, isGroup: isGroup));
     }
     return ListView(
+      controller: scrollController,
       reverse: true,
       padding: const EdgeInsets.fromLTRB(
         PrivioSpacing.m,

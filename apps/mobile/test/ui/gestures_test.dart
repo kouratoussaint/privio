@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
+import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/ui/core/widgets/swipe_actions.dart';
 
 import '../helpers/fakes.dart';
@@ -86,6 +87,83 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('À effacer'), findsNothing);
     expect(find.text('Message supprimé'), findsOneWidget);
+  });
+
+  testWidgets('toucher une citation : remonte au message d’origine, même loin dans la discussion', (
+    tester,
+  ) async {
+    final d = _deps();
+    await d.messaging.startDirectConversation('u2');
+    final original = d.messaging.receive('conv-bob', 'Rendez-vous au marché à 9 h');
+    for (var i = 0; i < 40; i++) {
+      d.messaging.receive('conv-bob', 'Message intermédiaire $i');
+    }
+    final now = DateTime.now();
+    d.messaging.messages['conv-bob']!.add(
+      ChatMessage(
+        id: 'srv-reponse',
+        senderId: 'u2',
+        body: 'Tu confirmes ?',
+        replyToId: original.id,
+        replyPreview: original.body,
+        replyKind: 'text',
+        sentAt: now,
+        expiresAt: now.add(const Duration(hours: 72)),
+        updatedAt: now,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(overrides: d.overrides, retry: (_, _) => null, child: const PrivioApp()),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('conversation.conv-bob')));
+    await tester.pumpAndSettle();
+    // Seule la citation affiche ce texte : l'original est trop haut pour être construit.
+    expect(find.text('Rendez-vous au marché à 9 h'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bubble.quote')));
+    await tester.pumpAndSettle();
+    // L'original est maintenant construit et visible (la réponse, tout en bas, ne l'est plus).
+    final shown = find.text('Rendez-vous au marché à 9 h');
+    expect(shown, findsOneWidget);
+    expect(find.byKey(const Key('bubble.quote')), findsNothing);
+    expect(tester.getRect(find.byType(ListView)).contains(tester.getCenter(shown)), isTrue);
+    expect(find.textContaining('n’est plus affiché'), findsNothing);
+  });
+
+  testWidgets('toucher une citation dont l’original a expiré : message clair', (tester) async {
+    final d = _deps();
+    await d.messaging.startDirectConversation('u2');
+    final now = DateTime.now();
+    // L'original expire pendant que la discussion est ouverte.
+    final original = d.messaging.receive(
+      'conv-bob',
+      'Ancien message',
+      expiresAt: now.add(const Duration(seconds: 1)),
+    );
+    d.messaging.messages['conv-bob']!.add(
+      ChatMessage(
+        id: 'srv-reponse',
+        senderId: 'u2',
+        body: 'Tu confirmes ?',
+        replyToId: original.id,
+        replyPreview: original.body,
+        replyKind: 'text',
+        sentAt: now,
+        expiresAt: now.add(const Duration(hours: 72)),
+        updatedAt: now,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(overrides: d.overrides, retry: (_, _) => null, child: const PrivioApp()),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('conversation.conv-bob')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 1300)));
+    await tester.tap(find.byKey(const Key('bubble.quote')));
+    await tester.pump(const Duration(milliseconds: 500)); // après le délai du double appui
+    expect(find.textContaining('n’est plus affiché'), findsOneWidget);
   });
 
   testWidgets('glisser un petit peu : rien ne se passe', (tester) async {
