@@ -172,6 +172,20 @@ class AppLockController extends AsyncNotifier<AppLockState> {
     }
   }
 
+  /// Confirmer son identité par l'empreinte, application déjà déverrouillée (ouverture de
+  /// la console, lot 5.1). Faux si l'empreinte n'est pas activée ou pas disponible.
+  Future<bool> confirmWithBiometrics(String reason) async {
+    final s = state.value;
+    if (s == null || !s.enabled || !s.config.biometrics || !s.biometricsAvailable) return false;
+    _authenticating = true;
+    try {
+      return await ref.read(biometricGateProvider).authenticate(reason);
+    } finally {
+      _authenticating = false;
+      _backgroundAt = null;
+    }
+  }
+
   // --- Réglages -------------------------------------------------------------
 
   Future<AppLockConfig> _withPin(AppLockConfig base, String pin) async {

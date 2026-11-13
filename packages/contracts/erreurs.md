@@ -111,3 +111,8 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | `CONNECTION_DAILY_LIMIT` | `send_connection_request` | déjà `connection_request_daily_per_person` (3) demandes vers cette personne aujourd'hui |
 | `CONNECTION_REQUEST_NOT_FOUND` | `respond_connection_request`, `cancel_connection_request` | demande inconnue, déjà traitée, annulée ou expirée |
 | `CONNECTION_NOTE_TOO_LONG` | `send_connection_request` | mot de plus de `connection_note_max_chars` (140) caractères |
+
+### Console d'administration (lot 5.1)
+| Code | Origine | Signification |
+|---|---|---|
+| `ADMIN_REQUIRED` | `console_dashboard` (et toute fonction de la console) | le compte connecté n'est pas l'administrateur (même réponse pour tous ; `console_access` renvoie simplement `false`) |

@@ -59,6 +59,7 @@ enum FailureCode {
   connectionRequestNotFound,
   connectionNoteTooLong,
   privacySettingInvalid,
+  adminRequired,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -136,6 +137,7 @@ class AppFailure implements Exception {
     FailureCode.connectionRequestNotFound => 'Cette demande n’est plus valable.',
     FailureCode.connectionNoteTooLong => 'Votre mot est trop long (140 caractères au plus).',
     FailureCode.privacySettingInvalid => 'Réglage de confidentialité invalide.',
+    FailureCode.adminRequired => 'Accès réservé à l’administration de Privio.',
     FailureCode.otpInvalidOrExpired =>
       'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
     FailureCode.smsRateLimited =>
@@ -206,6 +208,7 @@ const _serverCodes = <String, FailureCode>{
   'CONNECTION_REQUEST_NOT_FOUND': FailureCode.connectionRequestNotFound,
   'CONNECTION_NOTE_TOO_LONG': FailureCode.connectionNoteTooLong,
   'PRIVACY_SETTING_INVALID': FailureCode.privacySettingInvalid,
+  'ADMIN_REQUIRED': FailureCode.adminRequired,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

@@ -12,6 +12,7 @@ import '../../../core/util/reactions.dart';
 import '../../../data/services/photo_picker.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
+import '../../../state/console_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/push_providers.dart';
@@ -336,6 +337,23 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ],
             ),
+            // Lot 5.1 : entrée visible uniquement pour le compte administrateur (réponse du
+            // serveur ; pour tout autre compte, la console n'existe pas).
+            if (ref.watch(consoleAccessProvider).value ?? false) ...[
+              const SizedBox(height: PrivioSpacing.l),
+              _Card(
+                children: [
+                  ListTile(
+                    key: const Key('settings.console'),
+                    leading: Icon(Icons.admin_panel_settings_outlined, color: p.accentText),
+                    title: const Text('Administration'),
+                    subtitle: const Text('Tableau de bord de Privio (chiffres seulement)'),
+                    trailing: Icon(Icons.chevron_right, color: secondary),
+                    onTap: () => context.push(Routes.console),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: PrivioSpacing.l),
             _Card(
               children: [

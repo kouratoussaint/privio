@@ -21,6 +21,7 @@ import '../ui/features/onboarding/onboarding_screen.dart';
 import '../ui/features/permissions/permissions_screen.dart';
 import '../ui/features/profile_setup/profile_setup_screen.dart';
 import '../ui/features/settings/blocked_users_screen.dart';
+import '../ui/features/console/console_screen.dart';
 import '../ui/features/settings/delete_account_screen.dart';
 import '../ui/features/settings/help_screen.dart';
 import '../ui/features/settings/settings_tab.dart';
@@ -56,6 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
       GoRoute(path: Routes.archived, builder: (_, _) => const ArchivedScreen()),
       GoRoute(path: Routes.requests, builder: (_, _) => const ConnectionRequestsScreen()),
+      GoRoute(path: Routes.console, builder: (_, _) => const ConsoleScreen()),
       GoRoute(path: Routes.help, builder: (_, _) => const HelpScreen()),
       GoRoute(path: Routes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: Routes.appLock, builder: (_, _) => const AppLockSettingsScreen()),

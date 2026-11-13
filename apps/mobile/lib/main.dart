@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config/env.dart';
 import 'data/services/account_api.dart';
+import 'data/services/admin_api.dart';
 import 'data/services/audio/audio_engine.dart';
 import 'data/services/device_services.dart';
 import 'data/services/audio/voice_recorder.dart';
@@ -19,6 +20,7 @@ import 'data/storage/local_store.dart';
 import 'data/storage/media_vault.dart';
 import 'data/storage/secure_session_storage.dart';
 import 'state/app_lock_providers.dart';
+import 'state/console_providers.dart';
 import 'state/data_providers.dart';
 import 'state/messaging_providers.dart';
 import 'state/providers.dart';
@@ -69,6 +71,7 @@ Future<void> main() async {
         audioEngineProvider.overrideWithValue(DeviceAudioEngine()),
         photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
+        adminApiProvider.overrideWithValue(SupabaseAdminApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
         appLockStoreProvider.overrideWithValue(SecureAppLockStore()),
         biometricGateProvider.overrideWithValue(DeviceBiometricGate()),

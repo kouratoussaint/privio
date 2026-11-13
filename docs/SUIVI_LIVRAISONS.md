@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — 2.F, 4.2 et 4.3 validés ; 4.4, 4.5, 4.6, 4.7 et 4.8 livrés (à tester) ; feuille de route étendue (lots 4.5 à 4.8, étapes 7 à 9). Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — 2.F, 4.2 et 4.3 validés ; 4.4, 4.5, 4.6, 4.7, 4.8 et 5.1 livrés (à tester) ; feuille de route étendue (lots 4.5 à 4.8, étapes 7 à 9). Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -62,7 +62,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 5 — Console d'administration
 | Lot | Contenu | Statut |
 |---|---|---|
-| 5.1 | Console **dans l'application**, visible et utilisable uniquement par le compte +226 75 49 35 18 (vérification par le serveur) ; tableau de bord | ⏳ |
+| 5.1 | Console **dans l'application** (ADR-015), visible et utilisable uniquement par le compte +226 75 49 35 18 (vérification par le serveur à chaque appel) : entrée « Administration » dans Paramètres ; code Privio ou empreinte à chaque ouverture (verrouillage obligatoire), refermée après 5 min sans action ou à la sortie de l'app ; tableau de bord en nombres seulement (comptes et activité, groupes et demandes, santé technique, signalements en attente) ; chaque consultation journalisée (90 jours). **Tests** : avec +226 75 49 35 18, Paramètres → Administration → code → chiffres ; attendre 5 min ; sortir de l'app et revenir ; avec un autre compte, l'entrée n'existe pas | 🧪 13/11/2026 |
 | 5.2 | Politiques modifiables + historique, statistiques | ⏳ |
 | 5.3 | Signalements et modération (décision B3) | ⏳ |
 

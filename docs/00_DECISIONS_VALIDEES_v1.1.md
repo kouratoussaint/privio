@@ -104,6 +104,11 @@ Demandés par le commanditaire après test sur téléphone :
   sont pas créés en v1 : un seul administrateur. La protection supplémentaire de l'accès
   (code ou empreinte à l'ouverture de la console, appui sur le verrouillage du lot 4.2) sera
   proposée et validée au lot 5.1.
+- **Validé le 13/11/2026 (lot 5.1, ADR-015)** : code Privio ou empreinte à chaque ouverture
+  (verrouillage obligatoire pour ouvrir la console) ; console refermée après 5 min sans action
+  et à la sortie de l'app. Tableau de bord en nombres seulement : comptes et activité,
+  groupes et demandes, santé technique, signalements en attente. Chaque consultation est
+  journalisée (90 jours).
 
 ## Amendement 7 — Confidentialité et « vider la discussion » (13 novembre 2026)
 - L'utilisateur règle le maximum de sa confidentialité : statut « en ligne » / « vu à »,

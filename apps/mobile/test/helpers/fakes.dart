@@ -21,7 +21,10 @@ import 'package:privio/data/services/messaging_api.dart';
 import 'package:privio/data/services/realtime_service.dart';
 import 'package:privio/data/storage/local_store.dart';
 import 'package:privio/data/storage/media_vault.dart';
+import 'package:privio/data/services/admin_api.dart';
 import 'package:privio/data/services/permission_gateway.dart';
+import 'package:privio/domain/models/console.dart';
+import 'package:privio/state/console_providers.dart';
 import 'package:privio/data/services/push_service.dart';
 import 'package:privio/data/services/photo_picker.dart';
 import 'package:privio/data/storage/local_flags.dart';
@@ -1504,6 +1507,45 @@ class FakeRealtimeService implements RealtimeService {
   }
 }
 
+/// Console (lot 5.1) : le « serveur » décide de l'accès ; chaque consultation est comptée.
+class FakeAdminApi implements AdminApi {
+  bool admin = false;
+  int dashboardCalls = 0;
+  ConsoleDashboard board = ConsoleDashboard(
+    generatedAt: DateTime(2026, 11, 13, 18, 30),
+    countingSince: DateTime(2026, 11, 13),
+    accountsTotal: 42,
+    active24h: 17,
+    active7d: 30,
+    new7d: 5,
+    messagesToday: 120,
+    messages7d: 860,
+    voice7d: 64,
+    photos7d: 31,
+    messagesLive: 400,
+    groupsTotal: 6,
+    groupsCreated7d: 2,
+    invitationsPending: 3,
+    requestsPending: 4,
+    requestsAccepted7d: 9,
+    requestsRefused7d: 1,
+    pushSent24h: 210,
+    storageVoiceBytes: 3 * 1024 * 1024 + 300 * 1024,
+    storagePhotoBytes: 12 * 1024 * 1024,
+    reportsOpen: 1,
+  );
+
+  @override
+  Future<bool> consoleAccess() async => admin;
+
+  @override
+  Future<ConsoleDashboard> dashboard() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    dashboardCalls++;
+    return board;
+  }
+}
+
 class FakePushService implements PushService {
   bool available = true;
   String? currentToken = 'jeton-fcm-de-test-000000000001';
@@ -1556,6 +1598,7 @@ class TestDeps {
   /// Stockage local partagé (permet de simuler un redémarrage de l'application).
   final store = MemoryLocalStore();
   final push = FakePushService();
+  final admin = FakeAdminApi();
   final vault = MemoryMediaVault();
   final realtime = FakeRealtimeService();
   final recorder = FakeVoiceRecorder();
@@ -1578,6 +1621,7 @@ class TestDeps {
     permissionGatewayProvider.overrideWithValue(permissions),
     appVersionProvider.overrideWithValue('0.1.0-test'),
     messagingApiProvider.overrideWithValue(messaging),
+    adminApiProvider.overrideWithValue(admin),
     localStoreProvider.overrideWithValue(store),
     pushServiceProvider.overrideWithValue(push),
     mediaVaultProvider.overrideWithValue(vault),
