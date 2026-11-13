@@ -37,7 +37,7 @@ ChatMessage _voice(String id, DateTime sent, Duration ttl, {DateTime? deletedAt}
 
 void main() {
   group('modèle', () {
-    test('un vocal fait l\'aller-retour JSON (chemin, durée, citation)', () {
+    test('un vocal fait l’aller-retour JSON (chemin, durée, citation)', () {
       final now = DateTime.utc(2026, 11, 12, 10);
       final m = ChatMessage.fromJson(
         ChatMessage(
@@ -60,12 +60,12 @@ void main() {
       expect(m.replyKind, 'voice');
     });
 
-    test('vocal supprimé pour tous : plus écoutable', () {
+    test('vocal supprimé pour tous\u202F: plus écoutable', () {
       final now = DateTime.now();
       expect(_voice('m', now, const Duration(hours: 1), deletedAt: now).hasPlayableVoice, isFalse);
     });
 
-    test('un vocal ne se modifie jamais ; durée maximale lue dans les politiques', () {
+    test('un vocal ne se modifie jamais\u202F; durée maximale lue dans les politiques', () {
       final now = DateTime.now();
       final rules = MessagingRules.fromPolicies(const {'voice_max_seconds': 20});
       expect(rules.canEdit(_voice('m', now, const Duration(hours: 1)), now), isFalse);
@@ -80,7 +80,7 @@ void main() {
       expect(spokenVoiceDuration(const Duration(milliseconds: 900)), '1 seconde');
     });
 
-    test('file d\'envoi : un vocal garde son type et sa durée', () {
+    test('file d’envoi\u202F: un vocal garde son type et sa durée', () {
       final o = OutboxItem.fromJson(
         OutboxItem(
           clientId: 'c1',
@@ -107,25 +107,25 @@ void main() {
       cache = LocalCache(MemoryLocalStore(), media: vault, clock: () => now);
     });
 
-    test('un son est effacé du téléphone à l\'expiration de son message', () async {
+    test('un son est effacé du téléphone à l’expiration de son message', () async {
       await cache.ensureLoaded();
       final key = LocalCache.messageMediaKey('m1');
       await cache.putMedia(key, [1, 2, 3], now.add(const Duration(minutes: 5)));
       expect(await cache.readMedia(key), [1, 2, 3]);
       now = now.add(const Duration(minutes: 6));
-      expect(await cache.readMedia(key), isNull, reason: 'expiré : jamais relu');
+      expect(await cache.readMedia(key), isNull, reason: 'expiré\u202F: jamais relu');
       await cache.purgeExpired();
       await cache.readMedia('rien'); // attend la fin des écritures
       expect(vault.files, isEmpty, reason: 'fichier effacé du coffre');
     });
 
-    test('un son déjà expiré n\'est jamais écrit', () async {
+    test('un son déjà expiré n’est jamais écrit', () async {
       await cache.putMedia('msg-x', [1], now.subtract(const Duration(seconds: 1)));
       await cache.readMedia('rien');
       expect(vault.files, isEmpty);
     });
 
-    test('vocal supprimé pour tous : son effacé dès la synchronisation', () async {
+    test('vocal supprimé pour tous\u202F: son effacé dès la synchronisation', () async {
       await cache.putMessages('conv', [_voice('m1', now, const Duration(hours: 1))]);
       await cache.putMedia(LocalCache.messageMediaKey('m1'), [
         9,
@@ -137,7 +137,7 @@ void main() {
       expect(vault.files, isEmpty);
     });
 
-    test('« supprimer pour moi » : message et son retirés', () async {
+    test('«\u202Fsupprimer pour moi\u202F»\u202F: message et son retirés', () async {
       await cache.putMessages('conv', [_voice('m1', now, const Duration(hours: 1))]);
       await cache.putMedia(LocalCache.messageMediaKey('m1'), [
         9,
@@ -148,7 +148,7 @@ void main() {
       expect(vault.files, isEmpty);
     });
 
-    test('file d\'envoi : son retiré à l\'envoi, ou après 72 h sans réseau', () async {
+    test('file d’envoi\u202F: son retiré à l’envoi, ou après 72 h sans réseau', () async {
       final item = OutboxItem(
         clientId: 'c1',
         conversationId: 'conv',
@@ -171,13 +171,13 @@ void main() {
       expect(vault.files, isEmpty);
     });
 
-    test('déconnexion : coffre entièrement effacé', () async {
+    test('déconnexion\u202F: coffre entièrement effacé', () async {
       await cache.putMedia('msg-a', [1], now.add(const Duration(hours: 1)));
       await cache.wipe();
       expect(vault.files, isEmpty);
     });
 
-    test('l\'index des sons survit à un redémarrage (et l\'échéance avec lui)', () async {
+    test('l’index des sons survit à un redémarrage (et l’échéance avec lui)', () async {
       final store = MemoryLocalStore();
       final first = LocalCache(store, media: vault, clock: () => now);
       await first.putMedia('msg-a', [5], now.add(const Duration(minutes: 1)));
@@ -195,7 +195,7 @@ void main() {
     setUp(() async => dir = await Directory.systemTemp.createTemp('privio_vault'));
     tearDown(() async => dir.delete(recursive: true));
 
-    test('son chiffré au repos, relu à l\'identique ; altération rejetée', () async {
+    test('son chiffré au repos, relu à l’identique\u202F; altération rejetée', () async {
       final keys = _Keys();
       final vault = EncryptedMediaVault(keys: keys, directory: () async => dir);
       final sound = Uint8List.fromList(utf8.encode('ftypM4A secret de la mairie'));
@@ -211,7 +211,7 @@ void main() {
       expect(await file.exists(), isFalse);
     });
 
-    test('effacement : dossier ET clé détruits', () async {
+    test('effacement\u202F: dossier ET clé détruits', () async {
       final keys = _Keys();
       final vault = EncryptedMediaVault(keys: keys, directory: () async => dir);
       await vault.put('msg-1', [1, 2]);
@@ -220,7 +220,7 @@ void main() {
       expect(keys.key, isNull);
     });
 
-    test('clé de coffre refusée si elle n\'est pas un nom de fichier sûr', () async {
+    test('clé de coffre refusée si elle n’est pas un nom de fichier sûr', () async {
       final vault = EncryptedMediaVault(keys: _Keys(), directory: () async => dir);
       expect(() => vault.put('../evasion', [1]), throwsArgumentError);
     });
@@ -244,14 +244,14 @@ void main() {
       }
     });
 
-    test('pas de réseau pendant l\'envoi : on réessaiera', () {
+    test('pas de réseau pendant l’envoi\u202F: on réessaiera', () {
       expect(
         toAppFailure(const FunctionsFetchException(details: 'socket')).code,
         FailureCode.network,
       );
     });
 
-    test('téléchargement refusé (expiré, supprimé, non membre) : plus disponible', () {
+    test('téléchargement refusé (expiré, supprimé, non membre)\u202F: plus disponible', () {
       expect(
         toAppFailure(const StorageException('Object not found', statusCode: '400')).code,
         FailureCode.mediaNotFound,

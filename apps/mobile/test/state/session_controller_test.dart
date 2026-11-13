@@ -47,7 +47,7 @@ void main() {
     expect(deps.auth.signedIn, isFalse);
   });
 
-  test('déconnexion volontaire → appareil désenregistré, retour à l\'accueil', () async {
+  test('déconnexion volontaire → appareil désenregistré, retour à l’accueil', () async {
     final deps =
         TestDeps(
             auth: FakeAuthService(signedIn: true),

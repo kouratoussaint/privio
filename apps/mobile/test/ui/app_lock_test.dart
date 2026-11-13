@@ -77,7 +77,7 @@ Finder _tab(String label) =>
     find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
 
 void main() {
-  testWidgets('activer : code à 6 chiffres, refus des codes trop simples, confirmation', (
+  testWidgets('activer\u202F: code à 6 chiffres, refus des codes trop simples, confirmation', (
     tester,
   ) async {
     final deps = _deps();
@@ -111,12 +111,12 @@ void main() {
     final c = deps.lockStore.config;
     expect(c.enabled, isTrue);
     expect(c.hash, isNotNull);
-    expect(jsonEncode(c.toJson()).contains(_pin), isFalse, reason: 'le code n\'est jamais gardé');
+    expect(jsonEncode(c.toJson()).contains(_pin), isFalse, reason: 'le code n’est jamais gardé');
     expect(find.byKey(const Key('lock.delay')), findsOneWidget);
     expect(find.text('Après 1 minute'), findsOneWidget);
   });
 
-  testWidgets('au démarrage : contenu masqué jusqu\'au bon code', (tester) async {
+  testWidgets('au démarrage\u202F: contenu masqué jusqu’au bon code', (tester) async {
     final deps = await _lockedDeps();
     await _start(tester, deps);
     expect(find.byKey(const Key('lock.screen')), findsOneWidget);
@@ -133,7 +133,7 @@ void main() {
     expect(deps.lockStore.config.failures, 0);
   });
 
-  testWidgets('5 erreurs : attente imposée, gardée après redémarrage, puis nouvel essai', (
+  testWidgets('5 erreurs\u202F: attente imposée, gardée après redémarrage, puis nouvel essai', (
     tester,
   ) async {
     var now = DateTime(2026, 11, 13, 10);
@@ -145,7 +145,7 @@ void main() {
     }
     expect(find.textContaining('Encore 1 essai avant une attente'), findsOneWidget);
     await _type(tester, '000001');
-    expect(find.textContaining('Trop d\'essais. Réessayez dans 30 s'), findsOneWidget);
+    expect(find.textContaining('Trop d’essais. Réessayez dans 30 s'), findsOneWidget);
     expect(deps.lockStore.config.retryAt, now.add(const Duration(seconds: 30)));
 
     // Pavé désactivé pendant l'attente : même le bon code n'est pas essayé.
@@ -158,7 +158,9 @@ void main() {
     expect(find.byKey(const Key('lock.screen')), findsNothing);
   });
 
-  testWidgets('retour au premier plan : reverrouillé seulement après le délai', (tester) async {
+  testWidgets('retour au premier plan\u202F: reverrouillé seulement après le délai', (
+    tester,
+  ) async {
     var now = DateTime(2026, 11, 13, 10);
     final deps = await _lockedDeps();
     deps.clock = () => now;
@@ -180,7 +182,7 @@ void main() {
     expect(find.text('Message secret'), findsNothing);
   });
 
-  testWidgets('empreinte : proposée d\'office, et le code reste accepté si elle échoue', (
+  testWidgets('empreinte\u202F: proposée d’office, et le code reste accepté si elle échoue', (
     tester,
   ) async {
     final deps = await _lockedDeps(biometrics: true);
@@ -188,7 +190,7 @@ void main() {
       ..isAvailable = true
       ..accept = false;
     await _start(tester, deps);
-    expect(deps.biometrics.prompts, 1, reason: 'demandée à l\'affichage');
+    expect(deps.biometrics.prompts, 1, reason: 'demandée à l’affichage');
     expect(find.byKey(const Key('lock.screen')), findsOneWidget);
 
     deps.biometrics.accept = true;
@@ -197,7 +199,7 @@ void main() {
     expect(find.byKey(const Key('lock.screen')), findsNothing);
   });
 
-  testWidgets('code oublié : déconnexion, données du téléphone et verrouillage effacés', (
+  testWidgets('code oublié\u202F: déconnexion, données du téléphone et verrouillage effacés', (
     tester,
   ) async {
     final deps = await _lockedDeps();
@@ -212,7 +214,7 @@ void main() {
     expect(find.byKey(const Key('lock.screen')), findsNothing);
   });
 
-  testWidgets('désactiver demande le code actuel ; changer le code', (tester) async {
+  testWidgets('désactiver demande le code actuel\u202F; changer le code', (tester) async {
     final deps = await _lockedDeps();
     await _start(tester, deps);
     await _type(tester, _pin);

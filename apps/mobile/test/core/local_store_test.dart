@@ -34,7 +34,7 @@ void main() {
   setUp(() async => dir = await Directory.systemTemp.createTemp('privio_store'));
   tearDown(() async => dir.delete(recursive: true));
 
-  test('fichier chiffré : relecture exacte, aucun texte en clair sur le disque', () async {
+  test('fichier chiffré\u202F: relecture exacte, aucun texte en clair sur le disque', () async {
     final keys = _MemoryKeys();
     final store = EncryptedFileStore(keys: keys, directory: () async => dir);
     await store.write({'secret': 'Rendez-vous à 15 h derrière la mairie'});
@@ -45,7 +45,7 @@ void main() {
     expect((await again.read())!['secret'], 'Rendez-vous à 15 h derrière la mairie');
   });
 
-  test('fichier altéré ou mauvaise clé : rejeté sans planter, puis supprimé', () async {
+  test('fichier altéré ou mauvaise clé\u202F: rejeté sans planter, puis supprimé', () async {
     final keys = _MemoryKeys();
     final store = EncryptedFileStore(keys: keys, directory: () async => dir);
     await store.write({'a': 1});
@@ -57,7 +57,7 @@ void main() {
     expect(await file.exists(), isFalse);
   });
 
-  test('effacement : fichier ET clé détruits (ancien contenu illisible à jamais)', () async {
+  test('effacement\u202F: fichier ET clé détruits (ancien contenu illisible à jamais)', () async {
     final keys = _MemoryKeys();
     final store = EncryptedFileStore(keys: keys, directory: () async => dir);
     await store.write({'a': 1});
@@ -66,7 +66,7 @@ void main() {
     expect(keys.key, isNull);
   });
 
-  test('cache : les messages expirés sont retirés du disque, même hors connexion', () async {
+  test('cache\u202F: les messages expirés sont retirés du disque, même hors connexion', () async {
     var now = DateTime.utc(2026, 11, 12, 10);
     final store = MemoryLocalStore();
     final cache = LocalCache(store, clock: () => now);
@@ -83,7 +83,7 @@ void main() {
     expect(jsonEncode(store.data), isNot(contains('Expire vite')));
   });
 
-  test('cache : aperçu expiré effacé de la liste, envoi trop ancien abandonné', () async {
+  test('cache\u202F: aperçu expiré effacé de la liste, envoi trop ancien abandonné', () async {
     var now = DateTime.utc(2026, 11, 12, 10);
     final store = MemoryLocalStore();
     final cache = LocalCache(store, clock: () => now);
@@ -117,7 +117,7 @@ void main() {
     expect(jsonEncode(store.data), isNot(contains('Aperçu secret')));
   });
 
-  test('cache : effacement complet à la déconnexion', () async {
+  test('cache\u202F: effacement complet à la déconnexion', () async {
     final store = MemoryLocalStore();
     final cache = LocalCache(store);
     await cache.ensureLoaded();

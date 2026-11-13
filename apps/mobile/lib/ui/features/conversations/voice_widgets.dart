@@ -262,7 +262,7 @@ class VoiceRecordingStrip extends ConsumerWidget {
           if (recording.locked)
             IconButton(
               key: const Key('voice.cancel'),
-              tooltip: 'Annuler l\'enregistrement',
+              tooltip: 'Annuler l’enregistrement',
               onPressed: () => ref.read(voiceRecorderControllerProvider.notifier).cancel(),
               icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
             )
@@ -291,7 +291,7 @@ class VoiceRecordingStrip extends ConsumerWidget {
                         Text(
                           ending
                               ? 'Arrêt dans ${recording.remaining.inSeconds + 1} s'
-                              : '${formatVoiceDuration(recording.max)} au plus',
+                              : '${recording.max.inSeconds} s max.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: ending ? theme.colorScheme.error : secondary,
                           ),
@@ -389,14 +389,14 @@ class VoicePreviewBar extends ConsumerWidget {
                   children: [
                     IconButton(
                       key: const Key('voice.discard'),
-                      tooltip: 'Supprimer l\'enregistrement',
+                      tooltip: 'Supprimer l’enregistrement',
                       onPressed: () =>
                           run(ref.read(voiceRecorderControllerProvider.notifier).discard),
                       icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
                     ),
                     IconButton(
                       key: const Key('voice.preview_play'),
-                      tooltip: current && playback.playing ? 'Pause' : 'Écouter avant d\'envoyer',
+                      tooltip: current && playback.playing ? 'Pause' : 'Écouter avant d’envoyer',
                       onPressed: () => run(() => player.togglePreview(preview.audio)),
                       icon: Icon(
                         current && playback.playing

@@ -99,10 +99,10 @@ class GroupsTab extends ConsumerWidget {
     return invitations.isEmpty && groups.isEmpty
         ? const EmptyView(
             icon: Icons.groups_outlined,
-            title: 'Aucun groupe pour l\'instant',
+            title: 'Aucun groupe pour l’instant',
             message:
-                'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre ; '
-                'les messages s\'effacent comme dans vos discussions.',
+                'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre\u202F; '
+                'les messages s’effacent comme dans vos discussions.',
           )
         : ListView(
             padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
@@ -162,7 +162,7 @@ class _InvitationCard extends ConsumerWidget {
                     children: [
                       Text(i.title, style: theme.textTheme.titleSmall),
                       Text(
-                        '${i.inviterName ?? 'Quelqu\'un'} vous invite · '
+                        '${i.inviterName ?? 'Quelqu’un'} vous invite · '
                         '${i.memberCount} membre${i.memberCount > 1 ? 's' : ''}',
                         style: theme.textTheme.bodySmall?.copyWith(color: p.accentText),
                       ),

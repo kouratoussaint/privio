@@ -41,7 +41,9 @@ Future<void> _scrollTap(WidgetTester tester, Finder f) async {
 }
 
 void main() {
-  testWidgets('signaler un message : motif, copie jointe avec accord, blocage', (tester) async {
+  testWidgets('signaler un message\u202F: motif, copie jointe avec accord, blocage', (
+    tester,
+  ) async {
     final deps = _deps();
     await _launch(tester, deps);
     await tester.tap(find.byKey(const Key('conversation.conv-bob')));
@@ -66,7 +68,7 @@ void main() {
     expect(find.textContaining('signalement est transmis'), findsOneWidget);
   });
 
-  testWidgets('sans accord : la copie du message n’est pas jointe', (tester) async {
+  testWidgets('sans accord\u202F: la copie du message n’est pas jointe', (tester) async {
     final deps = _deps();
     await _launch(tester, deps);
     await tester.tap(find.byKey(const Key('conversation.conv-bob')));
@@ -97,13 +99,13 @@ void main() {
     expect(deps.messaging.reports.single['reason'], 'impersonation');
   });
 
-  testWidgets('aide : questions fréquentes et contact de l’assistance', (tester) async {
+  testWidgets('aide\u202F: questions fréquentes et contact de l’assistance', (tester) async {
     final deps = _deps();
     await _launch(tester, deps);
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
     await _scrollTap(tester, find.byKey(const Key('settings.help')));
-    expect(find.text('Quand mes messages sont-ils effacés ?'), findsOneWidget);
+    expect(find.text('Quand mes messages sont-ils effacés\u202F?'), findsOneWidget);
     await _scrollTap(tester, find.byKey(const Key('help.contact')));
     await tester.enterText(find.byKey(const Key('help.message')), 'Je ne reçois pas les SMS');
     await tester.tap(find.byKey(const Key('help.send')));
@@ -112,7 +114,7 @@ void main() {
     expect(deps.messaging.reports.single['details'], 'Je ne reçois pas les SMS');
   });
 
-  testWidgets('supprimer son compte : confirmation, effacement local, retour à l’accueil', (
+  testWidgets('supprimer son compte\u202F: confirmation, effacement local, retour à l’accueil', (
     tester,
   ) async {
     final deps = _deps();

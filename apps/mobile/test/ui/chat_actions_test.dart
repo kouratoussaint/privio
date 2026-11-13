@@ -68,8 +68,8 @@ void main() {
 
   testWidgets('répondre en citant un message', (tester) async {
     final deps = await _openChatWithBob(tester);
-    await _receive(tester, deps, 'On se voit demain ?');
-    await _openActions(tester, 'On se voit demain ?');
+    await _receive(tester, deps, 'On se voit demain\u202F?');
+    await _openActions(tester, 'On se voit demain\u202F?');
     await tester.tap(find.byKey(const Key('action.reply')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('composer.context')), findsOneWidget);
@@ -77,7 +77,10 @@ void main() {
     expect(find.byKey(const Key('composer.context')), findsNothing);
     final quote = find.byKey(const Key('bubble.quote'));
     expect(quote, findsOneWidget);
-    expect(find.descendant(of: quote, matching: find.text('On se voit demain ?')), findsOneWidget);
+    expect(
+      find.descendant(of: quote, matching: find.text('On se voit demain\u202F?')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('modifier son message dans le délai', (tester) async {
@@ -95,7 +98,9 @@ void main() {
     expect(find.textContaining('modifié'), findsOneWidget);
   });
 
-  testWidgets('délai de modification dépassé : action absente (règle serveur)', (tester) async {
+  testWidgets('délai de modification dépassé\u202F: action absente (règle serveur)', (
+    tester,
+  ) async {
     await _openChatWithBob(tester, policies: {'message_edit_window_minutes': 0});
     await _send(tester, 'Trop tard');
     await _openActions(tester, 'Trop tard');
@@ -125,7 +130,7 @@ void main() {
     expect(deps.messaging.hiddenForMe, hasLength(1));
   });
 
-  testWidgets('message reçu : ni modifier ni supprimer pour tous, jamais copier/transférer', (
+  testWidgets('message reçu\u202F: ni modifier ni supprimer pour tous, jamais copier/transférer', (
     tester,
   ) async {
     final deps = await _openChatWithBob(tester);
@@ -137,10 +142,10 @@ void main() {
     expect(find.textContaining(RegExp('copier|transf', caseSensitive: false)), findsNothing);
   });
 
-  testWidgets('accusés : envoyé, puis reçu, puis lu', (tester) async {
+  testWidgets('accusés\u202F: envoyé, puis reçu, puis lu', (tester) async {
     final semantics = tester.ensureSemantics();
     final deps = await _openChatWithBob(tester);
-    await _send(tester, 'Tu as reçu ?');
+    await _send(tester, 'Tu as reçu\u202F?');
     expect(find.byKey(const Key('delivery.sent')), findsOneWidget);
 
     deps.messaging.peerDeliveredUpTo = DateTime.now().add(const Duration(seconds: 1));
@@ -155,7 +160,7 @@ void main() {
     // Le lecteur d'écran annonce « Lu » avec le texte de la bulle (nœud fusionné).
     expect(
       tester.getSemantics(find.byKey(const Key('delivery.read'))).label,
-      allOf(contains('Tu as reçu ?'), contains('expire dans'), contains('Lu')),
+      allOf(contains('Tu as reçu\u202F?'), contains('expire dans'), contains('Lu')),
     );
     semantics.dispose();
   });

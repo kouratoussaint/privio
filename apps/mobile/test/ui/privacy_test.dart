@@ -66,13 +66,17 @@ Future<void> _clear(WidgetTester tester, String option) async {
 }
 
 void main() {
-  testWidgets('écran Confidentialité : visibilités, accusés, écriture, durée par défaut', (
+  testWidgets('écran Confidentialité\u202F: visibilités, accusés, écriture, durée par défaut', (
     tester,
   ) async {
     final deps = _deps();
     await _start(tester, deps);
     await _openPrivacy(tester);
-    expect(find.text('Mes contacts'), findsOneWidget, reason: 'présence : contacts par défaut');
+    expect(
+      find.text('Mes contacts'),
+      findsOneWidget,
+      reason: 'présence\u202F: contacts par défaut',
+    );
 
     await tester.tap(find.byKey(const Key('privacy.presence')));
     await tester.pumpAndSettle();
@@ -112,7 +116,7 @@ void main() {
     expect(deps.messaging.privacySaves, hasLength(7));
   });
 
-  testWidgets('refus du serveur : réglage remis comme avant, message clair', (tester) async {
+  testWidgets('refus du serveur\u202F: réglage remis comme avant, message clair', (tester) async {
     final deps = _deps()..messaging.failPrivacy = true;
     await _start(tester, deps);
     await _openPrivacy(tester);
@@ -123,7 +127,9 @@ void main() {
     expect(sw.value, isTrue);
   });
 
-  testWidgets('« en train d\'écrire » désactivé : aucun signal envoyé', (tester) async {
+  testWidgets('«\u202Fen train d’écrire\u202F» désactivé\u202F: aucun signal envoyé', (
+    tester,
+  ) async {
     final deps = _deps();
     deps.messaging.privacy = const PrivacySettings(typing: false);
     await _start(tester, deps);
@@ -133,11 +139,13 @@ void main() {
     expect(deps.messaging.typingSignals, 0);
   });
 
-  testWidgets('présence : « en ligne », « vu hier », ou rien si caché', (tester) async {
+  testWidgets('présence\u202F: «\u202Fen ligne\u202F», «\u202Fvu hier\u202F», ou rien si caché', (
+    tester,
+  ) async {
     final deps = _deps();
     deps.messaging.presences['u2'] = const UserPresence(visible: true, online: true);
     await _start(tester, deps);
-    expect(deps.messaging.presenceTouches, contains(true), reason: 'Privio ouvert : signalé');
+    expect(deps.messaging.presenceTouches, contains(true), reason: 'Privio ouvert\u202F: signalé');
     await _openBob(tester);
     expect(find.text('en ligne'), findsOneWidget);
 
@@ -165,23 +173,24 @@ void main() {
     expect(deps.messaging.presenceTouches.last, isFalse);
   });
 
-  testWidgets('vider seulement chez moi : la discussion devient vide, sans « Message supprimé »', (
-    tester,
-  ) async {
-    final deps = _deps();
-    await _start(tester, deps);
-    await _openBob(tester);
-    expect(find.text('Premier message'), findsOneWidget);
-    await _clear(tester, 'me');
-    expect(find.text('Discussion vidée.'), findsOneWidget);
-    expect(find.text('Premier message'), findsNothing);
-    expect(find.text('Deuxième message'), findsNothing);
-    expect(find.text('Message supprimé'), findsNothing);
-    expect(deps.messaging.clearedBefore['conv-bob'], isNotNull);
-    expect(deps.messaging.messages['conv-bob'], hasLength(2), reason: 'Bob garde les siens');
-  });
+  testWidgets(
+    'vider seulement chez moi\u202F: la discussion devient vide, sans «\u202FMessage supprimé\u202F»',
+    (tester) async {
+      final deps = _deps();
+      await _start(tester, deps);
+      await _openBob(tester);
+      expect(find.text('Premier message'), findsOneWidget);
+      await _clear(tester, 'me');
+      expect(find.text('Discussion vidée.'), findsOneWidget);
+      expect(find.text('Premier message'), findsNothing);
+      expect(find.text('Deuxième message'), findsNothing);
+      expect(find.text('Message supprimé'), findsNothing);
+      expect(deps.messaging.clearedBefore['conv-bob'], isNotNull);
+      expect(deps.messaging.messages['conv-bob'], hasLength(2), reason: 'Bob garde les siens');
+    },
+  );
 
-  testWidgets('vider pour nous deux : demande, bandeau d\'attente, annulation', (tester) async {
+  testWidgets('vider pour nous deux\u202F: demande, bandeau d’attente, annulation', (tester) async {
     final deps = _deps();
     await _start(tester, deps);
     await _openBob(tester);
@@ -189,8 +198,8 @@ void main() {
     expect(find.text('Demande envoyée à Bob.'), findsOneWidget);
     expect(deps.messaging.clearRequests['conv-bob'], 'u1');
     expect(find.byKey(const Key('clear.banner')), findsOneWidget);
-    expect(find.textContaining('en attente de l\'accord de Bob'), findsOneWidget);
-    expect(find.text('Premier message'), findsOneWidget, reason: 'rien n\'est effacé avant accord');
+    expect(find.textContaining('en attente de l’accord de Bob'), findsOneWidget);
+    expect(find.text('Premier message'), findsOneWidget, reason: 'rien n’est effacé avant accord');
 
     await tester.tap(find.byKey(const Key('clear.cancel')));
     await tester.pumpAndSettle();
@@ -198,7 +207,7 @@ void main() {
     expect(find.byKey(const Key('clear.banner')), findsNothing);
   });
 
-  testWidgets('demande reçue : aperçu dans la liste ; accepter vide tout, sans trace', (
+  testWidgets('demande reçue\u202F: aperçu dans la liste\u202F; accepter vide tout, sans trace', (
     tester,
   ) async {
     final deps = _deps();
@@ -215,7 +224,7 @@ void main() {
     expect(deps.messaging.messages['conv-bob'], isEmpty);
   });
 
-  testWidgets('demande reçue : refuser garde tout', (tester) async {
+  testWidgets('demande reçue\u202F: refuser garde tout', (tester) async {
     final deps = _deps();
     deps.messaging.clearRequests['conv-bob'] = 'u2';
     await _start(tester, deps);
@@ -227,32 +236,33 @@ void main() {
     expect(find.byKey(const Key('clear.banner')), findsNothing);
   });
 
-  testWidgets('groupe : un membre vide seulement chez lui ; un administrateur pour tous', (
-    tester,
-  ) async {
-    final deps = _deps();
-    deps.messaging
-      ..seedGroup('g1', 'Famille', owner: 'u2', members: {FakeMessagingApi.me: 'member'})
-      ..receiveInGroup('g1', 'u2', 'Bonjour la famille');
-    await _start(tester, deps);
-    await tester.tap(find.byKey(const Key('conversation.g1')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('chat.menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('chat.clear')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('clear.everyone')), findsNothing, reason: 'membre simple');
-    expect(find.byKey(const Key('clear.me')), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'groupe\u202F: un membre vide seulement chez lui\u202F; un administrateur pour tous',
+    (tester) async {
+      final deps = _deps();
+      deps.messaging
+        ..seedGroup('g1', 'Famille', owner: 'u2', members: {FakeMessagingApi.me: 'member'})
+        ..receiveInGroup('g1', 'u2', 'Bonjour la famille');
+      await _start(tester, deps);
+      await tester.tap(find.byKey(const Key('conversation.g1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('chat.menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('chat.clear')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('clear.everyone')), findsNothing, reason: 'membre simple');
+      expect(find.byKey(const Key('clear.me')), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
 
-    deps.messaging.groups['g1']!.roles[FakeMessagingApi.me] = 'admin';
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('conversation.g1')));
-    await tester.pumpAndSettle();
-    await _clear(tester, 'everyone');
-    expect(find.text('Bonjour la famille'), findsNothing);
-    expect(deps.messaging.messages['g1'], isEmpty);
-  });
+      deps.messaging.groups['g1']!.roles[FakeMessagingApi.me] = 'admin';
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('conversation.g1')));
+      await tester.pumpAndSettle();
+      await _clear(tester, 'everyone');
+      expect(find.text('Bonjour la famille'), findsNothing);
+      expect(deps.messaging.messages['g1'], isEmpty);
+    },
+  );
 }

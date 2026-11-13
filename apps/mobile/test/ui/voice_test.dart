@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:privio/app.dart';
@@ -63,7 +64,7 @@ String _snack(WidgetTester tester) => tester
     .data!;
 
 void main() {
-  testWidgets('champ vide : micro ; texte saisi : bouton Envoyer', (tester) async {
+  testWidgets('champ vide\u202F: micro\u202F; texte saisi\u202F: bouton Envoyer', (tester) async {
     await _openChatWithBob(tester);
     expect(find.byKey(const Key('chat.mic')), findsOneWidget);
     expect(find.byKey(const Key('chat.send')), findsNothing);
@@ -73,7 +74,7 @@ void main() {
     expect(find.byKey(const Key('chat.mic')), findsNothing);
   });
 
-  testWidgets('toucher le micro : enregistrer, arrêter, préécouter, envoyer', (tester) async {
+  testWidgets('toucher le micro\u202F: enregistrer, arrêter, préécouter, envoyer', (tester) async {
     final deps = await _openChatWithBob(tester);
     await tester.tap(find.byKey(const Key('chat.mic')));
     await tester.pump();
@@ -81,7 +82,7 @@ void main() {
     expect(
       find.byKey(const Key('voice.stop')),
       findsOneWidget,
-      reason: 'verrouillé : bouton Arrêter',
+      reason: 'verrouillé\u202F: bouton Arrêter',
     );
     await _advance(tester, const Duration(seconds: 3));
     expect(find.text('0:03'), findsOneWidget);
@@ -106,7 +107,7 @@ void main() {
     expect(deps.vault.files.keys.where((k) => k.startsWith('out-')), isEmpty);
   });
 
-  testWidgets('préécoute supprimée : rien n\'est envoyé', (tester) async {
+  testWidgets('préécoute supprimée\u202F: rien n’est envoyé', (tester) async {
     final deps = await _openChatWithBob(tester);
     await _recordLocked(tester, const Duration(seconds: 2));
     await tester.tap(find.byKey(const Key('voice.discard')));
@@ -115,7 +116,7 @@ void main() {
     expect(deps.messaging.sentClientIds, isEmpty);
   });
 
-  testWidgets('annuler pendant l\'enregistrement : rien n\'est conservé', (tester) async {
+  testWidgets('annuler pendant l’enregistrement\u202F: rien n’est conservé', (tester) async {
     final deps = await _openChatWithBob(tester);
     await tester.tap(find.byKey(const Key('chat.mic')));
     await tester.pump();
@@ -129,10 +130,27 @@ void main() {
 
   testWidgets('arrêt automatique à la limite de 30 s, puis préécoute', (tester) async {
     final deps = await _openChatWithBob(tester);
+    final haptics = <Object?>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+      c,
+    ) async {
+      if (c.method == 'HapticFeedback.vibrate') haptics.add(c.arguments);
+      return null;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
     await tester.tap(find.byKey(const Key('chat.mic')));
     await tester.pump();
-    await _advance(tester, const Duration(seconds: 26));
+    await _advance(tester, const Duration(seconds: 24));
+    expect(haptics, isEmpty);
+    await _advance(tester, const Duration(seconds: 2));
     expect(find.textContaining('Arrêt dans'), findsOneWidget, reason: 'compte à rebours final');
+    // Lot 4.4 : une vibration, une seule, quand il reste 5 s.
+    expect(haptics, ['HapticFeedbackType.mediumImpact']);
     await _advance(tester, const Duration(seconds: 5));
     await tester.pumpAndSettle();
     expect(deps.recorder.recording, isFalse, reason: 'arrêté juste avant 30 s');
@@ -140,7 +158,7 @@ void main() {
     expect(find.text('0:29'), findsOneWidget);
   });
 
-  testWidgets('enregistrement trop court : message d\'aide, rien en préécoute', (tester) async {
+  testWidgets('enregistrement trop court\u202F: message d’aide, rien en préécoute', (tester) async {
     await _openChatWithBob(tester);
     await _recordLocked(tester, const Duration(milliseconds: 500));
     expect(find.byKey(const Key('voice.preview')), findsNothing);
@@ -159,7 +177,7 @@ void main() {
     expect(find.byKey(const Key('voice.preview')), findsOneWidget);
   });
 
-  testWidgets('maintenir puis glisser vers la gauche : annulé', (tester) async {
+  testWidgets('maintenir puis glisser vers la gauche\u202F: annulé', (tester) async {
     final deps = await _openChatWithBob(tester);
     final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('chat.mic'))));
     await tester.pump(const Duration(milliseconds: 600));
@@ -172,7 +190,9 @@ void main() {
     expect(find.byKey(const Key('voice.preview')), findsNothing);
   });
 
-  testWidgets('maintenir puis glisser vers le haut : verrouillé, mains libres', (tester) async {
+  testWidgets('maintenir puis glisser vers le haut\u202F: verrouillé, mains libres', (
+    tester,
+  ) async {
     final deps = await _openChatWithBob(tester);
     final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('chat.mic'))));
     await tester.pump(const Duration(milliseconds: 600));
@@ -187,7 +207,7 @@ void main() {
     expect(find.byKey(const Key('voice.preview')), findsOneWidget);
   });
 
-  testWidgets('micro refusé : explication, l\'application reste utilisable', (tester) async {
+  testWidgets('micro refusé\u202F: explication, l’application reste utilisable', (tester) async {
     final deps = await _openChatWithBob(tester);
     deps.recorder.permission = MicPermission.denied;
     await tester.tap(find.byKey(const Key('chat.mic')));
@@ -197,7 +217,7 @@ void main() {
     expect(find.byKey(const Key('chat.input')), findsOneWidget);
   });
 
-  testWidgets('micro refusé définitivement : proposer les réglages', (tester) async {
+  testWidgets('micro refusé définitivement\u202F: proposer les réglages', (tester) async {
     final deps = await _openChatWithBob(tester);
     deps.recorder.permission = MicPermission.permanentlyDenied;
     await tester.tap(find.byKey(const Key('chat.mic')));
@@ -208,7 +228,7 @@ void main() {
     expect(deps.recorder.starts, 0);
   });
 
-  testWidgets('écouter un vocal reçu : téléchargé une seule fois, puis lu localement', (
+  testWidgets('écouter un vocal reçu\u202F: téléchargé une seule fois, puis lu localement', (
     tester,
   ) async {
     final deps = await _openChatWithBob(tester);
@@ -240,7 +260,7 @@ void main() {
     expect(deps.messaging.downloads, hasLength(1));
   });
 
-  testWidgets('hors connexion, son jamais téléchargé : message clair', (tester) async {
+  testWidgets('hors connexion, son jamais téléchargé\u202F: message clair', (tester) async {
     final deps = await _openChatWithBob(tester);
     await _receiveVoice(tester, deps);
     final id = deps.messaging.messages['conv-bob']!.last.id;
@@ -251,7 +271,9 @@ void main() {
     expect(deps.audio.played, isEmpty);
   });
 
-  testWidgets('vocal envoyé hors connexion : il attend, puis part sans doublon', (tester) async {
+  testWidgets('vocal envoyé hors connexion\u202F: il attend, puis part sans doublon', (
+    tester,
+  ) async {
     final deps = await _openChatWithBob(tester);
     deps.messaging.offline = true;
     await _recordLocked(tester, const Duration(seconds: 2));
@@ -276,7 +298,7 @@ void main() {
     expect(deps.vault.files.keys.where((k) => k.startsWith('out-')), isEmpty);
   });
 
-  testWidgets('répondre à un vocal : citation « Message vocal »', (tester) async {
+  testWidgets('répondre à un vocal\u202F: citation «\u202FMessage vocal\u202F»', (tester) async {
     final deps = await _openChatWithBob(tester);
     await _receiveVoice(tester, deps);
     final id = deps.messaging.messages['conv-bob']!.last.id;
@@ -299,7 +321,9 @@ void main() {
     );
   });
 
-  testWidgets('son vocal : jamais modifiable ; supprimé pour moi, son effacé', (tester) async {
+  testWidgets('son vocal\u202F: jamais modifiable\u202F; supprimé pour moi, son effacé', (
+    tester,
+  ) async {
     final deps = await _openChatWithBob(tester);
     await _recordLocked(tester, const Duration(seconds: 2));
     await tester.tap(find.byKey(const Key('voice.send')));
@@ -319,7 +343,7 @@ void main() {
     expect(deps.vault.files, isEmpty);
   });
 
-  testWidgets('liste des discussions : « Message vocal » en aperçu', (tester) async {
+  testWidgets('liste des discussions\u202F: «\u202FMessage vocal\u202F» en aperçu', (tester) async {
     final deps = await _openChatWithBob(tester);
     await _receiveVoice(tester, deps);
     await tester.tap(find.byType(BackButton));

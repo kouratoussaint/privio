@@ -29,9 +29,9 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Bloquer $name ?'),
+          title: Text('Bloquer $name\u202F?'),
           content: const Text(
-            'Vous ne pourrez plus vous écrire, dans un sens comme dans l\'autre, et cette '
+            'Vous ne pourrez plus vous écrire, dans un sens comme dans l’autre, et cette '
             'personne ne pourra plus vous trouver. Vous pourrez la débloquer à tout moment.',
           ),
           actions: [
@@ -75,7 +75,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     }
     final iBlocked = blockedList.value?.any((b) => b.id == peerId) ?? false;
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact')),
+      appBar: AppBar(title: const Text('Infos')),
       body: ListView(
         padding: const EdgeInsets.all(PrivioSpacing.xl),
         children: [

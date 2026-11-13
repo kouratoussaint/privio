@@ -17,7 +17,7 @@ void main() {
     expect(toAppFailure(const PostgrestException(message: 'inattendu')).code, FailureCode.unknown);
   });
 
-  test('erreurs Auth : code faux ou expiré, limites SMS, session perdue', () {
+  test('erreurs Auth\u202F: code faux ou expiré, limites SMS, session perdue', () {
     expect(
       toAppFailure(const AuthException('x', code: 'otp_expired')).code,
       FailureCode.otpInvalidOrExpired,

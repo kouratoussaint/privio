@@ -19,10 +19,10 @@ class StorageScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Effacer les médias gardés ?'),
+        title: const Text('Effacer les photos et vocaux gardés\u202F?'),
         content: const Text(
           'Les photos et vocaux gardés sur ce téléphone sont effacés. Tant que les messages '
-          'n\'ont pas expiré, vous pourrez les télécharger de nouveau (cela consomme des données). '
+          'ne sont pas effacés, vous pourrez les télécharger de nouveau (cela consomme des données). '
           'Les envois en attente sont conservés.',
         ),
         actions: [
@@ -93,14 +93,14 @@ class StorageScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
             child: Text(
-              'Sans téléchargement automatique, une photo reçue s\'affiche en attente : '
+              'Sans téléchargement automatique, une photo reçue s’affiche en attente\u202F: '
               'touchez-la pour la télécharger. Les vocaux ne se téléchargent que lorsque vous '
               'les écoutez. Vos propres envois ne sont jamais retéléchargés.',
               style: muted,
             ),
           ),
           const Divider(height: PrivioSpacing.xxl),
-          title('Données utilisées par les médias'),
+          title('Données utilisées par les photos et vocaux'),
           if (usage != null) ...[
             ListTile(
               key: const Key('storage.usage.month'),
@@ -125,7 +125,7 @@ class StorageScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
             child: Text(
               'Photos, vocaux et photos de profil échangés depuis ce téléphone. Les messages '
-              'texte, très légers, ne sont pas comptés. Chiffres indicatifs : votre opérateur '
+              'texte, très légers, ne sont pas comptés. Chiffres indicatifs\u202F: votre opérateur '
               'fait foi.',
               style: muted,
             ),
@@ -146,7 +146,7 @@ class StorageScreen extends ConsumerWidget {
           ListTile(
             key: const Key('storage.space'),
             leading: Icon(Icons.sd_storage_outlined, color: p.accentText),
-            title: const Text('Médias gardés (chiffrés)'),
+            title: const Text('Photos et vocaux sur ce téléphone'),
             subtitle: Text(switch (space) {
               AsyncData(:final value) =>
                 '${value.files} fichier${value.files > 1 ? 's' : ''} · ${formatBytes(value.bytes)}',
@@ -156,10 +156,7 @@ class StorageScreen extends ConsumerWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-            child: Text(
-              'Chaque média est effacé automatiquement à l\'expiration de son message.',
-              style: muted,
-            ),
+            child: Text('Chaque photo ou vocal s’efface avec son message.', style: muted),
           ),
           Padding(
             padding: const EdgeInsets.all(PrivioSpacing.l),
@@ -167,7 +164,7 @@ class StorageScreen extends ConsumerWidget {
               key: const Key('storage.clear'),
               onPressed: () => _clear(context, ref),
               icon: const Icon(Icons.cleaning_services_outlined),
-              label: const Text('Effacer les médias gardés'),
+              label: const Text('Effacer les photos et vocaux gardés'),
             ),
           ),
         ],

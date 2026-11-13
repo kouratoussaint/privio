@@ -32,7 +32,7 @@ void main() {
     await _pumpApp(tester, deps);
 
     // 08 — liste vide, temps réel démarré pour le compte connecté
-    expect(find.text('Aucune discussion pour l\'instant'), findsOneWidget);
+    expect(find.text('Aucune discussion pour l’instant'), findsOneWidget);
     expect(deps.realtime.startedFor, 'u1');
 
     // 09 — recherche exacte par identifiant (normalisé : @, majuscules)
@@ -60,7 +60,7 @@ void main() {
     expect(find.text('71 h'), findsOneWidget);
 
     // Réception en temps réel ; un message déjà expiré n'est jamais affiché
-    deps.messaging.receive('conv-bob', 'Salut Toussaint !');
+    deps.messaging.receive('conv-bob', 'Salut Toussaint\u202F!');
     deps.messaging.receive(
       'conv-bob',
       'Message expiré',
@@ -68,23 +68,23 @@ void main() {
     );
     deps.realtime.emit('conv-bob');
     await tester.pumpAndSettle();
-    expect(find.text('Salut Toussaint !'), findsOneWidget);
+    expect(find.text('Salut Toussaint\u202F!'), findsOneWidget);
     expect(find.text('Message expiré'), findsNothing);
 
     // Coupure réseau : le message attend (file locale), puis repart avec le MÊME
     // identifiant (pas de doublon)
     deps.messaging.failNextSend = true;
-    await tester.enterText(find.byKey(const Key('chat.input')), 'Tu es là ?');
+    await tester.enterText(find.byKey(const Key('chat.input')), 'Tu es là\u202F?');
     await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('En attente du réseau'), findsOneWidget);
-    await tester.tap(find.text('Tu es là ?'));
+    expect(find.textContaining('En attente de réseau'), findsOneWidget);
+    await tester.tap(find.text('Tu es là\u202F?'));
     await tester.pumpAndSettle();
     final ids = deps.messaging.sentClientIds;
     expect(ids[ids.length - 1], ids[ids.length - 2]);
-    expect(find.textContaining('En attente du réseau'), findsNothing);
-    expect(find.text('Tu es là ?'), findsOneWidget);
+    expect(find.textContaining('En attente de réseau'), findsNothing);
+    expect(find.text('Tu es là\u202F?'), findsOneWidget);
 
     // Fiche contact → bloquer
     await tester.tap(find.byKey(const Key('chat.contact')));
@@ -101,7 +101,8 @@ void main() {
     await tester.tap(find.byType(BackButton)); // pageBack() cherche « Back » (anglais)
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('chat.input')), findsNothing);
-    expect(find.textContaining('(blocage)'), findsOneWidget);
+    expect(find.text('Vous avez bloqué Bob.'), findsOneWidget);
+    expect(find.byKey(const Key('notice.action')), findsOneWidget); // « Débloquer »
 
     // Paramètres → Personnes bloquées → Débloquer
     await tester.tap(find.byType(BackButton)); // pageBack() cherche « Back » (anglais)
@@ -114,10 +115,12 @@ void main() {
     await tester.tap(find.byKey(const Key('blocked.unblock.u2')));
     await tester.pumpAndSettle();
     expect(deps.messaging.blocked, isEmpty);
-    expect(find.text('Personne n\'est bloqué'), findsOneWidget);
+    expect(find.text('Personne n’est bloqué'), findsOneWidget);
   });
 
-  testWidgets('recherche par numéro : format +226, message clair si introuvable', (tester) async {
+  testWidgets('recherche par numéro\u202F: format +226, message clair si introuvable', (
+    tester,
+  ) async {
     final deps = _readyUser();
     await _pumpApp(tester, deps);
     await tester.tap(find.byKey(const Key('discussions.new')));
@@ -128,10 +131,10 @@ void main() {
     expect(deps.messaging.phoneSearches, ['+22670000009']);
     expect(deps.messaging.handleSearches, isEmpty);
     expect(find.textContaining('Aucun compte trouvé'), findsOneWidget);
-    expect(find.textContaining('Me trouver par mon numéro'), findsOneWidget);
+    expect(find.textContaining('invitez cette personne'), findsOneWidget);
   });
 
-  testWidgets('identifiant invalide : aucune requête envoyée', (tester) async {
+  testWidgets('identifiant invalide\u202F: aucune requête envoyée', (tester) async {
     final deps = _readyUser();
     await _pumpApp(tester, deps);
     await tester.tap(find.byKey(const Key('discussions.new')));
@@ -143,7 +146,7 @@ void main() {
     expect(deps.messaging.handleSearches, isEmpty);
   });
 
-  testWidgets('temps réel coupé : le message reçu apparaît quand même en 5 s', (tester) async {
+  testWidgets('temps réel coupé\u202F: le message reçu apparaît quand même en 5 s', (tester) async {
     final deps = _readyUser();
     await _pumpApp(tester, deps);
     await tester.tap(find.byKey(const Key('discussions.new')));
@@ -163,17 +166,53 @@ void main() {
     expect(find.text('Arrivé sans temps réel'), findsOneWidget);
   });
 
-  testWidgets('Paramètres : état de la réception instantanée visible', (tester) async {
+  testWidgets('bandeau de blocage\u202F: « Débloquer » rouvre la saisie (lot 4.4)', (tester) async {
+    final deps = _readyUser();
+    await _pumpApp(tester, deps);
+    await tester.tap(find.byKey(const Key('discussions.new')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('search.input')), 'bob_ouaga');
+    await tester.tap(find.byKey(const Key('search.submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('search.write')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('chat.contact')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact.block')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact.block.confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('chat.input')), findsNothing);
+    await tester.pump(const Duration(seconds: 5)); // le message « Bob est bloqué. » se retire
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notice.action')));
+    await tester.pumpAndSettle();
+    expect(deps.messaging.blocked, isEmpty);
+    expect(find.text('Bob est débloqué.'), findsOneWidget);
+    expect(find.byKey(const Key('chat.input')), findsOneWidget);
+  });
+
+  testWidgets('Aide\u202F: diagnostic de connexion (déplacé des Paramètres)', (tester) async {
     final deps = _readyUser();
     await _pumpApp(tester, deps);
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
+    expect(find.text('Réception instantanée'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Réception instantanée'),
+      find.byKey(const Key('settings.help')),
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(find.text('Réception instantanée'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings.help')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings.realtime')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Diagnostic de connexion'), findsOneWidget);
     expect(find.text('Connecté'), findsOneWidget);
   });
 }

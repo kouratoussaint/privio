@@ -5,7 +5,7 @@ import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/core/phone/phone_number.dart';
 
 void main() {
-  test('identifiant client : UUID v4 valide et unique', () {
+  test('identifiant client\u202F: UUID v4 valide et unique', () {
     final ids = {for (var i = 0; i < 1000; i++) uuidV4()};
     expect(ids.length, 1000);
     for (final id in ids.take(20)) {
@@ -16,7 +16,7 @@ void main() {
     }
   });
 
-  test('un message n\'est plus visible à son heure d\'expiration (P0)', () {
+  test('un message n’est plus visible à son heure d’expiration (P0)', () {
     final sent = DateTime.utc(2026, 11, 12, 10);
     final m = ChatMessage(
       id: 'm',
@@ -71,7 +71,7 @@ void main() {
     expect(m.reactions.single.emoji, '👍');
   });
 
-  test('recherche : chiffres = numéro, sinon identifiant', () {
+  test('recherche\u202F: chiffres = numéro, sinon identifiant', () {
     const looksLikePhone = PhoneNumber.looksLikePhone;
     expect(looksLikePhone('70 00 00 02'), isTrue);
     expect(looksLikePhone('+22670000002'), isTrue);

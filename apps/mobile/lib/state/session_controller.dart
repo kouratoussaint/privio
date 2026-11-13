@@ -42,8 +42,8 @@ const kAccountDeletedNotice =
     'un nouveau compte à tout moment.';
 
 const kOtherDeviceNotice =
-    'Votre compte est maintenant ouvert sur un autre téléphone. Privio ne fonctionne que '
-    'sur un seul appareil à la fois : reconnectez-vous pour l\'utiliser ici.';
+    'Privio est maintenant ouvert sur un autre téléphone (un seul à la fois). '
+    'Reconnectez-vous pour l’utiliser ici.';
 
 final sessionControllerProvider = AsyncNotifierProvider<SessionController, SessionState>(
   SessionController.new,

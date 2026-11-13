@@ -24,7 +24,7 @@ void main() {
       'privio': HandleIssue.reserved,
     };
     cases.forEach((input, expected) {
-      test('« $input » → $expected', () => expect(HandleRules.validate(input), expected));
+      test('«\u202F$input\u202F» → $expected', () => expect(HandleRules.validate(input), expected));
     });
   });
 

@@ -34,14 +34,14 @@ void main() {
   group('préparation sur le téléphone', () {
     test('aucune métadonnée ne quitte le téléphone (GPS, appareil)', () {
       final raw = _jpegWithExif(gps: true);
-      expect(_hasExif(raw), isTrue, reason: 'la photo d\'origine en contient');
+      expect(_hasExif(raw), isTrue, reason: 'la photo d’origine en contient');
       final out = processPhotoSync(raw)!;
       expect(_hasExif(out.bytes), isFalse);
       expect(latin1.decode(out.bytes, allowInvalid: true), isNot(contains('APPAREIL-SECRET')));
       expect(out.bytes.sublist(0, 2), [0xFF, 0xD8]);
     });
 
-    test('photo prise en portrait : rotation appliquée avant de retirer l\'EXIF', () {
+    test('photo prise en portrait\u202F: rotation appliquée avant de retirer l’EXIF', () {
       final out = processPhotoSync(_jpegWithExif(width: 40, height: 20, orientation: 6))!;
       expect((out.width, out.height), (20, 40));
     });
@@ -57,25 +57,25 @@ void main() {
       expect((out.width, out.height), (300, 200));
     });
 
-    test('photo de profil : carré de 512 px', () {
+    test('photo de profil\u202F: carré de 512 px', () {
       final raw = img.encodeJpg(img.Image(width: 800, height: 600), quality: 50);
       final out = processPhotoSync(raw, square: true, maxSide: kAvatarSide)!;
       expect((out.width, out.height), (512, 512));
     });
 
-    test('image avec transparence (PNG) : convertie en JPEG', () {
+    test('image avec transparence (PNG)\u202F: convertie en JPEG', () {
       final png = img.encodePng(img.Image(width: 30, height: 30, numChannels: 4));
       final out = processPhotoSync(png)!;
       expect(out.bytes.sublist(0, 2), [0xFF, 0xD8]);
     });
 
-    test('fichier illisible : refusé', () {
+    test('fichier illisible\u202F: refusé', () {
       expect(processPhotoSync(Uint8List.fromList(utf8.encode('pas une image'))), isNull);
     });
   });
 
   group('modèle', () {
-    test('une photo fait l\'aller-retour JSON (chemin, dimensions, légende)', () {
+    test('une photo fait l’aller-retour JSON (chemin, dimensions, légende)', () {
       final now = DateTime.utc(2026, 11, 12, 10);
       final m = ChatMessage.fromJson(
         ChatMessage(
@@ -119,29 +119,29 @@ void main() {
         'resets_at': '2026-11-13T00:00:00Z',
       });
       expect(q.remaining, 2);
-      expect(photoQuotaText(q), 'Il vous reste 2 photos aujourd\'hui (5 par jour).');
-      expect(photoQuotaText(const PhotoQuota(limit: 5, used: 4)), contains('1 photo aujourd\'hui'));
+      expect(photoQuotaText(q), 'Il vous reste 2 photos aujourd’hui (5 par jour).');
+      expect(photoQuotaText(const PhotoQuota(limit: 5, used: 4)), contains('1 photo aujourd’hui'));
       expect(
         photoQuotaText(const PhotoQuota(limit: 5, used: 7)),
-        contains('Nouvelles photos demain'),
+        contains('Prochaines photos demain, dès minuit'),
       );
     });
 
-    test('citations : vocal, photo avec ou sans légende, texte', () {
+    test('citations\u202F: vocal, photo avec ou sans légende, texte', () {
       expect(quoteLabel('photo', null), '📷 Photo');
       expect(quoteLabel('photo', 'Plage'), '📷 Plage');
       expect(quoteLabel('voice', null), 'Message vocal');
       expect(quoteLabel('text', 'Salut'), 'Salut');
     });
 
-    test('hauteur d\'une photo dans la bulle : proportions bornées', () {
+    test('hauteur d’une photo dans la bulle\u202F: proportions bornées', () {
       expect(photoBubbleHeight(1600, 1200), closeTo(177, 1));
       expect(photoBubbleHeight(100, 2000), 320);
       expect(photoBubbleHeight(2000, 100), 140);
       expect(photoBubbleHeight(null, null), kPhotoBubbleWidth);
     });
 
-    test('photo de profil : profil, correspondant, résultat de recherche', () {
+    test('photo de profil\u202F: profil, correspondant, résultat de recherche', () {
       expect(
         Profile.fromJson(const {'handle': 'a', 'display_name': 'A', 'avatar_path': 'u/x.jpg'})
             .avatarPath,
@@ -174,14 +174,14 @@ void main() {
       );
     });
 
-    test('clé de coffre d\'une photo de profil : sûre et bornée', () {
+    test('clé de coffre d’une photo de profil\u202F: sûre et bornée', () {
       final key = LocalCache.avatarMediaKey(
         '00000000-0000-0000-0000-0000000000a1/11111111-2222-3333-4444-555555555555.jpg',
       );
       expect(RegExp(r'^[A-Za-z0-9_-]{1,80}$').hasMatch(key), isTrue);
     });
 
-    test('photo en attente : type, légende et dimensions conservés', () {
+    test('photo en attente\u202F: type, légende et dimensions conservés', () {
       final o = OutboxItem.fromJson(
         OutboxItem(
           clientId: 'c1',
@@ -200,7 +200,7 @@ void main() {
     });
   });
 
-  test('photo supprimée pour tous : fichier effacé du téléphone', () async {
+  test('photo supprimée pour tous\u202F: fichier effacé du téléphone', () async {
     final now = DateTime.now();
     final vault = MemoryMediaVault();
     final cache = LocalCache(MemoryLocalStore(), media: vault);
@@ -223,7 +223,7 @@ void main() {
     expect(vault.files, isEmpty);
   });
 
-  test('quota atteint (photo-send) : message clair', () {
+  test('quota atteint (photo-send)\u202F: message clair', () {
     expect(
       toAppFailure(const FunctionException(status: 429, details: {'error': 'PHOTO_QUOTA_REACHED'}))
           .code,

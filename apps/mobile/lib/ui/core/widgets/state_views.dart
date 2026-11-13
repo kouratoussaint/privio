@@ -72,10 +72,20 @@ class EmptyView extends StatelessWidget {
 
 /// Bandeau d'information (ex. « compte ouvert sur un autre appareil »).
 class NoticeBanner extends StatelessWidget {
-  const NoticeBanner({super.key, required this.message, this.onClose});
+  const NoticeBanner({
+    super.key,
+    required this.message,
+    this.onClose,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String message;
   final VoidCallback? onClose;
+
+  /// Action unique proposée dans le bandeau (ex. « Débloquer »).
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +109,12 @@ class NoticeBanner extends StatelessWidget {
                   ),
                 ),
               ),
+              if (actionLabel != null)
+                TextButton(
+                  key: const Key('notice.action'),
+                  onPressed: onAction,
+                  child: Text(actionLabel!),
+                ),
               if (onClose != null)
                 IconButton(onPressed: onClose, tooltip: 'Fermer', icon: const Icon(Icons.close)),
             ],

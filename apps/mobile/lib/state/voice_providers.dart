@@ -216,6 +216,11 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
   /// Appelé à l'arrêt automatique (limite atteinte), pour prévenir l'interface.
   void Function(VoiceStopResult result)? onAutoStop;
 
+  /// Appelé une fois quand il reste 5 s (lot 4.4 : vibration d'avertissement).
+  void Function()? onNearEnd;
+
+  static const nearEnd = Duration(seconds: 5);
+
   @override
   VoiceRecState build() {
     _recorder = ref.watch(voiceRecorderProvider);
@@ -255,6 +260,7 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
     if (s is! VoiceRecording) return;
     final elapsed = s.elapsed + tick;
     state = VoiceRecording(elapsed: elapsed, locked: s.locked, max: s.max);
+    if (s.max - s.elapsed > nearEnd && s.max - elapsed <= nearEnd) onNearEnd?.call();
     if (elapsed >= s.max - safety) {
       unawaited(stop().then((r) => onAutoStop?.call(r)));
     }

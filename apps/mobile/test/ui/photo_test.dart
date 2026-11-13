@@ -59,11 +59,11 @@ String _snack(WidgetTester tester) => tester
     .data!;
 
 void main() {
-  testWidgets('envoyer une photo avec légende : compteur, aperçu, bulle', (tester) async {
+  testWidgets('envoyer une photo avec légende\u202F: compteur, aperçu, bulle', (tester) async {
     final deps = await _openChatWithBob(tester);
     await tester.tap(find.byKey(const Key('composer.photo')));
     await tester.pumpAndSettle();
-    expect(find.text('Il vous reste 5 photos aujourd\'hui (5 par jour).'), findsOneWidget);
+    expect(find.text('Il vous reste 5 photos aujourd’hui (5 par jour).'), findsOneWidget);
     await tester.tap(find.byKey(const Key('photo.gallery')));
     await tester.pumpAndSettle();
     expect(deps.photos.sources, [PhotoSource.gallery]);
@@ -85,20 +85,35 @@ void main() {
     expect(deps.messaging.photoDownloads, isEmpty);
   });
 
-  testWidgets('photos du jour épuisées : choix désactivés, explication', (tester) async {
+  testWidgets('photos du jour épuisées\u202F: choix désactivés, explication', (tester) async {
     final deps = _deps();
     deps.messaging.photosUsed = 5;
     await _openChatWithBob(tester, deps: deps);
+    // Lot 4.4 : icône atténuée avec la pastille « 0 » avant même de toucher.
+    expect(
+      find.descendant(of: find.byKey(const Key('composer.photo')), matching: find.text('0')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('composer.photo')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Nouvelles photos demain'), findsOneWidget);
+    expect(find.textContaining('Prochaines photos demain'), findsOneWidget);
     await tester.tap(find.byKey(const Key('photo.gallery')), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(deps.photos.sources, isEmpty);
     expect(find.byKey(const Key('photo.compose')), findsNothing);
   });
 
-  testWidgets('quota épuisé entre-temps (autre appareil) : refus du serveur affiché', (
+  testWidgets('compteur changé après l’ouverture de la discussion\u202F: la feuille le relit', (
+    tester,
+  ) async {
+    final deps = await _openChatWithBob(tester);
+    deps.messaging.photosUsed = 5; // photos envoyées depuis un autre appareil
+    await tester.tap(find.byKey(const Key('composer.photo')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Prochaines photos demain'), findsOneWidget);
+  });
+
+  testWidgets('quota épuisé entre-temps (autre appareil)\u202F: refus du serveur affiché', (
     tester,
   ) async {
     final deps = await _openChatWithBob(tester);
@@ -110,11 +125,11 @@ void main() {
     await tester.tap(find.byKey(const Key('photo.send')));
     await tester.pumpAndSettle();
     expect(deps.messaging.storedPhotos, isEmpty);
-    expect(find.textContaining('Échec de l\'envoi'), findsOneWidget);
+    expect(find.textContaining('Non envoyé'), findsOneWidget);
     expect(_snack(tester), const AppFailure(FailureCode.photoQuotaReached).message);
   });
 
-  testWidgets('aperçu annulé ou sélection abandonnée : rien n\'est envoyé', (tester) async {
+  testWidgets('aperçu annulé ou sélection abandonnée\u202F: rien n’est envoyé', (tester) async {
     final deps = await _openChatWithBob(tester);
     await tester.tap(find.byKey(const Key('composer.photo')));
     await tester.pumpAndSettle();
@@ -131,7 +146,9 @@ void main() {
     expect(deps.vault.files, isEmpty);
   });
 
-  testWidgets('photo reçue : téléchargée, agrandie sans aucun bouton de partage', (tester) async {
+  testWidgets('photo reçue\u202F: téléchargée, agrandie sans aucun bouton de partage', (
+    tester,
+  ) async {
     final deps = await _openChatWithBob(tester);
     final m = deps.messaging.receivePhoto('conv-bob', caption: 'Coucher de soleil');
     deps.realtime.emit('conv-bob');
@@ -149,7 +166,7 @@ void main() {
     expect(find.byKey(const Key('photo.viewer')), findsNothing);
   });
 
-  testWidgets('hors connexion : photo jamais téléchargée → message, réessai possible', (
+  testWidgets('hors connexion\u202F: photo jamais téléchargée → message, réessai possible', (
     tester,
   ) async {
     final deps = await _openChatWithBob(tester);
@@ -168,7 +185,9 @@ void main() {
     expect(find.byKey(Key('photo.open.msg-${m.id}')), findsOneWidget);
   });
 
-  testWidgets('photo envoyée hors connexion : elle attend, puis part sans doublon', (tester) async {
+  testWidgets('photo envoyée hors connexion\u202F: elle attend, puis part sans doublon', (
+    tester,
+  ) async {
     final deps = await _openChatWithBob(tester);
     deps.messaging.offline = true;
     await _sendPhoto(tester, caption: 'En attente');
@@ -177,7 +196,7 @@ void main() {
     expect(
       find.byKey(Key('photo.open.out-$clientId')),
       findsOneWidget,
-      reason: 'la photo en attente s\'affiche depuis le coffre local',
+      reason: 'la photo en attente s’affiche depuis le coffre local',
     );
     deps.messaging.offline = false;
     deps.realtime.emit('conv-bob', event: 'reconnected');
@@ -188,7 +207,7 @@ void main() {
     expect(deps.vault.files.keys.where((k) => k.startsWith('out-')), isEmpty);
   });
 
-  testWidgets('répondre à une photo ; une photo ne se modifie pas ; supprimée pour moi', (
+  testWidgets('répondre à une photo\u202F; une photo ne se modifie pas\u202F; supprimée pour moi', (
     tester,
   ) async {
     final deps = await _openChatWithBob(tester);
@@ -218,7 +237,9 @@ void main() {
     expect(deps.vault.files.keys, isNot(contains(LocalCache.messageMediaKey(m.id))));
   });
 
-  testWidgets('liste : aperçu « 📷 Photo » et photo de profil du correspondant', (tester) async {
+  testWidgets('liste\u202F: aperçu «\u202F📷 Photo\u202F» et photo de profil du correspondant', (
+    tester,
+  ) async {
     final deps = await _openChatWithBob(tester);
     deps.messaging
       ..bobAvatarPath = 'u2/avatar.jpg'
@@ -243,7 +264,7 @@ void main() {
     expect(find.byKey(const Key('avatar.photo.u2/avatar.jpg')), findsNothing);
   });
 
-  testWidgets('photo de profil : choisir, puis retirer (Paramètres)', (tester) async {
+  testWidgets('photo de profil\u202F: choisir, puis retirer (Paramètres)', (tester) async {
     final deps = _deps();
     await _start(tester, deps);
     await tester.tap(find.text('Paramètres'));
@@ -268,7 +289,7 @@ void main() {
     expect(deps.api.account!.profile!.avatarPath, isNull);
   });
 
-  testWidgets('appareil photo indisponible : message clair', (tester) async {
+  testWidgets('appareil photo indisponible\u202F: message clair', (tester) async {
     final deps = await _openChatWithBob(tester);
     deps.photos.failure = const AppFailure(FailureCode.cameraUnavailable);
     await tester.tap(find.byKey(const Key('composer.photo')));

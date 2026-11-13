@@ -128,7 +128,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
               ),
               const SizedBox(height: PrivioSpacing.xs),
               Text(
-                'Votre signalement est confidentiel : la personne n’est pas prévenue.',
+                'Votre signalement est confidentiel\u202F: la personne n’est pas prévenue.',
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: PrivioSpacing.s),

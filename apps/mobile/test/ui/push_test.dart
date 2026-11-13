@@ -42,7 +42,9 @@ Future<void> _openSettingsSwitch(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('connecté : le jeton de cet appareil est enregistré, puis renouvelé', (tester) async {
+  testWidgets('connecté\u202F: le jeton de cet appareil est enregistré, puis renouvelé', (
+    tester,
+  ) async {
     final deps = _deps();
     await _launch(tester, deps);
     expect(deps.api.pushTokens, ['jeton-fcm-de-test-000000000001']);
@@ -52,7 +54,9 @@ void main() {
     expect(deps.api.pushTokens.last, 'jeton-fcm-renouvele-0000000002');
   });
 
-  testWidgets('interrupteur : couper retire le jeton ; réactiver le renvoie', (tester) async {
+  testWidgets('interrupteur\u202F: couper retire le jeton\u202F; réactiver le renvoie', (
+    tester,
+  ) async {
     final deps = _deps();
     await _launch(tester, deps);
     await _openSettingsSwitch(tester);
@@ -67,13 +71,13 @@ void main() {
     expect(deps.api.pushTokens, hasLength(2));
   });
 
-  testWidgets('notifications coupées : aucun jeton envoyé au démarrage', (tester) async {
+  testWidgets('notifications coupées\u202F: aucun jeton envoyé au démarrage', (tester) async {
     final deps = _deps()..flags.push = false;
     await _launch(tester, deps);
     expect(deps.api.pushTokens, isEmpty);
   });
 
-  testWidgets('déconnexion : jeton retiré du serveur et de Firebase', (tester) async {
+  testWidgets('déconnexion\u202F: jeton retiré du serveur et de Firebase', (tester) async {
     final deps = _deps();
     await _launch(tester, deps);
     await tester.tap(find.text('Paramètres'));
@@ -102,13 +106,15 @@ void main() {
     expect(find.text('Salut'), findsOneWidget);
   });
 
-  testWidgets('application lancée depuis une notification : discussion ouverte', (tester) async {
+  testWidgets('application lancée depuis une notification\u202F: discussion ouverte', (
+    tester,
+  ) async {
     final deps = _deps()..push.initial = 'conv-bob';
     await _launch(tester, deps);
     expect(find.byKey(const Key('chat.input')), findsOneWidget);
   });
 
-  testWidgets('Firebase indisponible : l’application fonctionne normalement', (tester) async {
+  testWidgets('Firebase indisponible\u202F: l’application fonctionne normalement', (tester) async {
     final deps = _deps()..push.available = false;
     await _launch(tester, deps);
     expect(deps.api.pushTokens, isEmpty);

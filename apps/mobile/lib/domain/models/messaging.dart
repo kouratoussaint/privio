@@ -499,27 +499,27 @@ String? groupEventText(ChatMessage m, {required String? me}) {
     return null;
   }
   final mine = m.senderId != null && m.senderId == me;
-  final a = j['a'] as String? ?? 'Quelqu\'un';
+  final a = j['a'] as String? ?? 'Quelqu’un';
   final t = j['t'] as String? ?? 'un membre';
   final v = j['v'] as String?;
   String did(String verb) => mine ? 'Vous avez $verb' : '$a a $verb';
   return switch (j['e']) {
-    'created' => did('créé le groupe « ${v ?? ''} »'),
+    'created' => did('créé le groupe «\u202F${v ?? ''}\u202F»'),
     'joined' => mine ? 'Vous avez rejoint le groupe' : '$a a rejoint le groupe',
     'left' => mine ? 'Vous avez quitté le groupe' : '$a a quitté le groupe',
     'removed' => did('retiré $t du groupe'),
     'admin_added' => did('nommé $t administrateur'),
-    'admin_removed' => did('retiré le rôle d\'administrateur à $t'),
+    'admin_removed' => did('retiré le rôle d’administrateur à $t'),
     'owner_changed' =>
       j['a'] == null ? '$t est maintenant propriétaire du groupe' : did('confié le groupe à $t'),
-    'title' => did('renommé le groupe « ${v ?? ''} »'),
+    'title' => did('renommé le groupe «\u202F${v ?? ''}\u202F»'),
     'description' => did('modifié la description du groupe'),
     'photo' => did('changé la photo du groupe'),
     'photo_removed' => did('retiré la photo du groupe'),
     'posting' =>
       v == 'admins'
-          ? did('réservé l\'envoi de messages aux administrateurs')
-          : did('permis à tous les membres d\'écrire'),
+          ? did('réservé l’envoi de messages aux administrateurs')
+          : did('permis à tous les membres d’écrire'),
     'info_editing' =>
       v == 'admins'
           ? did('réservé la modification du groupe aux administrateurs')

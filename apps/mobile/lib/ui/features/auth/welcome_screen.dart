@@ -31,7 +31,7 @@ class WelcomeScreen extends ConsumerWidget {
                     key: const Key('welcome.phone'),
                     onPressed: () => context.push(Routes.phone),
                     icon: const Icon(Icons.phone_android),
-                    label: const Text('Continuer avec mon numéro de téléphone'),
+                    label: const Text('Continuer avec mon numéro'),
                   ),
                   const SizedBox(height: PrivioSpacing.s),
                   Text(

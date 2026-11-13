@@ -23,9 +23,9 @@ double photoBubbleHeight(int? width, int? height) {
 
 /// « Il vous reste 3 photos aujourd'hui. »
 String photoQuotaText(PhotoQuota q) => switch (q.remaining) {
-  0 => 'Vous avez envoyé vos ${q.limit} photos du jour. Nouvelles photos demain.',
-  1 => 'Il vous reste 1 photo aujourd\'hui (${q.limit} par jour).',
-  final n => 'Il vous reste $n photos aujourd\'hui (${q.limit} par jour).',
+  0 => 'Vous avez envoyé vos ${q.limit} photos du jour. Prochaines photos demain, dès minuit.',
+  1 => 'Il vous reste 1 photo aujourd’hui (${q.limit} par jour).',
+  final n => 'Il vous reste $n photos aujourd’hui (${q.limit} par jour).',
 };
 
 /// Photo dans une bulle (message envoyé, reçu ou en attente). Toucher : plein écran.
@@ -106,7 +106,7 @@ class PhotoMessageContent extends ConsumerWidget {
     final notDownloaded = bytes is AsyncData<Uint8List?> && bytes.value == null;
     final what = notDownloaded ? 'Photo non téléchargée' : 'Photo';
     return Semantics(
-      label: caption == null || caption!.isEmpty ? what : '$what : $caption',
+      label: caption == null || caption!.isEmpty ? what : '$what\u202F: $caption',
       button: onOpen != null || notDownloaded,
       onTapHint: notDownloaded ? 'télécharger' : 'agrandir',
       onTap: notDownloaded
@@ -282,7 +282,7 @@ Future<PhotoSource?> showPhotoSourceSheet(BuildContext context, {PhotoQuota? quo
                   const SizedBox(height: PrivioSpacing.xs),
                   Text(
                     quota == null
-                        ? 'Photos limitées chaque jour. Elles s\'effacent avec la discussion.'
+                        ? 'Photos limitées chaque jour. Elles s’effacent comme les messages.'
                         : photoQuotaText(quota),
                     key: const Key('photo.quota'),
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -372,9 +372,9 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                 padding: const EdgeInsets.only(top: PrivioSpacing.s),
                 child: Text(
                   q.remaining <= 1
-                      ? 'C\'est votre dernière photo du jour (${q.limit} par jour).'
-                      : 'Après celle-ci : ${q.remaining - 1} photo${q.remaining - 1 > 1 ? 's' : ''} '
-                            'aujourd\'hui (${q.limit} par jour).',
+                      ? 'C’est votre dernière photo du jour (${q.limit} par jour).'
+                      : 'Après celle-ci\u202F: ${q.remaining - 1} photo${q.remaining - 1 > 1 ? 's' : ''} '
+                            'aujourd’hui (${q.limit} par jour).',
                   key: const Key('photo.compose.quota'),
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                 ),

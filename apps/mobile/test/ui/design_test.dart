@@ -30,7 +30,7 @@ Future<TestDeps> _withBob(WidgetTester tester) async {
 void main() {
   testWidgets('recherche locale et filtres de la liste', (tester) async {
     final deps = await _withBob(tester);
-    deps.messaging.receive('conv-bob', 'Salut !');
+    deps.messaging.receive('conv-bob', 'Salut\u202F!');
     deps.realtime.emit('conv-bob');
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('conversation.conv-bob')), findsOneWidget);
@@ -55,27 +55,30 @@ void main() {
     expect(find.byKey(const Key('conversation.conv-bob')), findsOneWidget);
   });
 
-  testWidgets('rappel « s\'efface bientôt » seulement pour un message proche de l\'expiration', (
+  testWidgets(
+    'rappel «\u202Fs’efface bientôt\u202F» seulement pour un message proche de l’expiration',
+    (tester) async {
+      final deps = await _withBob(tester);
+      deps.messaging.receive('conv-bob', 'Loin de l’expiration');
+      deps.realtime.emit('conv-bob');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('expiring.conv-bob')), findsNothing);
+
+      deps.messaging.receive(
+        'conv-bob',
+        'Bientôt effacé',
+        expiresAt: DateTime.now().add(const Duration(hours: 2, minutes: 30)),
+      );
+      deps.realtime.emit('conv-bob');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('expiring.conv-bob')), findsOneWidget);
+      expect(find.text('2 h'), findsOneWidget);
+    },
+  );
+
+  testWidgets('conversation\u202F: séparateur «\u202FAujourd’hui\u202F» et carte 72 heures', (
     tester,
   ) async {
-    final deps = await _withBob(tester);
-    deps.messaging.receive('conv-bob', 'Loin de l\'expiration');
-    deps.realtime.emit('conv-bob');
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('expiring.conv-bob')), findsNothing);
-
-    deps.messaging.receive(
-      'conv-bob',
-      'Bientôt effacé',
-      expiresAt: DateTime.now().add(const Duration(hours: 2, minutes: 30)),
-    );
-    deps.realtime.emit('conv-bob');
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('expiring.conv-bob')), findsOneWidget);
-    expect(find.text('2 h'), findsOneWidget);
-  });
-
-  testWidgets('conversation : séparateur « Aujourd’hui » et carte 72 heures', (tester) async {
     final deps = await _withBob(tester);
     deps.messaging.receive('conv-bob', 'Bonjour');
     await tester.tap(find.byKey(const Key('conversation.conv-bob')));

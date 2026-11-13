@@ -111,7 +111,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Rechercher une discussion ou un contact',
+                hintText: 'Rechercher',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: p.field,
@@ -136,10 +136,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
           ),
           SizedBox(
             height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-              children: [
+            child: _FilterBar(
+              chips: [
                 _FilterChip(
                   label: 'Toutes',
                   selected: _filter == ConversationFilter.all,
@@ -153,14 +151,12 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
                 ),
                 _FilterChip(
                   label: 'Épinglées',
-                  icon: Icons.push_pin_outlined,
                   selected: _filter == ConversationFilter.pinned,
                   onTap: () => setState(() => _filter = ConversationFilter.pinned),
                 ),
                 _FilterChip(
                   key: const Key('filter.groups'),
                   label: 'Groupes',
-                  icon: Icons.groups_outlined,
                   selected: _filter == ConversationFilter.groups,
                   onTap: () => setState(() => _filter = ConversationFilter.groups),
                 ),
@@ -181,10 +177,10 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
             child: switch (conversations) {
               AsyncData(:final value) when value.isEmpty && archivedCount == 0 => const EmptyView(
                 icon: Icons.chat_bubble_outline,
-                title: 'Aucune discussion pour l\'instant',
+                title: 'Aucune discussion pour l’instant',
                 message:
-                    'Touchez le crayon pour écrire à quelqu\'un. Chaque message '
-                    's\'efface automatiquement 72 heures après son envoi.',
+                    'Touchez le crayon pour écrire à quelqu’un. Vos messages s’effacent seuls '
+                    'au bout de 72 h.',
               ),
               AsyncData(:final value) => _List(
                 items: _apply(value),
@@ -203,6 +199,96 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
   }
 }
 
+/// Barre des filtres (lot 4.4, R-09) : les 4 filtres restent visibles sur un écran
+/// étroit (320 dp) : marges resserrées et texte légèrement réduit, jamais sous 11 px
+/// (85 % de sa taille). Au-delà (très grande police), la barre défile.
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.chips});
+
+  final List<_FilterChip> chips;
+
+  static const minScale = 0.85;
+
+  /// Mode resserré : marge d'écran, espace entre filtres, marge intérieure, pastille.
+  static const denseEdge = PrivioSpacing.s;
+  static const denseGap = 6.0;
+  static const densePad = PrivioSpacing.s;
+  static const denseBadgeGap = 4.0;
+  static const denseBadgeMin = 18.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600);
+    final scaler = MediaQuery.textScalerOf(context);
+    // Largeur des textes (réductibles) et des pastilles (fixes).
+    double text = 0;
+    double badges = 0;
+    double denseBadges = 0;
+    for (final c in chips) {
+      final tp = TextPainter(
+        text: TextSpan(text: c.label, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+      )..layout();
+      text += tp.width;
+      tp.dispose();
+      if (c.count > 0) {
+        final badge = TextPainter(
+          text: TextSpan(
+            text: c.count > 99 ? '99+' : '${c.count}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+        )..layout();
+        badges += PrivioSpacing.s + (badge.width + 12 < 22 ? 22 : badge.width + 12);
+        denseBadges +=
+            denseBadgeGap + (badge.width + 8 < denseBadgeMin ? denseBadgeMin : badge.width + 8);
+        badge.dispose();
+      }
+    }
+    final gaps = chips.length - 1;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final roomy =
+            text + badges + chips.length * 2 * PrivioSpacing.m + gaps * PrivioSpacing.s <=
+            box.maxWidth - 2 * PrivioSpacing.l;
+        final denseFixed = denseBadges + chips.length * 2 * densePad + gaps * denseGap;
+        final scale = (box.maxWidth - 2 * denseEdge - denseFixed) / text;
+        if (roomy || scale < minScale) {
+          return ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+            children: [
+              for (final (i, c) in chips.indexed)
+                Padding(
+                  padding: EdgeInsets.only(right: i == gaps ? 0 : PrivioSpacing.s),
+                  child: c,
+                ),
+            ],
+          );
+        }
+        final textScale = scale >= 1 ? 1.0 : scale * 0.98;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: denseEdge),
+          child: Row(
+            children: [
+              for (final (i, c) in chips.indexed) ...[
+                if (i > 0) const SizedBox(width: denseGap),
+                MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: TextScaler.linear(scaler.scale(1) * textScale)),
+                  child: c.dense(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     super.key,
@@ -210,14 +296,23 @@ class _FilterChip extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.count = 0,
-    this.icon,
+    this.isDense = false,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
   final int count;
-  final IconData? icon;
+  final bool isDense;
+
+  _FilterChip dense() => _FilterChip(
+    key: key,
+    label: label,
+    selected: selected,
+    onTap: onTap,
+    count: count,
+    isDense: true,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -226,41 +321,36 @@ class _FilterChip extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     final bg = selected ? (dark ? PrivioColors.lilac : PrivioColors.purpleDeep) : p.field;
     final fg = selected ? (dark ? PrivioColors.navy : Colors.white) : theme.colorScheme.onSurface;
-    return Padding(
-      padding: const EdgeInsets.only(right: PrivioSpacing.s),
-      child: Semantics(
-        selected: selected,
-        button: true,
-        child: Material(
-          color: bg,
-          shape: const StadiumBorder(),
-          child: InkWell(
-            customBorder: const StadiumBorder(),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(icon, size: 16, color: fg),
-                      const SizedBox(width: PrivioSpacing.xs),
-                    ],
-                    Text(
-                      label,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: fg,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                      ),
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: bg,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDense ? _FilterBar.densePad : PrivioSpacing.m,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: fg,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
-                    if (count > 0) ...[
-                      const SizedBox(width: PrivioSpacing.s),
-                      _CountBadge(count: count),
-                    ],
+                  ),
+                  if (count > 0) ...[
+                    SizedBox(width: isDense ? _FilterBar.denseBadgeGap : PrivioSpacing.s),
+                    _CountBadge(count: count, compact: isDense),
                   ],
-                ),
+                ],
               ),
             ),
           ),
@@ -271,26 +361,31 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count});
+  const _CountBadge({required this.count, this.compact = false});
 
   final int count;
+
+  /// Pastille plus petite pour la barre de filtres resserrée (écran étroit).
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      constraints: const BoxConstraints(minWidth: 22),
-      height: 22,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      constraints: BoxConstraints(minWidth: compact ? _FilterBar.denseBadgeMin : 22),
+      height: compact ? _FilterBar.denseBadgeMin : 22,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: dark ? PrivioColors.lilac : PrivioColors.purple,
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(compact ? 9 : 11),
       ),
       child: Text(
         count > 99 ? '99+' : '$count',
+        // Pastille resserrée : taille fixe, jamais sous 11 px.
+        textScaler: compact ? TextScaler.noScaling : null,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: compact ? 11 : 12,
           fontWeight: FontWeight.w700,
           color: dark ? PrivioColors.navy : Colors.white,
         ),
@@ -350,8 +445,7 @@ class OfflineBanner extends StatelessWidget {
             const SizedBox(width: PrivioSpacing.s),
             Expanded(
               child: Text(
-                'Hors connexion. Les messages enregistrés sur ce téléphone restent lisibles ; '
-                'vos envois partiront au retour du réseau.',
+                'Hors connexion. Vos messages partiront dès le retour du réseau.',
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
               ),
             ),
@@ -480,8 +574,10 @@ class ConversationTile extends ConsumerWidget {
         summary.lastExpiresAt!.difference(now) < kExpiringSoon;
     // Qui a écrit : « Vous : », ou le nom de l'expéditeur dans un groupe.
     final who = mine
-        ? 'Vous : '
-        : (summary.isGroup && summary.lastSenderName != null ? '${summary.lastSenderName} : ' : '');
+        ? 'Vous\u202F: '
+        : (summary.isGroup && summary.lastSenderName != null
+              ? '${summary.lastSenderName}\u202F: '
+              : '');
     final preview = switch (summary) {
       ConversationSummary(blocked: true) => 'Contact bloqué',
       ConversationSummary(:final clearRequestBy?) when clearRequestBy != me =>
@@ -507,6 +603,7 @@ class ConversationTile extends ConsumerWidget {
             ) ??
             '',
       ConversationSummary(lastKind: 'system') =>
+        // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
         'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
       ConversationSummary(lastKind: 'voice') => '$who🎤 Message vocal',
       ConversationSummary(lastKind: 'photo', :final lastBody) =>
@@ -594,6 +691,7 @@ class ConversationTile extends ConsumerWidget {
                               formatRemaining(summary.lastExpiresAt!, now: now),
                               key: Key('expiring.${summary.id}'),
                               semanticsLabel:
+                                  // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
                                   's\'efface dans ${formatRemaining(summary.lastExpiresAt!, now: now)}',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: p.warn,

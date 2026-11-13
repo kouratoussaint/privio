@@ -8,7 +8,7 @@ import 'package:privio/core/theme/privio_tokens.dart';
 void main() {
   void expectAA(String name, Color fg, Color bg) {
     final ratio = contrastRatio(fg, bg);
-    expect(ratio, greaterThanOrEqualTo(4.5), reason: '$name : ${ratio.toStringAsFixed(2)}:1');
+    expect(ratio, greaterThanOrEqualTo(4.5), reason: '$name\u202F: ${ratio.toStringAsFixed(2)}:1');
   }
 
   for (final (label, s) in [
@@ -32,7 +32,7 @@ void main() {
     });
   }
 
-  test('règles du guide : le lilas échoue sur blanc, le violet sur fond sombre', () {
+  test('règles du guide\u202F: le lilas échoue sur blanc, le violet sur fond sombre', () {
     expect(contrastRatio(PrivioColors.lilac, Colors.white), lessThan(4.5));
     expect(contrastRatio(PrivioColors.purple, PrivioColors.surfaceDark), lessThan(4.5));
   });
@@ -54,20 +54,20 @@ void main() {
         'heure dans la bulle reçue (semi-transparente, couleur perçue)',
         () => expectAA('bubbleInMeta', blendOver(p.bubbleInMeta, p.bubbleIn), p.bubbleIn),
       );
-      test('l\'heure est plus discrète que le texte du message', () {
+      test('l’heure est plus discrète que le texte du message', () {
         expect(p.bubbleOutMeta.a, lessThan(1));
         expect(p.bubbleInMeta.a, lessThan(1));
       });
       test(
-        'texte d\'accent sur la feuille',
+        'texte d’accent sur la feuille',
         () => expectAA('accentText/sheet', p.accentText, p.sheet),
       );
-      test('rappel d\'expiration', () => expectAA('warn/sheet', p.warn, p.sheet));
-      test('état « Connecté »', () => expectAA('success', p.success, p.sheet));
+      test('rappel d’expiration', () => expectAA('warn/sheet', p.warn, p.sheet));
+      test('état «\u202FConnecté\u202F»', () => expectAA('success', p.success, p.sheet));
     });
   }
 
-  test('pastilles d\'initiales : texte blanc lisible sur chaque couleur', () {
+  test('pastilles d’initiales\u202F: texte blanc lisible sur chaque couleur', () {
     for (final c in PrivioColors.avatars) {
       expectAA('avatar ${c.toARGB32().toRadixString(16)}', Colors.white, c);
     }

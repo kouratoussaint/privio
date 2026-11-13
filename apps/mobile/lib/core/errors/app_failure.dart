@@ -70,66 +70,69 @@ class AppFailure implements Exception {
     FailureCode.authRequired => 'Votre session a expiré. Reconnectez-vous.',
     FailureCode.rateLimited => 'Trop de tentatives en peu de temps. Réessayez un peu plus tard.',
     FailureCode.handleTaken => 'Cet identifiant est déjà pris. Essayez-en un autre.',
-    FailureCode.handleInvalid => 'Cet identifiant n\'est pas valide.',
+    FailureCode.handleInvalid => 'Cet identifiant n’est pas valide.',
     FailureCode.displayNameInvalid => 'Votre nom doit contenir entre 1 et 40 caractères.',
     FailureCode.phoneNotVerified =>
-      'Votre numéro n\'est pas encore vérifié. Reconnectez-vous avec le code SMS.',
+      'Votre numéro n’est pas encore vérifié. Reconnectez-vous avec le code SMS.',
     FailureCode.profileExists => 'Votre profil existe déjà.',
-    FailureCode.phoneInvalid => 'Ce numéro n\'est pas valide.',
+    FailureCode.phoneInvalid => 'Ce numéro n’est pas valide.',
     FailureCode.notMember => 'Vous ne faites pas partie de cette discussion.',
     FailureCode.selfConversation => 'Vous ne pouvez pas vous écrire à vous-même.',
-    FailureCode.userNotFound => 'Ce compte n\'existe pas ou a été supprimé.',
+    FailureCode.userNotFound => 'Ce compte n’existe pas ou a été supprimé.',
     FailureCode.blocked => 'Vous ne pouvez pas écrire à ce contact.',
     FailureCode.bodyInvalid => 'Le message est vide ou trop long (4 000 caractères au plus).',
-    FailureCode.messageNotFound => 'Ce message n\'est plus disponible.',
-    FailureCode.messageExpired => 'Ce message a expiré.',
+    FailureCode.messageNotFound => 'Ce message n’est plus disponible.',
+    FailureCode.messageExpired => 'Ce message a été effacé.',
     FailureCode.messageDeleted => 'Ce message a été supprimé.',
-    FailureCode.notSender => 'Seul l\'expéditeur peut faire cette action.',
+    FailureCode.notSender => 'Seul l’expéditeur peut faire cette action.',
     FailureCode.editWindowExpired => 'Le délai pour modifier ce message est dépassé (60 minutes).',
     FailureCode.deleteWindowExpired => 'Le délai pour supprimer ce message pour tous est dépassé.',
     FailureCode.reactionInvalid => 'Choisissez un emoji.',
-    FailureCode.ttlInvalid => 'Cette durée n\'est pas autorisée.',
+    FailureCode.ttlInvalid => 'Cette durée n’est pas autorisée.',
     FailureCode.messageNotEditable => 'Ce message ne peut pas être modifié.',
     FailureCode.reportInvalid =>
-      'Ce signalement n\'a pas pu être enregistré. Vérifiez les informations.',
+      'Ce signalement n’a pas pu être enregistré. Vérifiez les informations.',
     FailureCode.confirmationRequired => 'Confirmation requise.',
     FailureCode.voiceTooLong => 'Le message vocal dépasse 30 secondes.',
     FailureCode.voiceTooShort => 'Message vocal trop court. Maintenez le micro pour parler.',
-    FailureCode.mediaInvalid => 'Ce fichier n\'a pas pu être lu. Choisissez-en un autre.',
+    FailureCode.mediaInvalid => 'Ce fichier n’a pas pu être lu. Choisissez-en un autre.',
     FailureCode.mediaTooLarge => 'Ce fichier est trop volumineux.',
-    FailureCode.mediaNotFound => 'Ce contenu n\'est plus disponible.',
+    FailureCode.mediaNotFound => 'Ce contenu n’est plus disponible.',
     FailureCode.mediaUnavailable =>
-      'L\'envoi des photos et messages vocaux est momentanément indisponible. Réessayez.',
-    FailureCode.microphoneUnavailable => 'Le micro n\'est pas disponible.',
+      'L’envoi des photos et messages vocaux est momentanément indisponible. Réessayez.',
+    FailureCode.microphoneUnavailable => 'Le micro n’est pas disponible.',
     FailureCode.microphoneDenied => 'Privio a besoin du micro pour enregistrer un message vocal.',
     FailureCode.photoQuotaReached =>
-      'Vous avez envoyé toutes vos photos du jour. De nouvelles photos seront possibles demain.',
-    FailureCode.cameraUnavailable => 'L\'appareil photo ou la galerie n\'est pas disponible.',
-    FailureCode.notGroup => 'Cette action n\'est possible que dans un groupe.',
+      'Vous avez envoyé toutes vos photos du jour. Prochaines photos demain, dès minuit.',
+    FailureCode.cameraUnavailable => 'L’appareil photo ou la galerie n’est pas disponible.',
+    FailureCode.notGroup => 'Cette action n’est possible que dans un groupe.',
     FailureCode.notAdmin => 'Seuls les administrateurs du groupe peuvent faire cela.',
     FailureCode.notOwner => 'Seul le propriétaire du groupe peut faire cela.',
-    FailureCode.roleInvalid => 'Cette action n\'est pas possible pour ce membre.',
+    FailureCode.roleInvalid => 'Cette action n’est pas possible pour ce membre.',
     FailureCode.groupFull => 'Ce groupe a atteint sa taille maximale.',
     FailureCode.groupTitleInvalid => 'Le nom du groupe doit contenir entre 1 et 60 caractères.',
     FailureCode.groupDescriptionInvalid => 'La description ne doit pas dépasser 300 caractères.',
-    FailureCode.invitationNotFound => 'Cette invitation n\'est plus valable.',
+    FailureCode.invitationNotFound => 'Cette invitation n’est plus valable.',
     FailureCode.postingRestricted =>
       'Seuls les administrateurs peuvent envoyer des messages dans ce groupe.',
     FailureCode.clearScopeInvalid => 'Choix de vidage inconnu.',
     FailureCode.clearNotAllowed =>
-      'Impossible de vider pour vous deux : la personne est bloquée ou son compte supprimé. '
+      'Impossible de vider pour vous deux\u202F: la personne est bloquée ou son compte supprimé. '
           'Vous pouvez vider la discussion chez vous.',
     FailureCode.clearRequestNotFound =>
-      'Cette demande n\'existe plus (annulée, refusée ou expirée).',
+      'Cette demande n’existe plus (annulée, refusée ou expirée).',
     FailureCode.privacySettingInvalid => 'Réglage de confidentialité invalide.',
-    FailureCode.otpInvalidOrExpired => 'Code incorrect ou expiré.',
+    FailureCode.otpInvalidOrExpired =>
+      'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
     FailureCode.smsRateLimited =>
       'Trop de codes demandés. Patientez avant de demander un nouveau code.',
     FailureCode.smsSendFailed =>
-      'Le SMS n\'a pas pu être envoyé. Vérifiez le numéro puis réessayez.',
+      'Le SMS n’a pas pu être envoyé. Vérifiez le numéro puis réessayez.',
     FailureCode.serviceUnavailable => 'Le service de connexion est momentanément indisponible.',
     FailureCode.network => 'Connexion impossible. Vérifiez votre réseau puis réessayez.',
-    FailureCode.unknown => 'Une erreur est survenue. Réessayez.',
+    FailureCode.unknown =>
+      'Un problème est survenu. Réessayez\u202F; si cela continue, écrivez à l’assistance '
+          '(Paramètres > Aide et assistance).',
   };
 
   @override

@@ -42,7 +42,7 @@ Future<void> _doubleTap(WidgetTester tester, Finder f) async {
 }
 
 void main() {
-  testWidgets('glisser un message vers la droite : répondre', (tester) async {
+  testWidgets('glisser un message vers la droite\u202F: répondre', (tester) async {
     await _openChat(tester);
     await tester.drag(find.text('Message de Bob'), const Offset(120, 0));
     await tester.pumpAndSettle();
@@ -50,7 +50,7 @@ void main() {
     expect(find.text('Répondre à'), findsOneWidget);
   });
 
-  testWidgets('double appui : réaction par défaut ❤️, puis retirée', (tester) async {
+  testWidgets('double appui\u202F: réaction par défaut ❤️, puis retirée', (tester) async {
     await _openChat(tester);
     await _doubleTap(tester, find.text('Message de Bob'));
     expect(find.byKey(const Key('reaction.❤️')), findsOneWidget);
@@ -65,7 +65,9 @@ void main() {
     expect(find.byKey(const Key('reaction.👍')), findsOneWidget);
   });
 
-  testWidgets('glisser vers la gauche : suppression avec choix selon l’auteur', (tester) async {
+  testWidgets('glisser vers la gauche\u202F: suppression avec choix selon l’auteur', (
+    tester,
+  ) async {
     await _openChat(tester);
     // Message reçu : seulement « pour moi ».
     await tester.drag(find.text('Message de Bob'), const Offset(-120, 0));
@@ -89,49 +91,50 @@ void main() {
     expect(find.text('Message supprimé'), findsOneWidget);
   });
 
-  testWidgets('toucher une citation : remonte au message d’origine, même loin dans la discussion', (
-    tester,
-  ) async {
-    final d = _deps();
-    await d.messaging.startDirectConversation('u2');
-    final original = d.messaging.receive('conv-bob', 'Rendez-vous au marché à 9 h');
-    for (var i = 0; i < 40; i++) {
-      d.messaging.receive('conv-bob', 'Message intermédiaire $i');
-    }
-    final now = DateTime.now();
-    d.messaging.messages['conv-bob']!.add(
-      ChatMessage(
-        id: 'srv-reponse',
-        senderId: 'u2',
-        body: 'Tu confirmes ?',
-        replyToId: original.id,
-        replyPreview: original.body,
-        replyKind: 'text',
-        sentAt: now,
-        expiresAt: now.add(const Duration(hours: 72)),
-        updatedAt: now,
-      ),
-    );
-    await tester.pumpWidget(
-      ProviderScope(overrides: d.overrides, retry: (_, _) => null, child: const PrivioApp()),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('conversation.conv-bob')));
-    await tester.pumpAndSettle();
-    // Seule la citation affiche ce texte : l'original est trop haut pour être construit.
-    expect(find.text('Rendez-vous au marché à 9 h'), findsOneWidget);
+  testWidgets(
+    'toucher une citation\u202F: remonte au message d’origine, même loin dans la discussion',
+    (tester) async {
+      final d = _deps();
+      await d.messaging.startDirectConversation('u2');
+      final original = d.messaging.receive('conv-bob', 'Rendez-vous au marché à 9 h');
+      for (var i = 0; i < 40; i++) {
+        d.messaging.receive('conv-bob', 'Message intermédiaire $i');
+      }
+      final now = DateTime.now();
+      d.messaging.messages['conv-bob']!.add(
+        ChatMessage(
+          id: 'srv-reponse',
+          senderId: 'u2',
+          body: 'Tu confirmes\u202F?',
+          replyToId: original.id,
+          replyPreview: original.body,
+          replyKind: 'text',
+          sentAt: now,
+          expiresAt: now.add(const Duration(hours: 72)),
+          updatedAt: now,
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(overrides: d.overrides, retry: (_, _) => null, child: const PrivioApp()),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('conversation.conv-bob')));
+      await tester.pumpAndSettle();
+      // Seule la citation affiche ce texte : l'original est trop haut pour être construit.
+      expect(find.text('Rendez-vous au marché à 9 h'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('bubble.quote')));
-    await tester.pumpAndSettle();
-    // L'original est maintenant construit et visible (la réponse, tout en bas, ne l'est plus).
-    final shown = find.text('Rendez-vous au marché à 9 h');
-    expect(shown, findsOneWidget);
-    expect(find.byKey(const Key('bubble.quote')), findsNothing);
-    expect(tester.getRect(find.byType(ListView)).contains(tester.getCenter(shown)), isTrue);
-    expect(find.textContaining('n’est plus affiché'), findsNothing);
-  });
+      await tester.tap(find.byKey(const Key('bubble.quote')));
+      await tester.pumpAndSettle();
+      // L'original est maintenant construit et visible (la réponse, tout en bas, ne l'est plus).
+      final shown = find.text('Rendez-vous au marché à 9 h');
+      expect(shown, findsOneWidget);
+      expect(find.byKey(const Key('bubble.quote')), findsNothing);
+      expect(tester.getRect(find.byType(ListView)).contains(tester.getCenter(shown)), isTrue);
+      expect(find.textContaining('Ce message a été effacé.'), findsNothing);
+    },
+  );
 
-  testWidgets('toucher une citation dont l’original a expiré : message clair', (tester) async {
+  testWidgets('toucher une citation dont l’original a expiré\u202F: message clair', (tester) async {
     final d = _deps();
     await d.messaging.startDirectConversation('u2');
     final now = DateTime.now();
@@ -145,7 +148,7 @@ void main() {
       ChatMessage(
         id: 'srv-reponse',
         senderId: 'u2',
-        body: 'Tu confirmes ?',
+        body: 'Tu confirmes\u202F?',
         replyToId: original.id,
         replyPreview: original.body,
         replyKind: 'text',
@@ -163,10 +166,10 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 1300)));
     await tester.tap(find.byKey(const Key('bubble.quote')));
     await tester.pump(const Duration(milliseconds: 500)); // après le délai du double appui
-    expect(find.textContaining('n’est plus affiché'), findsOneWidget);
+    expect(find.textContaining('Ce message a été effacé.'), findsOneWidget);
   });
 
-  testWidgets('glisser un petit peu : rien ne se passe', (tester) async {
+  testWidgets('glisser un petit peu\u202F: rien ne se passe', (tester) async {
     await _openChat(tester);
     await tester.drag(find.text('Message de Bob'), const Offset(30, 0));
     await tester.pumpAndSettle();
@@ -185,28 +188,29 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('liste : glisser à droite épingle, à gauche archive (avec « Annuler »)', (
-    tester,
-  ) async {
-    final deps = _deps();
-    await deps.messaging.startDirectConversation('u2');
-    deps.messaging.receive('conv-bob', 'Salut');
-    await tester.pumpWidget(
-      ProviderScope(overrides: deps.overrides, retry: (_, _) => null, child: const PrivioApp()),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'liste\u202F: glisser à droite épingle, à gauche archive (avec «\u202FAnnuler\u202F»)',
+    (tester) async {
+      final deps = _deps();
+      await deps.messaging.startDirectConversation('u2');
+      deps.messaging.receive('conv-bob', 'Salut');
+      await tester.pumpWidget(
+        ProviderScope(overrides: deps.overrides, retry: (_, _) => null, child: const PrivioApp()),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.drag(find.byKey(const Key('conversation.conv-bob')), const Offset(150, 0));
-    await tester.pumpAndSettle();
-    expect(deps.messaging.pinned, isTrue);
+      await tester.drag(find.byKey(const Key('conversation.conv-bob')), const Offset(150, 0));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.pinned, isTrue);
 
-    await tester.drag(find.byKey(const Key('conversation.conv-bob')), const Offset(-150, 0));
-    await tester.pumpAndSettle();
-    expect(deps.messaging.archived, isTrue);
-    expect(find.byKey(const Key('conversation.conv-bob')), findsNothing);
-    await tester.tap(find.text('Annuler'));
-    await tester.pumpAndSettle();
-    expect(deps.messaging.archived, isFalse);
-    expect(find.byKey(const Key('conversation.conv-bob')), findsOneWidget);
-  });
+      await tester.drag(find.byKey(const Key('conversation.conv-bob')), const Offset(-150, 0));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.archived, isTrue);
+      expect(find.byKey(const Key('conversation.conv-bob')), findsNothing);
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.archived, isFalse);
+      expect(find.byKey(const Key('conversation.conv-bob')), findsOneWidget);
+    },
+  );
 }

@@ -18,8 +18,8 @@ class BlockedUsersScreen extends ConsumerWidget {
       body: switch (blocked) {
         AsyncData(:final value) when value.isEmpty => const EmptyView(
           icon: Icons.block,
-          title: 'Personne n\'est bloqué',
-          message: 'Vous pouvez bloquer quelqu\'un depuis sa fiche contact.',
+          title: 'Personne n’est bloqué',
+          message: 'Vous pouvez bloquer quelqu’un depuis sa fiche contact.',
         ),
         AsyncData(:final value) => ListView(
           children: [

@@ -383,13 +383,13 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                         error: _error,
                         enabled: wait == null,
                         message: wait != null
-                            ? 'Trop d\'essais. Réessayez dans ${formatWait(remaining!)}.'
+                            ? 'Trop d’essais. Réessayez dans ${formatWait(remaining!)}.'
                             : _message,
                         onComplete: _submit,
                         extra: bio
                             ? IconButton(
                                 key: const Key('lock.biometrics'),
-                                tooltip: 'Utiliser l\'empreinte',
+                                tooltip: 'Utiliser l’empreinte',
                                 iconSize: 32,
                                 onPressed: wait == null ? _biometrics : null,
                                 icon: const Icon(Icons.fingerprint),
@@ -400,10 +400,10 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                       TextButton(
                         key: const Key('lock.forgot'),
                         onPressed: () => setState(() => _forgot = true),
-                        child: const Text('Code oublié ?'),
+                        child: const Text('Code oublié\u202F?'),
                       ),
                       Text(
-                        'Le contenu de Privio reste masqué tant que l\'application est verrouillée.',
+                        'Le contenu de Privio reste masqué tant que l’application est verrouillée.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -453,7 +453,7 @@ class _ForgotPanelState extends ConsumerState<_ForgotPanel> {
         const SizedBox(height: PrivioSpacing.m),
         const Text(
           'Pour des raisons de sécurité, le code ne peut pas être retrouvé. '
-          'Vous pouvez vous déconnecter : les messages gardés sur ce téléphone seront effacés, '
+          'Vous pouvez vous déconnecter\u202F: les messages gardés sur ce téléphone seront effacés, '
           'puis vous vous reconnecterez avec votre numéro et le code reçu par SMS. '
           'Vos discussions encore actives réapparaîtront.',
           textAlign: TextAlign.center,
@@ -526,8 +526,8 @@ class AppLockSettingsScreen extends ConsumerWidget {
               PrivioSpacing.m,
             ),
             child: Text(
-              'Un code à $kPinLength chiffres, propre à Privio, est demandé à l\'ouverture de '
-              'l\'application. Il protège vos messages si quelqu\'un utilise votre téléphone.',
+              'Un code à $kPinLength chiffres, propre à Privio, est demandé à l’ouverture de '
+              'l’application. Il protège vos messages si quelqu’un utilise votre téléphone.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -554,7 +554,7 @@ class AppLockSettingsScreen extends ConsumerWidget {
                 key: const Key('lock.use_biometrics'),
                 value: s.config.biometrics,
                 secondary: Icon(Icons.fingerprint, color: p.accentText),
-                title: const Text('Déverrouiller avec l\'empreinte'),
+                title: const Text('Déverrouiller avec l’empreinte'),
                 subtitle: const Text('Le code reste toujours accepté'),
                 onChanged: (v) => ref.read(appLockProvider.notifier).setBiometrics(v),
               ),
@@ -568,8 +568,8 @@ class AppLockSettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(PrivioSpacing.l),
             child: Text(
-              'Code oublié : il faudra vous déconnecter, ce qui efface les messages gardés sur '
-              'ce téléphone. Les captures d\'écran restent bloquées dans tous les cas.',
+              'Code oublié\u202F: il faudra vous déconnecter, ce qui efface les messages gardés sur '
+              'ce téléphone. Les captures d’écran restent bloquées dans tous les cas.',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
@@ -638,7 +638,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
           case MustWait(:final until):
             setState(() {
               _message =
-                  'Trop d\'essais. Réessayez dans ${formatWait(until.difference(DateTime.now()))}.';
+                  'Trop d’essais. Réessayez dans ${formatWait(until.difference(DateTime.now()))}.';
               _error = true;
             });
         }

@@ -52,50 +52,54 @@ Future<void> _openStorage(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('« jamais » : photo reçue en attente, téléchargée seulement si on la touche', (
-    tester,
-  ) async {
-    final deps = _deps()..flags.autoPhoto = 'never';
-    final m = deps.messaging.receivePhoto('conv-bob', caption: 'Marché');
-    await _start(tester, deps);
-    await _openBob(tester);
+  testWidgets(
+    '«\u202Fjamais\u202F»\u202F: photo reçue en attente, téléchargée seulement si on la touche',
+    (tester) async {
+      final deps = _deps()..flags.autoPhoto = 'never';
+      final m = deps.messaging.receivePhoto('conv-bob', caption: 'Marché');
+      await _start(tester, deps);
+      await _openBob(tester);
 
-    final key = 'msg-${m.id}';
-    expect(find.byKey(Key('photo.download.$key')), findsOneWidget);
-    expect(find.text('Photo · toucher pour télécharger'), findsOneWidget);
-    expect(deps.messaging.photoDownloads, isEmpty);
+      final key = 'msg-${m.id}';
+      expect(find.byKey(Key('photo.download.$key')), findsOneWidget);
+      expect(find.text('Photo · toucher pour télécharger'), findsOneWidget);
+      expect(deps.messaging.photoDownloads, isEmpty);
 
-    await tester.tap(find.byKey(Key('photo.download.$key')));
-    await tester.pumpAndSettle();
-    expect(deps.messaging.photoDownloads, [m.mediaPath]);
-    expect(find.byKey(Key('photo.open.$key')), findsOneWidget);
-  });
+      await tester.tap(find.byKey(Key('photo.download.$key')));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.photoDownloads, [m.mediaPath]);
+      expect(find.byKey(Key('photo.open.$key')), findsOneWidget);
+    },
+  );
 
-  testWidgets('« Wi-Fi seulement » : attente en données mobiles, téléchargement en Wi-Fi', (
-    tester,
-  ) async {
-    final deps = _deps()..flags.autoPhoto = 'wifi';
-    deps.network.kind = NetKind.mobile;
-    final m = deps.messaging.receivePhoto('conv-bob');
-    await _start(tester, deps);
-    await _openBob(tester);
-    expect(find.byKey(Key('photo.download.msg-${m.id}')), findsOneWidget);
-    expect(deps.messaging.photoDownloads, isEmpty);
+  testWidgets(
+    '«\u202FWi-Fi seulement\u202F»\u202F: attente en données mobiles, téléchargement en Wi-Fi',
+    (tester) async {
+      final deps = _deps()..flags.autoPhoto = 'wifi';
+      deps.network.kind = NetKind.mobile;
+      final m = deps.messaging.receivePhoto('conv-bob');
+      await _start(tester, deps);
+      await _openBob(tester);
+      expect(find.byKey(Key('photo.download.msg-${m.id}')), findsOneWidget);
+      expect(deps.messaging.photoDownloads, isEmpty);
 
-    deps.network.set(NetKind.wifi);
-    await tester.pumpAndSettle();
-    expect(deps.messaging.photoDownloads, [m.mediaPath]);
-    expect(find.byKey(Key('photo.open.msg-${m.id}')), findsOneWidget);
-  });
+      deps.network.set(NetKind.wifi);
+      await tester.pumpAndSettle();
+      expect(deps.messaging.photoDownloads, [m.mediaPath]);
+      expect(find.byKey(Key('photo.open.msg-${m.id}')), findsOneWidget);
+    },
+  );
 
-  testWidgets('écran Stockage : réglage, données consommées, effacement des médias', (
+  testWidgets('écran Stockage\u202F: réglage, données consommées, effacement des médias', (
     tester,
   ) async {
     final deps = _deps();
     final m = deps.messaging.receivePhoto('conv-bob');
     await _start(tester, deps);
     await _openBob(tester);
-    expect(deps.messaging.photoDownloads, [m.mediaPath], reason: '« toujours » par défaut');
+    expect(deps.messaging.photoDownloads, [
+      m.mediaPath,
+    ], reason: '«\u202Ftoujours\u202F» par défaut');
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
@@ -118,6 +122,8 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    await tester.ensureVisible(find.byKey(const Key('storage.clear')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('storage.clear')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('storage.clear.confirm')));
@@ -134,7 +140,9 @@ void main() {
     expect(deps.flags.usage, isEmpty);
   });
 
-  testWidgets('photo envoyée : comptée en « envoyé », jamais retéléchargée', (tester) async {
+  testWidgets('photo envoyée\u202F: comptée en «\u202Fenvoyé\u202F», jamais retéléchargée', (
+    tester,
+  ) async {
     final deps = _deps();
     await _start(tester, deps);
     await _openBob(tester);
@@ -151,28 +159,29 @@ void main() {
     expect(deps.flags.usage['$month:in'], isNull);
   });
 
-  testWidgets('réseau coupé : bandeau aussitôt ; retour : bandeau retiré, envois repartis', (
-    tester,
-  ) async {
-    final deps = _deps();
-    await _start(tester, deps);
-    expect(find.byKey(const Key('offline.banner')), findsNothing);
+  testWidgets(
+    'réseau coupé\u202F: bandeau aussitôt\u202F; retour\u202F: bandeau retiré, envois repartis',
+    (tester) async {
+      final deps = _deps();
+      await _start(tester, deps);
+      expect(find.byKey(const Key('offline.banner')), findsNothing);
 
-    deps.network.set(NetKind.none);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('offline.banner')), findsOneWidget);
+      deps.network.set(NetKind.none);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('offline.banner')), findsOneWidget);
 
-    // Le bandeau est aussi dans l'onglet Groupes.
-    await tester.tap(_tab('Groupes'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('offline.banner')), findsOneWidget);
+      // Le bandeau est aussi dans l'onglet Groupes.
+      await tester.tap(_tab('Groupes'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('offline.banner')), findsOneWidget);
 
-    deps.network.set(NetKind.mobile);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('offline.banner')), findsNothing);
-  });
+      deps.network.set(NetKind.mobile);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('offline.banner')), findsNothing);
+    },
+  );
 
-  testWidgets('onglet Groupes : erreur affichée avec « Réessayer »', (tester) async {
+  testWidgets('onglet Groupes\u202F: erreur affichée avec «\u202FRéessayer\u202F»', (tester) async {
     final deps = _deps();
     deps.messaging.failList = true;
     await _start(tester, deps);
@@ -182,6 +191,6 @@ void main() {
     deps.messaging.failList = false;
     await tester.tap(find.text('Réessayer'));
     await tester.pumpAndSettle();
-    expect(find.text('Aucun groupe pour l\'instant'), findsOneWidget);
+    expect(find.text('Aucun groupe pour l’instant'), findsOneWidget);
   });
 }

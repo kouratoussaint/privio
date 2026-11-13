@@ -58,7 +58,7 @@ void main() {
     expect(deps.permissions.requests, 0);
 
     // 08 — trois onglets, aucune « communauté »
-    expect(find.text('Aucune discussion pour l\'instant'), findsOneWidget);
+    expect(find.text('Aucune discussion pour l’instant'), findsOneWidget);
     Finder tab(String label) =>
         find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
     expect(tab('Discussions'), findsOneWidget);

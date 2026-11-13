@@ -20,7 +20,7 @@ class ArchivedScreen extends ConsumerWidget {
           ? const EmptyView(
               icon: Icons.archive_outlined,
               title: 'Aucune discussion archivée',
-              message: 'Appui long sur une discussion pour l’archiver.',
+              message: 'Glissez une discussion vers la gauche pour l’archiver.',
             )
           : ListView(children: [for (final c in archived) SwipeableConversationTile(summary: c)]),
     );

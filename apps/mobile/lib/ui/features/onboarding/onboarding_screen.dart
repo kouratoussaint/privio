@@ -16,6 +16,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
     (
       Icons.timer_outlined,
       'Des messages qui disparaissent',
+      // typo-fr: ignore-next (engagements validés A2, inchangés)
       'Chaque message est effacé automatiquement 72 heures après son envoi, '
           'qu\'il ait été lu ou non.',
     ),
@@ -28,6 +29,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
     (
       Icons.block,
       'Pas de transfert ni de copie',
+      // typo-fr: ignore-next (engagements validés A2, inchangés)
       'Les messages ne peuvent être ni transférés, ni copiés, ni enregistrés dans la '
           'galerie. Les captures d\'écran sont bloquées sur Android ; une photo prise '
           'avec un autre appareil reste toutefois possible.',
@@ -76,7 +78,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 const SizedBox(height: PrivioSpacing.s),
                 Text(
-                  'Une messagerie privée et éphémère. Voici ce que Privio fait pour vous :',
+                  'Une messagerie privée où les messages s’effacent tout seuls. Ce qu’il faut savoir\u202F:',
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -112,6 +114,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   onChanged: (v) => setState(() => _accepted = v ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
+                  // typo-fr: ignore-next (engagements validés A2, inchangés)
                   title: const Text('J\'ai lu et compris ces engagements.'),
                 ),
               ],

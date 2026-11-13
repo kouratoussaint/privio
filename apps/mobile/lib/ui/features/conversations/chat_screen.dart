@@ -195,6 +195,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final picked = await _pickTtl(
       title: 'Durée des messages',
       help:
+          // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
           'S\'applique aux nouveaux messages de cette discussion, pour vous deux. '
           'Votre correspondant est prévenu du changement.',
       choices: rules.ttlChoices(),
@@ -210,6 +211,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final picked = await _pickTtl(
       title: 'Durée de ce message',
       help:
+          // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
           'Uniquement pour le prochain message envoyé. Jamais plus long que la durée '
           'de la discussion (${formatTtl(cap)}).',
       choices: rules.ttlChoices(cap: cap),
@@ -228,7 +230,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     FocusScope.of(context).unfocus();
     PhotoQuota? quota;
     try {
-      quota = await ref.read(photoQuotaProvider.future);
+      // Toujours relu : le compteur affiché dans la saisie peut dater (autre appareil).
+      quota = await ref.refresh(photoQuotaProvider.future);
     } on Object {
       quota = null; // hors connexion : le serveur tranchera à l'envoi
     }
@@ -316,7 +319,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: const Text('Autoriser le micro'),
         content: const Text(
           'Le micro est désactivé pour Privio. Activez-le dans les réglages du téléphone '
-          'pour enregistrer des messages vocaux. Le reste de l\'application fonctionne sans.',
+          'pour enregistrer des messages vocaux. Le reste de l’application fonctionne sans.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Plus tard')),
@@ -416,7 +419,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer ce message ?'),
+        title: const Text('Supprimer ce message\u202F?'),
         content: Text(
           forAll
               ? 'Pour vous seulement, ou pour tout le monde dans cette discussion.'
@@ -487,8 +490,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               title: const Text('Seulement chez moi'),
               subtitle: Text(
                 s.isGroup
-                    ? 'Votre copie est vidée ; les autres membres gardent leurs messages.'
-                    : 'Votre copie est vidée ; ${s.title} garde ses messages.',
+                    ? 'Votre copie est vidée\u202F; les autres membres gardent leurs messages.'
+                    : 'Votre copie est vidée\u202F; ${s.title} garde ses messages.',
               ),
               onTap: () => Navigator.pop(ctx, 'me'),
             ),
@@ -504,9 +507,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Text(
           everyone
               ? (s.isGroup
-                    ? 'Vider le groupe pour tous ?'
-                    : 'Demander à ${s.title} de tout vider ?')
-              : 'Vider la discussion chez vous ?',
+                    ? 'Vider le groupe pour tous\u202F?'
+                    : 'Demander à ${s.title} de tout vider\u202F?')
+              : 'Vider la discussion chez vous\u202F?',
         ),
         content: Text(
           everyone && !s.isGroup
@@ -577,7 +580,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       (m) => m.id == id && m.isVisibleAt(now) && !m.isDeleted,
     );
     if (!present) {
-      _toast('Le message d’origine n’est plus affiché (expiré ou supprimé).');
+      _toast('Ce message a été effacé.');
       return;
     }
     BuildContext? target = _messageKeys[id]?.currentContext;
@@ -592,7 +595,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       target = _messageKeys[id]?.currentContext;
     }
     if (target == null || !target.mounted) {
-      _toast('Le message d’origine n’est plus affiché (expiré ou supprimé).');
+      _toast('Ce message a été effacé.');
       return;
     }
     await Scrollable.ensureVisible(
@@ -707,13 +710,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Supprimer pour tout le monde ?'),
+          title: const Text('Supprimer pour tout le monde\u202F?'),
           content: Text(
             adminDelete
-                ? 'Le message de ${m.senderName ?? 'ce membre'} sera effacé pour tous les membres du groupe.'
+                ? 'Le message de ${m.senderName ?? 'ce membre'} sera supprimé pour tous les membres du groupe.'
                 : (summary?.isGroup ?? false)
-                ? 'Le message sera effacé pour tous les membres du groupe.'
-                : 'Le message sera effacé chez vous et chez votre correspondant.',
+                ? 'Le message sera supprimé pour tous les membres du groupe.'
+                : 'Le message sera supprimé pour vous deux.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
@@ -759,6 +762,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final query = _searchCtrl.text.trim().toLowerCase();
     final voice = ref.watch(voiceRecorderControllerProvider);
     _voice.onAutoStop = _afterVoiceStop;
+    _voice.onNearEnd = () => unawaited(HapticFeedback.mediumImpact());
 
     return Scaffold(
       backgroundColor: p.chatBackground,
@@ -778,6 +782,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (canSetTtl && !_searching)
             IconButton(
               key: const Key('chat.ttl'),
+              // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
               tooltip: 'Durée des messages : ${formatTtl(summary?.ttlSeconds ?? 259200)}',
               onPressed: () => _chooseConversationTtl(summary),
               icon: const Icon(Icons.timer_outlined),
@@ -785,7 +790,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (summary != null && !_searching)
             PopupMenuButton<String>(
               key: const Key('chat.menu'),
-              tooltip: 'Plus d\'options',
+              tooltip: 'Plus d’options',
               onSelected: (v) {
                 if (v == 'clear') unawaited(_chooseClear(summary));
               },
@@ -925,7 +930,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onVoiceError: (f) => _toast(f.message),
                   onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
                   ttlSeconds: summary?.ttlSeconds ?? 259200,
-                  peerName: summary?.title ?? 'Votre correspondant',
+                  peerName: summary?.title ?? 'Votre contact',
                   onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
                   isGroup: isGroup,
                 ),
@@ -954,14 +959,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               )
             else if (summary?.blocked ?? false)
-              const Padding(
-                padding: EdgeInsets.all(PrivioSpacing.l),
-                child: NoticeBanner(
-                  message:
-                      'Vous ne pouvez pas échanger de messages avec ce contact '
-                      '(blocage). Gérez les blocages depuis la fiche du contact.',
-                ),
-              )
+              _BlockedBanner(peerId: summary?.peerId, name: summary?.title ?? '')
             else ...[
               if (_replyTo != null || _editing != null)
                 _ComposerContext(
@@ -1005,6 +1003,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ? null
                       : _pickPhoto,
                   busy: _preparingPhoto,
+                  photosLeft: ref.watch(photoQuotaProvider).value?.remaining,
                   ttlActive: _nextTtl != null,
                   strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
                   trailing: ValueListenableBuilder<TextEditingValue>(
@@ -1107,6 +1106,7 @@ class _MessageList extends StatelessWidget {
         icon: Icons.timer_outlined,
         title: 'Aucun message',
         message: isGroup
+            // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
             ? 'Les messages de ce groupe s\'effacent ${formatTtl(ttlSeconds)} après leur envoi.'
             : 'Les messages de cette discussion s\'effacent 72 heures après leur envoi.',
       );
@@ -1219,8 +1219,8 @@ class _MessageList extends StatelessWidget {
                 )
               : null,
           status: pm.failed
-              ? 'Échec de l\'envoi · toucher pour réessayer'
-              : (offline ? 'En attente du réseau · toucher pour réessayer' : 'Envoi…'),
+              ? 'Non envoyé · Toucher pour réessayer'
+              : (offline ? 'En attente de réseau' : 'Envoi…'),
           failed: pm.failed,
           onTap: () => onRetry(pm),
         ),
@@ -1295,6 +1295,7 @@ class _ExpiryNotice extends StatelessWidget {
                     const SizedBox(width: PrivioSpacing.s),
                     Flexible(
                       child: Text(
+                        // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
                         'Les messages de ${isGroup ? 'ce groupe' : 'cette discussion'} '
                         's’effacent ${formatTtl(ttlSeconds)} après leur envoi.'
                         '${onTap == null ? '' : ' Toucher pour modifier.'}',
@@ -1724,12 +1725,16 @@ class _Composer extends StatelessWidget {
     this.onTtlTap,
     this.onPhotoTap,
     this.busy = false,
+    this.photosLeft,
     this.ttlActive = false,
     this.onChanged,
   });
 
   /// Bouton photo (absent pendant une modification ou un enregistrement).
   final VoidCallback? onPhotoTap;
+
+  /// Photos restantes aujourd'hui (null : inconnu). À 0, l'icône est atténuée (lot 4.4).
+  final int? photosLeft;
 
   /// Photo en préparation : petit indicateur à la place du bouton.
   final bool busy;
@@ -1833,11 +1838,20 @@ class _Composer extends StatelessWidget {
                           else if (onPhotoTap != null)
                             IconButton(
                               key: const Key('composer.photo'),
-                              tooltip: 'Envoyer une photo',
+                              tooltip: photosLeft == 0
+                                  ? 'Plus de photos aujourd’hui'
+                                  : 'Envoyer une photo',
                               onPressed: onPhotoTap,
-                              icon: Icon(
-                                Icons.photo_camera_outlined,
-                                color: theme.colorScheme.onSurfaceVariant,
+                              icon: Badge(
+                                key: const Key('composer.photo_none'),
+                                isLabelVisible: photosLeft == 0,
+                                label: const Text('0'),
+                                child: Icon(
+                                  Icons.photo_camera_outlined,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                                    alpha: photosLeft == 0 ? 0.38 : 1,
+                                  ),
+                                ),
                               ),
                             ),
                         ],
@@ -1894,7 +1908,7 @@ class _ClearRequestBanner extends StatelessWidget {
                 Expanded(
                   child: Text(
                     mine
-                        ? 'Demande envoyée : en attente de l\'accord de ${summary.title} pour '
+                        ? 'Demande envoyée\u202F: en attente de l’accord de ${summary.title} pour '
                               'vider toute la discussion.'
                         : '${summary.title} propose de vider toute la discussion pour vous deux. '
                               'Tout disparaîtra, sans trace.',
@@ -1928,6 +1942,56 @@ class _ClearRequestBanner extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bandeau de blocage (lot 4.4) : une phrase, et « Débloquer » quand c'est vous qui avez bloqué.
+class _BlockedBanner extends ConsumerStatefulWidget {
+  const _BlockedBanner({required this.peerId, required this.name});
+
+  final String? peerId;
+  final String name;
+
+  @override
+  ConsumerState<_BlockedBanner> createState() => _BlockedBannerState();
+}
+
+class _BlockedBannerState extends ConsumerState<_BlockedBanner> {
+  bool _busy = false;
+
+  Future<void> _unblock(String peerId) async {
+    setState(() => _busy = true);
+    try {
+      await setBlocked(ref, peerId, blocked: false);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('${widget.name} est débloqué.')));
+      }
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final peerId = widget.peerId;
+    final iBlocked =
+        peerId != null &&
+        (ref.watch(blockedUsersProvider).value?.any((b) => b.id == peerId) ?? false);
+    return Padding(
+      padding: const EdgeInsets.all(PrivioSpacing.l),
+      child: NoticeBanner(
+        key: const Key('chat.blocked'),
+        message: iBlocked ? 'Vous avez bloqué ${widget.name}.' : 'Vous ne pouvez plus vous écrire.',
+        actionLabel: iBlocked ? 'Débloquer' : null,
+        onAction: iBlocked && !_busy ? () => _unblock(peerId) : null,
       ),
     );
   }

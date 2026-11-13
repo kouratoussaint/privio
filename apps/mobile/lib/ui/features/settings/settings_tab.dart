@@ -10,7 +10,6 @@ import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../core/util/reactions.dart';
 import '../../../data/services/photo_picker.dart';
-import '../../../data/services/realtime_service.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/messaging_providers.dart';
@@ -29,7 +28,7 @@ class SettingsTab extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Se déconnecter ?'),
+        title: const Text('Se déconnecter\u202F?'),
         content: const Text('Vous devrez recevoir un nouveau code SMS pour vous reconnecter.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
@@ -252,9 +251,11 @@ class SettingsTab extends ConsumerWidget {
                   secondary: Icon(Icons.phone_outlined, color: p.accentText),
                   title: const Text('Me trouver par mon numéro'),
                   subtitle: Text(
-                    profile == null
-                        ? 'Désactivé par défaut.'
-                        : 'Désactivé par défaut : on vous trouve par votre identifiant @${profile.handle}.',
+                    (account?.phoneDiscoverable ?? false)
+                        ? 'Activé\u202F: on peut aussi vous trouver par votre numéro.'
+                        : profile == null
+                        ? 'Désactivé\u202F: on vous trouve seulement par votre identifiant.'
+                        : 'Désactivé\u202F: on vous trouve seulement par @${profile.handle}.',
                   ),
                 ),
                 const _Divider(),
@@ -280,7 +281,7 @@ class SettingsTab extends ConsumerWidget {
                 ListTile(
                   key: const Key('settings.lock'),
                   leading: Icon(Icons.lock_outline, color: p.accentText),
-                  title: const Text('Verrouillage de l\'application'),
+                  title: const Text('Verrouillage de l’application'),
                   subtitle: Text(
                     (ref.watch(appLockProvider).value?.enabled ?? false)
                         ? 'Activé · ${delayLabel(ref.watch(appLockProvider).value!.config.delaySeconds).toLowerCase()}'
@@ -300,9 +301,7 @@ class SettingsTab extends ConsumerWidget {
                   onChanged: (v) => ref.read(pushProvider.notifier).setEnabled(v),
                   secondary: Icon(Icons.notifications_outlined, color: p.accentText),
                   title: const Text('Notifications'),
-                  subtitle: const Text(
-                    'Toujours sans contenu : « Nouveau message », sans nom ni texte.',
-                  ),
+                  subtitle: const Text('Sans nom ni contenu.'),
                 ),
                 const _Divider(),
                 ListTile(
@@ -328,43 +327,6 @@ class SettingsTab extends ConsumerWidget {
                   subtitle: const Text('Téléchargement des photos, données utilisées, espace'),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.storage),
-                ),
-                const _Divider(),
-                ValueListenableBuilder<RealtimeStatus>(
-                  valueListenable: ref.watch(realtimeStatusProvider).status,
-                  builder: (_, status, _) {
-                    final ok = status.state == RealtimeState.connected;
-                    final color = ok
-                        ? p.success
-                        : (status.state == RealtimeState.error ? p.warn : secondary);
-                    return ListTile(
-                      key: const Key('settings.realtime'),
-                      leading: Icon(Icons.sync, color: p.accentText),
-                      title: const Text('Réception instantanée'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                          ),
-                          const SizedBox(width: 6),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 140),
-                            child: Text(
-                              status.label,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: color,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
                 ),
                 const _Divider(),
                 ListTile(

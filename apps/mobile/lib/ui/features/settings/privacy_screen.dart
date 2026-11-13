@@ -173,14 +173,14 @@ class PrivacyScreen extends ConsumerWidget {
     Future<void> visibility(String which) async {
       final (label, help, current) = switch (which) {
         'presence' => (
-          'Statut « en ligne » et « vu à »',
-          'Qui voit si vous êtes connecté, et quand vous l\'étiez pour la dernière fois.',
+          'Statut «\u202Fen ligne\u202F» et «\u202Fvu à\u202F»',
+          'Qui voit si vous êtes connecté, et quand vous l’étiez pour la dernière fois.',
           s.presence,
         ),
         'avatar' => ('Photo de profil', 'Les autres voient vos initiales à la place.', s.avatar),
         _ => (
           'Invitations dans les groupes',
-          'Les personnes non autorisées ne peuvent pas vous inviter (sans qu\'on le leur dise). '
+          'Les personnes non autorisées ne peuvent pas vous inviter (sans qu’on le leur dise). '
               'Une invitation doit toujours être acceptée.',
           s.groupInvites,
         ),
@@ -209,7 +209,7 @@ class PrivacyScreen extends ConsumerWidget {
           ListTile(
             key: const Key('privacy.presence'),
             leading: Icon(Icons.circle_outlined, color: p.accentText),
-            title: const Text('En ligne et « vu à »'),
+            title: const Text('En ligne et «\u202Fvu à\u202F»'),
             subtitle: Text(visibilityLabel(s.presence)),
             onTap: () => visibility('presence'),
           ),
@@ -223,14 +223,14 @@ class PrivacyScreen extends ConsumerWidget {
           ListTile(
             key: const Key('privacy.invites'),
             leading: Icon(Icons.group_add_outlined, color: p.accentText),
-            title: const Text('Qui peut m\'inviter dans un groupe'),
+            title: const Text('Qui peut m’inviter dans un groupe'),
             subtitle: Text(visibilityLabel(s.groupInvites)),
             onTap: () => visibility('invites'),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
             child: Text(
-              '« Mes contacts » : les personnes avec qui vous avez une discussion à deux. '
+              '«\u202FMes contacts\u202F»\u202F: les personnes avec qui vous avez une discussion à deux. '
               'Une personne bloquée ne voit jamais rien.',
               style: muted,
             ),
@@ -242,8 +242,8 @@ class PrivacyScreen extends ConsumerWidget {
             secondary: Icon(Icons.done_all, color: p.accentText),
             title: const Text('Accusés de lecture'),
             subtitle: const Text(
-              'Désactivés : les autres ne voient pas quand vous avez lu leurs messages '
-              '(« reçu » reste affiché). Vous voyez toujours les leurs.',
+              'Si désactivés, on ne voit plus quand vous avez lu. Vous voyez toujours ceux '
+              'des autres.',
             ),
             onChanged: (v) => _save(context, ref, s.copyWith(readReceipts: v)),
           ),
@@ -251,8 +251,8 @@ class PrivacyScreen extends ConsumerWidget {
             key: const Key('privacy.typing'),
             value: s.typing,
             secondary: Icon(Icons.keyboard_outlined, color: p.accentText),
-            title: const Text('« En train d\'écrire »'),
-            subtitle: const Text('Désactivé : personne ne voit quand vous écrivez.'),
+            title: const Text('«\u202FEn train d’écrire\u202F»'),
+            subtitle: const Text('Désactivé\u202F: personne ne voit quand vous écrivez.'),
             onChanged: (v) => _save(context, ref, s.copyWith(typing: v)),
           ),
           ListTile(
@@ -267,8 +267,8 @@ class PrivacyScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
             child: Text(
-              'Pour effacer une discussion entière : dans la discussion, menu en haut à droite, '
-              '« Vider la discussion ».',
+              'Pour effacer une discussion entière\u202F: dans la discussion, menu en haut à droite, '
+              '«\u202FVider la discussion\u202F».',
               style: muted,
             ),
           ),
@@ -276,7 +276,7 @@ class PrivacyScreen extends ConsumerWidget {
           ListTile(
             key: const Key('privacy.lock'),
             leading: Icon(Icons.lock_outline, color: p.accentText),
-            title: const Text('Verrouillage de l\'application'),
+            title: const Text('Verrouillage de l’application'),
             subtitle: Text(
               (lock?.enabled ?? false)
                   ? 'Activé · ${delayLabel(lock!.config.delaySeconds).toLowerCase()}'
@@ -292,7 +292,7 @@ class PrivacyScreen extends ConsumerWidget {
           ),
           ListTile(
             leading: Icon(Icons.screenshot_monitor_outlined, color: p.accentText),
-            title: const Text('Captures d\'écran'),
+            title: const Text('Captures d’écran'),
             subtitle: const Text('Toujours bloquées dans Privio (non modifiable).'),
           ),
         ],

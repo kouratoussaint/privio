@@ -134,7 +134,7 @@ String presenceLabel(UserPresence p, DateTime now) {
   final today = DateTime(now.year, now.month, now.day);
   final day = DateTime(seen.year, seen.month, seen.day);
   final diff = today.difference(day).inDays;
-  if (diff <= 0) return 'vu aujourd\'hui à $time';
+  if (diff <= 0) return 'vu aujourd’hui à $time';
   if (diff == 1) return 'vu hier à $time';
   return 'vu le ${two(seen.day)}/${two(seen.month)} à $time';
 }

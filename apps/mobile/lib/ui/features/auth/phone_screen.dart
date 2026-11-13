@@ -34,8 +34,8 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
     if (e164 == null) {
       setState(
         () => _error =
-            'Numéro invalide. Saisissez 8 chiffres pour le Burkina Faso, ou un numéro '
-            'international commençant par +.',
+            'Numéro incomplet\u202F: 8 chiffres pour le Burkina Faso (ex. 70 12 34 56). '
+            'Autre pays\u202F: commencez par +.',
       );
       return;
     }
@@ -67,8 +67,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
         ),
         children: [
           Text(
-            'Saisissez votre numéro de téléphone. Nous vous enverrons un code par SMS '
-            'pour le vérifier.',
+            'Quel est votre numéro\u202F? Vous recevrez un code par SMS.',
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: PrivioSpacing.xl),

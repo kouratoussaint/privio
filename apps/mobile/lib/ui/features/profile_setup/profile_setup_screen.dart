@@ -118,7 +118,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         children: [
           if (phone != null)
             Text(
-              'Numéro vérifié : ${PhoneNumber.format(phone)}',
+              'Numéro vérifié\u202F: ${PhoneNumber.format(phone)}',
               style: theme.textTheme.bodyMedium,
             ),
           const SizedBox(height: PrivioSpacing.xl),
@@ -128,7 +128,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             maxLength: 40,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
-            decoration: InputDecoration(labelText: 'Votre nom', errorText: _nameError),
+            decoration: InputDecoration(
+              labelText: 'Votre nom',
+              helperText: 'Visible par les personnes avec qui vous échangez.',
+              errorText: _nameError,
+            ),
           ),
           const SizedBox(height: PrivioSpacing.m),
           TextField(
@@ -139,7 +143,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             enableSuggestions: false,
             onChanged: _onHandleChanged,
             decoration: InputDecoration(
-              labelText: 'Identifiant Privio',
+              labelText: 'Identifiant',
+              hintText: 'awa_s',
               prefixText: '@',
               helperText: helper,
               errorText: _handleError,

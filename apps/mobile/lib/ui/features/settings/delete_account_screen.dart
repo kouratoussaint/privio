@@ -54,7 +54,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     final ready = _confirm.text.trim().toUpperCase() == DeleteAccountScreen.confirmationWord;
     const effects = [
       'Votre profil, votre identifiant et votre numéro sont supprimés.',
-      'Vos messages envoyés sont effacés, y compris chez vos correspondants.',
+      'Vos messages envoyés sont supprimés, y compris chez les personnes qui les ont reçus.',
       'Vos blocages et vos discussions disparaissent.',
       'Les messages enregistrés sur ce téléphone sont détruits.',
       'Un signalement vous concernant peut être conservé jusqu’à 90 jours pour la modération.',

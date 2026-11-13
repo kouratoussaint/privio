@@ -490,14 +490,14 @@ class GroupInfoScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('member.remove_admin'),
                 leading: const Icon(Icons.remove_moderator_outlined),
-                title: const Text('Retirer le rôle d\'administrateur'),
+                title: const Text('Retirer le rôle d’administrateur'),
                 onTap: () => Navigator.pop(ctx, 'member'),
               ),
             if (s.isOwner)
               ListTile(
                 key: const Key('member.transfer'),
                 leading: const Icon(Icons.workspace_premium_outlined),
-                title: const Text('Confier le groupe (propriétaire)'),
+                title: const Text('Nommer propriétaire'),
                 onTap: () => Navigator.pop(ctx, 'transfer'),
               ),
             if (m.role == 'member' || (m.role == 'admin' && s.isOwner))
@@ -521,8 +521,8 @@ class GroupInfoScreen extends ConsumerWidget {
         builder: (ctx) => AlertDialog(
           title: Text(
             action == 'remove'
-                ? 'Retirer ${m.displayName} ?'
-                : 'Confier le groupe à ${m.displayName} ?',
+                ? 'Retirer ${m.displayName}\u202F?'
+                : 'Confier le groupe à ${m.displayName}\u202F?',
           ),
           content: Text(
             action == 'remove'
@@ -604,10 +604,10 @@ class GroupInfoScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Quitter « ${s.title} » ?'),
+        title: Text('Quitter «\u202F${s.title}\u202F»\u202F?'),
         content: Text(
           s.isOwner
-              ? 'Le groupe sera confié à l\'administrateur (ou au membre) le plus ancien. '
+              ? 'Le groupe sera confié à l’administrateur (ou au membre) le plus ancien. '
                     'Vous ne verrez plus ses messages.'
               : 'Vous ne verrez plus les messages de ce groupe.',
         ),
@@ -644,7 +644,7 @@ class GroupInfoScreen extends ConsumerWidget {
     final invited = (members.value ?? const <GroupMember>[]).where((m) => m.invited).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Groupe')),
+      appBar: AppBar(title: const Text('Infos')),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xl),
         children: [
@@ -789,7 +789,7 @@ class GroupInfoScreen extends ConsumerWidget {
             onTap: () => showReportSheet(
               context,
               reportedUserId: null,
-              reportedName: 'le groupe « ${s.title} »',
+              reportedName: 'le groupe «\u202F${s.title}\u202F»',
               conversationId: conversationId,
             ),
           ),

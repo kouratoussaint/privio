@@ -37,7 +37,7 @@ Future<void> _openBob(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('sans réseau au redémarrage : discussions et messages lus depuis le téléphone', (
+  testWidgets('sans réseau au redémarrage\u202F: discussions et messages lus depuis le téléphone', (
     tester,
   ) async {
     final deps = _deps();
@@ -56,69 +56,71 @@ void main() {
     expect(find.text('Gardé sur le téléphone'), findsOneWidget);
   });
 
-  testWidgets('envoi hors ligne : en attente, puis part seul au retour du réseau, sans doublon', (
-    tester,
-  ) async {
-    final deps = _deps();
-    await deps.messaging.startDirectConversation('u2');
-    await _launch(tester, deps);
-    await _openBob(tester);
+  testWidgets(
+    'envoi hors ligne\u202F: en attente, puis part seul au retour du réseau, sans doublon',
+    (tester) async {
+      final deps = _deps();
+      await deps.messaging.startDirectConversation('u2');
+      await _launch(tester, deps);
+      await _openBob(tester);
 
-    deps.messaging.offline = true;
-    await tester.enterText(find.byKey(const Key('chat.input')), 'Écrit sans réseau');
-    await tester.pump(); // le bouton « Envoyer » remplace le micro
-    await tester.tap(find.byKey(const Key('chat.send')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('En attente du réseau'), findsOneWidget);
-    expect(
-      deps.store.data.toString(),
-      contains('Écrit sans réseau'),
-      reason: 'le message en attente survit à la fermeture de l’app',
-    );
+      deps.messaging.offline = true;
+      await tester.enterText(find.byKey(const Key('chat.input')), 'Écrit sans réseau');
+      await tester.pump(); // le bouton « Envoyer » remplace le micro
+      await tester.tap(find.byKey(const Key('chat.send')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('En attente de réseau'), findsOneWidget);
+      expect(
+        deps.store.data.toString(),
+        contains('Écrit sans réseau'),
+        reason: 'le message en attente survit à la fermeture de l’app',
+      );
 
-    deps.messaging.offline = false;
-    await tester.pump(const Duration(seconds: 16)); // nouvel essai automatique
-    await tester.pumpAndSettle();
-    expect(find.textContaining('En attente du réseau'), findsNothing);
-    expect(find.text('Écrit sans réseau'), findsOneWidget);
-    final ids = deps.messaging.sentClientIds;
-    expect(ids.toSet().length, 1, reason: 'toujours le même identifiant client');
-    expect(
-      deps.messaging.messages['conv-bob']!.where((m) => m.body == 'Écrit sans réseau'),
-      hasLength(1),
-    );
-  });
+      deps.messaging.offline = false;
+      await tester.pump(const Duration(seconds: 16)); // nouvel essai automatique
+      await tester.pumpAndSettle();
+      expect(find.textContaining('En attente de réseau'), findsNothing);
+      expect(find.text('Écrit sans réseau'), findsOneWidget);
+      final ids = deps.messaging.sentClientIds;
+      expect(ids.toSet().length, 1, reason: 'toujours le même identifiant client');
+      expect(
+        deps.messaging.messages['conv-bob']!.where((m) => m.body == 'Écrit sans réseau'),
+        hasLength(1),
+      );
+    },
+  );
 
-  testWidgets('« en train d’écrire… » : affiché 5 s ; signal envoyé au plus toutes les 4 s', (
-    tester,
-  ) async {
-    final deps = _deps();
-    await deps.messaging.startDirectConversation('u2');
-    deps.messaging.receive('conv-bob', 'Salut');
-    await _launch(tester, deps);
+  testWidgets(
+    '«\u202Fen train d’écrire…\u202F»\u202F: affiché 5 s\u202F; signal envoyé au plus toutes les 4 s',
+    (tester) async {
+      final deps = _deps();
+      await deps.messaging.startDirectConversation('u2');
+      deps.messaging.receive('conv-bob', 'Salut');
+      await _launch(tester, deps);
 
-    deps.realtime.emit('conv-bob', event: 'typing');
-    await tester.pump();
-    await tester.pump();
-    // ignore: avoid_print
-    print(
-      'DEBUG typing=${find.textContaining('écrire').evaluate().length} realtime=${deps.realtime.startedFor}',
-    );
-    expect(find.text('en train d’écrire…'), findsOneWidget, reason: 'aperçu dans la liste');
+      deps.realtime.emit('conv-bob', event: 'typing');
+      await tester.pump();
+      await tester.pump();
+      // ignore: avoid_print
+      print(
+        'DEBUG typing=${find.textContaining('écrire').evaluate().length} realtime=${deps.realtime.startedFor}',
+      );
+      expect(find.text('en train d’écrire…'), findsOneWidget, reason: 'aperçu dans la liste');
 
-    await _openBob(tester);
-    deps.realtime.emit('conv-bob', event: 'typing');
-    await tester.pump();
-    expect(find.byKey(const Key('chat.typing')), findsOneWidget);
-    await tester.pump(const Duration(seconds: 6));
-    expect(find.byKey(const Key('chat.typing')), findsNothing);
+      await _openBob(tester);
+      deps.realtime.emit('conv-bob', event: 'typing');
+      await tester.pump();
+      expect(find.byKey(const Key('chat.typing')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
+      expect(find.byKey(const Key('chat.typing')), findsNothing);
 
-    await tester.enterText(find.byKey(const Key('chat.input')), 'B');
-    await tester.enterText(find.byKey(const Key('chat.input')), 'Bo');
-    await tester.enterText(find.byKey(const Key('chat.input')), 'Bon');
-    await tester.pump();
-    expect(deps.messaging.typingSignals, 1);
-  });
+      await tester.enterText(find.byKey(const Key('chat.input')), 'B');
+      await tester.enterText(find.byKey(const Key('chat.input')), 'Bo');
+      await tester.enterText(find.byKey(const Key('chat.input')), 'Bon');
+      await tester.pump();
+      expect(deps.messaging.typingSignals, 1);
+    },
+  );
 
   testWidgets('épingler, archiver puis désarchiver', (tester) async {
     final deps = _deps();

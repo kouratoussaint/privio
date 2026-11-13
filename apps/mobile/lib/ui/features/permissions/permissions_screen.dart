@@ -59,14 +59,13 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
           Text('Restez informé', style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: PrivioSpacing.m),
           Text(
-            'Les notifications vous signalent un nouveau message, sans jamais afficher '
-            'son contenu. Vous pourrez changer ce choix à tout moment.',
+            'Soyez prévenu d’un nouveau message. La notification n’affiche jamais son contenu.',
             style: theme.textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: PrivioSpacing.l),
           Text(
-            'Le micro et l\'appareil photo ne seront demandés que lorsque vous en aurez besoin.',
+            'Le micro et l’appareil photo ne seront demandés que lorsque vous en aurez besoin.',
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

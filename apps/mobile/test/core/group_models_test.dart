@@ -32,7 +32,7 @@ ChatMessage _event(Map<String, Object?> j, {String sender = 'u2'}) => ChatMessag
 );
 
 void main() {
-  test('résumé de groupe : titre, photo, nombre de membres, sourdine', () {
+  test('résumé de groupe\u202F: titre, photo, nombre de membres, sourdine', () {
     final s = _group(role: 'member');
     expect(s.isGroup, isTrue);
     expect(s.title, 'Famille');
@@ -43,7 +43,7 @@ void main() {
     expect(s.copyWith(pinned: true).groupTitle, 'Famille');
   });
 
-  test('droits : écrire et modifier selon le rôle et les réglages', () {
+  test('droits\u202F: écrire et modifier selon le rôle et les réglages', () {
     expect(_group(role: 'member').canPost, isTrue);
     expect(_group(role: 'member', posting: 'admins').canPost, isFalse);
     expect(_group(role: 'admin', posting: 'admins').canPost, isTrue);
@@ -77,7 +77,7 @@ void main() {
   test('textes des événements de groupe', () {
     expect(
       groupEventText(_event({'e': 'created', 'a': 'Bob', 'v': 'Famille'}), me: 'u1'),
-      'Bob a créé le groupe « Famille »',
+      'Bob a créé le groupe «\u202FFamille\u202F»',
     );
     expect(
       groupEventText(_event({'e': 'joined', 'a': 'Toussaint'}, sender: 'u1'), me: 'u1'),
@@ -93,7 +93,7 @@ void main() {
     );
     expect(
       groupEventText(_event({'e': 'posting', 'a': 'Bob', 'v': 'admins'}), me: 'u1'),
-      'Bob a réservé l\'envoi de messages aux administrateurs',
+      'Bob a réservé l’envoi de messages aux administrateurs',
     );
     // Durée (format « ttl: ») et contenu inconnu : pas d'événement de groupe.
     final ttl = ChatMessage(

@@ -20,7 +20,10 @@ void main() {
       '+22670000001234567': null,
     };
     cases.forEach((input, expected) {
-      test('« $input » → $expected', () => expect(PhoneNumber.normalize(input), expected));
+      test(
+        '«\u202F$input\u202F» → $expected',
+        () => expect(PhoneNumber.normalize(input), expected),
+      );
     });
   });
 

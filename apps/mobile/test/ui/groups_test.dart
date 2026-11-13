@@ -57,7 +57,7 @@ Future<void> _tapVisible(WidgetTester tester, Finder f) async {
 }
 
 void main() {
-  testWidgets('créer un groupe : contacts et identifiant, puis la discussion s\'ouvre', (
+  testWidgets('créer un groupe\u202F: contacts et identifiant, puis la discussion s’ouvre', (
     tester,
   ) async {
     final deps = _deps();
@@ -66,7 +66,7 @@ void main() {
 
     await tester.tap(_tab('Groupes'));
     await tester.pumpAndSettle();
-    expect(find.text('Aucun groupe pour l\'instant'), findsOneWidget);
+    expect(find.text('Aucun groupe pour l’instant'), findsOneWidget);
     expect(find.textContaining(RegExp('communaut', caseSensitive: false)), findsNothing);
 
     await tester.tap(find.byKey(const Key('groups.new')));
@@ -91,11 +91,11 @@ void main() {
     final g = deps.messaging.groups.values.single;
     expect(g.title, 'Famille');
     expect(g.roles, {FakeMessagingApi.me: 'owner'});
-    expect(g.invited, {'u2', 'u3'}, reason: 'invitations, pas d\'ajout forcé');
+    expect(g.invited, {'u2', 'u3'}, reason: 'invitations, pas d’ajout forcé');
     expect(find.text('Famille'), findsWidgets);
     expect(find.byKey(const Key('chat.members')), findsOneWidget);
     expect(find.text('1 membre'), findsOneWidget);
-    expect(find.text('Vous avez créé le groupe « Famille »'), findsOneWidget);
+    expect(find.text('Vous avez créé le groupe «\u202FFamille\u202F»'), findsOneWidget);
 
     // Envoi d'un message dans le groupe.
     await tester.enterText(find.byKey(const Key('chat.input')), 'Bienvenue');
@@ -105,7 +105,7 @@ void main() {
     expect(find.text('Bienvenue'), findsOneWidget);
   });
 
-  testWidgets('invitations : refuser, puis rejoindre un groupe', (tester) async {
+  testWidgets('invitations\u202F: refuser, puis rejoindre un groupe', (tester) async {
     final deps = _deps();
     deps.messaging.invitations.addAll(const [
       GroupInvitation(
@@ -146,7 +146,7 @@ void main() {
     expect(find.byKey(const Key('conversation.g-fam')), findsOneWidget);
   });
 
-  testWidgets('discussion de groupe : nom des auteurs, filtre, durée réservée aux admins', (
+  testWidgets('discussion de groupe\u202F: nom des auteurs, filtre, durée réservée aux admins', (
     tester,
   ) async {
     final deps = _deps();
@@ -158,11 +158,11 @@ void main() {
         owner: 'u2',
         members: {FakeMessagingApi.me: 'member', 'u3': 'member'},
       )
-      ..receiveInGroup('g1', 'u3', 'On se voit dimanche ?');
+      ..receiveInGroup('g1', 'u3', 'On se voit dimanche\u202F?');
     await _start(tester, deps);
 
     // Aperçu « Awa : … » et filtre Groupes.
-    expect(find.text('Awa : On se voit dimanche ?'), findsOneWidget);
+    expect(find.text('Awa\u202F: On se voit dimanche\u202F?'), findsOneWidget);
     await tester.tap(find.byKey(const Key('filter.groups')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('conversation.g1')), findsOneWidget);
@@ -183,12 +183,12 @@ void main() {
     expect(find.byKey(const Key('chat.posting_restricted')), findsNothing);
 
     // Pas de suppression pour tous du message d'un autre quand on n'est pas admin.
-    await tester.longPress(find.text('On se voit dimanche ?'));
+    await tester.longPress(find.text('On se voit dimanche\u202F?'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('action.delete_all')), findsNothing);
   });
 
-  testWidgets('envoi réservé aux administrateurs : bandeau à la place de la saisie', (
+  testWidgets('envoi réservé aux administrateurs\u202F: bandeau à la place de la saisie', (
     tester,
   ) async {
     final deps = _deps();
@@ -210,91 +210,98 @@ void main() {
     expect(find.byKey(const Key('composer.photo')), findsNothing);
   });
 
-  testWidgets('administration : rôles, retrait, réglages, nom ; l\'admin supprime un message', (
-    tester,
-  ) async {
-    final deps = _deps();
-    final g = deps.messaging.seedGroup('g1', 'Famille', members: {'u2': 'member', 'u3': 'admin'});
-    deps.messaging.receiveInGroup('g1', 'u2', 'Message de trop');
-    await _start(tester, deps);
-    await _openGroup(tester, 'g1');
+  testWidgets(
+    'administration\u202F: rôles, retrait, réglages, nom\u202F; l’admin supprime un message',
+    (tester) async {
+      final deps = _deps();
+      final g = deps.messaging.seedGroup('g1', 'Famille', members: {'u2': 'member', 'u3': 'admin'});
+      deps.messaging.receiveInGroup('g1', 'u2', 'Message de trop');
+      await _start(tester, deps);
+      await _openGroup(tester, 'g1');
 
-    // Suppression pour tous du message d'un membre (administrateur).
-    await tester.longPress(find.text('Message de trop'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('action.delete_all')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('sera effacé pour tous les membres du groupe'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('action.delete_all.confirm')));
-    await tester.pumpAndSettle();
-    expect(deps.messaging.messages['g1']!.last.isDeleted, isTrue);
+      // Suppression pour tous du message d'un membre (administrateur).
+      await tester.longPress(find.text('Message de trop'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('action.delete_all')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('sera supprimé pour tous les membres du groupe'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('action.delete_all.confirm')));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.messages['g1']!.last.isDeleted, isTrue);
 
-    await _openInfo(tester);
-    expect(find.text('3 membres'), findsOneWidget);
-    await _scrollTo(tester, find.byKey(const Key('member.u3')));
-    expect(find.text('Toussaint (vous)'), findsOneWidget);
+      await _openInfo(tester);
+      expect(find.text('3 membres'), findsOneWidget);
+      await _scrollTo(tester, find.byKey(const Key('member.u3')));
+      expect(find.text('Toussaint (vous)'), findsOneWidget);
 
-    // Bob devient administrateur.
-    await tester.tap(find.byKey(const Key('member.u2')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('member.make_admin')));
-    await tester.pumpAndSettle();
-    expect(g.roles['u2'], 'admin');
+      // Bob devient administrateur.
+      await tester.tap(find.byKey(const Key('member.u2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('member.make_admin')));
+      await tester.pumpAndSettle();
+      expect(g.roles['u2'], 'admin');
 
-    // Awa (administratrice) est retirée par le propriétaire, après confirmation.
-    await tester.tap(find.byKey(const Key('member.u3')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('member.remove')));
-    await tester.pumpAndSettle();
-    expect(find.text('Retirer Awa ?'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('member.confirm')));
-    await tester.pumpAndSettle();
-    expect(g.roles.containsKey('u3'), isFalse);
-    expect(find.byKey(const Key('member.u3')), findsNothing);
+      // Awa (administratrice) est retirée par le propriétaire, après confirmation.
+      await tester.tap(find.byKey(const Key('member.u3')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('member.remove')));
+      await tester.pumpAndSettle();
+      expect(find.text('Retirer Awa\u202F?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('member.confirm')));
+      await tester.pumpAndSettle();
+      expect(g.roles.containsKey('u3'), isFalse);
+      expect(find.byKey(const Key('member.u3')), findsNothing);
 
-    // Réglages.
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('group.edit')),
-      -200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('group.posting')));
-    await tester.pumpAndSettle();
-    expect(g.posting, 'admins');
-    await tester.tap(find.byKey(const Key('group.info_editing')));
-    await tester.pumpAndSettle();
-    expect(g.infoEditing, 'all');
+      // Réglages.
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('group.edit')),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('group.posting')));
+      await tester.pumpAndSettle();
+      expect(g.posting, 'admins');
+      await tester.tap(find.byKey(const Key('group.info_editing')));
+      await tester.pumpAndSettle();
+      expect(g.infoEditing, 'all');
 
-    // Nom et description.
-    await tester.tap(find.byKey(const Key('group.edit')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('group.edit.title')), 'Famille Kouraogo');
-    await tester.enterText(find.byKey(const Key('group.edit.description')), 'Nouvelles');
-    await tester.tap(find.byKey(const Key('group.edit.save')));
-    await tester.pumpAndSettle();
-    expect(g.title, 'Famille Kouraogo');
-    expect(g.description, 'Nouvelles');
-    expect(find.text('Famille Kouraogo', skipOffstage: false), findsOneWidget);
+      // Nom et description.
+      await tester.tap(find.byKey(const Key('group.edit')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('group.edit.title')), 'Famille Kouraogo');
+      await tester.enterText(find.byKey(const Key('group.edit.description')), 'Nouvelles');
+      await tester.tap(find.byKey(const Key('group.edit.save')));
+      await tester.pumpAndSettle();
+      expect(g.title, 'Famille Kouraogo');
+      expect(g.description, 'Nouvelles');
+      expect(find.text('Famille Kouraogo', skipOffstage: false), findsOneWidget);
 
-    // Sourdine 8 heures.
-    await _scrollTo(tester, find.byKey(const Key('group.mute')));
-    await tester.tap(find.byKey(const Key('group.mute')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('mute.8')));
-    await tester.pumpAndSettle();
-    expect(deps.messaging.muted['g1'], isNotNull);
+      // Sourdine 8 heures.
+      await _scrollTo(tester, find.byKey(const Key('group.mute')));
+      await tester.tap(find.byKey(const Key('group.mute')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('mute.8')));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.muted['g1'], isNotNull);
 
-    // Retour à la discussion : les événements sont affichés.
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('Vous avez nommé Bob administrateur'), findsOneWidget);
-    expect(find.text('Vous avez retiré Awa du groupe'), findsOneWidget);
-    expect(find.text('Vous avez renommé le groupe « Famille Kouraogo »'), findsOneWidget);
-    expect(find.text('Vous avez réservé l\'envoi de messages aux administrateurs'), findsOneWidget);
-  });
+      // Retour à la discussion : les événements sont affichés.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Vous avez nommé Bob administrateur'), findsOneWidget);
+      expect(find.text('Vous avez retiré Awa du groupe'), findsOneWidget);
+      expect(
+        find.text('Vous avez renommé le groupe «\u202FFamille Kouraogo\u202F»'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Vous avez réservé l’envoi de messages aux administrateurs'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('membre : pas d\'actions d\'administration ; signaler et quitter le groupe', (
+  testWidgets('membre\u202F: pas d’actions d’administration\u202F; signaler et quitter le groupe', (
     tester,
   ) async {
     final deps = _deps();
@@ -338,7 +345,7 @@ void main() {
     expect(find.byKey(const Key('conversation.g1')), findsNothing);
   });
 
-  testWidgets('retiré d\'un groupe : la discussion n\'est plus lisible', (tester) async {
+  testWidgets('retiré d’un groupe\u202F: la discussion n’est plus lisible', (tester) async {
     final deps = _deps();
     deps.messaging.seedGroup('g1', 'Famille', owner: 'u2', members: {'u3': 'member'});
     await _start(tester, deps);

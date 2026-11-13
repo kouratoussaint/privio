@@ -58,8 +58,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       setState(() {
         _found = user;
         _message = user == null
-            ? 'Aucun compte trouvé. Vérifiez l\'identifiant ; pour une recherche par numéro, '
-                  'la personne doit avoir activé « Me trouver par mon numéro ».'
+            ? 'Aucun compte trouvé. Vérifiez l’orthographe, ou invitez cette personne sur Privio.'
             : null;
       });
     } on Object catch (e) {
@@ -99,8 +98,9 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _busy ? null : _search(),
             decoration: InputDecoration(
-              labelText: 'Identifiant Privio ou numéro',
+              labelText: 'Identifiant ou numéro',
               hintText: '@identifiant ou 70 00 00 00',
+              helperText: 'Identifiant exact (ex. @awa_s) ou numéro',
               suffixIcon: IconButton(
                 key: const Key('search.submit'),
                 tooltip: 'Rechercher',

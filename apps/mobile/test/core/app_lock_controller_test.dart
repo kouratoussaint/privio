@@ -46,7 +46,7 @@ void main() {
     expect(d.lockStore.config.failures, 0);
   });
 
-  test('appareil photo ou galerie : pas de reverrouillage au retour', () async {
+  test('appareil photo ou galerie\u202F: pas de reverrouillage au retour', () async {
     final (d, _, advance) = await setup();
     final c = d.container();
     final lock = c.read(appLockProvider.notifier);

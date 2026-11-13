@@ -32,7 +32,7 @@ Future<TestDeps> _openChat(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('régler la durée de la discussion : annonce et nouvelle durée', (tester) async {
+  testWidgets('régler la durée de la discussion\u202F: annonce et nouvelle durée', (tester) async {
     final deps = await _openChat(tester);
     expect(find.textContaining('s’effacent 72 h'), findsOneWidget);
 
@@ -87,7 +87,7 @@ void main() {
     expect(find.byKey(const Key('ttl.259200')), findsNothing);
   });
 
-  testWidgets('changement fait par le correspondant : annonce à son nom', (tester) async {
+  testWidgets('changement fait par le correspondant\u202F: annonce à son nom', (tester) async {
     final deps = await _openChat(tester);
     final now = DateTime.now();
     deps.messaging.conversationTtl = 8 * 3600;

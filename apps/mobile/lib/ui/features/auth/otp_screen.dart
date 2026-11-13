@@ -136,6 +136,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             onPressed: _busy ? null : () => Navigator.of(context).maybePop(),
             child: const Text('Modifier le numéro'),
           ),
+          if (canResend) ...[
+            const SizedBox(height: PrivioSpacing.s),
+            Text(
+              'Toujours rien\u202F? Vérifiez le numéro ou votre réseau, puis renvoyez le code.',
+              key: const Key('otp.help'),
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
       ),
     );
