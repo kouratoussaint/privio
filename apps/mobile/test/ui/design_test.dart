@@ -76,7 +76,7 @@ void main() {
     },
   );
 
-  testWidgets('conversation\u202F: séparateur «\u202FAujourd’hui\u202F» et carte 72 heures', (
+  testWidgets('conversation\u202F: séparateur «\u202FAujourd’hui\u202F» et ligne 72 h', (
     tester,
   ) async {
     final deps = await _withBob(tester);
@@ -85,6 +85,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Aujourd’hui'), findsOneWidget);
     expect(find.byKey(const Key('chat.expiry_notice')), findsOneWidget);
-    expect(find.textContaining('s’effacent 72 h'), findsOneWidget);
+    expect(find.text('Messages effacés après 72\u00A0h'), findsOneWidget);
   });
 }

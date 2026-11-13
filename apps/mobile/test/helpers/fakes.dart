@@ -257,6 +257,9 @@ class FakeMessagingApi implements MessagingApi {
   bool failList = false;
   int conversationTtl = 72 * 3600;
 
+  /// Dernier réglage de durée reçu (discussion, secondes).
+  (String, int)? lastTtlSet;
+
   /// Coupure réseau simulée : tout appel échoue comme sans connexion.
   bool offline = false;
   bool pinned = false;
@@ -323,6 +326,7 @@ class FakeMessagingApi implements MessagingApi {
   @override
   Future<int> setConversationTtl(String conversationId, int seconds) async {
     conversationTtl = seconds;
+    lastTtlSet = (conversationId, seconds);
     final now = DateTime.now();
     (messages[conversationId] ??= []).add(
       ChatMessage(

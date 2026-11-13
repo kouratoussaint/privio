@@ -17,6 +17,7 @@ import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/ttl_picker.dart';
 import '../conversations/contact_screen.dart';
 import '../conversations/report_sheet.dart';
 
@@ -559,6 +560,26 @@ class GroupInfoScreen extends ConsumerWidget {
     );
   }
 
+  /// Durée des messages du groupe (lot 4.6) : administrateurs autorisés à modifier le groupe.
+  Future<void> _ttl(BuildContext context, WidgetRef ref, ConversationSummary s) async {
+    final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
+    final picked = await showTtlPicker(
+      context,
+      title: 'Durée des messages',
+      help: 'Pour les prochains messages du groupe.',
+      current: s.ttlSeconds,
+      min: rules.minTtlSeconds,
+      max: rules.maxTtlSeconds,
+    );
+    if (picked == null || picked == s.ttlSeconds || !context.mounted) return;
+    await _run(
+      context,
+      ref,
+      () =>
+          groupAction(ref, conversationId, (api) => api.setConversationTtl(conversationId, picked)),
+    );
+  }
+
   Future<void> _mute(BuildContext context, WidgetRef ref, ConversationSummary s) async {
     final now = DateTime.now();
     final choice = await showModalBottomSheet<Duration?>(
@@ -694,9 +715,12 @@ class GroupInfoScreen extends ConsumerWidget {
             ),
           const Divider(height: PrivioSpacing.xxl),
           ListTile(
+            key: const Key('group.ttl'),
             leading: Icon(Icons.timer_outlined, color: p.accentText),
             title: const Text('Durée des messages'),
             subtitle: Text(formatTtl(s.ttlSeconds)),
+            trailing: s.canEditInfo ? const Icon(Icons.chevron_right) : null,
+            onTap: s.canEditInfo ? () => _ttl(context, ref, s) : null,
           ),
           ListTile(
             key: const Key('group.mute'),

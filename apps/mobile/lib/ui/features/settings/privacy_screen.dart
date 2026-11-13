@@ -12,6 +12,7 @@ import '../../../state/app_lock_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/privacy_providers.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/ttl_picker.dart';
 import '../lock/app_lock_screens.dart' show delayLabel;
 
 /// Écran 23 — confidentialité et sécurité (lot 4.3). Chaque réglage est appliqué par le
@@ -79,54 +80,14 @@ class PrivacyScreen extends ConsumerWidget {
   Future<void> _pickTtl(BuildContext context, WidgetRef ref, PrivacySettings s) async {
     final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
     final current = s.defaultTtlSeconds ?? rules.maxTtlSeconds;
-    final picked = await showModalBottomSheet<int>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                child: Text(
-                  'Durée par défaut des messages',
-                  style: Theme.of(ctx).textTheme.titleMedium,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  PrivioSpacing.l,
-                  PrivioSpacing.xs,
-                  PrivioSpacing.l,
-                  PrivioSpacing.s,
-                ),
-                child: Text(
-                  'Pour les discussions et groupes que vous créerez. Les discussions existantes '
-                  'gardent leur durée (modifiable dans chacune).',
-                  style: Theme.of(ctx).textTheme.bodySmall,
-                ),
-              ),
-              RadioGroup<int>(
-                groupValue: current,
-                onChanged: (v) => Navigator.pop(ctx, v),
-                child: Column(
-                  children: [
-                    for (final t in rules.ttlChoices())
-                      RadioListTile<int>(
-                        key: Key('privacy.ttl.$t'),
-                        value: t,
-                        title: Text(formatTtl(t)),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final picked = await showTtlPicker(
+      context,
+      title: 'Durée par défaut des messages',
+      help: 'Pour les discussions et groupes que vous créerez.',
+      current: current,
+      min: rules.minTtlSeconds,
+      max: rules.maxTtlSeconds,
+      keyPrefix: 'privacy.ttl',
     );
     if (picked == null || !context.mounted) return;
     await _save(

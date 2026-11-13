@@ -111,7 +111,18 @@ void main() {
     expect(deps.messaging.privacy.defaultTtlSeconds, 3600);
     await tester.tap(find.byKey(const Key('privacy.ttl')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('privacy.ttl.259200')));
+    // 72 h n'a pas de puce (lot 4.6) : « Personnalisé », roulette des heures de 1 à 72.
+    await tester.tap(find.byKey(const Key('privacy.ttl.custom')));
+    await tester.pumpAndSettle();
+    final hours = tester.widget<ListWheelScrollView>(
+      find.descendant(
+        of: find.byKey(const Key('privacy.ttl.custom.hours')),
+        matching: find.byType(ListWheelScrollView),
+      ),
+    );
+    (hours.controller! as FixedExtentScrollController).jumpToItem(72);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('privacy.ttl.custom.ok')));
     await tester.pumpAndSettle();
     expect(deps.messaging.privacy.defaultTtlSeconds, isNull, reason: '72 h = pas de défaut');
     expect(deps.messaging.privacySaves, hasLength(7));

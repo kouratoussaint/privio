@@ -286,6 +286,20 @@ void main() {
       await tester.pumpAndSettle();
       expect(deps.messaging.muted['g1'], isNotNull);
 
+      // Durée des messages du groupe depuis les Infos (lot 4.6).
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('group.ttl')),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('group.ttl')));
+      await tester.pumpAndSettle();
+      expect(find.text('Pour les prochains messages du groupe.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('ttl.21600')));
+      await tester.pumpAndSettle();
+      expect(deps.messaging.lastTtlSet, ('g1', 21600));
+
       // Retour à la discussion : les événements sont affichés.
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();

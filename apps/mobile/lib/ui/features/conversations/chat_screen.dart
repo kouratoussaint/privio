@@ -25,6 +25,7 @@ import '../../core/widgets/swipe_actions.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
 import '../../../data/services/photo_picker.dart' show PhotoSource;
+import '../../core/widgets/ttl_picker.dart';
 import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
@@ -140,67 +141,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  /// Feuille de choix d'une durée. Renvoie la durée choisie (secondes) ou null.
-  Future<int?> _pickTtl({
-    required String title,
-    required String help,
-    required List<int> choices,
-    required int current,
-  }) => showModalBottomSheet<int>(
-    context: context,
-    showDragHandle: true,
-    // Défilante : reste utilisable sur les petits écrans et avec une grande police.
-    isScrollControlled: true,
-    builder: (ctx) => SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                PrivioSpacing.xl,
-                0,
-                PrivioSpacing.xl,
-                PrivioSpacing.s,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Theme.of(ctx).textTheme.titleMedium),
-                  const SizedBox(height: PrivioSpacing.xs),
-                  Text(help, style: Theme.of(ctx).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            RadioGroup<int>(
-              groupValue: current,
-              onChanged: (v) => Navigator.pop(ctx, v),
-              child: Column(
-                children: [
-                  for (final c in choices)
-                    RadioListTile<int>(key: Key('ttl.$c'), value: c, title: Text(formatTtl(c))),
-                ],
-              ),
-            ),
-            const SizedBox(height: PrivioSpacing.s),
-          ],
-        ),
-      ),
-    ),
-  );
-
   Future<void> _chooseConversationTtl(ConversationSummary? summary) async {
     final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
     final current = summary?.ttlSeconds ?? rules.maxTtlSeconds;
-    final picked = await _pickTtl(
+    final picked = await showTtlPicker(
+      context,
       title: 'Durée des messages',
-      help:
-          // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-          'S\'applique aux nouveaux messages de cette discussion, pour vous deux. '
-          'Votre correspondant est prévenu du changement.',
-      choices: rules.ttlChoices(),
+      help: (summary?.isGroup ?? false)
+          ? 'Pour les prochains messages du groupe.'
+          : 'Pour les prochains messages, chez vous deux.',
       current: current,
+      min: rules.minTtlSeconds,
+      max: rules.maxTtlSeconds,
     );
     if (picked == null || picked == current || !mounted) return;
     await _guard(() => _chat.setTtl(picked));
@@ -209,14 +161,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _chooseMessageTtl(ConversationSummary? summary) async {
     final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
     final cap = summary?.ttlSeconds ?? rules.maxTtlSeconds;
-    final picked = await _pickTtl(
+    final picked = await showTtlPicker(
+      context,
       title: 'Durée de ce message',
-      help:
-          // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-          'Uniquement pour le prochain message envoyé. Jamais plus long que la durée '
-          'de la discussion (${formatTtl(cap)}).',
-      choices: rules.ttlChoices(cap: cap),
+      help: 'Pour ce message seulement, au plus ${formatTtl(cap)}.',
       current: _nextTtl ?? cap,
+      min: rules.minTtlSeconds,
+      max: cap,
     );
     if (picked == null || !mounted) return;
     setState(() => _nextTtl = picked == cap ? null : picked);
@@ -796,12 +747,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: Icon(_searching ? Icons.close : Icons.search),
           ),
           if (canSetTtl && !_searching)
-            IconButton(
-              key: const Key('chat.ttl'),
-              // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-              tooltip: 'Durée des messages : ${formatTtl(summary?.ttlSeconds ?? 259200)}',
-              onPressed: () => _chooseConversationTtl(summary),
-              icon: const Icon(Icons.timer_outlined),
+            _TtlPill(
+              ttlSeconds: summary?.ttlSeconds ?? 259200,
+              onTap: () => _chooseConversationTtl(summary),
             ),
           if (summary != null && !_searching)
             PopupMenuButton<String>(
@@ -848,58 +796,65 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : () => context.push(Routes.contact(widget.conversationId)),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
-                  child: Row(
-                    children: [
-                      UserAvatar(
-                        name: title,
-                        avatarPath: summary?.avatarPath,
-                        seed: isGroup
-                            ? widget.conversationId
-                            : (summary?.peerId ?? widget.conversationId),
-                        radius: 20,
-                        ring: p.onHeaderMuted,
-                        icon: isGroup ? Icons.groups_rounded : null,
-                      ),
-                      const SizedBox(width: PrivioSpacing.m),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(title, overflow: TextOverflow.ellipsis),
-                            if (typing)
-                              Text(
-                                isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
-                                key: const Key('chat.typing'),
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: p.onHeaderMuted, fontStyle: FontStyle.italic),
-                              )
-                            else if (isGroup)
-                              Text(
-                                '${summary!.memberCount} membre${summary.memberCount > 1 ? 's' : ''}',
-                                key: const Key('chat.members'),
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: p.onHeaderMuted),
-                              )
-                            else if (presence.isNotEmpty)
-                              Text(
-                                presence,
-                                key: const Key('chat.presence'),
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: p.onHeaderMuted),
-                              )
-                            else if (summary?.peerHandle != null)
-                              Text(
-                                '@${summary!.peerHandle}',
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: p.onHeaderMuted),
-                              ),
-                          ],
+                  child: LayoutBuilder(
+                    // Écran étroit et grande police : l'avatar s'efface avant le nom.
+                    builder: (context, box) => Row(
+                      children: [
+                        if (box.maxWidth >= 120) ...[
+                          UserAvatar(
+                            name: title,
+                            avatarPath: summary?.avatarPath,
+                            seed: isGroup
+                                ? widget.conversationId
+                                : (summary?.peerId ?? widget.conversationId),
+                            radius: 20,
+                            ring: p.onHeaderMuted,
+                            icon: isGroup ? Icons.groups_rounded : null,
+                          ),
+                          const SizedBox(width: PrivioSpacing.m),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(title, overflow: TextOverflow.ellipsis),
+                              if (typing)
+                                Text(
+                                  isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
+                                  key: const Key('chat.typing'),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: p.onHeaderMuted,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                )
+                              else if (isGroup)
+                                Text(
+                                  '${summary!.memberCount} membre${summary.memberCount > 1 ? 's' : ''}',
+                                  key: const Key('chat.members'),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: p.onHeaderMuted),
+                                )
+                              else if (presence.isNotEmpty)
+                                Text(
+                                  presence,
+                                  key: const Key('chat.presence'),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: p.onHeaderMuted),
+                                )
+                              else if (summary?.peerHandle != null)
+                                Text(
+                                  '@${summary!.peerHandle}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: p.onHeaderMuted),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -996,9 +951,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _ComposerContext(
                   key: const Key('composer.ttl_chip'),
                   icon: Icons.timer_outlined,
-                  label: 'Durée de ce message',
-                  text:
-                      '${formatTtl(_nextTtl!)} (au lieu de ${formatTtl(summary?.ttlSeconds ?? 259200)})',
+                  label: 'Ce message',
+                  text: formatTtl(_nextTtl!),
+                  compact: true,
                   onCancel: () => setState(() => _nextTtl = null),
                 ),
               if (voice is VoicePreview)
@@ -1121,10 +1076,7 @@ class _MessageList extends StatelessWidget {
       return EmptyView(
         icon: Icons.timer_outlined,
         title: 'Aucun message',
-        message: isGroup
-            // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-            ? 'Les messages de ce groupe s\'effacent ${formatTtl(ttlSeconds)} après leur envoi.'
-            : 'Les messages de cette discussion s\'effacent 72 heures après leur envoi.',
+        message: 'Vos messages s’effaceront ${formatTtl(ttlSeconds)} après leur envoi.',
       );
     }
     final items = <Widget>[];
@@ -1242,8 +1194,9 @@ class _MessageList extends StatelessWidget {
         ),
       );
     }
+    // Lot 4.6 : une ligne discrète tout en haut de la discussion (au lieu d'une carte en bas).
     if (!searching) {
-      items.add(_ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap, isGroup: isGroup));
+      items.insert(0, _ExpiryNotice(ttlSeconds: ttlSeconds, onTap: onTtlTap));
     }
     return ListView(
       controller: scrollController,
@@ -1278,49 +1231,97 @@ class _DayChip extends StatelessWidget {
   }
 }
 
-/// Carte de sécurité du guide : rappel de la durée de vie, touchable pour la régler.
+/// Rappel de la durée de vie (lot 4.6) : une ligne discrète en haut de la discussion,
+/// comme le séparateur des jours ; touchable pour la régler quand c'est permis.
 class _ExpiryNotice extends StatelessWidget {
-  const _ExpiryNotice({required this.ttlSeconds, required this.onTap, this.isGroup = false});
+  const _ExpiryNotice({required this.ttlSeconds, required this.onTap});
 
   final int ttlSeconds;
   final VoidCallback? onTap;
-  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
     final p = PrivioPalette.of(context);
     final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: PrivioSpacing.xs),
+        padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.s),
         child: Material(
           color: p.notice,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           child: InkWell(
             key: const Key('chat.expiry_notice'),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320, minHeight: 44),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: PrivioSpacing.s),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.timer_outlined, size: 18, color: p.accentText),
-                    const SizedBox(width: PrivioSpacing.s),
-                    Flexible(
-                      child: Text(
-                        // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-                        'Les messages de ${isGroup ? 'ce groupe' : 'cette discussion'} '
-                        's’effacent ${formatTtl(ttlSeconds)} après leur envoi.'
-                        '${onTap == null ? '' : ' Toucher pour modifier.'}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.timer_outlined, size: 14, color: color),
+                  const SizedBox(width: PrivioSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      'Messages effacés après ${formatTtl(ttlSeconds)}',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.labelMedium?.copyWith(color: color),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Durée des messages dans l'en-tête (lot 4.6) : « ⏱ 24 h », touchable pour la régler.
+class _TtlPill extends StatelessWidget {
+  const _TtlPill({required this.ttlSeconds, required this.onTap});
+
+  final int ttlSeconds;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = IconTheme.of(context).color ?? Theme.of(context).colorScheme.onPrimary;
+    final label = formatTtl(ttlSeconds);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.xs),
+      child: Tooltip(
+        message: 'Durée des messages\u202F: $label',
+        child: Semantics(
+          button: true,
+          label: 'Durée des messages\u202F: $label',
+          excludeSemantics: true,
+          child: Material(
+            color: fg.withValues(alpha: 0.16),
+            shape: const StadiumBorder(),
+            child: InkWell(
+              key: const Key('chat.ttl'),
+              customBorder: const StadiumBorder(),
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 36),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timer_outlined, size: 16, color: fg),
+                      const SizedBox(width: PrivioSpacing.xs),
+                      Text(
+                        label,
+                        // Étiquette courte à taille fixe : laisse la place au nom (écran étroit).
+                        textScaler: TextScaler.noScaling,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: fg, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1331,7 +1332,6 @@ class _ExpiryNotice extends StatelessWidget {
   }
 }
 
-/// Message système (ex. changement de durée), centré et discret.
 class _SystemNotice extends StatelessWidget {
   const _SystemNotice({super.key, required this.text, this.icon = Icons.timer_outlined});
 
@@ -1680,6 +1680,7 @@ class _ComposerContext extends StatelessWidget {
     required this.text,
     required this.onCancel,
     this.icon = Icons.reply,
+    this.compact = false,
   });
 
   final String label;
@@ -1687,10 +1688,30 @@ class _ComposerContext extends StatelessWidget {
   final VoidCallback onCancel;
   final IconData icon;
 
+  /// Une seule ligne (lot 4.6) : « ⏱ Ce message : 30 min ✕ ».
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final p = PrivioPalette.of(context);
+    if (compact) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(PrivioSpacing.m, PrivioSpacing.xs, PrivioSpacing.m, 0),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: InputChip(
+            backgroundColor: p.notice,
+            side: BorderSide.none,
+            avatar: Icon(icon, size: 16, color: p.accentText),
+            label: Text('$label\u202F: $text'),
+            onDeleted: onCancel,
+            deleteButtonTooltipMessage: 'Annuler',
+            deleteIcon: const Icon(Icons.close, size: 16, key: Key('composer.ttl_cancel')),
+          ),
+        ),
+      );
+    }
     return Container(
       key: key == null ? const Key('composer.context') : null,
       margin: const EdgeInsets.fromLTRB(PrivioSpacing.m, PrivioSpacing.xs, PrivioSpacing.m, 0),

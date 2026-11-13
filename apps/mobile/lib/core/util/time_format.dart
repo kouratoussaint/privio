@@ -21,12 +21,16 @@ String formatRemaining(DateTime expiresAt, {DateTime? now}) {
   return '${left.inHours} h';
 }
 
-/// Durées proposées pour une discussion ou un message (bornées par les règles serveur).
-const kTtlChoices = [300, 3600, 8 * 3600, 24 * 3600, 72 * 3600];
+/// Durées proposées en puces pour une discussion ou un message (lot 4.6), bornées par
+/// les règles serveur ; toute autre durée passe par « Personnalisé » (72 h au plus).
+const kTtlChoices = [5 * 60, 15 * 60, 30 * 60, 3600, 6 * 3600, 12 * 3600, 24 * 3600, 48 * 3600];
 
-/// « 5 min », « 1 h », « 24 h », « 72 h ».
+/// « 5 min », « 1 h », « 4 h 30 », « 72 h » — espaces insécables : jamais coupé en fin
+/// de ligne (« 4 / h 30 »).
 String formatTtl(int seconds) {
-  if (seconds < 3600) return '${(seconds / 60).round()} min';
-  final h = seconds / 3600;
-  return h == h.roundToDouble() ? '${h.round()} h' : '${h.toStringAsFixed(1)} h';
+  final minutes = (seconds / 60).round();
+  if (minutes < 60) return '$minutes\u00A0min';
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  return m == 0 ? '$h\u00A0h' : '$h\u00A0h\u00A0${m.toString().padLeft(2, '0')}';
 }
