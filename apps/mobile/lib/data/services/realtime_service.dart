@@ -42,7 +42,8 @@ abstract interface class RealtimeService {
 class SupabaseRealtimeService implements RealtimeService {
   SupabaseRealtimeService(this._client);
 
-  static const events = ['message', 'message_changed', 'receipt'];
+  // « invitation » (groupes) et « request » (demandes de connexion, lot 4.7) : listes à jour.
+  static const events = ['message', 'message_changed', 'receipt', 'invitation', 'request'];
   static const _retryDelays = [
     Duration(seconds: 2),
     Duration(seconds: 5),

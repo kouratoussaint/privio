@@ -5,6 +5,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../core/config/firebase_options.dart';
 
+/// Cible d'ouverture d'une notification de demande de connexion (pas une discussion).
+const kRequestsTarget = 'requests';
+
 /// Notifications (lot 4.1). Le contenu affiché est GÉNÉRIQUE et fixé par le serveur :
 /// « Nouveau message » — jamais de texte ni de nom. Le téléphone ne reçoit que
 /// l'identifiant de la discussion, pour l'ouvrir quand on touche la notification.
@@ -57,6 +60,8 @@ class FirebasePushService implements PushService {
   }
 
   static String? _conversationOf(RemoteMessage? m) {
+    // Demande de connexion (lot 4.7) : ouvrir l'écran des demandes.
+    if (m?.data['type'] == 'request') return kRequestsTarget;
     final id = m?.data['conversation_id'];
     return id is String && id.length == 36 ? id : null;
   }

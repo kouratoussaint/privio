@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Concurrence réelle (deux connexions simultanées) :
-#  1. A et B démarrent la même discussion au même instant → une seule discussion ;
+#  1. A et B s'envoient une demande de connexion au même instant (lot 4.7) → une seule
+#     discussion, ouverte par la demande croisée ;
 #  2. le même message (même identifiant client) envoyé deux fois en parallèle → un seul message.
 # Usage : DATABASE_URL=postgresql://... scripts/db/concurrency_messaging_test.sh
 set -euo pipefail
@@ -11,6 +12,7 @@ CID=33333333-3333-3333-3333-333333333333
 cleanup() {
   psql "$DB" -q >/dev/null <<SQL
 delete from public.conversations where direct_key = least('$A','$B') || ':' || greatest('$A','$B');
+delete from private.connection_requests where from_user in ('$A','$B') or to_user in ('$A','$B');
 delete from auth.users where id in ('$A','$B');
 SQL
 }
@@ -32,13 +34,16 @@ select pg_sleep(1);
 commit;
 SQL
 }
-as_user "$A" "$SA" "select public.start_direct_conversation('$B');" > /tmp/cc1 &
-as_user "$B" "$SB" "select public.start_direct_conversation('$A');" > /tmp/cc2 &
+as_user "$A" "$SA" "select state from public.send_connection_request('$B', null);" > /tmp/cc1 &
+as_user "$B" "$SB" "select state from public.send_connection_request('$A', null);" > /tmp/cc2 &
 wait
-C1=$(grep -E '^[0-9a-f-]{36}$' /tmp/cc1 || true); C2=$(grep -E '^[0-9a-f-]{36}$' /tmp/cc2 || true)
+S=$(cat /tmp/cc1 /tmp/cc2 | grep -E '^(requested|connected)$' | sort | tr '\n' ' ')
 N=$(psql "$DB" -qAt -c "select count(*) from public.conversations where direct_key = least('$A','$B') || ':' || greatest('$A','$B');")
-echo "discussion : A=$C1 B=$C2 en base=$N"
-[ -n "$C1" ] && [ "$C1" = "$C2" ] && [ "$N" = 1 ] || { echo "ÉCHEC : discussions en double"; cat /tmp/cc1 /tmp/cc2; exit 1; }
+P=$(psql "$DB" -qAt -c "select count(*) from private.connection_requests where status = 'pending' and from_user in ('$A','$B');")
+C1=$(psql "$DB" -qAt -c "select id from public.conversations where direct_key = least('$A','$B') || ':' || greatest('$A','$B');")
+echo "demandes croisées : réponses=[$S] discussions=$N en attente=$P"
+[ "$S" = "connected requested " ] && [ "$N" = 1 ] && [ "$P" = 0 ] \
+  || { echo "ÉCHEC : demandes croisées"; cat /tmp/cc1 /tmp/cc2; exit 1; }
 
 as_user "$A" "$SA" "select id from public.send_message('$C1', '$CID', 'parallèle');" > /tmp/cs1 &
 as_user "$A" "$SA" "select id from public.send_message('$C1', '$CID', 'parallèle');" > /tmp/cs2 &

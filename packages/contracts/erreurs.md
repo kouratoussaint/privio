@@ -101,3 +101,13 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | `CLEAR_REQUEST_NOT_FOUND` | `respond_clear_request` | aucune demande de l'autre personne en cours (annulée, refusée, échue) |
 | `NOT_ADMIN` | `clear_conversation` (groupe, `everyone`) | réservé au propriétaire et aux administrateurs |
 
+
+### Demandes de connexion (lot 4.7)
+| Code | Origine | Signification |
+|---|---|---|
+| `CONNECTION_REQUIRED` | `start_direct_conversation` | aucune discussion existante : il faut d'abord une demande acceptée |
+| `CONNECTION_NOT_ALLOWED` | `send_connection_request` | la personne n'accepte pas de demandes, ou un blocage existe (même réponse, le blocage n'est pas révélé) |
+| `CONNECTION_RETRY_LATER` | `send_connection_request` | refus récent : attendre `connection_request_retry_minutes` (5 min) |
+| `CONNECTION_DAILY_LIMIT` | `send_connection_request` | déjà `connection_request_daily_per_person` (3) demandes vers cette personne aujourd'hui |
+| `CONNECTION_REQUEST_NOT_FOUND` | `respond_connection_request`, `cancel_connection_request` | demande inconnue, déjà traitée, annulée ou expirée |
+| `CONNECTION_NOTE_TOO_LONG` | `send_connection_request` | mot de plus de `connection_note_max_chars` (140) caractères |

@@ -104,6 +104,12 @@ void main() {
     expect(deps.messaging.privacy.readReceipts, isFalse);
     expect(deps.messaging.privacy.typing, isFalse);
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('privacy.ttl')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('privacy.ttl')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('privacy.ttl.3600')));

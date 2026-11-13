@@ -612,3 +612,114 @@ class UserPresence {
     lastSeenAt: j['last_seen_at'] == null ? null : DateTime.parse(j['last_seen_at'] as String),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Demandes de connexion (lot 4.7)
+// ---------------------------------------------------------------------------
+
+/// Relation avec une personne trouvée : décide du bouton de la recherche.
+enum LinkState {
+  /// Discussion existante (ou demandes désactivées) : on écrit.
+  connected,
+
+  /// Ma demande attend sa réponse.
+  outgoing,
+
+  /// Sa demande attend ma réponse.
+  incoming,
+
+  /// Refus récent : nouvel essai à [ConnectionStatus.retryAt].
+  refused,
+
+  /// Aucune relation : on peut envoyer une demande.
+  none,
+}
+
+class ConnectionStatus {
+  const ConnectionStatus({required this.state, this.conversationId, this.requestId, this.retryAt});
+
+  final LinkState state;
+  final String? conversationId;
+  final String? requestId;
+  final DateTime? retryAt;
+
+  factory ConnectionStatus.fromJson(Map<String, dynamic> j) => ConnectionStatus(
+    state: LinkState.values.firstWhere((s) => s.name == j['state'], orElse: () => LinkState.none),
+    conversationId: j['conversation_id'] as String?,
+    requestId: j['request_id'] as String?,
+    retryAt: j['retry_at'] == null ? null : DateTime.parse(j['retry_at'] as String),
+  );
+}
+
+/// Résultat d'un envoi : discussion ouverte (déjà connectés, demande croisée) ou demande.
+class ConnectionSendResult {
+  const ConnectionSendResult({required this.connected, this.conversationId, this.requestId});
+
+  final bool connected;
+  final String? conversationId;
+  final String? requestId;
+
+  factory ConnectionSendResult.fromJson(Map<String, dynamic> j) => ConnectionSendResult(
+    connected: j['state'] == 'connected',
+    conversationId: j['conversation_id'] as String?,
+    requestId: j['request_id'] as String?,
+  );
+}
+
+enum ConnectionAction { accept, refuse, block }
+
+class ConnectionRequest {
+  const ConnectionRequest({
+    required this.id,
+    required this.incoming,
+    required this.userId,
+    required this.handle,
+    required this.displayName,
+    required this.status,
+    required this.createdAt,
+    required this.expiresAt,
+    this.avatarPath,
+    this.note,
+    this.answeredAt,
+    this.retryAt,
+  });
+
+  final String id;
+
+  /// Reçue (true) ou envoyée (false).
+  final bool incoming;
+
+  /// L'autre personne.
+  final String userId;
+  final String handle;
+  final String displayName;
+  final String? avatarPath;
+  final String? note;
+
+  /// pending · refused · expired (accepted et cancelled ne sont pas listées).
+  final String status;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+  final DateTime? answeredAt;
+  final DateTime? retryAt;
+
+  bool get pending => status == 'pending';
+
+  factory ConnectionRequest.fromJson(Map<String, dynamic> j) {
+    DateTime? at(String k) => j[k] == null ? null : DateTime.parse(j[k] as String);
+    return ConnectionRequest(
+      id: j['id'] as String,
+      incoming: j['direction'] == 'incoming',
+      userId: j['user_id'] as String,
+      handle: j['handle'] as String,
+      displayName: j['display_name'] as String,
+      avatarPath: j['avatar_path'] as String?,
+      note: j['note'] as String?,
+      status: j['status'] as String,
+      createdAt: at('created_at')!,
+      expiresAt: at('expires_at')!,
+      answeredAt: at('answered_at'),
+      retryAt: at('retry_at'),
+    );
+  }
+}

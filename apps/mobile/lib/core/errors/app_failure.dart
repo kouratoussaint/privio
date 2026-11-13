@@ -52,6 +52,12 @@ enum FailureCode {
   clearScopeInvalid,
   clearNotAllowed,
   clearRequestNotFound,
+  connectionRequired,
+  connectionNotAllowed,
+  connectionRetryLater,
+  connectionDailyLimit,
+  connectionRequestNotFound,
+  connectionNoteTooLong,
   privacySettingInvalid,
   otpInvalidOrExpired,
   smsRateLimited,
@@ -121,6 +127,14 @@ class AppFailure implements Exception {
           'Vous pouvez vider la discussion chez vous.',
     FailureCode.clearRequestNotFound =>
       'Cette demande n’existe plus (annulée, refusée ou expirée).',
+    FailureCode.connectionRequired => 'Envoyez d’abord une demande de connexion à cette personne.',
+    FailureCode.connectionNotAllowed => 'Cette personne n’accepte pas de demandes.',
+    FailureCode.connectionRetryLater =>
+      'Votre demande a été refusée. Vous pourrez réessayer dans quelques minutes.',
+    FailureCode.connectionDailyLimit =>
+      'Vous avez déjà envoyé 3 demandes à cette personne aujourd’hui. Réessayez demain.',
+    FailureCode.connectionRequestNotFound => 'Cette demande n’est plus valable.',
+    FailureCode.connectionNoteTooLong => 'Votre mot est trop long (140 caractères au plus).',
     FailureCode.privacySettingInvalid => 'Réglage de confidentialité invalide.',
     FailureCode.otpInvalidOrExpired =>
       'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
@@ -185,6 +199,12 @@ const _serverCodes = <String, FailureCode>{
   'CLEAR_SCOPE_INVALID': FailureCode.clearScopeInvalid,
   'CLEAR_NOT_ALLOWED': FailureCode.clearNotAllowed,
   'CLEAR_REQUEST_NOT_FOUND': FailureCode.clearRequestNotFound,
+  'CONNECTION_REQUIRED': FailureCode.connectionRequired,
+  'CONNECTION_NOT_ALLOWED': FailureCode.connectionNotAllowed,
+  'CONNECTION_RETRY_LATER': FailureCode.connectionRetryLater,
+  'CONNECTION_DAILY_LIMIT': FailureCode.connectionDailyLimit,
+  'CONNECTION_REQUEST_NOT_FOUND': FailureCode.connectionRequestNotFound,
+  'CONNECTION_NOTE_TOO_LONG': FailureCode.connectionNoteTooLong,
   'PRIVACY_SETTING_INVALID': FailureCode.privacySettingInvalid,
 };
 

@@ -62,9 +62,16 @@ post /rest/v1/rpc/create_profile '{"p_handle":"smoke_peer","p_display_name":"Pai
 post /rest/v1/rpc/register_device '{"p_platform":"android","p_app_version":"ci"}' "$TB" >/dev/null
 
 PEER=$(post /rest/v1/rpc/find_user_by_handle '{"p_handle":"smoke_peer"}' "$T2" | json "d[0]['id']")
-CONV=$(post /rest/v1/rpc/start_direct_conversation "{\"p_other_user_id\":\"$PEER\"}" "$T2" | tr -d '"')
-echo "$CONV" | grep -qE '^[0-9a-f-]{36}$' && pass "discussion démarrée après recherche par identifiant" \
-  || fail "start_direct_conversation" "$CONV"
+# Lot 4.7 : premier contact par demande de connexion, acceptée par le destinataire.
+R=$(post /rest/v1/rpc/start_direct_conversation "{\"p_other_user_id\":\"$PEER\"}" "$T2")
+echo "$R" | grep -q 'CONNECTION_REQUIRED' && pass "pas d'écriture directe à un inconnu" \
+  || fail "écriture directe refusée" "$R"
+REQ=$(post /rest/v1/rpc/send_connection_request "{\"p_user_id\":\"$PEER\"}" "$T2" | json "d[0]['request_id']")
+echo "$REQ" | grep -qE '^[0-9a-f-]{36}$' && pass "demande de connexion envoyée" || fail "send_connection_request" "$REQ"
+CONV=$(post /rest/v1/rpc/respond_connection_request "{\"p_request_id\":\"$REQ\",\"p_action\":\"accept\"}" "$TB" \
+  | json "d[0]['conversation_id']")
+echo "$CONV" | grep -qE '^[0-9a-f-]{36}$' && pass "demande acceptée : discussion ouverte" \
+  || fail "respond_connection_request" "$CONV"
 
 R=$(post /rest/v1/rpc/send_message "{\"p_conversation_id\":\"$CONV\",\"p_client_msg_id\":\"44444444-4444-4444-4444-444444444444\",\"p_body\":\"Bonjour depuis la CI\"}" "$T2")
 MID=$(echo "$R" | json "d[0]['id']"); EXP=$(echo "$R" | json "d[0]['expires_at']")
@@ -84,4 +91,5 @@ python3 "$(dirname "$0")/photo_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_UR
 python3 "$(dirname "$0")/group_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/push_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
 python3 "$(dirname "$0")/privacy_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité : OK"
+python3 "$(dirname "$0")/connection_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion : OK"

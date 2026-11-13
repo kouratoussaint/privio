@@ -3,6 +3,9 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();
+-- Lot 4.7 : ce fichier ouvre des discussions directement (règles d'avant les demandes de
+-- connexion, testées dans 16_demandes_connexion).
+insert into private.policies (key, value) values ('connection_requests_required', 'false');
 
 insert into auth.users (id, phone, phone_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a1', '22670000001', now()),

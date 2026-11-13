@@ -793,6 +793,47 @@ final invitationsProvider = FutureProvider.autoDispose<List<GroupInvitation>>((r
   return ref.watch(messagingApiProvider).listInvitations();
 });
 
+/// Demandes de connexion (lot 4.7) : reçues en attente, envoyées (en attente, refusées,
+/// expirées). Mises à jour en temps réel, au retour dans l'app et après une coupure.
+final connectionRequestsProvider = FutureProvider.autoDispose<List<ConnectionRequest>>((ref) {
+  if (ref.watch(currentUserIdProvider) == null) return const [];
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    final e = next.value?.event;
+    if (e == 'request' || e == 'resume' || e == 'reconnected') ref.invalidateSelf();
+  });
+  return ref.watch(messagingApiProvider).listConnectionRequests();
+});
+
+/// Réglage « Qui peut m'envoyer une demande » (true : tout le monde).
+final acceptConnectionRequestsProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.watch(messagingApiProvider).getAcceptConnectionRequests(),
+);
+
+/// Nombre de demandes reçues en attente (encart et pastille de l'onglet Discussions).
+final incomingRequestCountProvider = Provider.autoDispose<int>(
+  (ref) =>
+      ref.watch(connectionRequestsProvider).value?.where((r) => r.incoming && r.pending).length ??
+      0,
+);
+
+/// Répondre à une demande ; renvoie la discussion ouverte (acceptation).
+Future<String?> respondToConnection(
+  WidgetRef ref,
+  String requestId,
+  ConnectionAction action,
+) async {
+  try {
+    return await ref.read(messagingApiProvider).respondConnectionRequest(requestId, action);
+  } on Object catch (e) {
+    throw toAppFailure(e);
+  } finally {
+    ref
+      ..invalidate(connectionRequestsProvider)
+      ..invalidate(conversationsProvider);
+    if (action == ConnectionAction.block) ref.invalidate(blockedUsersProvider);
+  }
+}
+
 /// Membres d'un groupe (et invitations en attente pour les administrateurs).
 final groupMembersProvider = FutureProvider.autoDispose.family<List<GroupMember>, String>((
   ref,

@@ -23,6 +23,7 @@ abstract final class Routes {
   static const appLockDisable = '/app-lock/disable';
   static const storage = '/storage';
   static const privacy = '/privacy';
+  static const requests = '/requests';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
   static String groupInvite(String conversationId) => '/chat/$conversationId/invite';

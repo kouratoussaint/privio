@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../data/services/push_service.dart' show kRequestsTarget;
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
@@ -69,7 +70,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ref.listen(openConversationRequestProvider, (_, id) {
       if (id == null) return;
       ref.read(openConversationRequestProvider.notifier).consume();
-      context.push(Routes.chat(id));
+      // Notification de demande de connexion (lot 4.7) : l'écran des demandes.
+      context.push(id == kRequestsTarget ? Routes.requests : Routes.chat(id));
     });
     final shell = widget.shell;
     final unread =
@@ -79,6 +81,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             ?.where((c) => !c.archived && c.unreadCount > 0)
             .length ??
         0;
+    // Lot 4.7 : les demandes de connexion reçues comptent dans la pastille Discussions.
+    final requests = ref.watch(incomingRequestCountProvider);
     final invitations = ref.watch(invitationsProvider).value?.length ?? 0;
     return PopScope(
       canPop: false,
@@ -95,7 +99,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               icon: Icons.chat_bubble_outline,
               selectedIcon: Icons.chat_bubble,
               label: 'Discussions',
-              badge: unread,
+              badge: unread + requests,
             ),
             PrivioNavItem(
               icon: Icons.groups_outlined,

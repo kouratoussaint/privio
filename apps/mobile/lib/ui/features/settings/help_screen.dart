@@ -51,6 +51,14 @@ class HelpScreen extends ConsumerWidget {
           'Pour signaler un message précis, faites un appui long sur ce message.',
     ),
     (
+      'Comment écrire à quelqu’un pour la première fois\u202F?',
+      'Touchez le crayon, cherchez son identifiant (ou son numéro), puis «\u202FEnvoyer une demande\u202F», '
+          'avec un petit mot si vous voulez. Dès qu’elle accepte, la discussion s’ouvre chez vous '
+          'deux. Sans réponse, la demande expire après 24 h\u202F; après un refus, attendez quelques '
+          'minutes avant de redemander (3 fois par jour au plus). Paramètres, Confidentialité\u202F: '
+          'vous pouvez refuser toute demande.',
+    ),
+    (
       'Pourquoi ne puis-je pas trouver quelqu’un\u202F?',
       'La recherche demande l’identifiant exact (ex. @awa_s). Par numéro, on ne trouve que '
           'les personnes qui ont activé «\u202FMe trouver par mon numéro\u202F».',

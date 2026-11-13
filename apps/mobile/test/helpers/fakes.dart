@@ -585,6 +585,143 @@ class FakeMessagingApi implements MessagingApi {
     return id;
   }
 
+  // --- Demandes de connexion (lot 4.7) ------------------------------------------
+  /// Comme le serveur avant le lot 4.7 si false (tests antérieurs : écriture directe).
+  bool requestsRequired = false;
+
+  /// Réglage de Bob : accepte-t-il les demandes ?
+  bool peerAcceptsRequests = true;
+  bool acceptRequests = true;
+  final List<ConnectionRequest> requests = [];
+  final List<(String, ConnectionAction)> responses = [];
+  DateTime? retryAt;
+  int _reqSeq = 0;
+
+  bool _connected(String userId) => userId == bob.id && conversations.containsKey('conv-bob');
+
+  /// Simule une demande reçue de Bob.
+  ConnectionRequest receiveConnectionRequest({String? note}) {
+    final now = DateTime.now();
+    final r = ConnectionRequest(
+      id: 'req-${_reqSeq++}',
+      incoming: true,
+      userId: bob.id,
+      handle: bob.handle,
+      displayName: bob.displayName,
+      note: note,
+      status: 'pending',
+      createdAt: now,
+      expiresAt: now.add(const Duration(hours: 24)),
+    );
+    requests.add(r);
+    return r;
+  }
+
+  @override
+  Future<ConnectionStatus> connectionStatus(String userId) async {
+    _net();
+    if (!requestsRequired || _connected(userId)) {
+      return ConnectionStatus(
+        state: LinkState.connected,
+        conversationId: _connected(userId) ? 'conv-bob' : null,
+      );
+    }
+    for (final r in requests.where((r) => r.userId == userId && r.pending)) {
+      return ConnectionStatus(
+        state: r.incoming ? LinkState.incoming : LinkState.outgoing,
+        requestId: r.id,
+      );
+    }
+    if (retryAt != null && retryAt!.isAfter(DateTime.now())) {
+      return ConnectionStatus(state: LinkState.refused, retryAt: retryAt);
+    }
+    return const ConnectionStatus(state: LinkState.none);
+  }
+
+  @override
+  Future<ConnectionSendResult> sendConnectionRequest(String userId, {String? note}) async {
+    _net();
+    if (!requestsRequired || _connected(userId)) {
+      return ConnectionSendResult(
+        connected: true,
+        conversationId: await startDirectConversation(userId),
+      );
+    }
+    if (!peerAcceptsRequests || blocked.contains(userId)) {
+      throw const AppFailure(FailureCode.connectionNotAllowed);
+    }
+    final incoming = requests.where((r) => r.userId == userId && r.incoming && r.pending);
+    if (incoming.isNotEmpty) {
+      final id = await respondConnectionRequest(incoming.first.id, ConnectionAction.accept);
+      return ConnectionSendResult(connected: true, conversationId: id);
+    }
+    final now = DateTime.now();
+    final r = ConnectionRequest(
+      id: 'req-${_reqSeq++}',
+      incoming: false,
+      userId: userId,
+      handle: bob.handle,
+      displayName: bob.displayName,
+      note: note,
+      status: 'pending',
+      createdAt: now,
+      expiresAt: now.add(const Duration(hours: 24)),
+    );
+    requests.add(r);
+    return ConnectionSendResult(connected: false, requestId: r.id);
+  }
+
+  @override
+  Future<String?> respondConnectionRequest(String requestId, ConnectionAction action) async {
+    _net();
+    final r = requests.where((r) => r.id == requestId && r.pending).firstOrNull;
+    if (r == null) throw const AppFailure(FailureCode.connectionRequestNotFound);
+    requests.remove(r);
+    responses.add((requestId, action));
+    switch (action) {
+      case ConnectionAction.accept:
+        final id = await startDirectConversation(r.userId);
+        if (r.note != null) {
+          final now = DateTime.now();
+          (messages[id] ??= []).add(
+            ChatMessage(
+              id: 'srv-${_seq++}',
+              kind: 'text',
+              senderId: r.incoming ? r.userId : me,
+              body: r.note,
+              sentAt: now,
+              expiresAt: now.add(const Duration(minutes: 5)),
+              updatedAt: now,
+            ),
+          );
+        }
+        return id;
+      case ConnectionAction.block:
+        blocked.add(r.userId);
+        return null;
+      case ConnectionAction.refuse:
+        return null;
+    }
+  }
+
+  @override
+  Future<void> cancelConnectionRequest(String requestId) async {
+    _net();
+    requests.removeWhere((r) => r.id == requestId);
+  }
+
+  @override
+  Future<List<ConnectionRequest>> listConnectionRequests() async => [...requests];
+
+  @override
+  Future<bool> getAcceptConnectionRequests() async => acceptRequests;
+
+  @override
+  Future<void> setAcceptConnectionRequests(bool accept) async {
+    _net();
+    acceptRequests = accept;
+  }
+
   @override
   Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50}) async {
     _net();

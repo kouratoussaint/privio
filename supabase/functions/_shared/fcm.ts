@@ -61,11 +61,44 @@ async function accessToken(sa: ServiceAccount): Promise<string> {
 export type SendResult = "sent" | "invalid_token" | "failed";
 
 /** Notification GÉNÉRIQUE : aucun nom, aucun contenu ; masquée sur l'écran verrouillé. */
-export async function sendGeneric(
+export function sendGeneric(
   sa: ServiceAccount,
   token: string,
   conversationId: string,
   isGroup: boolean,
+): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: isGroup ? "Nouveau message dans un groupe" : "Nouveau message",
+    data: { type: "message", conversation_id: conversationId },
+    // Une seule notification par discussion (les suivantes la remplacent).
+    tag: conversationId,
+  });
+}
+
+/** Textes (sans nom ni contenu) des notifications de demande de connexion (lot 4.7). */
+export const REQUEST_BODIES: Record<string, string> = {
+  received: "Nouvelle demande de connexion",
+  accepted: "Votre demande de connexion a été acceptée",
+  refused: "Réponse à votre demande de connexion",
+};
+
+/** Demande de connexion : reçue (destinataire), acceptée ou refusée (expéditeur). */
+export function sendRequestEvent(
+  sa: ServiceAccount,
+  token: string,
+  event: string,
+): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: REQUEST_BODIES[event] ?? "Privio",
+    data: { type: "request", event },
+    tag: "privio-requests",
+  });
+}
+
+async function sendNotification(
+  sa: ServiceAccount,
+  token: string,
+  n: { body: string; data: Record<string, string>; tag: string },
 ): Promise<SendResult> {
   const res = await fetch(
     `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
@@ -78,11 +111,8 @@ export async function sendGeneric(
       body: JSON.stringify({
         message: {
           token,
-          notification: {
-            title: "Privio",
-            body: isGroup ? "Nouveau message dans un groupe" : "Nouveau message",
-          },
-          data: { type: "message", conversation_id: conversationId },
+          notification: { title: "Privio", body: n.body },
+          data: n.data,
           android: {
             priority: "HIGH",
             ttl: "86400s",
@@ -90,8 +120,7 @@ export async function sendGeneric(
               channel_id: "privio_messages",
               icon: "ic_stat_privio",
               color: "#5B1FB8",
-              // Une seule notification par discussion (les suivantes la remplacent).
-              tag: conversationId,
+              tag: n.tag,
               visibility: "PRIVATE",
             },
           },

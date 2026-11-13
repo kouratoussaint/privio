@@ -12,6 +12,17 @@ abstract interface class MessagingApi {
   Future<FoundUser?> findByHandle(String handle);
   Future<FoundUser?> findByPhone(String phoneE164);
   Future<String> startDirectConversation(String otherUserId);
+
+  // Demandes de connexion (lot 4.7) : premier contact par demande, acceptée ou refusée.
+  Future<ConnectionStatus> connectionStatus(String userId);
+  Future<ConnectionSendResult> sendConnectionRequest(String userId, {String? note});
+
+  /// Renvoie l'identifiant de la discussion ouverte (acceptation), sinon null.
+  Future<String?> respondConnectionRequest(String requestId, ConnectionAction action);
+  Future<void> cancelConnectionRequest(String requestId);
+  Future<List<ConnectionRequest>> listConnectionRequests();
+  Future<bool> getAcceptConnectionRequests();
+  Future<void> setAcceptConnectionRequests(bool accept);
   Future<List<ChatMessage>> getMessages(String conversationId, {int limit = 50});
   Future<ChatMessage> sendMessage({
     required String conversationId,
@@ -171,6 +182,42 @@ class SupabaseMessagingApi implements MessagingApi {
       'start_direct_conversation',
       params: {'p_other_user_id': otherUserId},
     ) as String,
+  );
+
+  @override
+  Future<ConnectionStatus> connectionStatus(String userId) async =>
+      ConnectionStatus.fromJson((await _rows('connection_status', {'p_user_id': userId})).first);
+
+  @override
+  Future<ConnectionSendResult> sendConnectionRequest(String userId, {String? note}) async =>
+      ConnectionSendResult.fromJson(
+        (await _rows('send_connection_request', {'p_user_id': userId, 'p_note': note})).first,
+      );
+
+  @override
+  Future<String?> respondConnectionRequest(String requestId, ConnectionAction action) async =>
+      (await _rows('respond_connection_request', {
+            'p_request_id': requestId,
+            'p_action': action.name,
+          })).first['conversation_id']
+          as String?;
+
+  @override
+  Future<void> cancelConnectionRequest(String requestId) => _guard(
+    () => _client.rpc<dynamic>('cancel_connection_request', params: {'p_request_id': requestId}),
+  );
+
+  @override
+  Future<List<ConnectionRequest>> listConnectionRequests() async =>
+      (await _rows('list_connection_requests')).map(ConnectionRequest.fromJson).toList();
+
+  @override
+  Future<bool> getAcceptConnectionRequests() async =>
+      (await _rows('get_connection_settings')).first['accept_requests'] as bool? ?? true;
+
+  @override
+  Future<void> setAcceptConnectionRequests(bool accept) => _guard(
+    () => _client.rpc<dynamic>('set_connection_settings', params: {'p_accept_requests': accept}),
   );
 
   @override

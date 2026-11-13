@@ -188,10 +188,11 @@ class PrivacyScreen extends ConsumerWidget {
             subtitle: Text(visibilityLabel(s.groupInvites)),
             onTap: () => visibility('invites'),
           ),
+          const _ConnectionRequestsTile(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
             child: Text(
-              '«\u202FMes contacts\u202F»\u202F: les personnes avec qui vous avez une discussion à deux. '
+              '«\u202FMes contacts\u202F»\u202F: les personnes avec qui vous êtes connecté (discussion à deux). '
               'Une personne bloquée ne voit jamais rien.',
               style: muted,
             ),
@@ -258,6 +259,41 @@ class PrivacyScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// « Qui peut m'envoyer une demande » (lot 4.7) : tout le monde ou personne.
+class _ConnectionRequestsTile extends ConsumerWidget {
+  const _ConnectionRequestsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = PrivioPalette.of(context);
+    final accept = ref.watch(acceptConnectionRequestsProvider);
+    final value = accept.value ?? true;
+    return SwitchListTile(
+      key: const Key('privacy.requests'),
+      value: value,
+      secondary: Icon(Icons.person_add_alt_1_outlined, color: p.accentText),
+      title: const Text('Demandes de connexion'),
+      subtitle: Text(
+        value
+            ? 'Tout le monde peut vous envoyer une demande.'
+            : 'Personne ne peut vous envoyer de demande.',
+      ),
+      onChanged: accept.isLoading
+          ? null
+          : (v) async {
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref.read(messagingApiProvider).setAcceptConnectionRequests(v);
+              } on Object catch (e) {
+                messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+              } finally {
+                ref.invalidate(acceptConnectionRequestsProvider);
+              }
+            },
     );
   }
 }

@@ -114,3 +114,16 @@ Demandés par le commanditaire après test sur téléphone :
   « Message supprimé »). Deux choix : pour nous deux **avec l'accord de l'autre**, ou
   seulement chez moi. Dans un groupe, les **administrateurs** vident pour tous.
 
+## Amendement 8 — Demande de connexion avant le premier message (13 novembre 2026)
+- On ne peut plus écrire directement à une personne avec qui l'on n'a pas encore de
+  discussion : le premier contact est une **demande de connexion** (petit mot facultatif de
+  140 caractères). La personne **accepte** (la discussion s'ouvre chez les deux), **refuse**
+  (l'expéditeur est **prévenu**) ou **bloque**. Demandes croisées : connexion immédiate.
+- Le mot devient le premier message après acceptation et **s'efface 5 minutes plus tard** ;
+  en cas de refus ou d'expiration, il est effacé aussitôt.
+- Une demande sans réponse **expire après 24 h** ; après un refus, **5 minutes** d'attente ;
+  **3 demandes au plus vers une même personne par jour** (décision A). Valeurs administrables.
+- Réglage personnel « Qui peut m'envoyer une demande » : tout le monde (défaut) / personne.
+- Les discussions existantes restent ouvertes ; écrire en privé à un membre d'un groupe
+  passe aussi par une demande. Détails : ADR-014.
+

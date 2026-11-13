@@ -16,6 +16,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/swipe_actions.dart';
+import '../conversations/connection_requests_screen.dart' show ConnectionRequestsBanner;
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -165,6 +166,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
           ),
           const SizedBox(height: PrivioSpacing.s),
           if (offline) const OfflineBanner(),
+          // Lot 4.7 : demandes de connexion reçues (ou refus récents) en tête de liste.
+          const ConnectionRequestsBanner(),
           if (archivedCount > 0)
             ListTile(
               key: const Key('discussions.archived'),

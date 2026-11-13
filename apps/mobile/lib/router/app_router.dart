@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../state/session_controller.dart';
 import '../ui/features/auth/otp_screen.dart';
 import '../ui/features/conversations/chat_screen.dart';
+import '../ui/features/conversations/connection_requests_screen.dart';
 import '../ui/features/conversations/new_conversation_screen.dart';
 import '../ui/features/auth/phone_screen.dart';
 import '../ui/features/auth/welcome_screen.dart';
@@ -54,6 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.newGroup, builder: (_, _) => const NewGroupScreen()),
       GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
       GoRoute(path: Routes.archived, builder: (_, _) => const ArchivedScreen()),
+      GoRoute(path: Routes.requests, builder: (_, _) => const ConnectionRequestsScreen()),
       GoRoute(path: Routes.help, builder: (_, _) => const HelpScreen()),
       GoRoute(path: Routes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: Routes.appLock, builder: (_, _) => const AppLockSettingsScreen()),
