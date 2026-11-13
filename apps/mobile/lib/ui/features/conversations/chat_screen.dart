@@ -921,6 +921,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   message: 'Vous ne faites plus partie de ce groupe.',
                 ),
               )
+            else if (summary?.isClosed ?? false)
+              const Padding(
+                padding: EdgeInsets.all(PrivioSpacing.l),
+                child: NoticeBanner(
+                  key: Key('chat.group_closed'),
+                  message: 'Ce groupe a été fermé par Privio. Plus personne ne peut y écrire.',
+                ),
+              )
             else if (isGroup && !canPost)
               const Padding(
                 padding: EdgeInsets.all(PrivioSpacing.l),

@@ -142,3 +142,19 @@ Demandés par le commanditaire après test sur téléphone :
 - Statistiques sur 30 jours, nombres anonymes seulement ; comptes actifs relevés chaque soir.
 - Réglages propres à un groupe ou à un compte : reportés. Un seul administrateur en v1.
   Détails : ADR-016.
+
+## Amendement 10 — Modération (13 novembre 2026, lot 5.3)
+- Décisions : classer sans suite, avertir, suspendre (24 h, 7 jours, 30 jours, sans limite),
+  réactiver, supprimer le message signalé, fermer un groupe signalé. Motif interne obligatoire,
+  jamais montré à la personne ; elle voit le motif du signalement (spam, harcèlement…).
+- La console affiche l'@identifiant de la personne qui signale et de la personne signalée,
+  jamais leur numéro. La copie jointe (texte, photo, vocal) s'affiche à la demande ; chaque
+  lecture est journalisée.
+- Une contestation par sanction. Le compte de l'administration ne peut pas être sanctionné.
+- Notification sans contenu à l'administration pour chaque signalement, demande d'assistance
+  et contestation.
+- Compte suspendu : l'application affiche l'écran « Compte suspendu » (motif, fin,
+  contestation) au lieu de déconnecter ; le serveur refuse tout le reste.
+- Sanctions gardées 1 an (sauf suspension sans limite encore active). Lot 5.4 : comptes et
+  réponses aux demandes d'assistance. Détails : ADR-017.
+

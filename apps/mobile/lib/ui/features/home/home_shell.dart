@@ -7,7 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
-import '../../../data/services/push_service.dart' show kGroupsTarget, kRequestsTarget;
+import '../../../data/services/push_service.dart'
+    show kConsoleTarget, kGroupsTarget, kRequestsTarget;
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
@@ -77,7 +78,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         context.go(Routes.groups);
         return;
       }
-      context.push(id == kRequestsTarget ? Routes.requests : Routes.chat(id));
+      context.push(switch (id) {
+        kRequestsTarget => Routes.requests,
+        kConsoleTarget => Routes.console,
+        _ => Routes.chat(id),
+      });
     });
     final shell = widget.shell;
     final unread =

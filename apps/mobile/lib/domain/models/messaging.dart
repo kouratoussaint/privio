@@ -121,7 +121,10 @@ class ConversationSummary {
   bool get isGroup => kind == 'group';
   bool get isOwner => myRole == 'owner';
   bool get isAdmin => myRole == 'owner' || myRole == 'admin';
-  bool get canPost => isGroup ? (posting == 'all' || isAdmin) : !blocked;
+
+  /// Groupe fermé par Privio (lot 5.3) : plus personne n'y écrit.
+  bool get isClosed => isGroup && posting == 'closed';
+  bool get canPost => isGroup ? (!isClosed && (posting == 'all' || isAdmin)) : !blocked;
   bool get canEditInfo => isGroup ? (infoEditing == 'all' || isAdmin) : !blocked;
   bool isMuted(DateTime now) => mutedUntil != null && mutedUntil!.isAfter(now);
 
@@ -526,6 +529,7 @@ String? groupEventText(ChatMessage m, {required String? me}) {
       v == 'admins'
           ? did('réservé l’envoi de messages aux administrateurs')
           : did('permis à tous les membres d’écrire'),
+    'closed' => 'Ce groupe a été fermé par Privio',
     'info_editing' =>
       v == 'admins'
           ? did('réservé la modification du groupe aux administrateurs')

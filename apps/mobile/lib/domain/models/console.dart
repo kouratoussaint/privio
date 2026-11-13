@@ -392,11 +392,15 @@ class JournalEntry {
     this.label,
     this.before,
     this.after,
+    this.detail = const {},
   });
 
   final int id;
 
-  /// dashboard, stats, policy.
+  /// Détail brut (modération : action, @identifiant, durée…).
+  final Map<String, dynamic> detail;
+
+  /// dashboard, stats, policy, moderation, evidence, lift, appeal.
   final String action;
   final DateTime at;
   final String? key;
@@ -412,5 +416,6 @@ class JournalEntry {
     label: j['label'] as String?,
     before: _plain(j['before']),
     after: _plain(j['after']),
+    detail: j['detail'] is Map ? Map<String, dynamic>.from(j['detail'] as Map) : const {},
   );
 }

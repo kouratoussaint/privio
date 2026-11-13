@@ -106,6 +106,21 @@ export function sendInvitation(sa: ServiceAccount, token: string): Promise<SendR
   });
 }
 
+/** Administration (lot 5.3) : aucun nom, aucun contenu ; l'appui ouvre la console. */
+export const ADMIN_BODIES: Record<string, string> = {
+  report: "Nouveau signalement à traiter",
+  support: "Nouvelle demande d’assistance",
+  appeal: "Nouvelle contestation à examiner",
+};
+
+export function sendAdminEvent(sa: ServiceAccount, token: string, event: string): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: ADMIN_BODIES[event] ?? "Privio",
+    data: { type: "console", event },
+    tag: "privio-console",
+  });
+}
+
 async function sendNotification(
   sa: ServiceAccount,
   token: string,

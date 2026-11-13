@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
 import '../../domain/models/account.dart';
+import '../../domain/models/moderation.dart';
 
 /// Accès au compte via les RPC sécurisées (aucun accès direct aux tables privées).
 abstract interface class AccountApi {
@@ -22,6 +23,11 @@ abstract interface class AccountApi {
   /// chemin. L'ancienne photo est effacée par le serveur.
   Future<String> setAvatar(Uint8List jpeg);
   Future<void> removeAvatar();
+
+  /// Lot 5.3 : suspension ou avertissement en cours pour ce compte.
+  Future<ModerationStatus> moderationStatus();
+  Future<void> submitAppeal(String sanctionId, String text);
+  Future<void> acknowledgeWarning(String sanctionId);
 }
 
 class SupabaseAccountApi implements AccountApi {
@@ -89,4 +95,17 @@ class SupabaseAccountApi implements AccountApi {
 
   @override
   Future<void> removeAvatar() async => _rpc('remove_avatar');
+
+  @override
+  Future<ModerationStatus> moderationStatus() async => ModerationStatus.fromJson(
+    Map<String, dynamic>.from(await _rpc('my_moderation_status') as Map),
+  );
+
+  @override
+  Future<void> submitAppeal(String sanctionId, String text) =>
+      _rpc('submit_appeal', {'p_sanction_id': sanctionId, 'p_text': text});
+
+  @override
+  Future<void> acknowledgeWarning(String sanctionId) =>
+      _rpc('acknowledge_warning', {'p_sanction_id': sanctionId});
 }

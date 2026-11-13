@@ -119,3 +119,15 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | `POLICY_LOCKED` | `console_set_policy` (lot 5.2) | réglage fixé (invariant de sécurité) ou fonctionnalité non développée |
 | `POLICY_NOT_FOUND` | `console_set_policy` (lot 5.2) | réglage inconnu |
 | `POLICY_TYPE_INVALID` / `POLICY_OUT_OF_BOUNDS` / `FEATURE_NOT_IMPLEMENTED` | `console_set_policy` | mêmes refus que la validation des politiques (type, bornes, fonctionnalité) |
+
+### Modération (lot 5.3)
+| Code | Origine | Signification |
+|---|---|---|
+| `ACCOUNT_SUSPENDED` | toutes les RPC (sauf compte, appareil, notifications, situation, contestation, suppression du compte) | compte suspendu |
+| `GROUP_CLOSED` | envoi, invitation, réglage d'écriture | groupe fermé par Privio |
+| `MODERATION_NOTE_REQUIRED` | décisions de la console | motif interne absent (3 à 500 caractères) |
+| `MODERATION_INVALID` | `console_moderate`, `console_reports` | décision qui ne s'applique pas au dossier (plusieurs cibles, durée hors choix…) |
+| `REPORT_NOT_FOUND` | console | signalement déjà traité ou sans copie |
+| `ADMIN_PROTECTED` | `console_moderate` | le compte de l'administration ne peut pas être sanctionné |
+| `APPEAL_INVALID` / `APPEAL_NOT_ALLOWED` | `submit_appeal` | texte de 3 à 500 caractères ; une seule contestation par sanction |
+| `APPEAL_NOT_FOUND` | `console_answer_appeal` | contestation déjà examinée |

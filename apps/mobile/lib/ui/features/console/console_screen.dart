@@ -15,6 +15,7 @@ import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
 import 'console_journal_tab.dart';
 import 'console_policies_tab.dart';
+import 'console_reports_tab.dart';
 import 'console_stats_tab.dart';
 
 /// Console d'administration (lot 5.1, amendement 6). Réservée au compte administrateur :
@@ -57,6 +58,8 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
   void _close({bool idle = false}) {
     _idle?.cancel();
     if (!_verified || !mounted) return;
+    // Dialogues et feuilles ouverts au-dessus de la console : refermés aussi.
+    Navigator.of(context).popUntil((r) => r is! PopupRoute);
     setState(() {
       _verified = false;
       _message = idle ? 'Console refermée après 5 min sans action.' : null;
@@ -124,7 +127,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
               onPressed: _close,
             ),
         ],
-        // Lot 5.2 : quatre onglets une fois la console ouverte.
+        // Lots 5.2 et 5.3 : cinq onglets une fois la console ouverte.
         bottom: open
             ? TabBar(
                 key: const Key('console.tabs'),
@@ -137,6 +140,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
                 dividerColor: Colors.transparent,
                 tabs: const [
                   Tab(key: Key('console.tab.dashboard'), text: 'Tableau de bord'),
+                  Tab(key: Key('console.tab.reports'), text: 'Signalements'),
                   Tab(key: Key('console.tab.policies'), text: 'Réglages'),
                   Tab(key: Key('console.tab.stats'), text: 'Statistiques'),
                   Tab(key: Key('console.tab.journal'), text: 'Journal'),
@@ -150,7 +154,13 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
         (_, true) => Listener(
           onPointerDown: (_) => _touch(),
           child: const TabBarView(
-            children: [_Dashboard(), ConsolePoliciesTab(), ConsoleStatsTab(), ConsoleJournalTab()],
+            children: [
+              _Dashboard(),
+              ConsoleReportsTab(),
+              ConsolePoliciesTab(),
+              ConsoleStatsTab(),
+              ConsoleJournalTab(),
+            ],
           ),
         ),
         (final l?, false) => Center(
@@ -176,7 +186,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
         ),
       },
     );
-    return open ? DefaultTabController(length: 4, child: scaffold) : scaffold;
+    return open ? DefaultTabController(length: 5, child: scaffold) : scaffold;
   }
 }
 

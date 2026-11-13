@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
 import '../../domain/models/console.dart';
+import '../../domain/models/moderation.dart';
 
 /// Console d'administration (lot 5.1). Le serveur vérifie le droit d'accès à CHAQUE appel ;
 /// l'application ne fait qu'afficher ou masquer l'entrée.
@@ -23,6 +24,18 @@ abstract interface class AdminApi {
   Future<ConsoleStats> stats();
 
   Future<List<JournalEntry>> journal();
+
+  // Lot 5.3 : modération
+  Future<List<ModerationReport>> reports(String status);
+  Future<void> takeReports(List<String> ids);
+  Future<ReportEvidence> evidence(String reportId);
+
+  /// dismiss, warn, suspend (days : 1, 7, 30 ou null = sans limite), delete_message, close_group.
+  Future<void> moderate(List<String> ids, String action, String note, {int? days});
+  Future<void> liftSuspension(String userId, String note);
+  Future<List<Sanction>> sanctions(String userId);
+  Future<List<Sanction>> appeals();
+  Future<void> answerAppeal(String sanctionId, {required bool lift, required String note});
 }
 
 class SupabaseAdminApi implements AdminApi {
@@ -77,6 +90,57 @@ class SupabaseAdminApi implements AdminApi {
   @override
   Future<List<JournalEntry>> journal() async =>
       (await _rows('console_journal', {'p_limit': 200})).map(JournalEntry.fromJson).toList();
+
+  @override
+  Future<List<ModerationReport>> reports(String status) async => (await _rows('console_reports', {
+    'p_status': status,
+  })).map(ModerationReport.fromJson).toList();
+
+  @override
+  Future<void> takeReports(List<String> ids) =>
+      _guard(() => _client.rpc<dynamic>('console_take_reports', params: {'p_ids': ids}));
+
+  @override
+  Future<ReportEvidence> evidence(String reportId) => _guard(() async {
+    final res = await _client.rpc<dynamic>(
+      'console_report_evidence',
+      params: {'p_report_id': reportId},
+    );
+    return ReportEvidence.fromJson(Map<String, dynamic>.from(res as Map));
+  });
+
+  @override
+  Future<void> moderate(List<String> ids, String action, String note, {int? days}) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_moderate',
+      params: {'p_report_ids': ids, 'p_action': action, 'p_note': note, 'p_days': days},
+    ),
+  );
+
+  @override
+  Future<void> liftSuspension(String userId, String note) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_lift_suspension',
+      params: {'p_user_id': userId, 'p_note': note},
+    ),
+  );
+
+  @override
+  Future<List<Sanction>> sanctions(String userId) async =>
+      (await _rows('console_sanctions', {'p_user_id': userId})).map(Sanction.fromJson).toList();
+
+  @override
+  Future<List<Sanction>> appeals() async =>
+      (await _rows('console_appeals')).map(Sanction.fromJson).toList();
+
+  @override
+  Future<void> answerAppeal(String sanctionId, {required bool lift, required String note}) =>
+      _guard(
+        () => _client.rpc<dynamic>(
+          'console_answer_appeal',
+          params: {'p_sanction_id': sanctionId, 'p_lift': lift, 'p_note': note},
+        ),
+      );
 
   @override
   Future<ConsoleDashboard> dashboard() async {

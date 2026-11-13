@@ -764,7 +764,8 @@ class GroupInfoScreen extends ConsumerWidget {
             subtitle: Text(s.isMuted(now) ? 'Notifications coupées' : 'Notifications actives'),
             onTap: () => _mute(context, ref, s),
           ),
-          if (s.isAdmin) ...[
+          // Groupe fermé par Privio (lot 5.3) : plus de réglage d'écriture ni d'invitation.
+          if (s.isAdmin && !s.isClosed) ...[
             SwitchListTile(
               key: const Key('group.posting'),
               value: s.posting == 'admins',
@@ -803,7 +804,7 @@ class GroupInfoScreen extends ConsumerWidget {
             child: Row(
               children: [
                 Expanded(child: Text('Membres', style: theme.textTheme.titleMedium)),
-                if (s.isAdmin)
+                if (s.isAdmin && !s.isClosed)
                   TextButton.icon(
                     key: const Key('group.invite'),
                     onPressed: () => context.push(Routes.groupInvite(conversationId)),

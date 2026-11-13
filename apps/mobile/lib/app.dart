@@ -8,6 +8,7 @@ import 'router/app_router.dart';
 import 'state/data_providers.dart';
 import 'state/messaging_providers.dart';
 import 'state/privacy_providers.dart';
+import 'ui/features/moderation/moderation_gate.dart';
 import 'ui/features/lock/app_lock_screens.dart';
 
 class PrivioApp extends ConsumerWidget {
@@ -39,8 +40,10 @@ class PrivioApp extends ConsumerWidget {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
       // Verrouillage (SEC-004) : recouvre tout, navigateur compris.
-      builder: (context, child) =>
-          AppLockGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+      // Modération (lot 5.3) : compte suspendu ou avertissement, sous le verrouillage.
+      builder: (context, child) => AppLockGate(
+        child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+      ),
     );
   }
 }

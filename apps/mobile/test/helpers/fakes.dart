@@ -24,6 +24,7 @@ import 'package:privio/data/storage/media_vault.dart';
 import 'package:privio/data/services/admin_api.dart';
 import 'package:privio/data/services/permission_gateway.dart';
 import 'package:privio/domain/models/console.dart';
+import 'package:privio/domain/models/moderation.dart';
 import 'package:privio/state/console_providers.dart';
 import 'package:privio/data/services/push_service.dart';
 import 'package:privio/data/services/photo_picker.dart';
@@ -71,6 +72,31 @@ class FakeAuthService implements AuthService {
 }
 
 class FakeAccountApi implements AccountApi {
+  /// Lot 5.3 : situation de modération renvoyée par le « serveur ».
+  ModerationStatus moderation = ModerationStatus.none;
+  String? appealText;
+  int warningsAcknowledged = 0;
+
+  @override
+  Future<ModerationStatus> moderationStatus() async => moderation;
+
+  @override
+  Future<void> submitAppeal(String sanctionId, String text) async {
+    final s = moderation.suspension;
+    if (s == null || s.appealed) throw const AppFailure(FailureCode.appealNotAllowed);
+    if (text.trim().length < 3) throw const AppFailure(FailureCode.appealInvalid);
+    appealText = text;
+    moderation = ModerationStatus(
+      suspension: SuspensionInfo(id: s.id, reason: s.reason, until: s.until, appealed: true),
+    );
+  }
+
+  @override
+  Future<void> acknowledgeWarning(String sanctionId) async {
+    warningsAcknowledged++;
+    moderation = ModerationStatus(suspension: moderation.suspension);
+  }
+
   Account? account;
   AppFailure? accountFailure;
   final Set<String> takenHandles = {'alice_bf'};
@@ -1693,6 +1719,117 @@ class FakeAdminApi implements AdminApi {
   Future<List<JournalEntry>> journal() async {
     if (!admin) throw const AppFailure(FailureCode.adminRequired);
     return List.of(journalEntries);
+  }
+
+  // --- Lot 5.3 : modération -------------------------------------------------
+  final reportList = <ModerationReport>[];
+  final appealList = <Sanction>[];
+  final sanctionsByUser = <String, List<Sanction>>{};
+  final evidenceById = <String, ReportEvidence>{};
+  final moderations = <(List<String>, String, String, int?)>[];
+  final lifted = <String>[];
+  final appealAnswers = <(String, bool)>[];
+  int evidenceReads = 0;
+
+  ModerationReport _with(
+    ModerationReport r, {
+    required String status,
+    String? decision,
+    String? note,
+  }) => ModerationReport(
+    id: r.id,
+    kind: r.kind,
+    reason: r.reason,
+    details: r.details,
+    status: status,
+    createdAt: r.createdAt,
+    takenAt: DateTime(2026, 11, 13, 20),
+    decision: decision ?? r.decision,
+    decisionNote: note ?? r.decisionNote,
+    decidedAt: decision == null ? r.decidedAt : DateTime(2026, 11, 13, 21),
+    reporterHandle: r.reporterHandle,
+    reportedUserId: r.reportedUserId,
+    reportedHandle: r.reportedHandle,
+    reportedName: r.reportedName,
+    reportedSince: r.reportedSince,
+    conversationId: r.conversationId,
+    groupTitle: r.groupTitle,
+    groupClosed: r.groupClosed || decision == 'group_closed',
+    messageId: r.messageId,
+    evidenceKind: r.evidenceKind,
+    reports90d: r.reports90d,
+    reporters90d: r.reporters90d,
+    suspended: decision == 'suspended' || r.suspended,
+    suspendedUntil: r.suspendedUntil,
+    sanctionsCount: r.sanctionsCount,
+    protected: r.protected,
+  );
+
+  @override
+  Future<List<ModerationReport>> reports(String status) async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    return reportList.where((r) => r.status == status).toList();
+  }
+
+  @override
+  Future<void> takeReports(List<String> ids) async {
+    for (var i = 0; i < reportList.length; i++) {
+      if (ids.contains(reportList[i].id) && reportList[i].status == 'open') {
+        reportList[i] = _with(reportList[i], status: 'reviewing');
+      }
+    }
+  }
+
+  @override
+  Future<ReportEvidence> evidence(String reportId) async {
+    final e = evidenceById[reportId];
+    if (e == null) throw const AppFailure(FailureCode.reportNotFound);
+    evidenceReads++;
+    _audit('evidence');
+    return e;
+  }
+
+  @override
+  Future<void> moderate(List<String> ids, String action, String note, {int? days}) async {
+    if (note.trim().length < 3) throw const AppFailure(FailureCode.moderationNoteRequired);
+    final targets = reportList.where((r) => ids.contains(r.id)).toList();
+    if (targets.isEmpty) throw const AppFailure(FailureCode.reportNotFound);
+    if ((action == 'warn' || action == 'suspend') && targets.any((r) => r.protected)) {
+      throw const AppFailure(FailureCode.adminProtected);
+    }
+    moderations.add((ids, action, note, days));
+    const decisions = {
+      'dismiss': 'dismissed',
+      'warn': 'warned',
+      'suspend': 'suspended',
+      'delete_message': 'message_deleted',
+      'close_group': 'group_closed',
+    };
+    for (var i = 0; i < reportList.length; i++) {
+      if (ids.contains(reportList[i].id)) {
+        reportList[i] = _with(
+          reportList[i],
+          status: 'closed',
+          decision: decisions[action],
+          note: note,
+        );
+      }
+    }
+  }
+
+  @override
+  Future<void> liftSuspension(String userId, String note) async => lifted.add(userId);
+
+  @override
+  Future<List<Sanction>> sanctions(String userId) async => sanctionsByUser[userId] ?? const [];
+
+  @override
+  Future<List<Sanction>> appeals() async => List.of(appealList);
+
+  @override
+  Future<void> answerAppeal(String sanctionId, {required bool lift, required String note}) async {
+    appealAnswers.add((sanctionId, lift));
+    appealList.removeWhere((s) => s.id == sanctionId);
   }
 
   @override

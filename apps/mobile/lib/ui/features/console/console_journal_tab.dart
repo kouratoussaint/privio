@@ -53,9 +53,36 @@ class ConsoleJournalTab extends ConsumerWidget {
   }
 }
 
+String _who(JournalEntry e) {
+  final h = e.detail['handle'] as String?;
+  final g = e.detail['group'] as String?;
+  if (h != null) return '@$h';
+  if (g != null) return 'groupe «\u202F$g\u202F»';
+  return 'dossier';
+}
+
 String journalText(JournalEntry e, String unit) => switch (e.action) {
   'dashboard' => 'Consultation du tableau de bord',
   'stats' => 'Consultation des statistiques',
+  'evidence' => 'Lecture d’une copie signalée (${_who(e)})',
+  'lift' => 'Réactivation de ${_who(e)}',
+  'appeal' =>
+    'Contestation de ${_who(e)}\u202F: ${e.detail['lift'] == true ? 'suspension levée' : 'suspension maintenue'}',
+  'moderation' => switch (e.detail['action']) {
+    'dismiss' => 'Dossier classé sans suite (${_who(e)})',
+    'warn' => 'Avertissement à ${_who(e)}',
+    'suspend' =>
+      'Suspension de ${_who(e)} '
+          '(${switch (e.detail['days']) {
+            1 => '24\u00A0h',
+            7 => '7\u00A0jours',
+            30 => '30\u00A0jours',
+            _ => 'sans limite',
+          }})',
+    'delete_message' => 'Message supprimé (${_who(e)})',
+    'close_group' => 'Fermeture du ${_who(e)}',
+    _ => 'Décision de modération',
+  },
   'policy' =>
     'Réglage « ${e.label ?? e.key} » : '
         '${e.before == null ? 'défaut' : formatPolicyValue(unit, e.before)} → '
@@ -78,6 +105,8 @@ class _EntryTile extends StatelessWidget {
       leading: Icon(switch (e.action) {
         'policy' => Icons.tune,
         'stats' => Icons.bar_chart,
+        'moderation' || 'lift' || 'appeal' => Icons.gavel_outlined,
+        'evidence' => Icons.visibility,
         _ => Icons.visibility_outlined,
       }),
       title: Text(journalText(e, unit)),

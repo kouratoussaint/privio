@@ -43,7 +43,15 @@ class SupabaseRealtimeService implements RealtimeService {
   SupabaseRealtimeService(this._client);
 
   // « invitation » (groupes) et « request » (demandes de connexion, lot 4.7) : listes à jour.
-  static const events = ['message', 'message_changed', 'receipt', 'invitation', 'request'];
+  static const events = [
+    'message',
+    'message_changed',
+    'receipt',
+    'invitation',
+    'request',
+    // Lot 5.3 : suspension, avertissement ou réactivation du compte.
+    'moderation',
+  ];
   static const _retryDelays = [
     Duration(seconds: 2),
     Duration(seconds: 5),

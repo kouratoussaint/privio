@@ -1,5 +1,5 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
-// invitations de groupe : lot 4.8).
+// invitations de groupe : lot 4.8 ; administration : lot 5.3).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que
@@ -8,7 +8,7 @@
 // Sans compte de service FCM configuré : compte rendu « not_configured », rien n'est envoyé.
 
 import { ApiError, json, registerEndpoint, rpc, serviceHeaders } from "../_shared/supabase.ts";
-import { loadServiceAccount, sendGeneric, sendInvitation, sendRequestEvent } from "../_shared/fcm.ts";
+import { ADMIN_BODIES, loadServiceAccount, sendAdminEvent, sendGeneric, sendInvitation, sendRequestEvent } from "../_shared/fcm.ts";
 
 interface Target {
   token: string;
@@ -24,11 +24,21 @@ Deno.serve(async (req) => {
   let messageId = "";
   let requestId = "";
   let invitationId = "";
+  let adminEvent = "";
+  let refId = "";
   try {
-    const body = (await req.json()) as { message_id?: string; request_id?: string; invitation_id?: string };
+    const body = (await req.json()) as {
+      message_id?: string;
+      request_id?: string;
+      invitation_id?: string;
+      admin_event?: string;
+      ref_id?: string;
+    };
     messageId = body.message_id ?? "";
     requestId = body.request_id ?? "";
     invitationId = body.invitation_id ?? "";
+    adminEvent = body.admin_event ?? "";
+    refId = body.ref_id ?? "";
   } catch {
     return json(400, { error: "BODY_INVALID" });
   }
@@ -37,6 +47,11 @@ Deno.serve(async (req) => {
   if (requestId) {
     if (!UUID.test(requestId)) return json(400, { error: "BODY_INVALID" });
     return await dispatchRequest(token, requestId);
+  }
+  // Lot 5.3 : signalement, demande d'assistance ou contestation, pour l'administration.
+  if (adminEvent) {
+    if (!(adminEvent in ADMIN_BODIES) || !UUID.test(refId)) return json(400, { error: "BODY_INVALID" });
+    return await dispatchAdmin(token, adminEvent, refId);
   }
   // Lot 4.8 : invitation à rejoindre un groupe.
   if (invitationId) {
@@ -182,6 +197,52 @@ async function dispatchInvitation(token: string, invitationId: string): Promise<
     for (const t of targets) {
       try {
         const r = await sendInvitation(sa, t.token);
+        if (r === "sent") sent++;
+        else {
+          failed++;
+          if (r === "invalid_token") invalid.push(t.token);
+        }
+      } catch {
+        failed++;
+      }
+    }
+    await report(targets.length, sent, failed, failed === 0 ? "sent" : "partial", invalid);
+    return json(200, { recipients: targets.length, sent, failed });
+  } catch (e) {
+    if (e instanceof ApiError) return json(e.status === 401 ? 401 : 400, { error: e.code });
+    return json(500, { error: "UNKNOWN" });
+  }
+}
+
+/** Événement pour l'administration (lot 5.3) : notification sans contenu, vers la console. */
+async function dispatchAdmin(token: string, event: string, refId: string): Promise<Response> {
+  const report = (recipients: number, sent: number, failed: number, status: string, invalid: string[] = []) =>
+    rpc("push_report", {
+      p_token: token,
+      p_message_id: refId,
+      p_recipients: recipients,
+      p_sent: sent,
+      p_failed: failed,
+      p_status: status,
+      p_invalid_tokens: invalid,
+    }, serviceHeaders());
+  try {
+    const targets = await rpc<{ token: string }[]>("push_admin_targets", { p_token: token }, serviceHeaders());
+    if (targets.length === 0) {
+      await report(0, 0, 0, "no_targets");
+      return json(200, { recipients: 0 });
+    }
+    const sa = loadServiceAccount();
+    if (!sa) {
+      await report(targets.length, 0, 0, "not_configured");
+      return json(200, { recipients: targets.length, status: "not_configured" });
+    }
+    let sent = 0;
+    let failed = 0;
+    const invalid: string[] = [];
+    for (const t of targets) {
+      try {
+        const r = await sendAdminEvent(sa, t.token, event);
         if (r === "sent") sent++;
         else {
           failed++;
