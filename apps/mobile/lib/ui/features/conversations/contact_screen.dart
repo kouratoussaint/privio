@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../domain/models/messaging.dart';
+import '../../../state/privacy_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import 'report_sheet.dart';
@@ -92,6 +94,25 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               '@${summary.peerHandle}',
               style: theme.textTheme.bodyLarge,
               textAlign: TextAlign.center,
+            ),
+          if (summary.peerId != null && !summary.blocked)
+            Builder(
+              builder: (context) {
+                final label = presenceLabel(
+                  ref.watch(presenceProvider(summary.peerId!)).value ?? const UserPresence(),
+                  DateTime.now(),
+                );
+                return label.isEmpty
+                    ? const SizedBox.shrink()
+                    : Text(
+                        label,
+                        key: const Key('contact.presence'),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      );
+              },
             ),
           const SizedBox(height: PrivioSpacing.xxl),
           if (blockedList.isLoading)

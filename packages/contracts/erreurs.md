@@ -91,3 +91,13 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | `NOT_MEMBER` | toutes | pas (ou plus) membre du groupe — HTTP 403 dans `avatar-set` |
 | `RATE_LIMITED` | `create_group`, `invite_to_group` | trop de groupes créés ou d'invitations envoyées |
 
+### Confidentialité et vidage (lot 4.3)
+| Code | Origine | Signification |
+|---|---|---|
+| `PRIVACY_SETTING_INVALID` | `set_my_privacy` | valeur inconnue ou manquante |
+| `TTL_INVALID` | `set_my_privacy` | durée par défaut hors bornes |
+| `CLEAR_SCOPE_INVALID` | `clear_conversation` | portée autre que `me` / `everyone` |
+| `CLEAR_NOT_ALLOWED` | `clear_conversation`, `respond_clear_request` | « pour nous deux » impossible : blocage ou compte supprimé |
+| `CLEAR_REQUEST_NOT_FOUND` | `respond_clear_request` | aucune demande de l'autre personne en cours (annulée, refusée, échue) |
+| `NOT_ADMIN` | `clear_conversation` (groupe, `everyone`) | réservé au propriétaire et aux administrateurs |
+

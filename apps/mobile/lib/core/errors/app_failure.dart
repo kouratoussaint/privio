@@ -49,6 +49,10 @@ enum FailureCode {
   groupDescriptionInvalid,
   invitationNotFound,
   postingRestricted,
+  clearScopeInvalid,
+  clearNotAllowed,
+  clearRequestNotFound,
+  privacySettingInvalid,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -111,6 +115,13 @@ class AppFailure implements Exception {
     FailureCode.invitationNotFound => 'Cette invitation n\'est plus valable.',
     FailureCode.postingRestricted =>
       'Seuls les administrateurs peuvent envoyer des messages dans ce groupe.',
+    FailureCode.clearScopeInvalid => 'Choix de vidage inconnu.',
+    FailureCode.clearNotAllowed =>
+      'Impossible de vider pour vous deux : la personne est bloquée ou son compte supprimé. '
+          'Vous pouvez vider la discussion chez vous.',
+    FailureCode.clearRequestNotFound =>
+      'Cette demande n\'existe plus (annulée, refusée ou expirée).',
+    FailureCode.privacySettingInvalid => 'Réglage de confidentialité invalide.',
     FailureCode.otpInvalidOrExpired => 'Code incorrect ou expiré.',
     FailureCode.smsRateLimited =>
       'Trop de codes demandés. Patientez avant de demander un nouveau code.',
@@ -168,6 +179,10 @@ const _serverCodes = <String, FailureCode>{
   'GROUP_DESCRIPTION_INVALID': FailureCode.groupDescriptionInvalid,
   'INVITATION_NOT_FOUND': FailureCode.invitationNotFound,
   'POSTING_RESTRICTED': FailureCode.postingRestricted,
+  'CLEAR_SCOPE_INVALID': FailureCode.clearScopeInvalid,
+  'CLEAR_NOT_ALLOWED': FailureCode.clearNotAllowed,
+  'CLEAR_REQUEST_NOT_FOUND': FailureCode.clearRequestNotFound,
+  'PRIVACY_SETTING_INVALID': FailureCode.privacySettingInvalid,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

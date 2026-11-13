@@ -83,4 +83,5 @@ python3 "$(dirname "$0")/voice_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "${DB_U
 python3 "$(dirname "$0")/photo_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
 python3 "$(dirname "$0")/group_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/push_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications : OK"
+python3 "$(dirname "$0")/privacy_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité : OK"

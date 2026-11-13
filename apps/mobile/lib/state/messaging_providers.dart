@@ -1,3 +1,4 @@
+import 'privacy_providers.dart';
 import 'data_providers.dart';
 
 import 'dart:async';
@@ -273,7 +274,12 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     try {
       final list = await api.listConversations();
       state = AsyncData(list);
-      await ref.read(localCacheProvider).putConversations(list);
+      final cache = ref.read(localCacheProvider);
+      await cache.putConversations(list);
+      // Discussions vidées : la copie gardée sur ce téléphone est effacée aussi.
+      for (final c in list) {
+        if (c.clearedBefore != null) await cache.applyCleared(c.id, c.clearedBefore!);
+      }
       ref.read(offlineProvider.notifier).report(offline: false);
       // Accusé « reçu » : les messages listés sont arrivés sur cet appareil.
       for (final c in list) {
@@ -396,6 +402,8 @@ class ChatController extends AsyncNotifier<ChatState> {
   Future<ChatState> build() async {
     final cache = ref.watch(localCacheProvider);
     await cache.ensureLoaded();
+    // Réglages de confidentialité chargés dès l'ouverture (indicateur d'écriture).
+    ref.listen(privacyProvider, (_, _) {});
     ref.listen(realtimeSignalsProvider, (_, next) {
       final signal = next.value;
       if (signal == null || signal.event == 'typing') return;
@@ -435,6 +443,8 @@ class ChatController extends AsyncNotifier<ChatState> {
   Future<void> reload() async {
     try {
       final messages = await ref.read(messagingApiProvider).getMessages(conversationId);
+      final cleared = ref.read(conversationSummaryProvider(conversationId))?.clearedBefore;
+      if (cleared != null) await _cache.applyCleared(conversationId, cleared);
       final current = state.value ?? const ChatState(messages: []);
       state = AsyncData(current.copyWith(messages: messages));
       await _cache.putMessages(conversationId, messages);
@@ -452,8 +462,12 @@ class ChatController extends AsyncNotifier<ChatState> {
     }
   }
 
-  /// Signale « en train d'écrire » au plus toutes les 4 s (sans contenu).
+  /// Signale « en train d'écrire » au plus toutes les 4 s (sans contenu). Rien n'est
+  /// envoyé si la personne a désactivé l'indicateur (le serveur l'ignore aussi).
   void notifyTyping() {
+    // Réglage pas encore connu : on s'abstient (le serveur l'applique de toute façon).
+    final privacy = ref.read(privacyProvider).value;
+    if (privacy == null || !privacy.typing) return;
     final now = DateTime.now();
     if (_lastTypingSent != null && now.difference(_lastTypingSent!) < typingThrottle) return;
     _lastTypingSent = now;

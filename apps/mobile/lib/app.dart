@@ -7,6 +7,7 @@ import 'data/services/device_services.dart';
 import 'router/app_router.dart';
 import 'state/data_providers.dart';
 import 'state/messaging_providers.dart';
+import 'state/privacy_providers.dart';
 import 'ui/features/lock/app_lock_screens.dart';
 
 class PrivioApp extends ConsumerWidget {
@@ -38,7 +39,8 @@ class PrivioApp extends ConsumerWidget {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
       // Verrouillage (SEC-004) : recouvre tout, navigateur compris.
-      builder: (context, child) => AppLockGate(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) =>
+          AppLockGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
     );
   }
 }

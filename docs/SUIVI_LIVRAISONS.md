@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — lot 4.2 livré (à tester) ; 2.F : correctif des citations à revérifier. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — lots 4.2 et 4.3 livrés (à tester) ; 2.F : correctif des citations à revérifier. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -52,6 +52,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 |---|---|---|
 | 4.1 | Notifications FCM sans contenu ni nom, masquées sur l'écran verrouillé, une par discussion ; ouverture de la discussion au toucher ; interrupteur dans les Paramètres ; pas de notification en sourdine, en cas de blocage ou pour l'expéditeur (ADR-011). **Compte de service FCM requis** (secret `FCM_SERVICE_ACCOUNT_B64`, en place sur staging) | ✅ 13/11/2026 |
 | 4.2 | Verrouillage : code Privio à 6 chiffres + empreinte facultative, délai réglable, attente après 5 erreurs, « code oublié » = déconnexion ; bandeau hors connexion immédiat et reprise automatique ; écran « Stockage et données » : photos reçues téléchargées toujours / en Wi-Fi / à la demande, données consommées par mois, place occupée et effacement des médias (ADR-012). **Tests** : activer le code, fermer puis rouvrir Privio ; se tromper 5 fois ; essayer l'empreinte ; régler « Jamais » et recevoir une photo ; couper puis remettre les données mobiles | 🧪 13/11/2026 |
+| 4.3 | Confidentialité avancée (écran « Confidentialité ») : en ligne / « vu à », photo de profil, invitations dans les groupes (tout le monde / mes contacts / personne), accusés de lecture, « en train d'écrire », durée par défaut ; présence dans l'en-tête et la fiche contact ; **vider la discussion** sans trace : pour nous deux avec accord (demande 24 h, bandeau Accepter/Refuser), seulement chez moi, groupe par les administrateurs (ADR-013). **Tests** : régler « Personne » pour en ligne et vérifier sur l'autre téléphone ; couper les accusés ; demander à vider puis accepter sur l'autre téléphone ; vider chez soi seulement | 🧪 13/11/2026 |
 
 ## Étape 5 — Console d'administration
 | Lot | Contenu | Statut |

@@ -56,6 +56,9 @@ class ConversationSummary {
     this.myRole,
     this.posting = 'all',
     this.infoEditing = 'admins',
+    this.clearedBefore,
+    this.clearRequestBy,
+    this.clearRequestExpiresAt,
   });
 
   final String id;
@@ -108,6 +111,13 @@ class ConversationSummary {
   final String posting;
   final String infoEditing;
 
+  /// Messages envoyés avant cet instant effacés pour moi (« vider », lot 4.3).
+  final DateTime? clearedBefore;
+
+  /// Demande « vider pour nous deux » en cours : qui l'a faite, jusqu'à quand.
+  final String? clearRequestBy;
+  final DateTime? clearRequestExpiresAt;
+
   bool get isGroup => kind == 'group';
   bool get isOwner => myRole == 'owner';
   bool get isAdmin => myRole == 'owner' || myRole == 'admin';
@@ -154,6 +164,9 @@ class ConversationSummary {
     'my_role': myRole,
     'posting': posting,
     'info_editing': infoEditing,
+    'cleared_before': clearedBefore?.toUtc().toIso8601String(),
+    'clear_request_by': clearRequestBy,
+    'clear_request_expires_at': clearRequestExpiresAt?.toUtc().toIso8601String(),
   };
 
   /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
@@ -199,6 +212,9 @@ class ConversationSummary {
     myRole: myRole,
     posting: posting,
     infoEditing: infoEditing,
+    clearedBefore: clearedBefore,
+    clearRequestBy: clearRequestBy,
+    clearRequestExpiresAt: clearRequestExpiresAt,
   );
 
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
@@ -235,6 +251,9 @@ class ConversationSummary {
     myRole: j['my_role'] as String?,
     posting: j['posting'] as String? ?? 'all',
     infoEditing: j['info_editing'] as String? ?? 'admins',
+    clearedBefore: _date(j['cleared_before']),
+    clearRequestBy: j['clear_request_by'] as String?,
+    clearRequestExpiresAt: _date(j['clear_request_expires_at']),
   );
 }
 
@@ -507,4 +526,83 @@ String? groupEventText(ChatMessage m, {required String? me}) {
           : did('permis à tous les membres de modifier le groupe'),
     _ => null,
   };
+}
+
+/// Réglages de confidentialité du compte (lot 4.3). Visibilités : 'everyone',
+/// 'contacts' (personnes avec qui l'on a une discussion à deux) ou 'nobody'.
+class PrivacySettings {
+  const PrivacySettings({
+    this.presence = 'contacts',
+    this.readReceipts = true,
+    this.typing = true,
+    this.avatar = 'everyone',
+    this.groupInvites = 'everyone',
+    this.defaultTtlSeconds,
+  });
+
+  final String presence;
+  final bool readReceipts;
+  final bool typing;
+  final String avatar;
+  final String groupInvites;
+
+  /// Durée des messages des nouvelles discussions (null : 72 h).
+  final int? defaultTtlSeconds;
+
+  PrivacySettings copyWith({
+    String? presence,
+    bool? readReceipts,
+    bool? typing,
+    String? avatar,
+    String? groupInvites,
+    int? defaultTtlSeconds,
+    bool clearDefaultTtl = false,
+  }) => PrivacySettings(
+    presence: presence ?? this.presence,
+    readReceipts: readReceipts ?? this.readReceipts,
+    typing: typing ?? this.typing,
+    avatar: avatar ?? this.avatar,
+    groupInvites: groupInvites ?? this.groupInvites,
+    defaultTtlSeconds: clearDefaultTtl ? null : (defaultTtlSeconds ?? this.defaultTtlSeconds),
+  );
+
+  factory PrivacySettings.fromJson(Map<String, dynamic> j) => PrivacySettings(
+    presence: j['presence_visibility'] as String? ?? 'contacts',
+    readReceipts: j['read_receipts'] as bool? ?? true,
+    typing: j['typing_indicator'] as bool? ?? true,
+    avatar: j['avatar_visibility'] as String? ?? 'everyone',
+    groupInvites: j['group_invites'] as String? ?? 'everyone',
+    defaultTtlSeconds: (j['default_ttl_seconds'] as num?)?.toInt(),
+  );
+
+  Map<String, dynamic> toRpc() => {
+    'p_presence_visibility': presence,
+    'p_read_receipts': readReceipts,
+    'p_typing_indicator': typing,
+    'p_avatar_visibility': avatar,
+    'p_group_invites': groupInvites,
+    'p_default_ttl_seconds': defaultTtlSeconds,
+  };
+}
+
+/// Libellé d'une visibilité.
+String visibilityLabel(String v) => switch (v) {
+  'everyone' => 'Tout le monde',
+  'contacts' => 'Mes contacts',
+  _ => 'Personne',
+};
+
+/// Statut d'une personne (si elle le montre).
+class UserPresence {
+  const UserPresence({this.visible = false, this.online = false, this.lastSeenAt});
+
+  final bool visible;
+  final bool online;
+  final DateTime? lastSeenAt;
+
+  factory UserPresence.fromJson(Map<String, dynamic> j) => UserPresence(
+    visible: j['visible'] as bool? ?? false,
+    online: j['online'] as bool? ?? false,
+    lastSeenAt: j['last_seen_at'] == null ? null : DateTime.parse(j['last_seen_at'] as String),
+  );
 }

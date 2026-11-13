@@ -40,7 +40,7 @@ jobs:
       - name: Démarrer Supabase (base, Auth, API, Storage, fonctions)
         run: >
           supabase start -x imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
-      - name: Tests pgTAP (sécurité, profils, recherche, appareils, politiques, messagerie, vocaux, photos)
+      - name: Tests pgTAP (sécurité, profils, recherche, appareils, politiques, messagerie, vocaux, photos, groupes, confidentialité)
         run: supabase test db
       - name: Test de concurrence (scénario AUTH n°4)
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/db/concurrency_handle_test.sh

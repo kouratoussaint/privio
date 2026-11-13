@@ -83,6 +83,8 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    await tester.ensureVisible(find.byKey(const Key('settings.signout')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings.signout')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings.signout.confirm')));

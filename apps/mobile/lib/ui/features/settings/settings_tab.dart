@@ -234,6 +234,17 @@ class SettingsTab extends ConsumerWidget {
             const _SectionTitle('Confidentialité'),
             _Card(
               children: [
+                ListTile(
+                  key: const Key('settings.privacy'),
+                  leading: Icon(Icons.shield_outlined, color: p.accentText),
+                  title: const Text('Confidentialité'),
+                  subtitle: const Text(
+                    'En ligne, photo, accusés de lecture, invitations, durée par défaut',
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  onTap: () => context.push(Routes.privacy),
+                ),
+                const _Divider(),
                 SwitchListTile(
                   key: const Key('settings.discoverable'),
                   value: account?.phoneDiscoverable ?? false,

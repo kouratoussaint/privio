@@ -111,6 +111,22 @@ abstract interface class MessagingApi {
   Future<List<BlockedUser>> listBlockedUsers();
   Future<void> blockUser(String userId);
   Future<void> unblockUser(String userId);
+
+  // Confidentialité et présence (lot 4.3)
+  Future<PrivacySettings> getMyPrivacy();
+  Future<void> setMyPrivacy(PrivacySettings settings);
+
+  /// L'application est ouverte ([online]) ou passe en arrière-plan.
+  Future<void> touchPresence({required bool online});
+  Future<UserPresence> getPresence(String userId);
+
+  /// Vider : chez moi, ou pour tout le monde (1:1 : demande d'accord ; groupe : admin).
+  /// Renvoie 'cleared' ou 'requested'.
+  Future<String> clearConversation(String conversationId, {required bool everyone});
+
+  /// Réponse à une demande de l'autre personne : 'cleared' ou 'refused'.
+  Future<String> respondClearRequest(String conversationId, {required bool accept});
+  Future<void> cancelClearRequest(String conversationId);
 }
 
 class SupabaseMessagingApi implements MessagingApi {
@@ -410,6 +426,50 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<void> signalTyping(String conversationId) =>
       _call('signal_typing', {'p_conversation_id': conversationId});
+
+  @override
+  Future<PrivacySettings> getMyPrivacy() => _guard(() async {
+    final rows = await _client.rpc<dynamic>('get_my_privacy') as List<dynamic>;
+    return rows.isEmpty
+        ? const PrivacySettings()
+        : PrivacySettings.fromJson(Map<String, dynamic>.from(rows.first as Map));
+  });
+
+  @override
+  Future<void> setMyPrivacy(PrivacySettings settings) => _call('set_my_privacy', settings.toRpc());
+
+  @override
+  Future<void> touchPresence({required bool online}) =>
+      _call('touch_presence', {'p_online': online});
+
+  @override
+  Future<UserPresence> getPresence(String userId) => _guard(() async {
+    final rows =
+        await _client.rpc<dynamic>('get_presence', params: {'p_user_id': userId}) as List<dynamic>;
+    return rows.isEmpty
+        ? const UserPresence()
+        : UserPresence.fromJson(Map<String, dynamic>.from(rows.first as Map));
+  });
+
+  @override
+  Future<String> clearConversation(String conversationId, {required bool everyone}) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'clear_conversation',
+      params: {'p_conversation_id': conversationId, 'p_scope': everyone ? 'everyone' : 'me'},
+    ) as String,
+  );
+
+  @override
+  Future<String> respondClearRequest(String conversationId, {required bool accept}) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'respond_clear_request',
+      params: {'p_conversation_id': conversationId, 'p_accept': accept},
+    ) as String,
+  );
+
+  @override
+  Future<void> cancelClearRequest(String conversationId) =>
+      _call('cancel_clear_request', {'p_conversation_id': conversationId});
 
   @override
   Future<void> report({

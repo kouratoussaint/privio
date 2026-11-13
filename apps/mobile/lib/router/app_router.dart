@@ -11,6 +11,7 @@ import '../ui/features/auth/welcome_screen.dart';
 import '../ui/features/groups/group_screens.dart';
 import '../ui/features/home/archived_screen.dart';
 import '../ui/features/lock/app_lock_screens.dart';
+import '../ui/features/settings/privacy_screen.dart';
 import '../ui/features/settings/storage_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
 import '../ui/features/home/groups_tab.dart';
@@ -69,6 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const PinFlowScreen(flow: PinFlow.disable),
       ),
       GoRoute(path: Routes.storage, builder: (_, _) => const StorageScreen()),
+      GoRoute(path: Routes.privacy, builder: (_, _) => const PrivacyScreen()),
       GoRoute(
         path: '/chat/:id',
         builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']!),

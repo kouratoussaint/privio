@@ -484,6 +484,8 @@ class ConversationTile extends ConsumerWidget {
         : (summary.isGroup && summary.lastSenderName != null ? '${summary.lastSenderName} : ' : '');
     final preview = switch (summary) {
       ConversationSummary(blocked: true) => 'Contact bloqué',
+      ConversationSummary(:final clearRequestBy?) when clearRequestBy != me =>
+        'Propose de vider la discussion',
       ConversationSummary(lastMessageId: null) =>
         summary.isGroup
             ? '${summary.memberCount} membre${summary.memberCount > 1 ? 's' : ''}'

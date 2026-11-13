@@ -420,6 +420,41 @@ void main() {
       await tester.pumpAndSettle();
       await typePin('00');
       await _shot(tester, '23_ecran_verrouille_$suffix');
+
+      // Lot 4.3 — confidentialité, présence, vider la discussion
+      await tester.tap(find.byKey(const Key('pin.delete')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('pin.delete')));
+      await tester.pump();
+      await typePin('258014');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settings.privacy')),
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.ensureVisible(find.byKey(const Key('settings.privacy')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settings.privacy')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '23_confidentialite_$suffix');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      m.presences['u2'] = const UserPresence(visible: true, online: true);
+      m.clearRequests['conv-bob'] = 'u2';
+      await tester.tap(
+        find.descendant(of: find.byType(NavigationBar), matching: find.text('Discussions')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('conversation.conv-bob')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '11_vider_demande_recue_$suffix');
+      await tester.tap(find.byKey(const Key('chat.menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('chat.clear')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '11_vider_choix_$suffix');
     });
   }
 }

@@ -16,6 +16,7 @@ import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/privacy_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/voice_providers.dart';
 import '../../core/widgets/avatar.dart';
@@ -445,6 +446,126 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (choice == 'all') await _guard(() => _chat.deleteForEveryone(m.id));
   }
 
+  /// Vider la discussion (lot 4.3) : chez moi, ou pour tout le monde (1:1 : avec l'accord
+  /// de l'autre ; groupe : administrateurs).
+  Future<void> _chooseClear(ConversationSummary s) async {
+    final everyoneAllowed = s.isGroup ? s.isAdmin : !(s.blocked || s.peerDeleted);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                PrivioSpacing.l,
+                0,
+                PrivioSpacing.l,
+                PrivioSpacing.s,
+              ),
+              child: Text('Vider la discussion', style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+            if (everyoneAllowed)
+              ListTile(
+                key: const Key('clear.everyone'),
+                leading: const Icon(Icons.group_remove_outlined),
+                title: Text(s.isGroup ? 'Pour tous les membres' : 'Pour nous deux'),
+                subtitle: Text(
+                  s.isGroup
+                      ? 'Tous les messages, vocaux et photos disparaissent pour tout le monde, '
+                            'sans laisser de trace.'
+                      : '${s.title} doit accepter. Ensuite tout disparaît des deux côtés, '
+                            'sans laisser de trace.',
+                ),
+                onTap: () => Navigator.pop(ctx, 'everyone'),
+              ),
+            ListTile(
+              key: const Key('clear.me'),
+              leading: const Icon(Icons.person_remove_outlined),
+              title: const Text('Seulement chez moi'),
+              subtitle: Text(
+                s.isGroup
+                    ? 'Votre copie est vidée ; les autres membres gardent leurs messages.'
+                    : 'Votre copie est vidée ; ${s.title} garde ses messages.',
+              ),
+              onTap: () => Navigator.pop(ctx, 'me'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final everyone = choice == 'everyone';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          everyone
+              ? (s.isGroup
+                    ? 'Vider le groupe pour tous ?'
+                    : 'Demander à ${s.title} de tout vider ?')
+              : 'Vider la discussion chez vous ?',
+        ),
+        content: Text(
+          everyone && !s.isGroup
+              ? 'Si ${s.title} accepte, tous les messages disparaissent définitivement des deux '
+                    'côtés. La demande expire au bout de 24 heures.'
+              : 'Les messages actuels disparaissent définitivement de votre écran. '
+                    'Cette action ne peut pas être annulée.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          FilledButton(
+            key: const Key('clear.confirm'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(everyone && !s.isGroup ? 'Envoyer la demande' : 'Vider'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      final r = await ref
+          .read(messagingApiProvider)
+          .clearConversation(widget.conversationId, everyone: everyone);
+      await _afterClear();
+      if (r == 'requested') {
+        _toast('Demande envoyée à ${s.title}.');
+      } else {
+        _toast('Discussion vidée.');
+      }
+    } on Object catch (e) {
+      _toast(toAppFailure(e).message);
+    }
+  }
+
+  Future<void> _respondClear(bool? accept) async {
+    final api = ref.read(messagingApiProvider);
+    try {
+      if (accept == null) {
+        await api.cancelClearRequest(widget.conversationId);
+        _toast('Demande annulée.');
+      } else {
+        final r = await api.respondClearRequest(widget.conversationId, accept: accept);
+        _toast(r == 'cleared' ? 'Discussion vidée.' : 'Demande refusée.');
+      }
+    } on Object catch (e) {
+      _toast(toAppFailure(e).message);
+    }
+    await _afterClear();
+  }
+
+  Future<void> _afterClear() async {
+    await ref.read(conversationsProvider.notifier).refresh();
+    await _chat.reload();
+  }
+
   /// Toucher une citation : remonter au message d'origine s'il est encore là.
   ///
   /// La liste ne construit que les messages proches de l'écran : si l'original est plus
@@ -620,6 +741,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final now = DateTime.now();
     final title = summary?.title ?? 'Discussion';
     final isGroup = summary?.isGroup ?? false;
+    // Statut « en ligne » / « vu à » du correspondant, s'il le montre (lot 4.3).
+    final peerId = summary?.peerId;
+    final presence = isGroup || peerId == null || (summary?.blocked ?? false)
+        ? ''
+        : presenceLabel(
+            ref.watch(presenceProvider(peerId)).value ?? const UserPresence(),
+            DateTime.now(),
+          );
     // Groupe : la durée est réglable par qui peut modifier le groupe ; on ne peut écrire
     // que si l'envoi n'est pas réservé aux administrateurs.
     final canPost = summary?.canPost ?? true;
@@ -652,6 +781,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               tooltip: 'Durée des messages : ${formatTtl(summary?.ttlSeconds ?? 259200)}',
               onPressed: () => _chooseConversationTtl(summary),
               icon: const Icon(Icons.timer_outlined),
+            ),
+          if (summary != null && !_searching)
+            PopupMenuButton<String>(
+              key: const Key('chat.menu'),
+              tooltip: 'Plus d\'options',
+              onSelected: (v) {
+                if (v == 'clear') unawaited(_chooseClear(summary));
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  key: Key('chat.clear'),
+                  value: 'clear',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.cleaning_services_outlined),
+                    title: Text('Vider la discussion'),
+                  ),
+                ),
+              ],
             ),
         ],
         title: _searching
@@ -712,6 +860,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: p.onHeaderMuted),
                               )
+                            else if (presence.isNotEmpty)
+                              Text(
+                                presence,
+                                key: const Key('chat.presence'),
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: p.onHeaderMuted),
+                              )
                             else if (summary?.peerHandle != null)
                               Text(
                                 '@${summary!.peerHandle}',
@@ -735,6 +891,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 padding: EdgeInsets.only(top: PrivioSpacing.s),
                 child: OfflineBanner(),
               ),
+            if (summary?.clearRequestBy != null && !isGroup)
+              _ClearRequestBanner(summary: summary!, me: me, onRespond: _respondClear),
             Expanded(
               child: switch (chat) {
                 AsyncData(:final value) => _MessageList(
@@ -1688,6 +1846,86 @@ class _Composer extends StatelessWidget {
             ),
             const SizedBox(width: PrivioSpacing.s),
             trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Demande « vider pour nous deux » en cours (lot 4.3).
+class _ClearRequestBanner extends StatelessWidget {
+  const _ClearRequestBanner({required this.summary, required this.me, required this.onRespond});
+
+  final ConversationSummary summary;
+  final String? me;
+
+  /// true : accepter ; false : refuser ; null : annuler sa propre demande.
+  final void Function(bool? accept) onRespond;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = PrivioPalette.of(context);
+    final mine = summary.clearRequestBy == me;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('clear.banner'),
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(PrivioSpacing.l, PrivioSpacing.s, PrivioSpacing.l, 0),
+        padding: const EdgeInsets.fromLTRB(
+          PrivioSpacing.m,
+          PrivioSpacing.s,
+          PrivioSpacing.s,
+          PrivioSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: p.notice,
+          borderRadius: BorderRadius.circular(PrivioRadius.medium),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cleaning_services_outlined, size: 18, color: p.accentText),
+                const SizedBox(width: PrivioSpacing.s),
+                Expanded(
+                  child: Text(
+                    mine
+                        ? 'Demande envoyée : en attente de l\'accord de ${summary.title} pour '
+                              'vider toute la discussion.'
+                        : '${summary.title} propose de vider toute la discussion pour vous deux. '
+                              'Tout disparaîtra, sans trace.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: mine
+                  ? [
+                      TextButton(
+                        key: const Key('clear.cancel'),
+                        onPressed: () => onRespond(null),
+                        child: const Text('Annuler la demande'),
+                      ),
+                    ]
+                  : [
+                      TextButton(
+                        key: const Key('clear.refuse'),
+                        onPressed: () => onRespond(false),
+                        child: const Text('Refuser'),
+                      ),
+                      FilledButton(
+                        key: const Key('clear.accept'),
+                        onPressed: () => onRespond(true),
+                        child: const Text('Accepter et vider'),
+                      ),
+                    ],
+            ),
           ],
         ),
       ),

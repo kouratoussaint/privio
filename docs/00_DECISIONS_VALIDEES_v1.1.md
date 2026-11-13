@@ -104,3 +104,13 @@ Demandés par le commanditaire après test sur téléphone :
   sont pas créés en v1 : un seul administrateur. La protection supplémentaire de l'accès
   (code ou empreinte à l'ouverture de la console, appui sur le verrouillage du lot 4.2) sera
   proposée et validée au lot 5.1.
+
+## Amendement 7 — Confidentialité et « vider la discussion » (13 novembre 2026)
+- L'utilisateur règle le maximum de sa confidentialité : statut « en ligne » / « vu à »,
+  photo de profil, invitations dans les groupes (tout le monde / mes contacts / personne),
+  accusés de lecture, indicateur d'écriture, durée par défaut des messages. Réglages **non
+  réciproques**. Détails : ADR-013.
+- **Vider la discussion** : effacement de tous les messages **sans aucune trace** (pas de
+  « Message supprimé »). Deux choix : pour nous deux **avec l'accord de l'autre**, ou
+  seulement chez moi. Dans un groupe, les **administrateurs** vident pour tous.
+

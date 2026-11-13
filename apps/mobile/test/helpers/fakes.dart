@@ -402,7 +402,7 @@ class FakeMessagingApi implements MessagingApi {
   Future<Map<String, Object?>> getClientPolicies() async => policies;
 
   ConversationSummary _summary(String id, {bool? blockedFlag}) {
-    final list = messages[id] ?? const <ChatMessage>[];
+    final list = _visible(id);
     final last = list.isEmpty ? null : list.last;
     return ConversationSummary(
       id: id,
@@ -426,7 +426,104 @@ class FakeMessagingApi implements MessagingApi {
       peerDeliveredUpTo: peerDeliveredUpTo,
       peerAvatarPath: blocked.contains(bob.id) ? null : bobAvatarPath,
       mutedUntil: muted[id],
+      clearedBefore: clearedBefore[id],
+      clearRequestBy: clearRequests[id],
+      clearRequestExpiresAt: clearRequests[id] == null
+          ? null
+          : DateTime.now().add(const Duration(hours: 24)),
     );
+  }
+
+  /// Messages encore visibles pour moi (après un « vider » éventuel).
+  List<ChatMessage> _visible(String id) {
+    final before = clearedBefore[id];
+    return [
+      for (final m in messages[id] ?? const <ChatMessage>[])
+        if (before == null || m.sentAt.isAfter(before)) m,
+    ];
+  }
+
+  // -------------------------------------------------------------------------
+  // Confidentialité, présence, vider (lot 4.3)
+  // -------------------------------------------------------------------------
+  PrivacySettings privacy = const PrivacySettings();
+  final List<PrivacySettings> privacySaves = [];
+  bool failPrivacy = false;
+  final List<bool> presenceTouches = [];
+  final Map<String, UserPresence> presences = {};
+  final Map<String, DateTime> clearedBefore = {};
+
+  /// Demande « vider pour nous deux » en cours : identifiant de qui l'a faite.
+  final Map<String, String> clearRequests = {};
+
+  @override
+  Future<PrivacySettings> getMyPrivacy() async {
+    _net();
+    return privacy;
+  }
+
+  @override
+  Future<void> setMyPrivacy(PrivacySettings settings) async {
+    _net();
+    if (failPrivacy) throw const AppFailure(FailureCode.privacySettingInvalid);
+    privacy = settings;
+    privacySaves.add(settings);
+  }
+
+  @override
+  Future<void> touchPresence({required bool online}) async => presenceTouches.add(online);
+
+  @override
+  Future<UserPresence> getPresence(String userId) async {
+    _net();
+    return presences[userId] ?? const UserPresence();
+  }
+
+  void _wipe(String id) {
+    messages[id]?.clear();
+    clearRequests.remove(id);
+    clearedBefore[id] = DateTime.now();
+  }
+
+  @override
+  Future<String> clearConversation(String conversationId, {required bool everyone}) async {
+    _net();
+    if (!everyone) {
+      clearedBefore[conversationId] = DateTime.now();
+      return 'cleared';
+    }
+    final g = groups[conversationId];
+    if (g != null) {
+      if (!g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+      _wipe(conversationId);
+      return 'cleared';
+    }
+    if (blocked.contains(bob.id)) throw const AppFailure(FailureCode.clearNotAllowed);
+    if (clearRequests[conversationId] == bob.id) {
+      _wipe(conversationId);
+      return 'cleared';
+    }
+    clearRequests[conversationId] = me;
+    return 'requested';
+  }
+
+  @override
+  Future<String> respondClearRequest(String conversationId, {required bool accept}) async {
+    _net();
+    final by = clearRequests[conversationId];
+    if (by == null || by == me) throw const AppFailure(FailureCode.clearRequestNotFound);
+    if (!accept) {
+      clearRequests.remove(conversationId);
+      return 'refused';
+    }
+    _wipe(conversationId);
+    return 'cleared';
+  }
+
+  @override
+  Future<void> cancelClearRequest(String conversationId) async {
+    _net();
+    if (clearRequests[conversationId] == me) clearRequests.remove(conversationId);
   }
 
   /// Photo de profil de Bob (null : pas de photo).
@@ -493,7 +590,7 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   List<ChatMessage> _messagesFor(String conversationId) => [
-    for (final m in messages[conversationId] ?? const <ChatMessage>[])
+    for (final m in _visible(conversationId))
       if (!hiddenForMe.contains(m.id))
         if (m.replyToId == null)
           m
@@ -860,7 +957,7 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   ConversationSummary _groupSummary(FakeGroup g) {
-    final list = messages[g.id] ?? const <ChatMessage>[];
+    final list = _visible(g.id);
     final last = list.isEmpty ? null : list.last;
     return ConversationSummary(
       id: g.id,
@@ -890,6 +987,7 @@ class FakeMessagingApi implements MessagingApi {
       myRole: g.roles[me],
       posting: g.posting,
       infoEditing: g.infoEditing,
+      clearedBefore: clearedBefore[g.id],
     );
   }
 

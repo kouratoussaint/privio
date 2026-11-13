@@ -187,6 +187,23 @@ class LocalCache {
     return _persist();
   }
 
+  /// Discussion vidée (chez moi ou pour tous, lot 4.3) : les messages envoyés avant
+  /// [before] et leurs fichiers sont effacés du téléphone. Renvoie vrai si quelque chose
+  /// a été effacé.
+  Future<bool> applyCleared(String conversationId, DateTime before) async {
+    await ensureLoaded();
+    final list = _messages[conversationId];
+    if (list == null) return false;
+    final gone = list.where((m) => m.sentAt.isBefore(before)).toList();
+    if (gone.isEmpty) return false;
+    list.removeWhere((m) => m.sentAt.isBefore(before));
+    for (final m in gone) {
+      _forgetMedia(messageMediaKey(m.id));
+    }
+    await _persist();
+    return true;
+  }
+
   /// Message masqué (« supprimer pour moi ») : retiré, son compris.
   Future<void> removeMessage(String conversationId, String messageId) {
     _messages[conversationId]?.removeWhere((m) => m.id == messageId);
