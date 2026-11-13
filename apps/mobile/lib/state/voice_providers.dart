@@ -1,3 +1,5 @@
+import 'data_providers.dart';
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -103,6 +105,7 @@ class VoicePlayerController extends Notifier<VoicePlayback> {
       var audio = await cache.readMedia(key);
       if (audio == null) {
         audio = await ref.read(messagingApiProvider).downloadVoice(m.mediaPath!);
+        countData(ref, received: audio.length);
         await cache.putMedia(key, audio, m.expiresAt);
         if (ref.mounted) ref.read(offlineProvider.notifier).report(offline: false);
       }

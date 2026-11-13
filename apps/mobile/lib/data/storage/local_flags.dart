@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Indicateurs locaux NON sensibles (aucun jeton, aucune donnée personnelle).
@@ -15,6 +17,15 @@ abstract interface class LocalFlags {
   /// Réaction envoyée par un double appui sur un message (❤️ par défaut).
   Future<String> quickReaction();
   Future<void> setQuickReaction(String emoji);
+
+  // Économie de données (lot 4.2).
+  /// 'always', 'wifi' ou 'never' (téléchargement automatique des photos).
+  Future<String> photoAutoDownload();
+  Future<void> setPhotoAutoDownload(String value);
+
+  /// Octets de médias reçus / envoyés, par mois : {'2026-11:in': 1234, '2026-11:out': 56}.
+  Future<Map<String, int>> dataUsage();
+  Future<void> saveDataUsage(Map<String, int> usage);
 }
 
 class SharedPrefsLocalFlags implements LocalFlags {
@@ -25,6 +36,8 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _permissions = 'privio.permissions_seen';
   static const _push = 'privio.push_enabled';
   static const _quick = 'privio.quick_reaction';
+  static const _autoPhoto = 'privio.photo_auto_download';
+  static const _usage = 'privio.data_usage';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -55,4 +68,27 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setQuickReaction(String emoji) => _prefs.setString(_quick, emoji);
+
+  @override
+  Future<String> photoAutoDownload() async => (await _prefs.getString(_autoPhoto)) ?? 'always';
+
+  @override
+  Future<void> setPhotoAutoDownload(String value) => _prefs.setString(_autoPhoto, value);
+
+  @override
+  Future<Map<String, int>> dataUsage() async {
+    final raw = await _prefs.getString(_usage);
+    if (raw == null) return {};
+    try {
+      return {
+        for (final e in (jsonDecode(raw) as Map<String, dynamic>).entries)
+          e.key: (e.value as num).toInt(),
+      };
+    } on Object {
+      return {};
+    }
+  }
+
+  @override
+  Future<void> saveDataUsage(Map<String, int> usage) => _prefs.setString(_usage, jsonEncode(usage));
 }

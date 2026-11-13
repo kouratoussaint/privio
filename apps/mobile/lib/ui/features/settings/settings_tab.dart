@@ -1,3 +1,5 @@
+import '../../../state/data_providers.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,11 +12,13 @@ import '../../../core/util/reactions.dart';
 import '../../../data/services/photo_picker.dart';
 import '../../../data/services/realtime_service.dart';
 import '../../../router/routes.dart';
+import '../../../state/app_lock_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/push_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/avatar.dart';
+import '../lock/app_lock_screens.dart' show delayLabel;
 import '../../core/widgets/brand_scaffold.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
@@ -121,12 +125,14 @@ class SettingsTab extends ConsumerWidget {
       if (choice == 'remove') {
         await api.removeAvatar();
       } else {
+        final source = choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery;
         final raw = await ref
-            .read(photoPickerProvider)
-            .pick(choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery);
+            .read(appLockProvider.notifier)
+            .runExternal(() => ref.read(photoPickerProvider).pick(source));
         if (raw == null) return;
         final photo = await ref.read(photoPreparerProvider)(raw, avatar: true);
         await api.setAvatar(photo.bytes);
+        countDataW(ref, sent: photo.bytes.length);
       }
       await ref.read(sessionControllerProvider.notifier).refreshAccount();
       messenger.showSnackBar(
@@ -259,6 +265,19 @@ class SettingsTab extends ConsumerWidget {
                   ),
                   onTap: () => context.push(Routes.blockedUsers),
                 ),
+                const _Divider(),
+                ListTile(
+                  key: const Key('settings.lock'),
+                  leading: Icon(Icons.lock_outline, color: p.accentText),
+                  title: const Text('Verrouillage de l\'application'),
+                  subtitle: Text(
+                    (ref.watch(appLockProvider).value?.enabled ?? false)
+                        ? 'Activé · ${delayLabel(ref.watch(appLockProvider).value!.config.delaySeconds).toLowerCase()}'
+                        : 'Désactivé',
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  onTap: () => context.push(Routes.appLock),
+                ),
               ],
             ),
             const _SectionTitle('Notifications et gestes'),
@@ -291,6 +310,15 @@ class SettingsTab extends ConsumerWidget {
             const _SectionTitle('Ce téléphone'),
             _Card(
               children: [
+                ListTile(
+                  key: const Key('settings.storage'),
+                  leading: Icon(Icons.data_saver_on_outlined, color: p.accentText),
+                  title: const Text('Stockage et données'),
+                  subtitle: const Text('Téléchargement des photos, données utilisées, espace'),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  onTap: () => context.push(Routes.storage),
+                ),
+                const _Divider(),
                 ValueListenableBuilder<RealtimeStatus>(
                   valueListenable: ref.watch(realtimeStatusProvider).status,
                   builder: (_, status, _) {

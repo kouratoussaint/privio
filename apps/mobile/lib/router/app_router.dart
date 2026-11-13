@@ -10,6 +10,8 @@ import '../ui/features/auth/phone_screen.dart';
 import '../ui/features/auth/welcome_screen.dart';
 import '../ui/features/groups/group_screens.dart';
 import '../ui/features/home/archived_screen.dart';
+import '../ui/features/lock/app_lock_screens.dart';
+import '../ui/features/settings/storage_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
 import '../ui/features/home/groups_tab.dart';
 import '../ui/features/home/home_shell.dart';
@@ -53,6 +55,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.archived, builder: (_, _) => const ArchivedScreen()),
       GoRoute(path: Routes.help, builder: (_, _) => const HelpScreen()),
       GoRoute(path: Routes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
+      GoRoute(path: Routes.appLock, builder: (_, _) => const AppLockSettingsScreen()),
+      GoRoute(
+        path: Routes.appLockNew,
+        builder: (_, _) => const PinFlowScreen(flow: PinFlow.create),
+      ),
+      GoRoute(
+        path: Routes.appLockChange,
+        builder: (_, _) => const PinFlowScreen(flow: PinFlow.change),
+      ),
+      GoRoute(
+        path: Routes.appLockDisable,
+        builder: (_, _) => const PinFlowScreen(flow: PinFlow.disable),
+      ),
+      GoRoute(path: Routes.storage, builder: (_, _) => const StorageScreen()),
       GoRoute(
         path: '/chat/:id',
         builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']!),

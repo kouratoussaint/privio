@@ -11,6 +11,10 @@ import 'package:privio/core/errors/app_failure.dart';
 import 'package:privio/core/theme/privio_theme.dart';
 import 'package:privio/data/services/account_api.dart';
 import 'package:privio/data/services/audio/audio_engine.dart';
+import 'package:privio/data/services/device_services.dart';
+import 'package:privio/data/storage/app_lock_store.dart';
+import 'package:privio/state/app_lock_providers.dart';
+import 'package:privio/state/data_providers.dart';
 import 'package:privio/data/services/audio/voice_recorder.dart';
 import 'package:privio/data/services/auth_service.dart';
 import 'package:privio/data/services/messaging_api.dart';
@@ -174,6 +178,57 @@ class FakeLocalFlags implements LocalFlags {
   Future<void> setPermissionsSeen() async => permissions = true;
   @override
   Future<void> clearAccountScoped() async => permissions = false;
+
+  String autoPhoto = 'always';
+  Map<String, int> usage = {};
+
+  @override
+  Future<String> photoAutoDownload() async => autoPhoto;
+  @override
+  Future<void> setPhotoAutoDownload(String value) async => autoPhoto = value;
+  @override
+  Future<Map<String, int>> dataUsage() async => Map.of(usage);
+  @override
+  Future<void> saveDataUsage(Map<String, int> value) async => usage = Map.of(value);
+}
+
+/// Empreinte rapide pour les tests (même interface, une seule itération, sans isolat).
+class FastPinHasher extends PinHasher {
+  const FastPinHasher() : super(useIsolate: false);
+
+  @override
+  Future<String> hash(String pin, List<int> salt, int iterations) => super.hash(pin, salt, 1);
+}
+
+class FakeBiometricGate implements BiometricGate {
+  bool isAvailable = false;
+  bool accept = true;
+  int prompts = 0;
+
+  @override
+  Future<bool> available() async => isAvailable;
+
+  @override
+  Future<bool> authenticate(String reason) async {
+    prompts++;
+    return accept;
+  }
+}
+
+class FakeNetworkMonitor implements NetworkMonitor {
+  NetKind kind = NetKind.mobile;
+  final _changes = StreamController<NetKind>.broadcast();
+
+  void set(NetKind k) {
+    kind = k;
+    _changes.add(k);
+  }
+
+  @override
+  Future<NetKind> current() async => kind;
+
+  @override
+  Stream<NetKind> changes() => _changes.stream;
 }
 
 class FakePermissionGateway implements PermissionGateway {
@@ -197,6 +252,9 @@ class FakeMessagingApi implements MessagingApi {
   final List<String> handleSearches = [];
   final List<String> sentClientIds = [];
   bool failNextSend = false;
+
+  /// La liste des discussions échoue (erreur du serveur, pas de réseau).
+  bool failList = false;
   int conversationTtl = 72 * 3600;
 
   /// Coupure réseau simulée : tout appel échoue comme sans connexion.
@@ -394,6 +452,7 @@ class FakeMessagingApi implements MessagingApi {
 
   Future<List<ConversationSummary>> _list() async {
     _net();
+    if (failList) throw const AppFailure(FailureCode.unknown);
     return _listRaw();
   }
 
@@ -1209,8 +1268,17 @@ class TestDeps {
   final recorder = FakeVoiceRecorder();
   final audio = FakeAudioEngine();
   final photos = FakePhotoPicker();
+  final lockStore = MemoryAppLockStore();
+  final biometrics = FakeBiometricGate();
+  final network = FakeNetworkMonitor();
+  DateTime Function() clock = DateTime.now;
 
   List<Override> get overrides => [
+    appLockStoreProvider.overrideWithValue(lockStore),
+    biometricGateProvider.overrideWithValue(biometrics),
+    pinHasherProvider.overrideWithValue(const FastPinHasher()),
+    lockClockProvider.overrideWithValue(() => clock()),
+    networkMonitorProvider.overrideWithValue(network),
     authServiceProvider.overrideWithValue(auth),
     accountApiProvider.overrideWithValue(api),
     localFlagsProvider.overrideWithValue(flags),

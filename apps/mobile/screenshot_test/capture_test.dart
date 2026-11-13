@@ -355,6 +355,71 @@ void main() {
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
       await tester.pumpAndSettle();
       await _shot(tester, '20_groupe_membres_$suffix');
+
+      // 25 — stockage et données ; 23 — verrouillage (lot 4.2)
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(of: find.byType(NavigationBar), matching: find.text('Paramètres')),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settings.storage')),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.ensureVisible(find.byKey(const Key('settings.storage')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settings.storage')));
+      await tester.pumpAndSettle();
+      await _shot(tester, '25_stockage_$suffix');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settings.lock')),
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.ensureVisible(find.byKey(const Key('settings.lock')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settings.lock')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('lock.enabled')));
+      await tester.pumpAndSettle();
+      Future<void> typePin(String pin) async {
+        for (final d in pin.split('')) {
+          await tester.tap(find.byKey(Key('pin.$d')));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+      }
+
+      await typePin('2580');
+      await _shot(tester, '23_creer_code_$suffix');
+      await typePin('14');
+      await typePin('258014');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await _shot(tester, '23_verrouillage_$suffix');
+      await tester.tap(find.byKey(const Key('lock.delay')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('lock.delay.0')));
+      await tester.pumpAndSettle();
+      for (final st in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(st);
+      }
+      await tester.pumpAndSettle();
+      await typePin('00');
+      await _shot(tester, '23_ecran_verrouille_$suffix');
     });
   }
 }

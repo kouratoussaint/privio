@@ -13,6 +13,9 @@ abstract interface class MediaVault {
   Future<Uint8List?> get(String key);
   Future<void> delete(String key);
   Future<void> wipe();
+
+  /// Place occupée sur le téléphone, en octets (fichiers chiffrés).
+  Future<int> totalBytes();
 }
 
 /// Un fichier AES-256-GCM par son (vecteur aléatoire neuf à chaque écriture, écriture
@@ -82,6 +85,17 @@ class EncryptedMediaVault implements MediaVault {
     await _keys.delete();
     _key = null;
   }
+
+  @override
+  Future<int> totalBytes() async {
+    final dir = Directory('${(await _directory()).path}/$folder');
+    if (!await dir.exists()) return 0;
+    var total = 0;
+    await for (final f in dir.list()) {
+      if (f is File) total += await f.length();
+    }
+    return total;
+  }
 }
 
 /// Coffre en mémoire (tests).
@@ -99,4 +113,7 @@ class MemoryMediaVault implements MediaVault {
 
   @override
   Future<void> wipe() async => files.clear();
+
+  @override
+  Future<int> totalBytes() async => files.values.fold<int>(0, (a, b) => a + b.length);
 }

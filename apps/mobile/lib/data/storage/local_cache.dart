@@ -265,6 +265,30 @@ class LocalCache {
     return changed || _outbox.length != before || expired.isNotEmpty;
   }
 
+  /// Fichiers gardés sur le téléphone (photos, vocaux, photos de profil) et place occupée.
+  Future<({int files, int bytes})> mediaUsage() async {
+    await ensureLoaded();
+    await _writing;
+    return (files: _media.length, bytes: await _vault.totalBytes());
+  }
+
+  /// Efface les copies locales des médias reçus et envoyés (DATA-008). Elles seront
+  /// retéléchargées à la demande tant que les messages n'ont pas expiré. Les médias en
+  /// attente d'envoi sont gardés. Renvoie le nombre de fichiers effacés.
+  Future<int> clearMedia() async {
+    await ensureLoaded();
+    final keys = [
+      for (final k in _media.keys)
+        if (!k.startsWith('out-')) k,
+    ];
+    for (final k in keys) {
+      _forgetMedia(k);
+    }
+    await _persist();
+    await _writing;
+    return keys.length;
+  }
+
   /// Purge périodique : efface aussi du disque.
   Future<void> purgeExpired() async {
     await ensureLoaded();

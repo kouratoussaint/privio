@@ -10,6 +10,7 @@ import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../data/services/photo_picker.dart';
 import '../../../domain/models/messaging.dart';
+import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
 
 /// Largeur d'une photo dans une bulle ; la hauteur suit les proportions (bornées).
@@ -53,10 +54,28 @@ class PhotoMessageContent extends ConsumerWidget {
     final fg = outgoing ? p.onBubbleOut : p.onBubbleIn;
     final meta = outgoing ? p.bubbleOutMeta : p.bubbleInMeta;
     final h = photoBubbleHeight(width, height);
-    final bytes = ref.watch(photoBytesProvider(photo));
+    // Économie de données : sans téléchargement automatique, une photo reçue n'est
+    // téléchargée que si la personne le demande (DATA-003).
+    final download =
+        outgoing ||
+        ref.watch(photoAutoAllowedProvider) ||
+        ref.watch(photoRequestsProvider).contains(photo.key);
+    final AsyncValue<Uint8List?> bytes = download
+        ? ref.watch(photoBytesProvider(photo))
+        : ref.watch(photoLocalProvider(photo));
 
     final Widget frame = switch (bytes) {
-      AsyncData(:final value) => GestureDetector(
+      AsyncData(value: null) => InkWell(
+        key: Key('photo.download.${photo.key}'),
+        onTap: () => ref.read(photoRequestsProvider.notifier).request(photo.key),
+        child: _Placeholder(
+          height: h,
+          color: meta,
+          icon: Icons.download_for_offline_outlined,
+          label: 'Photo · toucher pour télécharger',
+        ),
+      ),
+      AsyncData(value: final Uint8List value) => GestureDetector(
         key: Key('photo.open.${photo.key}'),
         onTap: onOpen == null ? null : () => onOpen!(value),
         child: Image.memory(
@@ -84,10 +103,15 @@ class PhotoMessageContent extends ConsumerWidget {
       _ => _Placeholder(height: h, color: meta, loading: true),
     };
 
+    final notDownloaded = bytes is AsyncData<Uint8List?> && bytes.value == null;
+    final what = notDownloaded ? 'Photo non téléchargée' : 'Photo';
     return Semantics(
-      label: caption == null || caption!.isEmpty ? 'Photo' : 'Photo : $caption',
-      button: onOpen != null,
-      onTapHint: 'agrandir',
+      label: caption == null || caption!.isEmpty ? what : '$what : $caption',
+      button: onOpen != null || notDownloaded,
+      onTapHint: notDownloaded ? 'télécharger' : 'agrandir',
+      onTap: notDownloaded
+          ? () => ref.read(photoRequestsProvider.notifier).request(photo.key)
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

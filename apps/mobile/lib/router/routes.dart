@@ -17,6 +17,11 @@ abstract final class Routes {
   static const archived = '/archived';
   static const help = '/help';
   static const deleteAccount = '/delete-account';
+  static const appLock = '/app-lock';
+  static const appLockNew = '/app-lock/new';
+  static const appLockChange = '/app-lock/change';
+  static const appLockDisable = '/app-lock/disable';
+  static const storage = '/storage';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
   static String groupInvite(String conversationId) => '/chat/$conversationId/invite';

@@ -65,3 +65,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Thèmes AppCompat : exigés par l'empreinte digitale (local_auth) sur Android 7 et 8.
+    implementation("androidx.appcompat:appcompat:1.7.1")
+}

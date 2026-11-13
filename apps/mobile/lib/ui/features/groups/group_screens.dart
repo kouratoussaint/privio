@@ -11,6 +11,8 @@ import '../../../core/util/time_format.dart';
 import '../../../data/services/photo_picker.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
+import '../../../state/app_lock_providers.dart';
+import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/avatar.dart';
@@ -448,9 +450,10 @@ class GroupInfoScreen extends ConsumerWidget {
         await groupAction(ref, conversationId, (api) => api.removeGroupAvatar(conversationId));
         return;
       }
+      final source = choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery;
       final raw = await ref
-          .read(photoPickerProvider)
-          .pick(choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery);
+          .read(appLockProvider.notifier)
+          .runExternal(() => ref.read(photoPickerProvider).pick(source));
       if (raw == null) return;
       final photo = await ref.read(photoPreparerProvider)(raw, avatar: true);
       await groupAction(
@@ -458,6 +461,7 @@ class GroupInfoScreen extends ConsumerWidget {
         conversationId,
         (api) => api.setGroupAvatar(conversationId, photo.bytes),
       );
+      countDataW(ref, sent: photo.bytes.length);
     });
   }
 

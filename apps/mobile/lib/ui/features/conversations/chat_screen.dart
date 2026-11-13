@@ -14,6 +14,7 @@ import '../../../core/util/time_format.dart';
 import '../../../data/services/audio/voice_recorder.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
+import '../../../state/app_lock_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/voice_providers.dart';
@@ -234,7 +235,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final source = await showPhotoSourceSheet(context, quota: quota);
     if (source == null || !mounted) return;
     try {
-      final raw = await ref.read(photoPickerProvider).pick(source);
+      final raw = await ref
+          .read(appLockProvider.notifier)
+          .runExternal(() => ref.read(photoPickerProvider).pick(source));
       if (raw == null || !mounted) return;
       setState(() => _preparingPhoto = true);
       final photo = await ref.read(photoPreparerProvider)(raw);

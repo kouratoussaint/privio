@@ -6,16 +6,20 @@ import 'app.dart';
 import 'core/config/env.dart';
 import 'data/services/account_api.dart';
 import 'data/services/audio/audio_engine.dart';
+import 'data/services/device_services.dart';
 import 'data/services/audio/voice_recorder.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/messaging_api.dart';
 import 'data/services/push_service.dart';
 import 'data/services/photo_picker.dart';
 import 'data/services/realtime_service.dart';
+import 'data/storage/app_lock_store.dart';
 import 'data/storage/local_flags.dart';
 import 'data/storage/local_store.dart';
 import 'data/storage/media_vault.dart';
 import 'data/storage/secure_session_storage.dart';
+import 'state/app_lock_providers.dart';
+import 'state/data_providers.dart';
 import 'state/messaging_providers.dart';
 import 'state/providers.dart';
 import 'state/push_providers.dart';
@@ -66,6 +70,9 @@ Future<void> main() async {
         photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
+        appLockStoreProvider.overrideWithValue(SecureAppLockStore()),
+        biometricGateProvider.overrideWithValue(DeviceBiometricGate()),
+        networkMonitorProvider.overrideWithValue(DeviceNetworkMonitor()),
       ],
       child: const PrivioApp(),
     ),

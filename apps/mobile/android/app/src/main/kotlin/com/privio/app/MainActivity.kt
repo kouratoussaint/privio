@@ -6,7 +6,7 @@ import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
 /**
  * SEC-005 : FLAG_SECURE appliqué à toute l'application dès la création de la fenêtre.
@@ -16,8 +16,10 @@ import io.flutter.embedding.android.FlutterActivity
  *
  * Lot 4.1 : canal de notification « Messages » (contenu toujours générique, masqué
  * sur l'écran verrouillé).
+ *
+ * Lot 4.2 : FlutterFragmentActivity, exigée par l'empreinte digitale (local_auth).
  */
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,

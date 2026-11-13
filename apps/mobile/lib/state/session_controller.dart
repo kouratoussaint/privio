@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_failure.dart';
 import '../domain/models/account.dart';
+import 'app_lock_providers.dart';
 import 'providers.dart';
 import 'push_providers.dart';
 
@@ -101,6 +102,7 @@ class SessionController extends AsyncNotifier<SessionState> {
       await flags.clearAccountScoped();
       // Compte ouvert ailleurs : plus aucun message lisible sur ce téléphone.
       await ref.read(localCacheProvider).wipe();
+      await ref.read(appLockProvider.notifier).reset();
       return SessionState(
         onboardingDone: onboardingDone,
         signedIn: false,
@@ -164,8 +166,9 @@ class SessionController extends AsyncNotifier<SessionState> {
     _lastSignedIn = false;
     await ref.read(authServiceProvider).signOut();
     await ref.read(localFlagsProvider).clearAccountScoped();
-    // Déconnexion : le cache chiffré et sa clé sont détruits.
+    // Déconnexion : le cache chiffré et sa clé sont détruits, le verrouillage oublié.
     await ref.read(localCacheProvider).wipe();
+    await ref.read(appLockProvider.notifier).reset();
     _pendingNotice = null;
     await _reload();
   }
@@ -175,6 +178,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     await forgetPushToken(ref, serverSide: false);
     _lastSignedIn = false;
     await ref.read(localCacheProvider).wipe();
+    await ref.read(appLockProvider.notifier).reset();
     await ref.read(authServiceProvider).signOut();
     await ref.read(localFlagsProvider).clearAccountScoped();
     _pendingNotice = kAccountDeletedNotice;

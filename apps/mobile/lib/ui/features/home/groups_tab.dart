@@ -13,7 +13,7 @@ import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
-import 'discussions_tab.dart' show ConversationTile;
+import 'discussions_tab.dart' show ConversationTile, OfflineBanner;
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
@@ -47,9 +47,11 @@ class GroupsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
-    final groups = (ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+    final conversations = ref.watch(conversationsProvider);
+    final groups = (conversations.value ?? const <ConversationSummary>[])
         .where((c) => c.isGroup && !c.archived)
         .toList();
+    final offline = ref.watch(offlineProvider);
 
     return BrandScaffold(
       title: const Text('Groupes'),
@@ -63,31 +65,59 @@ class GroupsTab extends ConsumerWidget {
       ),
       body: ColoredBox(
         color: theme.colorScheme.surface,
-        child: invitations.isEmpty && groups.isEmpty
-            ? const EmptyView(
-                icon: Icons.groups_outlined,
-                title: 'Aucun groupe pour l\'instant',
-                message:
-                    'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre ; '
-                    'les messages s\'effacent comme dans vos discussions.',
-              )
-            : ListView(
-                padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
-                children: [
-                  if (invitations.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                      child: Text('Invitations', style: theme.textTheme.titleSmall),
-                    ),
-                    for (final i in invitations)
-                      _InvitationCard(invitation: i, onRespond: _respond),
-                    const SizedBox(height: PrivioSpacing.m),
-                  ],
-                  for (final g in groups) ConversationTile(summary: g),
-                ],
+        child: Column(
+          children: [
+            if (offline)
+              const Padding(
+                padding: EdgeInsets.only(top: PrivioSpacing.s),
+                child: OfflineBanner(),
               ),
+            Expanded(child: _body(context, ref, conversations, invitations, groups)),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _body(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<ConversationSummary>> conversations,
+    List<GroupInvitation> invitations,
+    List<ConversationSummary> groups,
+  ) {
+    final theme = Theme.of(context);
+    if (!conversations.hasValue && conversations.isLoading) return const LoadingView();
+    if (conversations case AsyncError(:final error)) {
+      return ErrorView(
+        message: toAppFailure(error).message,
+        onRetry: () => ref
+          ..invalidate(conversationsProvider)
+          ..invalidate(invitationsProvider),
+      );
+    }
+    return invitations.isEmpty && groups.isEmpty
+        ? const EmptyView(
+            icon: Icons.groups_outlined,
+            title: 'Aucun groupe pour l\'instant',
+            message:
+                'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre ; '
+                'les messages s\'effacent comme dans vos discussions.',
+          )
+        : ListView(
+            padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
+            children: [
+              if (invitations.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                  child: Text('Invitations', style: theme.textTheme.titleSmall),
+                ),
+                for (final i in invitations) _InvitationCard(invitation: i, onRespond: _respond),
+                const SizedBox(height: PrivioSpacing.m),
+              ],
+              for (final g in groups) ConversationTile(summary: g),
+            ],
+          );
   }
 }
 

@@ -1,3 +1,5 @@
+import 'data_providers.dart';
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -142,6 +144,7 @@ class OutboxController extends Notifier<List<OutboxItem>> {
                 replyToId: item.replyToId,
                 ttlSeconds: item.ttlSeconds,
               );
+        countData(ref, sent: media.length);
         // L'expéditeur revoit / réécoute son envoi sans le retélécharger.
         await _cache.putMedia(LocalCache.messageMediaKey(sent.id), media, sent.expiresAt);
         if (item.isPhoto) ref.invalidate(photoQuotaProvider);
@@ -733,6 +736,7 @@ final photoBytesProvider = FutureProvider.autoDispose.family<Uint8List, PhotoRef
   if (!until.isAfter(DateTime.now())) throw const AppFailure(FailureCode.messageExpired);
   try {
     final bytes = await ref.read(messagingApiProvider).downloadPhoto(path);
+    countData(ref, received: bytes.length);
     await cache.putMedia(photo.key, bytes, until);
     return bytes;
   } on Object catch (e) {
@@ -754,6 +758,7 @@ final avatarBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>
   final local = await cache.readMedia(key);
   if (local != null) return local;
   final bytes = await ref.read(messagingApiProvider).downloadAvatar(path);
+  countData(ref, received: bytes.length);
   await cache.putMedia(key, bytes, DateTime.now().add(const Duration(days: 7)));
   return bytes;
 });

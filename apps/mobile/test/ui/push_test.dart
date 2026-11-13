@@ -36,6 +36,9 @@ Future<void> _openSettingsSwitch(WidgetTester tester) async {
     200,
     scrollable: find.byType(Scrollable).last,
   );
+  // En haut de l'écran : la barre de navigation ne doit pas recouvrir l'interrupteur.
+  await tester.ensureVisible(find.byKey(const Key('settings.push')));
+  await tester.pumpAndSettle();
 }
 
 void main() {

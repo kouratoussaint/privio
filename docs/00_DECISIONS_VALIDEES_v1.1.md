@@ -90,3 +90,17 @@ Demandés par le commanditaire après test sur téléphone :
   liste, glisser à droite = épingler, à gauche = archiver (avec « Annuler »). Toutes ces
   actions restent disponibles par l'appui long et pour TalkBack.
 - **Notifications (lot 4.1)** : sans contenu ni nom, voir ADR-011.
+
+## Amendement 6 — Console d'administration dans l'application (13 novembre 2026)
+- **B4 / B5** : la console d'administration est **entièrement intégrée à l'application
+  mobile**. Il n'y a ni console web ni hébergement séparé (B5 sans objet).
+- **Accès** : réservé au **seul compte dont le numéro vérifié est +226 75 49 35 18**. Pour
+  tout autre compte, la console n'existe pas (aucune entrée visible).
+- **Contrôle côté serveur** : le droit d'administrer est vérifié par la base pour chaque
+  action (fonctions réservées, jamais une simple condition dans l'application). Le numéro de
+  l'administrateur est enregistré dans un réglage privé du serveur, modifiable par
+  déploiement, et non écrit dans le code de l'application.
+- Les rôles multiples prévus au dossier v1.0 (opérateur, support, analyste, sécurité) ne
+  sont pas créés en v1 : un seul administrateur. La protection supplémentaire de l'accès
+  (code ou empreinte à l'ouverture de la console, appui sur le verrouillage du lot 4.2) sera
+  proposée et validée au lot 5.1.
