@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_failure.dart';
+import '../core/media/waveform.dart';
 import '../data/services/audio/audio_engine.dart';
 import '../data/services/audio/voice_recorder.dart';
 import '../data/storage/local_cache.dart';
@@ -174,22 +175,47 @@ class VoiceIdle extends VoiceRecState {
 }
 
 class VoiceRecording extends VoiceRecState {
-  const VoiceRecording({required this.elapsed, required this.locked, required this.max});
+  const VoiceRecording({
+    required this.elapsed,
+    required this.locked,
+    required this.max,
+    this.paused = false,
+    this.levels = const [],
+  });
 
+  /// Temps réellement enregistré (les pauses ne comptent pas).
   final Duration elapsed;
 
   /// Verrouillé : l'enregistrement continue sans garder le doigt sur le micro.
   final bool locked;
   final Duration max;
 
+  /// En pause (lot 4.5, mode mains libres seulement).
+  final bool paused;
+
+  /// Derniers niveaux sonores (0 à 1), du plus ancien au plus récent : spectre en direct.
+  final List<double> levels;
+
   Duration get remaining => max - elapsed;
+
+  VoiceRecording copyWith({Duration? elapsed, bool? locked, bool? paused, List<double>? levels}) =>
+      VoiceRecording(
+        elapsed: elapsed ?? this.elapsed,
+        locked: locked ?? this.locked,
+        max: max,
+        paused: paused ?? this.paused,
+        levels: levels ?? this.levels,
+      );
 }
 
 class VoicePreview extends VoiceRecState {
-  const VoicePreview({required this.audio, required this.duration});
+  const VoicePreview({required this.audio, required this.duration, this.waveform});
 
   final Uint8List audio;
   final Duration duration;
+
+  /// Profil sonore envoyé avec le son (null si le micro n'a donné aucun niveau).
+  final List<int>? waveform;
 }
 
 /// Résultat de l'arrêt d'un enregistrement.
@@ -209,6 +235,12 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
   static const safety = Duration(milliseconds: 300);
 
   Timer? _timer;
+  StreamSubscription<double>? _levelSub;
+
+  /// Tous les niveaux mesurés hors pause (profil envoyé) et les plus récents (affichage).
+  final List<double> _samples = [];
+  final List<double> _recent = [];
+  static const liveBars = 48;
   bool _starting = false;
   bool _releasedWhileStarting = false;
   late VoiceRecorder _recorder;
@@ -226,6 +258,7 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
     _recorder = ref.watch(voiceRecorderProvider);
     ref.onDispose(() {
       _timer?.cancel();
+      unawaited(_levelSub?.cancel());
       // Écran quitté pendant un enregistrement : rien n'est conservé.
       if (_timer != null || _starting) unawaited(_recorder.cancel());
     });
@@ -246,6 +279,10 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
       await ref.read(voicePlayerProvider.notifier).stop();
       await _recorder.start();
       if (!ref.mounted) return MicPermission.granted;
+      _samples.clear();
+      _recent.clear();
+      unawaited(_levelSub?.cancel());
+      _levelSub = _recorder.levels.listen(_onLevel, onError: (Object _) {});
       state = VoiceRecording(elapsed: Duration.zero, locked: locked, max: _max);
       _timer = Timer.periodic(tick, (_) => _onTick());
       if (_releasedWhileStarting && !locked) await cancel();
@@ -255,11 +292,19 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
     }
   }
 
+  void _onLevel(double level) {
+    final s = state;
+    if (s is! VoiceRecording || s.paused) return;
+    _samples.add(level);
+    _recent.add(level);
+    if (_recent.length > liveBars) _recent.removeAt(0);
+  }
+
   void _onTick() {
     final s = state;
-    if (s is! VoiceRecording) return;
+    if (s is! VoiceRecording || s.paused) return;
     final elapsed = s.elapsed + tick;
-    state = VoiceRecording(elapsed: elapsed, locked: s.locked, max: s.max);
+    state = s.copyWith(elapsed: elapsed, levels: List.unmodifiable(_recent));
     if (s.max - s.elapsed > nearEnd && s.max - elapsed <= nearEnd) onNearEnd?.call();
     if (elapsed >= s.max - safety) {
       unawaited(stop().then((r) => onAutoStop?.call(r)));
@@ -270,8 +315,26 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
   void lock() {
     final s = state;
     if (s is VoiceRecording && !s.locked) {
-      state = VoiceRecording(elapsed: s.elapsed, locked: true, max: s.max);
+      state = s.copyWith(locked: true);
     }
+  }
+
+  /// Pause / reprise (lot 4.5) : mode mains libres uniquement ; le temps en pause ne
+  /// compte pas dans la limite.
+  Future<void> togglePause() async {
+    final s = state;
+    if (s is! VoiceRecording || !s.locked) return;
+    try {
+      if (s.paused) {
+        await _recorder.resume();
+      } else {
+        await _recorder.pause();
+      }
+    } on Object {
+      return; // micro indisponible : l'état ne change pas
+    }
+    final now = state;
+    if (ref.mounted && now is VoiceRecording) state = now.copyWith(paused: !s.paused);
   }
 
   /// Doigt levé : arrêt et préécoute (si l'enregistrement n'est pas verrouillé).
@@ -291,12 +354,14 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
     if (s is! VoiceRecording) return VoiceStopResult.none;
     _timer?.cancel();
     _timer = null;
+    unawaited(_levelSub?.cancel());
+    _levelSub = null;
     state = const VoiceIdle();
     final audio = await _recorder.stop();
     if (!ref.mounted) return VoiceStopResult.none;
     if (s.elapsed < minDuration) return VoiceStopResult.tooShort;
     if (audio == null || audio.isEmpty) return VoiceStopResult.failed;
-    state = VoicePreview(audio: audio, duration: s.elapsed);
+    state = VoicePreview(audio: audio, duration: s.elapsed, waveform: buildWaveform(_samples));
     return VoiceStopResult.preview;
   }
 
@@ -304,6 +369,8 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
   Future<void> cancel() async {
     _timer?.cancel();
     _timer = null;
+    unawaited(_levelSub?.cancel());
+    _levelSub = null;
     final wasRecording = state is VoiceRecording;
     state = const VoiceIdle();
     if (wasRecording) await _recorder.cancel();

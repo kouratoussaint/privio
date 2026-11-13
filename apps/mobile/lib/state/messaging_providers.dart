@@ -136,6 +136,7 @@ class OutboxController extends Notifier<List<OutboxItem>> {
                 audio: media,
                 replyToId: item.replyToId,
                 ttlSeconds: item.ttlSeconds,
+                waveform: item.waveform,
               )
             : await api.sendPhoto(
                 conversationId: item.conversationId,
@@ -507,6 +508,7 @@ class ChatController extends AsyncNotifier<ChatState> {
     required int durationMs,
     String? replyToId,
     int? ttlSeconds,
+    List<int>? waveform,
   }) async {
     final item = OutboxItem(
       clientId: uuidV4(),
@@ -517,6 +519,7 @@ class ChatController extends AsyncNotifier<ChatState> {
       ttlSeconds: ttlSeconds,
       kind: 'voice',
       durationMs: durationMs,
+      waveform: waveform,
     );
     final outbox = ref.read(outboxProvider.notifier);
     await outbox.enqueue(item, media: audio);
@@ -577,6 +580,7 @@ class ChatController extends AsyncNotifier<ChatState> {
             durationMs: sent.durationMs,
             width: sent.width,
             height: sent.height,
+            waveform: sent.waveform,
           );
     final messages = [...now.messages.where((m) => m.id != sent.id), shown];
     state = AsyncData(now.copyWith(messages: messages));

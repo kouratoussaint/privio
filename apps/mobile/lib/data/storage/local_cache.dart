@@ -20,6 +20,7 @@ class OutboxItem {
     this.durationMs,
     this.width,
     this.height,
+    this.waveform,
   });
 
   final String clientId;
@@ -38,6 +39,9 @@ class OutboxItem {
   /// Photo : dimensions (affichage en attente d'envoi) ; [body] porte la légende.
   final int? width;
   final int? height;
+
+  /// Vocal : profil sonore mesuré pendant l'enregistrement (lot 4.5).
+  final List<int>? waveform;
 
   /// Refusé par le serveur pour une autre raison que le réseau (ex. blocage).
   final bool failed;
@@ -61,6 +65,7 @@ class OutboxItem {
     durationMs: durationMs,
     width: width,
     height: height,
+    waveform: waveform,
     failed: failed ?? this.failed,
   );
 
@@ -76,6 +81,7 @@ class OutboxItem {
     'duration_ms': durationMs,
     'width': width,
     'height': height,
+    'waveform': waveform,
   };
 
   factory OutboxItem.fromJson(Map<String, dynamic> j) => OutboxItem(
@@ -90,6 +96,7 @@ class OutboxItem {
     durationMs: (j['duration_ms'] as num?)?.toInt(),
     width: (j['width'] as num?)?.toInt(),
     height: (j['height'] as num?)?.toInt(),
+    waveform: (j['waveform'] as List<dynamic>?)?.map((v) => (v as num).toInt()).toList(),
   );
 }
 

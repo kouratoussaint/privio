@@ -53,9 +53,11 @@ def sql(query):
                           text=True).stdout.strip()
 
 
-def send_voice(token, data, client_id=None, conv=CONV):
+def send_voice(token, data, client_id=None, conv=CONV, waveform=None):
     cid = client_id or str(uuid.uuid4())
-    status, raw = http("POST", f"/functions/v1/voice-send?conversation_id={conv}&client_msg_id={cid}",
+    extra = f"&waveform={waveform}" if waveform is not None else ""
+    status, raw = http("POST",
+                       f"/functions/v1/voice-send?conversation_id={conv}&client_msg_id={cid}{extra}",
                        data, token, {"Content-Type": "audio/mp4"})
     try:
         return status, json.loads(raw), cid
@@ -111,6 +113,22 @@ status, _ = http("GET", f"/storage/v1/object/authenticated/voice/{PATH}")
 check(status != 200, f"sans jeton : téléchargement refusé ({status})")
 status, _ = http("GET", f"/storage/v1/object/public/voice/{PATH}")
 check(status != 200, f"aucune URL publique ({status})")
+
+# --- Spectre (lot 4.5) : profil sonore vérifié puis transmis -------------------------
+WAVE = ",".join(str((i * 7) % 101) for i in range(40))
+status, wmsg, _ = send_voice(TA, FIXTURE, waveform=WAVE)
+check(status == 200 and wmsg.get("media_waveform") == [(i * 7) % 101 for i in range(40)],
+      "vocal avec spectre : la réponse porte le profil", f"{status} {wmsg}")
+_, raw = http("POST", "/rest/v1/rpc/get_messages", {"p_conversation_id": CONV}, TB)
+got = [m for m in json.loads(raw) if m["id"] == wmsg.get("id")]
+check(got and got[0]["media_waveform"] == wmsg.get("media_waveform"),
+      "le destinataire reçoit le même spectre", raw[:300])
+check(voice[0].get("media_waveform") is None, "vocal sans spectre : toujours lisible (profil vide)")
+for bad, why in (("1,2,3", "trop court"), (",".join(["101"] * 40), "valeur > 100"),
+                 (",".join(["a"] * 40), "pas un nombre"), (",".join(["5"] * 65), "trop long")):
+    status, body, _ = send_voice(TA, FIXTURE, waveform=bad)
+    check(status == 422 and body.get("error") == "BODY_INVALID", f"spectre {why} : refusé",
+          f"{status} {body}")
 
 # --- Un tiers ne peut ni lire ni écrire ---------------------------------------------
 TC = login("+22670000003")

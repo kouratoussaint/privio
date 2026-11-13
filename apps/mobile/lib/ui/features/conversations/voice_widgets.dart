@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/media/waveform.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/messaging.dart';
@@ -24,41 +25,133 @@ String spokenVoiceDuration(Duration d) {
 
 String _speedLabel(double speed) => '${speed == speed.roundToDouble() ? speed.toInt() : '1,5'}×';
 
-/// Fine barre de progression, touchable pour se déplacer dans le son.
-class _Track extends StatelessWidget {
-  const _Track({
+/// Spectre d'un vocal (lot 4.5) : barres tirées du profil sonore, colorées jusqu'à la
+/// position d'écoute ; toucher ou glisser fait sauter à cet endroit.
+class VoiceWaveform extends StatelessWidget {
+  const VoiceWaveform({
+    super.key,
+    required this.waveform,
     required this.progress,
     required this.color,
     required this.background,
     this.onSeek,
+    this.height = 28,
   });
 
+  /// Profil 0..100 (null : spectre neutre, ancien vocal).
+  final List<int>? waveform;
   final double progress;
   final Color color;
   final Color background;
   final ValueChanged<double>? onSeek;
+  final double height;
+
+  static const barWidth = 3.0;
+  static const gap = 2.0;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: onSeek == null
-          ? null
-          : (d) => onSeek!((d.localPosition.dx / box.maxWidth).clamp(0.0, 1.0)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: LinearProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            minHeight: 4,
-            color: color,
-            backgroundColor: background,
+    builder: (context, box) {
+      final count = ((box.maxWidth + gap) / (barWidth + gap)).floor().clamp(8, 64);
+      void seek(Offset at) => onSeek?.call((at.dx / box.maxWidth).clamp(0.0, 1.0));
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: onSeek == null ? null : (d) => seek(d.localPosition),
+        onHorizontalDragUpdate: onSeek == null ? null : (d) => seek(d.localPosition),
+        child: SizedBox(
+          height: height + 8,
+          width: box.maxWidth,
+          child: CustomPaint(
+            painter: _BarsPainter(
+              bars: displayBars(waveform, count),
+              progress: progress.clamp(0.0, 1.0),
+              color: color,
+              background: background,
+            ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
+}
+
+/// Spectre en direct pendant l'enregistrement : les derniers niveaux, alignés à droite.
+class LiveWaveform extends StatelessWidget {
+  const LiveWaveform({super.key, required this.levels, required this.color, this.height = 24});
+
+  final List<double> levels;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final count =
+          ((box.maxWidth + VoiceWaveform.gap) / (VoiceWaveform.barWidth + VoiceWaveform.gap))
+              .floor()
+              .clamp(4, 96);
+      final shown = levels.length > count ? levels.sublist(levels.length - count) : levels;
+      final bars = [
+        for (var i = 0; i < count - shown.length; i++) 0.06,
+        for (final l in shown) l.clamp(0.06, 1.0),
+      ];
+      return SizedBox(
+        key: const Key('voice.live_waveform'),
+        height: height,
+        width: box.maxWidth,
+        child: CustomPaint(
+          painter: _BarsPainter(bars: bars, progress: 1, color: color, background: color),
+        ),
+      );
+    },
+  );
+}
+
+class _BarsPainter extends CustomPainter {
+  _BarsPainter({
+    required this.bars,
+    required this.progress,
+    required this.color,
+    required this.background,
+  });
+
+  final List<double> bars;
+  final double progress;
+  final Color color;
+  final Color background;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (bars.isEmpty) return;
+    final step = size.width / bars.length;
+    final w = (step - VoiceWaveform.gap).clamp(1.5, VoiceWaveform.barWidth);
+    final played = Paint()..color = color;
+    final rest = Paint()..color = background;
+    for (var i = 0; i < bars.length; i++) {
+      final h = (bars[i] * size.height).clamp(2.0, size.height);
+      final x = i * step + (step - w) / 2;
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, (size.height - h) / 2, w, h),
+        Radius.circular(w / 2),
+      );
+      canvas.drawRRect(rect, (i + 0.5) / bars.length <= progress ? played : rest);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BarsPainter old) =>
+      old.progress != progress ||
+      old.color != color ||
+      old.background != background ||
+      !_sameBars(old.bars, bars);
+
+  static bool _sameBars(List<double> a, List<double> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }
 
 /// Contenu d'une bulle vocale : écouter / pause, progression, durée, vitesse.
@@ -131,10 +224,12 @@ class VoiceMessageContent extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ExcludeSemantics(
-                  child: _Track(
+                  child: VoiceWaveform(
+                    key: Key('voice.waveform.${message.id}'),
+                    waveform: message.waveform,
                     progress: progress,
                     color: fg,
-                    background: meta.withValues(alpha: 0.35),
+                    background: meta.withValues(alpha: 0.45),
                     onSeek: current && !playback.loading
                         ? (f) => run(() => player.seek(total * f))
                         : null,
@@ -252,11 +347,12 @@ class VoiceRecordingStrip extends ConsumerWidget {
     final p = PrivioPalette.of(context);
     final ending = recording.remaining <= const Duration(seconds: 5);
     final secondary = theme.colorScheme.onSurfaceVariant;
+    final ctrl = ref.read(voiceRecorderControllerProvider.notifier);
     return Semantics(
       liveRegion: true,
       label:
-          'Enregistrement en cours, ${spokenVoiceDuration(recording.elapsed)} '
-          'sur ${spokenVoiceDuration(recording.max)}',
+          '${recording.paused ? 'Enregistrement en pause' : 'Enregistrement en cours'}, '
+          '${spokenVoiceDuration(recording.elapsed)} sur ${spokenVoiceDuration(recording.max)}',
       child: Row(
         children: [
           if (recording.locked)
@@ -268,7 +364,10 @@ class VoiceRecordingStrip extends ConsumerWidget {
             )
           else
             const SizedBox(width: 18),
-          const _RecordingDot(),
+          if (recording.paused)
+            Icon(Icons.pause_rounded, size: 14, color: secondary)
+          else
+            const _RecordingDot(),
           const SizedBox(width: PrivioSpacing.s),
           ExcludeSemantics(
             child: Text(
@@ -289,22 +388,23 @@ class VoiceRecordingStrip extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          ending
+                          recording.paused
+                              ? 'En pause'
+                              : ending
                               ? 'Arrêt dans ${recording.remaining.inSeconds + 1} s'
                               : '${recording.max.inSeconds} s max.',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: ending ? theme.colorScheme.error : secondary,
+                            color: ending && !recording.paused
+                                ? theme.colorScheme.error
+                                : secondary,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: recording.elapsed.inMilliseconds / recording.max.inMilliseconds,
-                            minHeight: 3,
-                            color: ending ? theme.colorScheme.error : p.accentText,
-                            backgroundColor: p.divider,
-                          ),
+                        const SizedBox(height: 2),
+                        LiveWaveform(
+                          levels: recording.levels,
+                          color: recording.paused
+                              ? p.divider
+                              : (ending ? theme.colorScheme.error : p.accentText),
                         ),
                       ],
                     )
@@ -325,7 +425,18 @@ class VoiceRecordingStrip extends ConsumerWidget {
                     ),
             ),
           ),
-          const SizedBox(width: PrivioSpacing.s),
+          if (recording.locked)
+            IconButton(
+              key: const Key('voice.pause'),
+              tooltip: recording.paused ? 'Reprendre l’enregistrement' : 'Mettre en pause',
+              onPressed: () => unawaited(ctrl.togglePause()),
+              icon: Icon(
+                recording.paused ? Icons.fiber_manual_record : Icons.pause_rounded,
+                color: recording.paused ? theme.colorScheme.error : p.accentText,
+              ),
+            )
+          else
+            const SizedBox(width: PrivioSpacing.s),
         ],
       ),
     );
@@ -408,7 +519,9 @@ class VoicePreviewBar extends ConsumerWidget {
                     ),
                     Expanded(
                       child: ExcludeSemantics(
-                        child: _Track(
+                        child: VoiceWaveform(
+                          key: const Key('voice.preview_waveform'),
+                          waveform: preview.waveform,
                           progress: total.inMilliseconds == 0
                               ? 0
                               : position.inMilliseconds / total.inMilliseconds,

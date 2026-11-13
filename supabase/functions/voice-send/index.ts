@@ -1,6 +1,7 @@
 // PRIVIO — envoi d'un message vocal (lot 3.1).
 //
 // POST /functions/v1/voice-send?conversation_id=…&client_msg_id=…[&reply_to_id=…][&ttl_seconds=…]
+//      [&waveform=12,40,…] (lot 4.5 : profil sonore, 8 à 64 valeurs de 0 à 100)
 // Corps : le fichier audio/mp4 (AAC), 30 s au plus. En-têtes : jeton de l'utilisateur.
 //
 // 1. réservation au nom de l'utilisateur (session active, membre, non bloqué, anti-abus) ;
@@ -41,6 +42,15 @@ const STATUS: Record<string, number> = {
 
 const fail = (code: string) => json(STATUS[code] ?? 500, { error: code });
 
+/** Profil sonore « 12,40,… » : 8 à 64 entiers de 0 à 100 ; undefined si absent, null si invalide. */
+export function parseWaveform(raw: string | null): number[] | null | undefined {
+  if (raw === null || raw === "") return undefined;
+  const parts = raw.split(",");
+  if (parts.length < 8 || parts.length > 64) return null;
+  const values = parts.map((p) => (/^\d{1,3}$/.test(p) ? Number(p) : NaN));
+  return values.every((v) => Number.isInteger(v) && v >= 0 && v <= 100) ? values : null;
+}
+
 interface Prepared {
   path: string | null;
   state: string;
@@ -68,6 +78,8 @@ Deno.serve(async (req) => {
   const replyToId = q.get("reply_to_id");
   const ttlRaw = q.get("ttl_seconds");
   const ttl = ttlRaw === null ? null : Number(ttlRaw);
+  const waveform = parseWaveform(q.get("waveform"));
+  if (waveform === null) return fail("BODY_INVALID");
   if (
     !UUID.test(conversationId) || !UUID.test(clientMsgId) ||
     (replyToId !== null && !UUID.test(replyToId)) ||
@@ -121,6 +133,7 @@ Deno.serve(async (req) => {
       p_path: prep.path,
       p_duration_ms: durationMs,
       p_bytes: bytes.byteLength,
+      ...(waveform ? { p_waveform: waveform } : {}),
     }, serviceHeaders());
     return await publish(req, sendParams);
   } catch (e) {

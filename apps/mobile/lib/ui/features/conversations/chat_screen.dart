@@ -24,6 +24,7 @@ import '../../core/widgets/privacy_pattern.dart';
 import '../../core/widgets/swipe_actions.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
+import '../../../data/services/photo_picker.dart' show PhotoSource;
 import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
@@ -239,27 +240,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final source = await showPhotoSourceSheet(context, quota: quota);
     if (source == null || !mounted) return;
     try {
-      final raw = await ref
-          .read(appLockProvider.notifier)
-          .runExternal(() => ref.read(photoPickerProvider).pick(source));
-      if (raw == null || !mounted) return;
+      final picker = ref.read(photoPickerProvider);
+      final lock = ref.read(appLockProvider.notifier);
+      // Galerie : plusieurs photos, au plus celles qui restent aujourd'hui (lot 4.5).
+      final raws = source == PhotoSource.gallery
+          ? await lock.runExternal(
+              () => picker.pickMany(limit: quota?.remaining ?? kMaxPhotosPerPick),
+            )
+          : [?await lock.runExternal(() => picker.pick(source))];
+      if (raws.isEmpty || !mounted) return;
       setState(() => _preparingPhoto = true);
-      final photo = await ref.read(photoPreparerProvider)(raw);
+      final prepare = ref.read(photoPreparerProvider);
+      final photos = [for (final raw in raws) await prepare(raw)];
       if (!mounted) return;
       setState(() => _preparingPhoto = false);
-      final caption = await Navigator.of(context).push<String>(
+      final drafts = await Navigator.of(context).push<List<PhotoDraft>>(
         MaterialPageRoute(
-          builder: (_) => PhotoComposeScreen(photo: photo, quota: quota),
+          builder: (_) => PhotoComposeScreen(photos: photos, quota: quota),
         ),
       );
-      if (caption == null || !mounted) return;
+      if (drafts == null || drafts.isEmpty || !mounted) return;
       final replyTo = _replyTo;
       final ttl = _nextTtl;
       setState(() {
         _replyTo = null;
         _nextTtl = null;
       });
-      await _chat.sendPhoto(photo, caption: caption, replyToId: replyTo?.id, ttlSeconds: ttl);
+      // Un message par photo ; un échec n'empêche pas les suivantes (« Non envoyé »).
+      for (final (i, d) in drafts.indexed) {
+        await _chat.sendPhoto(
+          d.photo,
+          caption: d.caption,
+          replyToId: i == 0 ? replyTo?.id : null,
+          ttlSeconds: ttl,
+        );
+      }
     } on Object catch (e) {
       if (mounted) _toast(toAppFailure(e).message);
     } finally {
@@ -347,6 +362,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       () => _chat.sendVoice(
         preview.audio,
         durationMs: preview.duration.inMilliseconds,
+        waveform: preview.waveform,
         replyToId: replyTo?.id,
         ttlSeconds: ttl,
       ),

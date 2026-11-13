@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:privio/app.dart';
+import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
 
@@ -60,7 +61,7 @@ void main() {
     // 08 — trois onglets, aucune « communauté »
     expect(find.text('Aucune discussion pour l’instant'), findsOneWidget);
     Finder tab(String label) =>
-        find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+        find.descendant(of: find.byType(PrivioNavBar), matching: find.text(label));
     expect(tab('Discussions'), findsOneWidget);
     expect(tab('Groupes'), findsOneWidget);
     expect(tab('Paramètres'), findsOneWidget);

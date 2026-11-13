@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:privio/app.dart';
 import 'package:privio/data/storage/app_lock_store.dart';
 import 'package:privio/domain/models/account.dart';
+import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
 
@@ -74,7 +75,7 @@ const _toForeground = [
 ];
 
 Finder _tab(String label) =>
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+    find.descendant(of: find.byType(PrivioNavBar), matching: find.text(label));
 
 void main() {
   testWidgets('activer\u202F: code à 6 chiffres, refus des codes trop simples, confirmation', (

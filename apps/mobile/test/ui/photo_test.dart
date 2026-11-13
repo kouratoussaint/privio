@@ -298,4 +298,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(_snack(tester), const AppFailure(FailureCode.cameraUnavailable).message);
   });
+
+  testWidgets('plusieurs photos\u202F: limite du jour, retrait, un message par photo (lot 4.5)', (
+    tester,
+  ) async {
+    final deps = _deps();
+    deps.messaging.photosUsed = 2; // 3 restantes
+    deps.photos.many = [testJpeg(), testJpeg(), testJpeg(), testJpeg()];
+    await _openChatWithBob(tester, deps: deps);
+    await tester.tap(find.byKey(const Key('composer.photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('photo.gallery')));
+    await tester.pumpAndSettle();
+    expect(deps.photos.limits, [3], reason: 'jamais plus que les photos restantes');
+    expect(find.text('1 sur 3'), findsOneWidget);
+    expect(find.text('Ce sont vos dernières photos du jour (5 par jour).'), findsOneWidget);
+
+    // Légende de la 1re, puis retrait de la 2e.
+    await tester.enterText(find.byKey(const Key('photo.caption')), 'Première');
+    await tester.tap(find.byKey(const Key('photo.compose.thumb.1')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 sur 3'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('photo.compose.remove')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 sur 2'), findsOneWidget);
+    expect(find.text('Après l’envoi\u202F: 1 photo aujourd’hui (5 par jour).'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('photo.caption')), 'Troisième');
+    await tester.tap(find.byKey(const Key('photo.send')));
+    await tester.pumpAndSettle();
+
+    expect(deps.messaging.sentClientIds, hasLength(2));
+    expect(deps.messaging.sentCaptions, ['Première', 'Troisième']);
+    expect(deps.messaging.storedPhotos, hasLength(2));
+  });
+
+  testWidgets('appareil photo\u202F: toujours une seule photo', (tester) async {
+    final deps = await _openChatWithBob(tester);
+    await tester.tap(find.byKey(const Key('composer.photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('photo.camera')));
+    await tester.pumpAndSettle();
+    expect(deps.photos.limits, isEmpty);
+    expect(find.text('Envoyer une photo'), findsOneWidget);
+    expect(find.byKey(const Key('photo.compose.remove')), findsNothing);
+  });
 }

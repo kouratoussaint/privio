@@ -58,12 +58,14 @@ class HelpScreen extends ConsumerWidget {
     (
       'Combien de photos puis-je envoyer\u202F?',
       'Jusqu’à 5 photos par jour, groupes compris\u202F; le compteur repart à minuit. Une photo '
-          's’efface comme les messages et ne peut pas être enregistrée dans la galerie.',
+          's’efface comme les messages et ne peut pas être enregistrée dans la galerie. Dans la '
+          'galerie, vous pouvez en choisir plusieurs à la fois.',
     ),
     (
       'Combien de temps dure un message vocal\u202F?',
       '30 secondes au plus. Touchez le micro pour enregistrer sans le tenir, ou maintenez-le\u202F: '
-          'glissez vers la gauche pour annuler, vers le haut pour lâcher le doigt.',
+          'glissez vers la gauche pour annuler, vers le haut pour lâcher le doigt. Sans le '
+          'doigt, le bouton pause permet de reprendre plus tard\u202F; les pauses ne comptent pas.',
     ),
     (
       'Comment créer un groupe\u202F?',

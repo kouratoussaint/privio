@@ -358,6 +358,7 @@ class ChatMessage {
     this.width,
     this.height,
     this.senderName,
+    this.waveform,
   });
 
   final String id;
@@ -386,6 +387,9 @@ class ChatMessage {
   /// Photo : dimensions mesurées par le serveur (pour réserver la place avant l'affichage).
   final int? width;
   final int? height;
+
+  /// Vocal : profil sonore (8 à 64 valeurs de 0 à 100) ; null pour un ancien vocal.
+  final List<int>? waveform;
 
   bool get isDeleted => deletedAt != null;
   bool get isSystem => kind == 'system';
@@ -423,6 +427,7 @@ class ChatMessage {
     'media_width': width,
     'media_height': height,
     'sender_name': senderName,
+    'media_waveform': waveform,
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -452,6 +457,7 @@ class ChatMessage {
       width: (j['media_width'] as num?)?.toInt(),
       height: (j['media_height'] as num?)?.toInt(),
       senderName: j['sender_name'] as String?,
+      waveform: (j['media_waveform'] as List<dynamic>?)?.map((v) => (v as num).toInt()).toList(),
     );
   }
 }

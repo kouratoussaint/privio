@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — lots 4.2, 4.3 et 4.4 livrés (à tester) ; 2.F : correctif des citations à revérifier. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : 13/11/2026 — 2.F, 4.2 et 4.3 validés ; 4.4 et 4.5 livrés (à tester) ; feuille de route étendue (lots 4.5 à 4.7, étapes 7 à 9). Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -38,7 +38,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Lot 2.F — Actions rapides (ajout du 12/11/2026)
 | Lot | Contenu | Vos tests | Statut |
 |---|---|---|---|
-| 2.F | Glisser à droite = répondre ; double appui = réaction (❤️, réglable) ; glisser à gauche = supprimer (avec choix) ; toucher une citation = remonter au message ; liste : glisser à droite = épingler, à gauche = archiver (« Annuler ») | Essayer chaque geste sur un message reçu et sur un message envoyé | 🧪 13/11/2026 — gestes validés ; correctif « toucher une citation » à revérifier |
+| 2.F | Glisser à droite = répondre ; double appui = réaction (❤️, réglable) ; glisser à gauche = supprimer (avec choix) ; toucher une citation = remonter au message ; liste : glisser à droite = épingler, à gauche = archiver (« Annuler ») | Essayer chaque geste sur un message reçu et sur un message envoyé | ✅ 13/11/2026 |
 
 ## Étape 3 — Médias et groupes
 | Lot | Contenu | Vos tests | Statut |
@@ -51,9 +51,12 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | Lot | Contenu | Statut |
 |---|---|---|
 | 4.1 | Notifications FCM sans contenu ni nom, masquées sur l'écran verrouillé, une par discussion ; ouverture de la discussion au toucher ; interrupteur dans les Paramètres ; pas de notification en sourdine, en cas de blocage ou pour l'expéditeur (ADR-011). **Compte de service FCM requis** (secret `FCM_SERVICE_ACCOUNT_B64`, en place sur staging) | ✅ 13/11/2026 |
-| 4.2 | Verrouillage : code Privio à 6 chiffres + empreinte facultative, délai réglable, attente après 5 erreurs, « code oublié » = déconnexion ; bandeau hors connexion immédiat et reprise automatique ; écran « Stockage et données » : photos reçues téléchargées toujours / en Wi-Fi / à la demande, données consommées par mois, place occupée et effacement des médias (ADR-012). **Tests** : activer le code, fermer puis rouvrir Privio ; se tromper 5 fois ; essayer l'empreinte ; régler « Jamais » et recevoir une photo ; couper puis remettre les données mobiles | 🧪 13/11/2026 |
-| 4.3 | Confidentialité avancée (écran « Confidentialité ») : en ligne / « vu à », photo de profil, invitations dans les groupes (tout le monde / mes contacts / personne), accusés de lecture, « en train d'écrire », durée par défaut ; présence dans l'en-tête et la fiche contact ; **vider la discussion** sans trace : pour nous deux avec accord (demande 24 h, bandeau Accepter/Refuser), seulement chez moi, groupe par les administrateurs (ADR-013). **Tests** : régler « Personne » pour en ligne et vérifier sur l'autre téléphone ; couper les accusés ; demander à vider puis accepter sur l'autre téléphone ; vider chez soi seulement | 🧪 13/11/2026 |
+| 4.2 | Verrouillage : code Privio à 6 chiffres + empreinte facultative, délai réglable, attente après 5 erreurs, « code oublié » = déconnexion ; bandeau hors connexion immédiat et reprise automatique ; écran « Stockage et données » : photos reçues téléchargées toujours / en Wi-Fi / à la demande, données consommées par mois, place occupée et effacement des médias (ADR-012). **Tests** : activer le code, fermer puis rouvrir Privio ; se tromper 5 fois ; essayer l'empreinte ; régler « Jamais » et recevoir une photo ; couper puis remettre les données mobiles | ✅ 13/11/2026 |
+| 4.3 | Confidentialité avancée (écran « Confidentialité ») : en ligne / « vu à », photo de profil, invitations dans les groupes (tout le monde / mes contacts / personne), accusés de lecture, « en train d'écrire », durée par défaut ; présence dans l'en-tête et la fiche contact ; **vider la discussion** sans trace : pour nous deux avec accord (demande 24 h, bandeau Accepter/Refuser), seulement chez moi, groupe par les administrateurs (ADR-013). **Tests** : régler « Personne » pour en ligne et vérifier sur l'autre téléphone ; couper les accusés ; demander à vider puis accepter sur l'autre téléphone ; vider chez soi seulement | ✅ 13/11/2026 |
 | 4.4 | Finitions UX issues de l'audit du 13/11/2026 (textes et lisibilité, sans nouvelle fonction ni changement serveur) : textes d'inscription, de recherche, d'erreur et d'aide raccourcis ; aide au code SMS ; 4 filtres visibles sur un écran de 320 dp ; bandeau de blocage avec « Débloquer » ; « Non envoyé » / « En attente de réseau » ; un seul message de quota photo (« dès minuit ») et icône photo atténuée à 0 ; vocal « 30 s max. » avec vibration à 5 s de la fin ; titres « Infos » ; diagnostic de connexion déplacé dans l'Aide ; 8 nouvelles questions dans l'Aide ; typographie française (espaces fines, ’) vérifiée en CI (`scripts/typo_fr.py`). **Inchangés sur décision** : rappels de durée des messages (R-14 non validé), écran et case des engagements. **Tests** : écran le plus étroit possible (filtre « Groupes ») ; bloquer puis « Débloquer » depuis la discussion ; envoyer 5 photos ; enregistrer un vocal jusqu'à la fin ; parcourir l'Aide | 🧪 13/11/2026 |
+| 4.5 | Navigation et médias : double appui sur Retour pour quitter ; nouvelle barre de navigation (piste C : trait violet, pastilles de non-lus et d'invitations) ; plusieurs photos à la fois (un message par photo, dans la limite du jour) ; vocal : pause et reprise de l'enregistrement, spectre pendant l'enregistrement et dans la bulle ; aide mise à jour. **Tests** : appuyer deux fois sur Retour ; choisir 3 photos dans la galerie, en retirer une, envoyer ; enregistrer un vocal en mains libres, mettre en pause, reprendre, envoyer ; écouter un vocal reçu et toucher le spectre pour avancer | 🧪 13/11/2026 |
+| 4.6 | Durée des messages : 5 min, 15 min, 30 min, 1 h, 6 h, 12 h, 24 h, 48 h + « Personnalisé » (72 h au plus) ; sélecteur et rappels compacts ; engagement « 72 heures » inchangé | ⏳ |
+| 4.7 | Demande de connexion avant le premier message : accepter / refuser (l'expéditeur est prévenu) / bloquer ; expiration 7 j ; délai avant nouvelle demande ; réglage « Qui peut m'envoyer une demande » (amendement 8) | ⏳ |
 
 ## Étape 5 — Console d'administration
 | Lot | Contenu | Statut |
@@ -69,6 +72,25 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | 6.2 | Projet de production, vrai fournisseur SMS (B7), retrait des numéros de test | ⏳ |
 | 6.3 | Conditions d'utilisation, confidentialité (B10), numéros recyclés (B9) | ⏳ |
 
+## Étape 7 — Discussions enrichies (après la console)
+| Lot | Contenu | Statut |
+|---|---|---|
+| 7.1 | Fiche contact et groupe : photo en grand, « À propos », médias de la discussion, sourdine à deux, durée et « Vider » depuis la fiche, groupes en commun, lien d'invitation et demandes d'adhésion, @mentions | ⏳ |
+| 7.2 | Confort : bouton « descendre », repère « X non lus », sélection multiple, infos du message, messages épinglés et favoris, notifications par discussion | ⏳ |
+| 7.3 | Expression : émojis, autocollants Privio, GIF (service externe via le serveur, sans clé dans l'application), légende / recadrage / dessin sur photo, aperçu des liens, fond d'écran, vue unique pour les médias | ⏳ |
+
+## Étape 8 — Compte et réglages
+| Lot | Contenu | Statut |
+|---|---|---|
+| 8.1 | QR code de l'identifiant, « Inviter un ami », changer de numéro, thème clair / sombre / automatique, taille du texte | ⏳ |
+| 8.2 | Langues : français, mooré, dioula (traductions à relire par des locuteurs natifs) | ⏳ |
+
+## Étape 9 — Appels (après le pilote)
+| Lot | Contenu | Statut |
+|---|---|---|
+| 9.1 | Appels audio à deux (service relais gratuit de préférence) | ⏳ |
+| 9.2 | Appels vidéo à deux | ⏳ |
+
 ## Décisions en attente
 | # | Sujet | Nécessaire avant |
 |---|---|---|
@@ -76,6 +98,10 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | B2 | ✅ 25 membres par groupe par défaut, réglable 2–100 (12/11/2026) | — |
 | B3 | ✅ Signalements 90 j, journaux 30 j (appliqué par défaut, administrable) | — |
 | B4/B5 | ✅ Console intégrée à l'application, réservée au compte +226 75 49 35 18 ; pas de console web (13/11/2026) | — |
+| B11 | ✅ Durées : liste 5 min → 48 h + « Personnalisé », 72 h au plus, engagement inchangé (13/11/2026) | — |
+| B12 | ✅ Demande de connexion avant le premier message ; refus notifié à l'expéditeur (13/11/2026) | lot 4.7 |
+| B13 | ✅ GIF conservés ; appels après le pilote, service gratuit de préférence (13/11/2026) | lots 7.3, 9.1 |
+| B14 | Vérification en deux étapes : à prévoir, non planifiée | — |
 | B6/B7 | Sauvegardes, budget, fournisseur SMS +226 | lot 6.2 |
 | B9/B10 | Numéros recyclés, documents légaux | lot 6.3 |
 | Logo | Validation de la recréation provisoire | lot 6.1 |

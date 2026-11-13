@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
+import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
 
@@ -31,7 +32,7 @@ Future<void> _start(WidgetTester tester, TestDeps deps) async {
 }
 
 Finder _tab(String label) =>
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+    find.descendant(of: find.byType(PrivioNavBar), matching: find.text(label));
 
 Future<void> _openGroup(WidgetTester tester, String id) async {
   await tester.tap(find.byKey(Key('conversation.$id')));
@@ -349,7 +350,7 @@ void main() {
     final deps = _deps();
     deps.messaging.seedGroup('g1', 'Famille', owner: 'u2', members: {'u3': 'member'});
     await _start(tester, deps);
-    unawaited(GoRouter.of(tester.element(find.byType(NavigationBar))).push('/chat/g1'));
+    unawaited(GoRouter.of(tester.element(find.byType(PrivioNavBar))).push('/chat/g1'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('chat.not_member')), findsOneWidget);
     expect(find.text('Vous ne faites plus partie de ce groupe.'), findsOneWidget);

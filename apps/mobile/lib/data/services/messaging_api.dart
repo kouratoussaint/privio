@@ -29,6 +29,7 @@ abstract interface class MessagingApi {
     required Uint8List audio,
     String? replyToId,
     int? ttlSeconds,
+    List<int>? waveform,
   });
 
   /// Son d'un vocal, téléchargé du stockage privé avec le jeton de l'utilisateur
@@ -215,6 +216,7 @@ class SupabaseMessagingApi implements MessagingApi {
     required Uint8List audio,
     String? replyToId,
     int? ttlSeconds,
+    List<int>? waveform,
   }) => _guard(() async {
     final res = await _client.functions.invoke(
       'voice-send',
@@ -225,6 +227,7 @@ class SupabaseMessagingApi implements MessagingApi {
         'client_msg_id': clientMsgId,
         'reply_to_id': ?replyToId,
         if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
+        if (waveform != null && waveform.isNotEmpty) 'waveform': waveform.join(','),
       },
     );
     final row = Map<String, dynamic>.from(res.data as Map);
@@ -232,6 +235,7 @@ class SupabaseMessagingApi implements MessagingApi {
     return ChatMessage(
       id: row['id'] as String,
       kind: 'voice',
+      waveform: (row['media_waveform'] as List<dynamic>?)?.map((v) => (v as num).toInt()).toList(),
       senderId: _client.auth.currentUser?.id,
       replyToId: replyToId,
       sentAt: sentAt,

@@ -5,6 +5,7 @@ import 'package:privio/app.dart';
 import 'package:privio/data/services/device_services.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/state/data_providers.dart';
+import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
 
@@ -35,7 +36,7 @@ Future<void> _openBob(WidgetTester tester) async {
 }
 
 Finder _tab(String label) =>
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+    find.descendant(of: find.byType(PrivioNavBar), matching: find.text(label));
 
 Future<void> _openStorage(WidgetTester tester) async {
   await tester.tap(_tab('Paramètres'));

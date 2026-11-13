@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/media/waveform.dart';
 import '../../../core/util/ids.dart';
 
 enum MicPermission { granted, denied, permanentlyDenied }
@@ -16,6 +18,13 @@ abstract interface class VoiceRecorder {
   Future<MicPermission> ensurePermission();
 
   Future<void> start();
+
+  /// Pause et reprise de l'enregistrement (lot 4.5) : un seul fichier au final.
+  Future<void> pause();
+  Future<void> resume();
+
+  /// Niveau sonore (0 à 1) environ dix fois par seconde pendant l'enregistrement.
+  Stream<double> get levels;
 
   /// Arrête et renvoie le son ; le fichier temporaire est effacé aussitôt.
   Future<Uint8List?> stop();
@@ -47,6 +56,30 @@ class DeviceVoiceRecorder implements VoiceRecorder {
 
   final AudioRecorder _recorder;
   String? _path;
+
+  static const levelInterval = Duration(milliseconds: 100);
+
+  @override
+  Stream<double> get levels =>
+      _recorder.onAmplitudeChanged(levelInterval).map((a) => levelFromDb(a.current));
+
+  @override
+  Future<void> pause() async {
+    try {
+      await _recorder.pause();
+    } on Object {
+      throw const AppFailure(FailureCode.microphoneUnavailable);
+    }
+  }
+
+  @override
+  Future<void> resume() async {
+    try {
+      await _recorder.resume();
+    } on Object {
+      throw const AppFailure(FailureCode.microphoneUnavailable);
+    }
+  }
 
   @override
   Future<MicPermission> ensurePermission() async {

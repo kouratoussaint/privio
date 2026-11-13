@@ -5,6 +5,7 @@ import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/state/privacy_providers.dart';
+import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
 
@@ -33,7 +34,7 @@ Future<void> _start(WidgetTester tester, TestDeps deps) async {
 }
 
 Finder _tab(String label) =>
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+    find.descendant(of: find.byType(PrivioNavBar), matching: find.text(label));
 
 Future<void> _openPrivacy(WidgetTester tester) async {
   await tester.tap(_tab('Paramètres'));

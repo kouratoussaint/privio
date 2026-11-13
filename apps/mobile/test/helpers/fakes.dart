@@ -685,6 +685,9 @@ class FakeMessagingApi implements MessagingApi {
   final List<String> downloads = [];
   AppFailure? voiceFailure;
 
+  /// Profils sonores reçus avec les vocaux (lot 4.5), par identifiant client.
+  final Map<String, List<int>?> sentWaveforms = {};
+
   @override
   Future<ChatMessage> sendVoice({
     required String conversationId,
@@ -692,8 +695,10 @@ class FakeMessagingApi implements MessagingApi {
     required Uint8List audio,
     String? replyToId,
     int? ttlSeconds,
+    List<int>? waveform,
   }) async {
     sentClientIds.add(clientMsgId);
+    sentWaveforms[clientMsgId] = waveform;
     sentTtls.add(ttlSeconds);
     _net();
     if (voiceFailure != null) throw voiceFailure!;
@@ -720,6 +725,7 @@ class FakeMessagingApi implements MessagingApi {
       updatedAt: now,
       mediaPath: path,
       durationMs: 5000,
+      waveform: waveform,
     );
     list.add(m);
     return m;
@@ -837,6 +843,7 @@ class FakeMessagingApi implements MessagingApi {
     int durationMs = 12000,
     DateTime? expiresAt,
     List<int> audio = const [1, 2, 3, 4],
+    List<int>? waveform,
   }) {
     final now = DateTime.now();
     final id = 'srv-${_seq++}';
@@ -851,6 +858,7 @@ class FakeMessagingApi implements MessagingApi {
       updatedAt: now,
       mediaPath: path,
       durationMs: durationMs,
+      waveform: waveform,
     );
     (messages[conversationId] ??= []).add(m);
     return m;
@@ -1205,6 +1213,19 @@ class FakePhotoPicker implements PhotoPicker {
     if (failure != null) throw failure!;
     return photo;
   }
+
+  /// Photos rendues par la sélection multiple (par défaut : la photo unique).
+  List<Uint8List>? many;
+  final List<int> limits = [];
+
+  @override
+  Future<List<Uint8List>> pickMany({required int limit}) async {
+    sources.add(PhotoSource.gallery);
+    limits.add(limit);
+    if (failure != null) throw failure!;
+    final all = many ?? (photo == null ? const <Uint8List>[] : [photo!]);
+    return all.take(limit).toList();
+  }
 }
 
 /// Faux micro : enregistre « instantanément » les octets [audio].
@@ -1222,6 +1243,30 @@ class FakeVoiceRecorder implements VoiceRecorder {
   Future<void> start() async {
     starts++;
     recording = true;
+    paused = false;
+  }
+
+  /// Lot 4.5 : pause / reprise et niveaux sonores simulés ([emitLevel]).
+  bool paused = false;
+  int pauses = 0;
+  int resumes = 0;
+  final _levels = StreamController<double>.broadcast();
+
+  void emitLevel(double level) => _levels.add(level);
+
+  @override
+  Stream<double> get levels => _levels.stream;
+
+  @override
+  Future<void> pause() async {
+    pauses++;
+    paused = true;
+  }
+
+  @override
+  Future<void> resume() async {
+    resumes++;
+    paused = false;
   }
 
   @override

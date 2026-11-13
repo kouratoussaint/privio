@@ -350,4 +350,82 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Message vocal'), findsOneWidget);
   });
+
+  // ------------------------------------------------------------------ lot 4.5
+  testWidgets('pause et reprise\u202F: le temps en pause ne compte pas, un seul vocal', (
+    tester,
+  ) async {
+    final deps = await _openChatWithBob(tester);
+    await tester.tap(find.byKey(const Key('chat.mic')));
+    await tester.pump();
+    await _advance(tester, const Duration(seconds: 2));
+    await tester.tap(find.byKey(const Key('voice.pause')));
+    await tester.pump();
+    expect(deps.recorder.paused, isTrue);
+    expect(find.text('En pause'), findsOneWidget);
+    await _advance(tester, const Duration(seconds: 5));
+    expect(find.text('0:02'), findsOneWidget, reason: 'la pause ne compte pas');
+    await tester.tap(find.byKey(const Key('voice.pause')));
+    await tester.pump();
+    expect(deps.recorder.paused, isFalse);
+    await _advance(tester, const Duration(seconds: 2));
+    expect(find.text('0:04'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('voice.stop')));
+    await tester.pumpAndSettle();
+    expect(deps.recorder.pauses, 1);
+    expect(deps.recorder.resumes, 1);
+    await tester.tap(find.byKey(const Key('voice.send')));
+    await tester.pumpAndSettle();
+    expect(deps.messaging.storedVoices, hasLength(1), reason: 'un seul message vocal');
+  });
+
+  testWidgets('maintenir le micro\u202F: pas de bouton pause', (tester) async {
+    await _openChatWithBob(tester);
+    final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('chat.mic'))));
+    await tester.pump(const Duration(seconds: 1));
+    await _advance(tester, const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('voice.elapsed')), findsOneWidget);
+    expect(find.byKey(const Key('voice.pause')), findsNothing);
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('spectre\u202F: en direct, puis envoyé avec le son et affiché dans la bulle', (
+    tester,
+  ) async {
+    final deps = await _openChatWithBob(tester);
+    await tester.tap(find.byKey(const Key('chat.mic')));
+    await tester.pump();
+    for (var i = 0; i < 30; i++) {
+      deps.recorder.emitLevel(i.isEven ? 0.8 : 0.2);
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.byKey(const Key('voice.live_waveform')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('voice.stop')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('voice.preview_waveform')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('voice.send')));
+    await tester.pumpAndSettle();
+
+    final cid = deps.messaging.sentClientIds.single;
+    final wave = deps.messaging.sentWaveforms[cid]!;
+    expect(wave, hasLength(40));
+    expect(wave.reduce((a, b) => a > b ? a : b), 100, reason: 'le passage le plus fort vaut 100');
+    expect(wave.every((v) => v >= 0 && v <= 100), isTrue);
+    expect(find.byKey(Key('voice.waveform.srv-$cid')), findsOneWidget);
+  });
+
+  testWidgets('toucher le spectre pendant l’écoute\u202F: saut à cet endroit', (tester) async {
+    final deps = await _openChatWithBob(tester);
+    await _receiveVoice(tester, deps);
+    final id = deps.messaging.messages['conv-bob']!.last.id;
+    await tester.tap(find.byKey(Key('voice.play.$id')));
+    await tester.pumpAndSettle();
+    final wave = find.byKey(Key('voice.waveform.$id'));
+    final box = tester.getRect(wave);
+    await tester.tapAt(Offset(box.left + box.width * 0.5, box.center.dy));
+    await tester.pump();
+    final total = deps.messaging.messages['conv-bob']!.last.durationMs!;
+    expect(deps.audio.seekedTo!.inMilliseconds, closeTo(total * 0.5, total * 0.05));
+  });
 }

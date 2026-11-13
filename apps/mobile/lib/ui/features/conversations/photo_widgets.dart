@@ -316,10 +316,25 @@ Future<PhotoSource?> showPhotoSourceSheet(BuildContext context, {PhotoQuota? quo
 
 /// Écran 13 — aperçu avant envoi, légende facultative, compteur. Renvoie la légende
 /// (éventuellement vide) si la personne envoie, null si elle renonce.
-class PhotoComposeScreen extends StatefulWidget {
-  const PhotoComposeScreen({super.key, required this.photo, this.quota, this.maxCaption = 1000});
+/// Sélection multiple quand le quota du jour est inconnu (hors connexion) :
+/// le serveur tranchera à l'envoi.
+const kMaxPhotosPerPick = 5;
+
+/// Une photo prête à partir, avec sa légende.
+class PhotoDraft {
+  const PhotoDraft(this.photo, this.caption);
 
   final PreparedPhoto photo;
+  final String caption;
+}
+
+/// Aperçu avant envoi (lot 4.5 : une ou plusieurs photos). On fait défiler les photos,
+/// on peut en retirer une, chaque photo a sa légende ; chacune partira comme un message.
+/// Renvoie la liste à envoyer, ou null si la personne annule.
+class PhotoComposeScreen extends StatefulWidget {
+  const PhotoComposeScreen({super.key, required this.photos, this.quota, this.maxCaption = 1000});
+
+  final List<PreparedPhoto> photos;
   final PhotoQuota? quota;
   final int maxCaption;
 
@@ -328,19 +343,61 @@ class PhotoComposeScreen extends StatefulWidget {
 }
 
 class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
+  late final List<PreparedPhoto> _photos = [...widget.photos];
+  late final List<String> _captions = List.filled(widget.photos.length, '', growable: true);
   final _caption = TextEditingController();
+  final _pages = PageController();
+  int _index = 0;
 
   @override
   void dispose() {
     _caption.dispose();
+    _pages.dispose();
     super.dispose();
+  }
+
+  void _show(int i) {
+    _captions[_index] = _caption.text;
+    setState(() => _index = i);
+    _caption.text = _captions[i];
+  }
+
+  void _remove(int i) {
+    _captions[_index] = _caption.text;
+    setState(() {
+      _photos.removeAt(i);
+      _captions.removeAt(i);
+      if (_index >= _photos.length) _index = _photos.length - 1;
+    });
+    _caption.text = _captions[_index];
+    if (_pages.hasClients) _pages.jumpToPage(_index);
+  }
+
+  void _send() {
+    _captions[_index] = _caption.text;
+    Navigator.pop(context, [
+      for (final (i, p) in _photos.indexed) PhotoDraft(p, _captions[i].trim()),
+    ]);
+  }
+
+  String? _quotaText() {
+    final q = widget.quota;
+    if (q == null) return null;
+    final after = q.remaining - _photos.length;
+    if (after <= 0) {
+      return _photos.length == 1
+          ? 'C’est votre dernière photo du jour (${q.limit} par jour).'
+          : 'Ce sont vos dernières photos du jour (${q.limit} par jour).';
+    }
+    return 'Après l’envoi : $after photo${after > 1 ? 's' : ''} aujourd’hui (${q.limit} par jour).';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final q = widget.quota;
+    final many = _photos.length > 1;
+    final quota = _quotaText();
     return Scaffold(
       key: const Key('photo.compose'),
       backgroundColor: Colors.black,
@@ -353,28 +410,74 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.close),
         ),
-        title: const Text('Envoyer une photo'),
+        title: Text(many ? '${_index + 1} sur ${_photos.length}' : 'Envoyer une photo'),
+        actions: [
+          if (many)
+            IconButton(
+              key: const Key('photo.compose.remove'),
+              tooltip: 'Retirer cette photo',
+              onPressed: () => _remove(_index),
+              icon: const Icon(Icons.delete_outline),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: Center(
-                child: Image.memory(
-                  widget.photo.bytes,
-                  fit: BoxFit.contain,
-                  semanticLabel: 'Photo à envoyer',
+              child: PageView.builder(
+                key: const Key('photo.compose.pages'),
+                controller: _pages,
+                itemCount: _photos.length,
+                onPageChanged: _show,
+                itemBuilder: (_, i) => Center(
+                  child: Image.memory(
+                    _photos[i].bytes,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Photo ${i + 1} à envoyer',
+                  ),
                 ),
               ),
             ),
-            if (q != null)
+            if (many)
+              SizedBox(
+                height: 64,
+                child: ListView.separated(
+                  key: const Key('photo.compose.strip'),
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: PrivioSpacing.m,
+                    vertical: PrivioSpacing.xs,
+                  ),
+                  itemCount: _photos.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: PrivioSpacing.s),
+                  itemBuilder: (_, i) => GestureDetector(
+                    key: Key('photo.compose.thumb.$i'),
+                    onTap: () => _pages.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                    ),
+                    child: Container(
+                      width: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(PrivioRadius.small),
+                        border: Border.all(
+                          color: i == _index ? PrivioColors.lilac : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.memory(_photos[i].bytes, fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+              ),
+            if (quota != null)
               Padding(
                 padding: const EdgeInsets.only(top: PrivioSpacing.s),
                 child: Text(
-                  q.remaining <= 1
-                      ? 'C’est votre dernière photo du jour (${q.limit} par jour).'
-                      : 'Après celle-ci\u202F: ${q.remaining - 1} photo${q.remaining - 1 > 1 ? 's' : ''} '
-                            'aujourd’hui (${q.limit} par jour).',
+                  quota,
                   key: const Key('photo.compose.quota'),
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                 ),
@@ -395,7 +498,7 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                       style: const TextStyle(color: Colors.white),
                       cursorColor: Colors.white,
                       decoration: InputDecoration(
-                        hintText: 'Ajouter une légende',
+                        hintText: many ? 'Légende de cette photo' : 'Ajouter une légende',
                         hintStyle: const TextStyle(color: Colors.white60),
                         counterText: '',
                         filled: true,
@@ -417,18 +520,23 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                     ),
                   ),
                   const SizedBox(width: PrivioSpacing.s),
-                  SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: IconButton.filled(
-                      key: const Key('photo.send'),
-                      tooltip: 'Envoyer la photo',
-                      style: IconButton.styleFrom(
-                        backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
-                        foregroundColor: dark ? PrivioColors.navy : Colors.white,
+                  Badge(
+                    isLabelVisible: many,
+                    label: Text('${_photos.length}'),
+                    backgroundColor: PrivioColors.navy,
+                    child: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: IconButton.filled(
+                        key: const Key('photo.send'),
+                        tooltip: many ? 'Envoyer les ${_photos.length} photos' : 'Envoyer la photo',
+                        style: IconButton.styleFrom(
+                          backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
+                          foregroundColor: dark ? PrivioColors.navy : Colors.white,
+                        ),
+                        onPressed: _send,
+                        icon: const Icon(Icons.send),
                       ),
-                      onPressed: () => Navigator.pop(context, _caption.text.trim()),
-                      icon: const Icon(Icons.send),
                     ),
                   ),
                 ],
