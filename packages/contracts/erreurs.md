@@ -116,3 +116,6 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | Code | Origine | Signification |
 |---|---|---|
 | `ADMIN_REQUIRED` | `console_dashboard` (et toute fonction de la console) | le compte connecté n'est pas l'administrateur (même réponse pour tous ; `console_access` renvoie simplement `false`) |
+| `POLICY_LOCKED` | `console_set_policy` (lot 5.2) | réglage fixé (invariant de sécurité) ou fonctionnalité non développée |
+| `POLICY_NOT_FOUND` | `console_set_policy` (lot 5.2) | réglage inconnu |
+| `POLICY_TYPE_INVALID` / `POLICY_OUT_OF_BOUNDS` / `FEATURE_NOT_IMPLEMENTED` | `console_set_policy` | mêmes refus que la validation des politiques (type, bornes, fonctionnalité) |

@@ -13,6 +13,9 @@ import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
+import 'console_journal_tab.dart';
+import 'console_policies_tab.dart';
+import 'console_stats_tab.dart';
 
 /// Console d'administration (lot 5.1, amendement 6). Réservée au compte administrateur :
 /// le serveur le vérifie à chaque appel. À chaque ouverture : code Privio ou empreinte ;
@@ -106,11 +109,14 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
   @override
   Widget build(BuildContext context) {
     final lock = ref.watch(appLockProvider).value;
-    return Scaffold(
+    final open = _verified && (lock?.enabled ?? false);
+    final onBar =
+        Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary;
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: const Text('Administration'),
         actions: [
-          if (_verified)
+          if (open)
             IconButton(
               key: const Key('console.close'),
               tooltip: 'Refermer la console',
@@ -118,11 +124,35 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
               onPressed: _close,
             ),
         ],
+        // Lot 5.2 : quatre onglets une fois la console ouverte.
+        bottom: open
+            ? TabBar(
+                key: const Key('console.tabs'),
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                // Lisible sur la barre violette : blanc, et blanc atténué pour les autres onglets.
+                labelColor: onBar,
+                unselectedLabelColor: onBar.withValues(alpha: 0.78),
+                indicatorColor: onBar,
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(key: Key('console.tab.dashboard'), text: 'Tableau de bord'),
+                  Tab(key: Key('console.tab.policies'), text: 'Réglages'),
+                  Tab(key: Key('console.tab.stats'), text: 'Statistiques'),
+                  Tab(key: Key('console.tab.journal'), text: 'Journal'),
+                ],
+              )
+            : null,
       ),
       body: switch ((lock, _verified)) {
         (null, _) => const LoadingView(),
         (final l?, _) when !l.enabled => const _LockRequired(),
-        (_, true) => Listener(onPointerDown: (_) => _touch(), child: const _Dashboard()),
+        (_, true) => Listener(
+          onPointerDown: (_) => _touch(),
+          child: const TabBarView(
+            children: [_Dashboard(), ConsolePoliciesTab(), ConsoleStatsTab(), ConsoleJournalTab()],
+          ),
+        ),
         (final l?, false) => Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(PrivioSpacing.xl),
@@ -146,6 +176,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
         ),
       },
     );
+    return open ? DefaultTabController(length: 4, child: scaffold) : scaffold;
   }
 }
 

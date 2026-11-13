@@ -152,3 +152,265 @@ String formatBytes(int bytes) {
       : v.toStringAsFixed(1).replaceAll('.', ',').replaceAll(',0', '');
   return '$text ${units[i]}';
 }
+
+// ---------------------------------------------------------------------------
+// Lot 5.2 : réglages, statistiques, journal
+// ---------------------------------------------------------------------------
+
+/// Thèmes des réglages, dans l'ordre d'affichage.
+const kPolicyCategories = <String, String>{
+  'messages': 'Messages',
+  'media': 'Médias',
+  'groups': 'Groupes',
+  'requests': 'Demandes de connexion',
+  'abuse': 'Anti-abus',
+  'retention': 'Conservation',
+  'advanced': 'Avancé',
+  'locked': 'Fixés (sécurité)',
+  'future': 'Pas encore développés',
+};
+
+/// Un réglage global du serveur, tel que la console l'affiche.
+class ConsolePolicy {
+  const ConsolePolicy({
+    required this.key,
+    required this.category,
+    required this.label,
+    required this.unit,
+    required this.valueType,
+    required this.value,
+    required this.defaultValue,
+    this.min,
+    this.max,
+    this.locked = false,
+    this.advanced = false,
+    this.sortOrder = 0,
+    this.effect,
+    this.clientVisible = false,
+    this.updatedAt,
+  });
+
+  final String key;
+  final String category;
+  final String label;
+
+  /// min, h, j, s, o (octets), px, car (caractères), nb (nombre), bool, text.
+  final String unit;
+  final String valueType;
+  final Object? value;
+  final Object? defaultValue;
+  final int? min;
+  final int? max;
+  final bool locked;
+  final bool advanced;
+  final int sortOrder;
+  final String? effect;
+  final bool clientVisible;
+  final DateTime? updatedAt;
+
+  bool get isBool => valueType == 'boolean';
+  bool get isInt => valueType == 'integer';
+  bool get isDefault => value == defaultValue;
+
+  /// Effet affiché avant confirmation.
+  String get effectText =>
+      effect ??
+      (clientVisible
+          ? 'Appliqué tout de suite par le serveur\u202F; les téléphones le prennent en compte au '
+                'prochain retour dans l’application.'
+          : 'Appliqué tout de suite par le serveur.');
+
+  /// Pas des boutons − et + : 1, sauf pour les octets (16 Ko) et les pixels (64).
+  int get step => switch (unit) {
+    'o' => 16384,
+    'px' => 64,
+    _ => 1,
+  };
+
+  String format(Object? v) => formatPolicyValue(unit, v);
+
+  factory ConsolePolicy.fromJson(Map<String, dynamic> j) => ConsolePolicy(
+    key: j['key'] as String,
+    category: j['category'] as String? ?? 'advanced',
+    label: j['label'] as String? ?? j['key'] as String,
+    unit: j['unit'] as String? ?? 'nb',
+    valueType: j['value_type'] as String? ?? 'integer',
+    value: _plain(j['value']),
+    defaultValue: _plain(j['default_value']),
+    min: (j['min_value'] as num?)?.toInt(),
+    max: (j['max_value'] as num?)?.toInt(),
+    locked: j['locked'] as bool? ?? false,
+    advanced: j['advanced'] as bool? ?? false,
+    sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
+    effect: j['effect'] as String?,
+    clientVisible: j['client_visible'] as bool? ?? false,
+    updatedAt: DateTime.tryParse(j['updated_at'] as String? ?? ''),
+  );
+}
+
+/// Les nombres JSON arrivent parfois en double (5.0) : on garde des entiers.
+Object? _plain(Object? v) => v is num && v == v.roundToDouble() ? v.toInt() : v;
+
+/// « 4 000 » avec espaces fines (milliers).
+String formatThousands(int n) {
+  final s = n.abs().toString();
+  final b = StringBuffer(n < 0 ? '-' : '');
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) b.write(' ');
+    b.write(s[i]);
+  }
+  return b.toString();
+}
+
+/// Valeur d'un réglage avec son unité : « 60 min », « 24 h », « 7 j », « 512 Ko »…
+String formatPolicyValue(String unit, Object? v) {
+  if (v == null) return '—';
+  if (v is bool) return v ? 'Oui' : 'Non';
+  if (v is String) return v;
+  final n = (v as num).toInt();
+  return switch (unit) {
+    'min' => '${formatThousands(n)} min',
+    'h' => '$n h',
+    'j' => n > 1 ? '$n jours' : '$n jour',
+    's' => '$n s',
+    'o' => formatBytes(n),
+    'px' => '${formatThousands(n)} px',
+    'car' => '${formatThousands(n)} caractères',
+    _ => formatThousands(n),
+  };
+}
+
+/// Un changement de réglage (historique).
+class PolicyChange {
+  const PolicyChange({
+    required this.key,
+    required this.label,
+    required this.after,
+    required this.at,
+    this.before,
+    this.byConsole = true,
+  });
+
+  final String key;
+  final String label;
+  final Object? before;
+  final Object? after;
+  final bool byConsole;
+  final DateTime at;
+
+  factory PolicyChange.fromJson(Map<String, dynamic> j) => PolicyChange(
+    key: j['key'] as String,
+    label: j['label'] as String? ?? j['key'] as String,
+    before: _plain(j['before']),
+    after: _plain(j['after']),
+    byConsole: j['by_console'] as bool? ?? true,
+    at: DateTime.parse(j['created_at'] as String),
+  );
+}
+
+/// Une journée de statistiques (nombres seulement).
+class StatDay {
+  const StatDay({
+    required this.day,
+    this.text = 0,
+    this.voice = 0,
+    this.photo = 0,
+    this.active,
+    this.newAccounts = 0,
+    this.requests = 0,
+    this.accepted = 0,
+    this.refused = 0,
+    this.pushSent = 0,
+    this.pushFailed = 0,
+  });
+
+  final DateTime day;
+  final int text;
+  final int voice;
+  final int photo;
+
+  /// Comptes actifs (relevé du soir) ; null avant le premier relevé.
+  final int? active;
+  final int newAccounts;
+  final int requests;
+  final int accepted;
+  final int refused;
+  final int pushSent;
+  final int pushFailed;
+
+  int get messages => text + voice + photo;
+
+  factory StatDay.fromJson(Map<String, dynamic> j) {
+    int n(String k) => (j[k] as num?)?.toInt() ?? 0;
+    return StatDay(
+      day: DateTime.parse(j['day'] as String),
+      text: n('text'),
+      voice: n('voice'),
+      photo: n('photo'),
+      active: (j['active'] as num?)?.toInt(),
+      newAccounts: n('new_accounts'),
+      requests: n('requests'),
+      accepted: n('accepted'),
+      refused: n('refused'),
+      pushSent: n('push_sent'),
+      pushFailed: n('push_failed'),
+    );
+  }
+}
+
+class ConsoleStats {
+  const ConsoleStats({required this.days, this.versions = const [], this.countingSince});
+
+  final List<StatDay> days;
+
+  /// (version, téléphones actifs), de la plus répandue à la moins répandue.
+  final List<(String, int)> versions;
+  final DateTime? countingSince;
+
+  int sum(int Function(StatDay d) f) => days.fold(0, (a, d) => a + f(d));
+
+  factory ConsoleStats.fromJson(Map<String, dynamic> j) => ConsoleStats(
+    days: [
+      for (final d in (j['days'] as List? ?? const []))
+        StatDay.fromJson(Map<String, dynamic>.from(d as Map)),
+    ],
+    versions: [
+      for (final v in (j['versions'] as List? ?? const []))
+        ((v as Map)['version'] as String, (v['devices'] as num).toInt()),
+    ],
+    countingSince: DateTime.tryParse(j['counting_since'] as String? ?? ''),
+  );
+}
+
+/// Une entrée du journal de la console.
+class JournalEntry {
+  const JournalEntry({
+    required this.id,
+    required this.action,
+    required this.at,
+    this.key,
+    this.label,
+    this.before,
+    this.after,
+  });
+
+  final int id;
+
+  /// dashboard, stats, policy.
+  final String action;
+  final DateTime at;
+  final String? key;
+  final String? label;
+  final Object? before;
+  final Object? after;
+
+  factory JournalEntry.fromJson(Map<String, dynamic> j) => JournalEntry(
+    id: (j['id'] as num).toInt(),
+    action: j['action'] as String,
+    at: DateTime.parse(j['created_at'] as String),
+    key: j['key'] as String?,
+    label: j['label'] as String?,
+    before: _plain(j['before']),
+    after: _plain(j['after']),
+  );
+}

@@ -1535,6 +1535,166 @@ class FakeAdminApi implements AdminApi {
     reportsOpen: 1,
   );
 
+  /// Lot 5.2 : quelques réglages représentatifs, validés comme sur le serveur.
+  final policyList = <ConsolePolicy>[
+    const ConsolePolicy(
+      key: 'photo_daily_limit',
+      category: 'media',
+      label: 'Photos par compte et par jour',
+      unit: 'nb',
+      valueType: 'integer',
+      value: 5,
+      defaultValue: 5,
+      min: 0,
+      max: 10,
+      clientVisible: true,
+      effect: 'Compté sur la journée en cours.',
+    ),
+    const ConsolePolicy(
+      key: 'group_max_members',
+      category: 'groups',
+      label: 'Membres au plus par groupe',
+      unit: 'nb',
+      valueType: 'integer',
+      value: 25,
+      defaultValue: 25,
+      min: 2,
+      max: 100,
+    ),
+    const ConsolePolicy(
+      key: 'connection_requests_required',
+      category: 'requests',
+      label: 'Premier contact par demande de connexion',
+      unit: 'bool',
+      valueType: 'boolean',
+      value: true,
+      defaultValue: true,
+    ),
+    const ConsolePolicy(
+      key: 'photo_max_bytes',
+      category: 'advanced',
+      label: 'Taille maximale d’une photo',
+      unit: 'o',
+      valueType: 'integer',
+      value: 1048576,
+      defaultValue: 1048576,
+      min: 131072,
+      max: 2097152,
+      advanced: true,
+    ),
+    const ConsolePolicy(
+      key: 'message_ttl_hours',
+      category: 'locked',
+      label: 'Durée de vie maximale d’un message : 72 h',
+      unit: 'h',
+      valueType: 'integer',
+      value: 72,
+      defaultValue: 72,
+      locked: true,
+    ),
+  ];
+  final policyChanges = <PolicyChange>[];
+  final journalEntries = <JournalEntry>[];
+  int statsCalls = 0;
+  ConsoleStats statsData = ConsoleStats(
+    countingSince: DateTime(2026, 11, 13),
+    days: [
+      for (var i = 29; i >= 0; i--)
+        StatDay(
+          day: DateTime(2026, 11, 13).subtract(Duration(days: i)),
+          text: i < 3 ? 40 + i : 0,
+          voice: i < 3 ? 6 : 0,
+          photo: i < 3 ? 2 : 0,
+          active: i == 0 ? 17 : null,
+          newAccounts: i == 0 ? 5 : 0,
+          requests: i == 0 ? 10 : 0,
+          accepted: i == 0 ? 8 : 0,
+          refused: i == 0 ? 2 : 0,
+          pushSent: i == 0 ? 90 : 0,
+          pushFailed: i == 0 ? 10 : 0,
+        ),
+    ],
+    versions: const [('0.1.0+27', 12), ('0.1.0+26', 3)],
+  );
+
+  void _audit(String action, {String? key, Object? before, Object? after}) => journalEntries.insert(
+    0,
+    JournalEntry(
+      id: journalEntries.length + 1,
+      action: action,
+      at: DateTime(2026, 11, 13, 19, 30),
+      key: key,
+      label: key == null ? null : policyList.firstWhere((p) => p.key == key).label,
+      before: before,
+      after: after,
+    ),
+  );
+
+  @override
+  Future<List<ConsolePolicy>> policies() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    return List.of(policyList);
+  }
+
+  @override
+  Future<Object?> setPolicy(String key, Object value) async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    final i = policyList.indexWhere((p) => p.key == key);
+    if (i < 0) throw const AppFailure(FailureCode.policyNotFound);
+    final p = policyList[i];
+    if (p.locked) throw const AppFailure(FailureCode.policyLocked);
+    if (p.isInt && (value is! int || value < p.min! || value > p.max!)) {
+      throw const AppFailure(FailureCode.policyOutOfBounds);
+    }
+    final before = p.updatedAt == null ? null : p.value;
+    policyList[i] = ConsolePolicy(
+      key: p.key,
+      category: p.category,
+      label: p.label,
+      unit: p.unit,
+      valueType: p.valueType,
+      value: value,
+      defaultValue: p.defaultValue,
+      min: p.min,
+      max: p.max,
+      locked: p.locked,
+      advanced: p.advanced,
+      effect: p.effect,
+      clientVisible: p.clientVisible,
+      updatedAt: DateTime(2026, 11, 13, 19, 30),
+    );
+    policyChanges.insert(
+      0,
+      PolicyChange(
+        key: key,
+        label: p.label,
+        before: before,
+        after: value,
+        at: DateTime(2026, 11, 13, 19, 30),
+      ),
+    );
+    _audit('policy', key: key, before: before, after: value);
+    return value;
+  }
+
+  @override
+  Future<List<PolicyChange>> policyHistory(String key) async =>
+      policyChanges.where((c) => c.key == key).toList();
+
+  @override
+  Future<ConsoleStats> stats() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    statsCalls++;
+    _audit('stats');
+    return statsData;
+  }
+
+  @override
+  Future<List<JournalEntry>> journal() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    return List.of(journalEntries);
+  }
+
   @override
   Future<bool> consoleAccess() async => admin;
 
@@ -1542,6 +1702,7 @@ class FakeAdminApi implements AdminApi {
   Future<ConsoleDashboard> dashboard() async {
     if (!admin) throw const AppFailure(FailureCode.adminRequired);
     dashboardCalls++;
+    _audit('dashboard');
     return board;
   }
 }

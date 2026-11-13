@@ -18,3 +18,29 @@ final consoleAccessProvider = FutureProvider<bool>((ref) async {
 final consoleDashboardProvider = FutureProvider.autoDispose<ConsoleDashboard>(
   (ref) => ref.watch(adminApiProvider).dashboard(),
 );
+
+// Lot 5.2
+final consolePoliciesProvider = FutureProvider.autoDispose<List<ConsolePolicy>>(
+  (ref) => ref.watch(adminApiProvider).policies(),
+);
+
+final policyHistoryProvider = FutureProvider.autoDispose.family<List<PolicyChange>, String>(
+  (ref, key) => ref.watch(adminApiProvider).policyHistory(key),
+);
+
+final consoleStatsProvider = FutureProvider.autoDispose<ConsoleStats>(
+  (ref) => ref.watch(adminApiProvider).stats(),
+);
+
+final consoleJournalProvider = FutureProvider.autoDispose<List<JournalEntry>>(
+  (ref) => ref.watch(adminApiProvider).journal(),
+);
+
+/// Modifie un réglage puis rafraîchit la liste, l'historique et le journal.
+Future<void> savePolicy(WidgetRef ref, ConsolePolicy policy, Object value) async {
+  await ref.read(adminApiProvider).setPolicy(policy.key, value);
+  ref
+    ..invalidate(consolePoliciesProvider)
+    ..invalidate(policyHistoryProvider(policy.key))
+    ..invalidate(consoleJournalProvider);
+}

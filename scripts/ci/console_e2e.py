@@ -72,6 +72,39 @@ try:
           "aucun numéro, contenu ni identifiant dans le tableau de bord")
     check(int(sql("select count(*) from private.admin_audit where action = 'dashboard'")) == n0 + 1,
           "consultation inscrite au journal de la console")
+
+    # --- Lot 5.2 : réglages, statistiques, journal ---------------------------------
+    status, data = rpc("console_set_policy", {"p_key": "photo_daily_limit", "p_value": 4}, TB)
+    check(isinstance(data, dict) and data.get("message") == "ADMIN_REQUIRED",
+          "autre compte : modification d'un réglage refusée", data)
+    _, pols = rpc("console_policies", {}, TA)
+    pol = {p["key"]: p for p in pols}
+    check(len(pols) >= 47 and pol["group_max_members"]["label"] == "Membres au plus par groupe",
+          f"{len(pols)} réglages listés avec leur libellé", pols[:1])
+    before = pol["photo_daily_limit"]["value"]
+    status, val = rpc("console_set_policy", {"p_key": "photo_daily_limit", "p_value": 4}, TA)
+    check(status == 200 and val == 4, "photos par jour : 4", val)
+    _, client = rpc("get_client_policies", {}, TB)
+    check(client["values"]["photo_daily_limit"] == 4, "les téléphones reçoivent la nouvelle valeur")
+    status, data = rpc("console_set_policy", {"p_key": "message_ttl_hours", "p_value": 24}, TA)
+    check(isinstance(data, dict) and data.get("message") == "POLICY_LOCKED", "72 h : cadenas", data)
+    status, data = rpc("console_set_policy", {"p_key": "photo_daily_limit", "p_value": 99}, TA)
+    check(isinstance(data, dict) and data.get("message") == "POLICY_OUT_OF_BOUNDS", "hors bornes : refusé", data)
+    rpc("console_set_policy", {"p_key": "photo_daily_limit", "p_value": before}, TA)
+    _, hist = rpc("console_policy_history", {"p_key": "photo_daily_limit"}, TA)
+    check(len(hist) >= 2 and hist[0]["after"] == before and hist[1]["after"] == 4, "historique : 4 puis retour", hist[:2])
+    _, journal = rpc("console_journal", {}, TA)
+    check(journal[0]["action"] == "policy" and journal[0]["key"] == "photo_daily_limit",
+          "journal : dernier changement de réglage", journal[:1])
+    status, st = rpc("console_stats", {}, TA)
+    check(status == 200 and len(st["days"]) == 30, "statistiques sur 30 jours", st)
+    today = st["days"][-1]
+    check(today["text"] + today["voice"] + today["photo"] >= 1 and (today["active"] or 0) >= 1,
+          f"aujourd'hui : {today['text']} textes, {today['voice']} vocaux, {today['photo']} photos, {today['active']} actifs")
+    check(len(st["versions"]) >= 1, f"versions installées : {st['versions']}")
+    raw = json.dumps(st) + json.dumps(journal)
+    check("+226" not in raw and "2267" not in raw and "Bonjour" not in raw,
+          "statistiques et journal : aucun numéro ni contenu")
 finally:
     sql(f"update private.runtime_settings set value = '{before}' where key = 'admin_phone_e164'")
 print("Console d'administration : OK")

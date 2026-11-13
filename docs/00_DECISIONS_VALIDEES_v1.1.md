@@ -132,3 +132,13 @@ Demandés par le commanditaire après test sur téléphone :
 - Les discussions existantes restent ouvertes ; écrire en privé à un membre d'un groupe
   passe aussi par une demande. Détails : ADR-014.
 
+## Amendement 9 — Réglages et statistiques dans la console (13 novembre 2026, lot 5.2)
+- Tous les réglages en service sont modifiables depuis la console (les techniques dans
+  « Avancé ») ; simple confirmation « avant → après » à chaque changement ; retour à la valeur
+  par défaut et « Rétablir » depuis l'historique.
+- Invariants non modifiables : 72 h au plus, captures d'écran, copie, transfert, partage,
+  export et galerie interdits, fuseau des quotas ; les fonctions non développées (vidéos,
+  documents, appels vidéo) ne peuvent pas être activées.
+- Statistiques sur 30 jours, nombres anonymes seulement ; comptes actifs relevés chaque soir.
+- Réglages propres à un groupe ou à un compte : reportés. Un seul administrateur en v1.
+  Détails : ADR-016.

@@ -60,6 +60,11 @@ enum FailureCode {
   connectionNoteTooLong,
   privacySettingInvalid,
   adminRequired,
+  policyLocked,
+  policyNotFound,
+  policyOutOfBounds,
+  policyTypeInvalid,
+  featureNotImplemented,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -138,6 +143,11 @@ class AppFailure implements Exception {
     FailureCode.connectionNoteTooLong => 'Votre mot est trop long (140 caractères au plus).',
     FailureCode.privacySettingInvalid => 'Réglage de confidentialité invalide.',
     FailureCode.adminRequired => 'Accès réservé à l’administration de Privio.',
+    FailureCode.policyLocked => 'Ce réglage est fixé et ne peut pas être modifié.',
+    FailureCode.policyNotFound => 'Ce réglage n’existe pas.',
+    FailureCode.policyOutOfBounds => 'Valeur hors des limites autorisées pour ce réglage.',
+    FailureCode.policyTypeInvalid => 'Valeur invalide pour ce réglage.',
+    FailureCode.featureNotImplemented => 'Cette fonctionnalité n’est pas encore développée.',
     FailureCode.otpInvalidOrExpired =>
       'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
     FailureCode.smsRateLimited =>
@@ -209,6 +219,11 @@ const _serverCodes = <String, FailureCode>{
   'CONNECTION_NOTE_TOO_LONG': FailureCode.connectionNoteTooLong,
   'PRIVACY_SETTING_INVALID': FailureCode.privacySettingInvalid,
   'ADMIN_REQUIRED': FailureCode.adminRequired,
+  'POLICY_LOCKED': FailureCode.policyLocked,
+  'POLICY_NOT_FOUND': FailureCode.policyNotFound,
+  'POLICY_OUT_OF_BOUNDS': FailureCode.policyOutOfBounds,
+  'POLICY_TYPE_INVALID': FailureCode.policyTypeInvalid,
+  'FEATURE_NOT_IMPLEMENTED': FailureCode.featureNotImplemented,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

@@ -10,6 +10,8 @@ import 'package:privio/data/storage/app_lock_store.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/console.dart';
 import 'package:privio/router/routes.dart';
+import 'package:privio/state/messaging_providers.dart';
+import 'package:privio/state/session_controller.dart';
 import 'package:privio/ui/features/console/console_screen.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
@@ -58,6 +60,10 @@ Future<void> _start(WidgetTester tester, TestDeps deps, {bool locked = false}) a
   await tester.pumpAndSettle();
   if (locked) await _type(tester, _pin); // déverrouillage de l'application au démarrage
 }
+
+final _dashScroll = find
+    .descendant(of: find.byKey(const Key('console.dashboard')), matching: find.byType(Scrollable))
+    .first;
 
 Finder _tab(String label) =>
     find.descendant(of: find.byType(PrivioNavBar), matching: find.text(label));
@@ -176,14 +182,14 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const Key('console.health.voice')),
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: _dashScroll,
     );
     expect(find.text('3,3 Mo'), findsOneWidget); // stockage vocaux
     expect(find.textContaining('+226'), findsNothing);
     await tester.scrollUntilVisible(
       find.byKey(const Key('console.privacy_note')),
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: _dashScroll,
     );
     expect(find.textContaining('aucun message, nom ni numéro'), findsOneWidget);
     expect(find.textContaining('Activité comptée depuis le 13/11/2026'), findsOneWidget);
@@ -259,5 +265,208 @@ void main() {
     await tester.tap(find.byKey(const Key('console.biometrics')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('console.dashboard')), findsOneWidget);
+  });
+
+  // -------------------------------------------------------------------------
+  // Lot 5.2 : réglages, statistiques, journal
+  // -------------------------------------------------------------------------
+  Future<TestDeps> openTab(WidgetTester tester, String tab) async {
+    final deps = _deps();
+    await _withLock(deps);
+    await _start(tester, deps, locked: true);
+    await _openConsole(tester);
+    await _type(tester, _pin);
+    await tester.tap(find.byKey(Key('console.tab.$tab')));
+    await tester.pumpAndSettle();
+    return deps;
+  }
+
+  test('valeurs avec leur unité', () {
+    expect(formatPolicyValue('min', 60), '60 min');
+    expect(formatPolicyValue('j', 1), '1 jour');
+    expect(formatPolicyValue('j', 7), '7 jours');
+    expect(formatPolicyValue('car', 4000), '4 000 caractères');
+    expect(formatPolicyValue('o', 1048576), '1 Mo');
+    expect(formatPolicyValue('bool', true), 'Oui');
+    expect(formatPolicyValue('nb', 10080), '10 080');
+  });
+
+  testWidgets('réglages : par thème, cadenas sur les invariants', (tester) async {
+    await openTab(tester, 'policies');
+    expect(find.text('Médias'), findsOneWidget);
+    expect(find.text('Groupes'), findsOneWidget);
+    expect(find.text('Photos par compte et par jour'), findsOneWidget);
+    expect(find.text('Membres au plus par groupe'), findsOneWidget);
+    // « Avancé » et « Fixés » sont repliés.
+    expect(find.text('Taille maximale d’une photo'), findsNothing);
+    await tester.tap(find.text('Fixés (sécurité)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Durée de vie maximale d’un message : 72 h'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('policy.message_ttl_hours')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.message_ttl_hours')), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('policy.editor.message_ttl_hours')),
+      findsNothing,
+      reason: 'un invariant ne s’ouvre pas',
+    );
+  });
+
+  testWidgets('modifier un réglage : limites, confirmation avant → après, journal', (tester) async {
+    final deps = await openTab(tester, 'policies');
+    await tester.tap(find.byKey(const Key('policy.photo_daily_limit')));
+    await tester.pumpAndSettle();
+    expect(find.text('Entre 0 et 10 · par défaut 5'), findsOneWidget);
+    expect(find.text('Compté sur la journée en cours.'), findsOneWidget);
+    final save = find.byKey(const Key('policy.save'));
+    expect(tester.widget<FilledButton>(save).onPressed, isNull, reason: 'rien n’a changé');
+
+    await tester.tap(find.byKey(const Key('policy.minus')));
+    await tester.tap(find.byKey(const Key('policy.minus')));
+    await tester.pump();
+    expect(tester.widget<Text>(find.byKey(const Key('policy.value'))).data, '3');
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text('5  →  3'), findsOneWidget);
+    // Annuler : rien n'est envoyé.
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(deps.admin.policyChanges, isEmpty);
+
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.confirm.ok')));
+    await tester.pumpAndSettle();
+    expect(deps.admin.policyList.first.value, 3);
+    expect(find.text('Réglage enregistré : Photos par compte et par jour = 3'), findsOneWidget);
+    // La liste montre la nouvelle valeur et la valeur par défaut.
+    expect(find.textContaining('3 · par défaut : 5'), findsOneWidget);
+
+    // Journal.
+    await tester.tap(find.byKey(const Key('console.tab.journal')));
+    await tester.pumpAndSettle();
+    expect(find.text('Réglage « Photos par compte et par jour » : défaut → 3'), findsOneWidget);
+    expect(find.text('Consultation du tableau de bord'), findsOneWidget);
+  });
+
+  testWidgets('limites : impossible de dépasser le maximum', (tester) async {
+    final deps = await openTab(tester, 'policies');
+    await tester.tap(find.byKey(const Key('policy.group_max_members')));
+    await tester.pumpAndSettle();
+    final slider = find.byKey(const Key('policy.slider'));
+    await tester.drag(slider, const Offset(2000, 0));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const Key('policy.value'))).data, '100');
+    expect(tester.widget<IconButton>(find.byKey(const Key('policy.plus'))).onPressed, isNull);
+    await tester.tap(find.byKey(const Key('policy.default')));
+    await tester.pump();
+    expect(tester.widget<Text>(find.byKey(const Key('policy.value'))).data, '25');
+    expect(deps.admin.policyChanges, isEmpty);
+  });
+
+  testWidgets('interrupteur et historique : rétablir une ancienne valeur', (tester) async {
+    final deps = await openTab(tester, 'policies');
+    await tester.tap(find.byKey(const Key('policy.connection_requests_required')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.switch')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('policy.save')));
+    await tester.pumpAndSettle();
+    expect(find.text('Oui  →  Non'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('policy.confirm.ok')));
+    await tester.pumpAndSettle();
+    expect(deps.admin.policyList[2].value, false);
+
+    // Retour à « Oui », puis rétablir « Non » depuis l'historique.
+    await tester.tap(find.byKey(const Key('policy.connection_requests_required')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.default')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('policy.save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.confirm.ok')));
+    await tester.pumpAndSettle();
+    expect(deps.admin.policyList[2].value, true);
+
+    await tester.tap(find.byKey(const Key('policy.connection_requests_required')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('policy.history.0')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('policy.restore.1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Oui  →  Non'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('policy.confirm.ok')));
+    await tester.pumpAndSettle();
+    expect(deps.admin.policyList[2].value, false);
+    expect(deps.admin.policyChanges.length, 3);
+  });
+
+  testWidgets('refus du serveur : message clair, rien n’est changé', (tester) async {
+    final deps = await openTab(tester, 'policies');
+    // Le serveur a changé entre-temps de bornes : il refuse.
+    deps.admin.policyList[0] = const ConsolePolicy(
+      key: 'photo_daily_limit',
+      category: 'media',
+      label: 'Photos par compte et par jour',
+      unit: 'nb',
+      valueType: 'integer',
+      value: 5,
+      defaultValue: 5,
+      min: 0,
+      max: 4,
+    );
+    await tester.tap(find.byKey(const Key('policy.photo_daily_limit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.plus')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('policy.save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('policy.confirm.ok')));
+    await tester.pumpAndSettle();
+    expect(find.text('Valeur hors des limites autorisées pour ce réglage.'), findsOneWidget);
+    expect(deps.admin.policyChanges, isEmpty);
+  });
+
+  testWidgets('statistiques : 30 jours, parts, versions, tableau', (tester) async {
+    final deps = await openTab(tester, 'stats');
+    expect(deps.admin.statsCalls, 1);
+    expect(find.text('Messages par jour'), findsOneWidget);
+    expect(find.text('Texte'), findsOneWidget);
+    expect(find.text('123 · 84 %'), findsOneWidget); // 40+41+42 sur 147
+    // Toucher la dernière barre : le jour et la valeur.
+    final bars = find.byKey(const Key('stats.bars.messages'));
+    final box = tester.getRect(find.descendant(of: bars, matching: find.byType(CustomPaint)).first);
+    await tester.tapAt(Offset(box.right - 2, box.bottom - 5));
+    await tester.pumpAndSettle();
+    expect(find.text('13/11 : 48'), findsOneWidget);
+
+    final list = find
+        .descendant(of: find.byKey(const Key('console.stats')), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('stats.version.0.1.0+27')),
+      300,
+      scrollable: list,
+    );
+    expect(find.text('12 · 80 %'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('stats.table')), 300, scrollable: list);
+    await tester.tap(find.byKey(const Key('stats.table')));
+    await tester.pumpAndSettle();
+    expect(find.byType(DataTable), findsOneWidget);
+    expect(find.textContaining('+226'), findsNothing);
+  });
+
+  test('réglage changé : pris en compte par le téléphone au retour dans l’app', () async {
+    final deps = _deps(admin: false);
+    final c = deps.container();
+    addTearDown(c.dispose);
+    deps.messaging.policies = {'message_edit_window_minutes': 60};
+    await c.read(sessionControllerProvider.future);
+    expect((await c.read(messagingRulesProvider.future)).editWindow.inMinutes, 60);
+    deps.messaging.policies = {'message_edit_window_minutes': 15};
+    c.listen(realtimeSignalsProvider, (_, _) {});
+    deps.realtime.emit('', event: 'resume');
+    await Future<void>.delayed(Duration.zero);
+    expect((await c.read(messagingRulesProvider.future)).editWindow.inMinutes, 15);
   });
 }

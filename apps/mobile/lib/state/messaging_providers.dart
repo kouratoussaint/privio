@@ -720,6 +720,11 @@ class MessagingRules {
 
 final messagingRulesProvider = FutureProvider<MessagingRules>((ref) async {
   if (ref.watch(currentUserIdProvider) == null) return const MessagingRules();
+  // Lot 5.2 : un réglage changé dans la console arrive au prochain retour dans l'app.
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    final e = next.value?.event;
+    if (e == 'resume' || e == 'reconnected') ref.invalidateSelf();
+  });
   try {
     return MessagingRules.fromPolicies(await ref.watch(messagingApiProvider).getClientPolicies());
   } on Object {
