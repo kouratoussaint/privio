@@ -165,7 +165,11 @@ void main() {
     final ctx = tester.element(find.byKey(const Key('groups.new')));
     final sheet = PrivioPalette.of(ctx).sheet;
     expect(
-      find.byWidgetPredicate((w) => w is ColoredBox && w.color == sheet),
+      // Lot 7.2c1 : Material (et non ColoredBox) pour que les lignes touchables y
+      // dessinent leur effet d'appui.
+      find.byWidgetPredicate(
+        (w) => (w is ColoredBox && w.color == sheet) || (w is Material && w.color == sheet),
+      ),
       findsWidgets,
       reason: 'fond blanc comme Discussions',
     );

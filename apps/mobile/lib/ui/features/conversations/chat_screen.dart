@@ -86,6 +86,78 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _shownQuery = '';
   final _ghosts = <String, (ChatMessage, int)>{};
 
+  // Lot 7.2c1 : repère « X messages non lus » et bouton « descendre ».
+  final _openedAt = DateTime.now();
+  int? _unreadAtOpen;
+  bool _scrolledToMarker = false;
+  bool _awayFromBottom = false;
+  int _newBelow = 0;
+
+  /// Premier message non lu à l'ouverture (parmi ceux arrivés avant l'ouverture) et nombre
+  /// de non lus. Stable pendant que la discussion reste ouverte.
+  (String, int)? _unreadMarker(List<ChatMessage> visible, String? me) {
+    final n = _unreadAtOpen ?? 0;
+    if (n <= 0) return null;
+    final incoming = [
+      for (final m in visible)
+        if (m.senderId != me &&
+            !m.isSystem &&
+            !m.isDeleted &&
+            !m.sentAt.isAfter(_openedAt.add(const Duration(seconds: 5))))
+          m,
+    ];
+    if (incoming.isEmpty) return null;
+    final count = n < incoming.length ? n : incoming.length;
+    return (incoming[incoming.length - count].id, count);
+  }
+
+  void _onListScroll() {
+    if (!_listScroll.hasClients) return;
+    // Liste à l'envers : 0 = tout en bas (derniers messages).
+    final away = _listScroll.offset > 320;
+    if (away != _awayFromBottom || (!away && _newBelow > 0)) {
+      setState(() {
+        _awayFromBottom = away;
+        if (!away) _newBelow = 0;
+      });
+    }
+  }
+
+  Future<void> _scrollToBottom() async {
+    if (!_listScroll.hasClients) return;
+    setState(() => _newBelow = 0);
+    final d = _listScroll.offset > 4000 ? Duration.zero : Motion.of(context, Motion.slow);
+    if (d == Duration.zero) {
+      _listScroll.jumpTo(0);
+    } else {
+      await _listScroll.animateTo(0, duration: d, curve: Motion.enter);
+    }
+  }
+
+  /// À l'ouverture : la discussion se place sur le premier message non lu, s'il n'est pas
+  /// déjà à l'écran.
+  Future<void> _scrollToMarker(String id) async {
+    BuildContext? target = _messageKeys[id]?.currentContext;
+    for (var i = 0; target == null && i < 60 && _listScroll.hasClients; i++) {
+      final pos = _listScroll.position;
+      if (pos.pixels >= pos.maxScrollExtent) break;
+      _listScroll.jumpTo(
+        (pos.pixels + pos.viewportDimension * 0.8).clamp(0, pos.maxScrollExtent).toDouble(),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      target = _messageKeys[id]?.currentContext;
+    }
+    if (target == null || !target.mounted) return;
+    final box = target.findRenderObject() as RenderBox?;
+    final viewport = _listScroll.position.context.storageContext.findRenderObject() as RenderBox?;
+    if (box == null || viewport == null) return;
+    final top = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+    // Déjà entièrement visible : on ne bouge pas.
+    if (top >= 0 && top + box.size.height <= viewport.size.height) return;
+    await Scrollable.ensureVisible(target, alignment: 0.85);
+  }
+
   /// Compare les messages affichés à la fois précédente : renvoie ceux qui viennent
   /// d'arriver (et joue le son de réception), garde ceux qui viennent de disparaître le
   /// temps de leur dissolution.
@@ -113,6 +185,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
     _shown = visible;
     _shownQuery = query;
+    // Lot 7.2c1 : remonté dans la discussion : les nouveaux messages s'ajoutent au bouton
+    // « descendre ».
+    if (appearing.isNotEmpty && _awayFromBottom) _newBelow += appearing.length;
     if (appearing.isNotEmpty && ref.read(chatOnScreenProvider) == widget.conversationId) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => ref.read(feedbackProvider).sound(PrivioSound.received),
@@ -161,6 +236,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _onScreen = ref.read(chatOnScreenProvider.notifier);
+    _listScroll.addListener(_onListScroll);
     // Application mise en arrière-plan pendant un enregistrement : arrêt et préécoute.
     _lifecycle = AppLifecycleListener(
       // Lot 7.2b1 : application cachée (réduite, téléphone verrouillé) : plus « à l'écran ».
@@ -804,6 +880,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         )
         .toList();
     final appearing = visible == null ? const <String>{} : _track(visible, query, me);
+    // Lot 7.2c1 : nombre de non lus à l'ouverture (avant que la discussion soit marquée lue).
+    _unreadAtOpen ??= summary?.unreadCount;
+    final marker = visible == null || query.isNotEmpty ? null : _unreadMarker(visible, me);
+    if (marker != null && !_scrolledToMarker && chat.hasValue) {
+      _scrolledToMarker = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_scrollToMarker(marker.$1));
+      });
+    }
     _voice.onAutoStop = _afterVoiceStop;
     _voice.onNearEnd = () => unawaited(HapticFeedback.mediumImpact());
 
@@ -958,48 +1043,65 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             if (summary?.clearRequestBy != null && !isGroup)
               _ClearRequestBanner(summary: summary!, me: me, onRespond: _respondClear),
             Expanded(
-              child: switch (chat) {
-                AsyncData(:final value) => _MessageList(
-                  messages: visible!,
-                  ghosts: [for (final g in _ghosts.values) g],
-                  onGhostGone: (id) {
-                    if (mounted) setState(() => _ghosts.remove(id));
-                  },
-                  appearing: appearing,
-                  avatarOf: (id) => _avatarOf(id, summary, mentionMembers),
-                  searching: query.isNotEmpty,
-                  offline: offline,
-                  pending: query.isEmpty ? value.pending : const [],
-                  me: me,
-                  now: now,
-                  summary: summary,
-                  onRetry: _retry,
-                  onLongPress: (m) => _showActions(m, mine: m.senderId == me),
-                  onSwipeReply: _startReply,
-                  onSwipeDelete: _swipeDelete,
-                  onDoubleTap: _quickReact,
-                  onQuoteTap: (id) => unawaited(_scrollToMessage(id)),
-                  scrollController: _listScroll,
-                  messageKeys: _messageKeys,
-                  highlightedId: _highlightedId,
-                  onReactionTap: (m, emoji) {
-                    ref.read(feedbackProvider).sound(PrivioSound.reaction);
-                    unawaited(_guard(() => _chat.toggleReaction(m.id, emoji)));
-                  },
-                  onVoiceError: (f) => _toast(f.message),
-                  onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
-                  ttlSeconds: summary?.ttlSeconds ?? 259200,
-                  peerName: summary?.title ?? 'Votre contact',
-                  onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
-                  isGroup: isGroup,
-                  memberNames: {for (final m in mentionMembers) m.userId: m.displayName},
-                ),
-                AsyncError(:final error) => ErrorView(
-                  message: toAppFailure(error).message,
-                  onRetry: () => ref.invalidate(chatProvider(widget.conversationId)),
-                ),
-                _ => const SkeletonList(bubbles: true, rows: 6),
-              },
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: switch (chat) {
+                      AsyncData(:final value) => _MessageList(
+                        messages: visible!,
+                        unreadMarker: marker,
+                        ghosts: [for (final g in _ghosts.values) g],
+                        onGhostGone: (id) {
+                          if (mounted) setState(() => _ghosts.remove(id));
+                        },
+                        appearing: appearing,
+                        avatarOf: (id) => _avatarOf(id, summary, mentionMembers),
+                        searching: query.isNotEmpty,
+                        offline: offline,
+                        pending: query.isEmpty ? value.pending : const [],
+                        me: me,
+                        now: now,
+                        summary: summary,
+                        onRetry: _retry,
+                        onLongPress: (m) => _showActions(m, mine: m.senderId == me),
+                        onSwipeReply: _startReply,
+                        onSwipeDelete: _swipeDelete,
+                        onDoubleTap: _quickReact,
+                        onQuoteTap: (id) => unawaited(_scrollToMessage(id)),
+                        scrollController: _listScroll,
+                        messageKeys: _messageKeys,
+                        highlightedId: _highlightedId,
+                        onReactionTap: (m, emoji) {
+                          ref.read(feedbackProvider).sound(PrivioSound.reaction);
+                          unawaited(_guard(() => _chat.toggleReaction(m.id, emoji)));
+                        },
+                        onVoiceError: (f) => _toast(f.message),
+                        onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
+                        ttlSeconds: summary?.ttlSeconds ?? 259200,
+                        peerName: summary?.title ?? 'Votre contact',
+                        onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
+                        isGroup: isGroup,
+                        memberNames: {for (final m in mentionMembers) m.userId: m.displayName},
+                      ),
+                      AsyncError(:final error) => ErrorView(
+                        message: toAppFailure(error).message,
+                        onRetry: () => ref.invalidate(chatProvider(widget.conversationId)),
+                      ),
+                      _ => const SkeletonList(bubbles: true, rows: 6),
+                    },
+                  ),
+                  // Lot 7.2c1 : bouton « descendre », avec les nouveaux messages arrivés.
+                  Positioned(
+                    right: PrivioSpacing.m,
+                    bottom: PrivioSpacing.m,
+                    child: _ScrollDownButton(
+                      visible: _awayFromBottom && query.isEmpty,
+                      count: _newBelow,
+                      onTap: _scrollToBottom,
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (chat case AsyncError(:final error)
                 when toAppFailure(error).code == FailureCode.notMember)
@@ -1172,7 +1274,11 @@ class _MessageList extends StatelessWidget {
     this.onGhostGone,
     this.appearing = const {},
     this.avatarOf,
+    this.unreadMarker,
   });
+
+  /// Lot 7.2c1 : premier message non lu à l'ouverture, et nombre de non lus.
+  final (String, int)? unreadMarker;
 
   final bool isGroup;
 
@@ -1246,6 +1352,9 @@ class _MessageList extends StatelessWidget {
       if (day != lastDay) {
         items.add(_DayChip(label: day));
         lastDay = day;
+      }
+      if (unreadMarker case (final id, final n) when id == m.id && ghost == null) {
+        items.add(_UnreadDivider(count: n));
       }
       if (m.isSystem) {
         if (ghost != null) continue;
@@ -2305,6 +2414,105 @@ class _BlockedBannerState extends ConsumerState<_BlockedBanner> {
         message: iBlocked ? 'Vous avez bloqué ${widget.name}.' : 'Vous ne pouvez plus vous écrire.',
         actionLabel: iBlocked ? 'Débloquer' : null,
         onAction: iBlocked && !_busy ? () => _unblock(peerId) : null,
+      ),
+    );
+  }
+}
+
+/// Lot 7.2c1 : ligne « X messages non lus » au-dessus du premier non lu.
+class _UnreadDivider extends StatelessWidget {
+  const _UnreadDivider({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
+    return Padding(
+      key: const Key('chat.unread_marker'),
+      padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.s),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: color.withValues(alpha: 0.4))),
+          // Grande police sur petit écran : le texte passe à la ligne au lieu de déborder.
+          Flexible(
+            flex: 6,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: PrivioSpacing.s),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                count > 1 ? '$count messages non lus' : '1 message non lu',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: color.withValues(alpha: 0.4))),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lot 7.2c1 : bouton rond « descendre » (apparaît quand on remonte), avec le nombre de
+/// messages arrivés entre-temps.
+class _ScrollDownButton extends StatelessWidget {
+  const _ScrollDownButton({required this.visible, required this.count, required this.onTap});
+
+  final bool visible;
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return IgnorePointer(
+      ignoring: !visible,
+      child: AnimatedScale(
+        scale: visible ? 1 : 0.5,
+        duration: Motion.of(context, Motion.medium),
+        curve: Motion.enter,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: Motion.of(context, Motion.fast),
+          child: Semantics(
+            button: true,
+            label: count > 0
+                ? 'Descendre aux derniers messages, $count nouveau${count > 1 ? 'x' : ''}'
+                : 'Descendre aux derniers messages',
+            excludeSemantics: true,
+            child: Badge(
+              isLabelVisible: count > 0,
+              label: PopOnChange(value: count, child: Text(count > 99 ? '99+' : '$count')),
+              backgroundColor: theme.colorScheme.primary,
+              child: Material(
+                color: theme.colorScheme.surface,
+                elevation: 3,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  key: const Key('chat.scroll_down'),
+                  customBorder: const CircleBorder(),
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      Icons.keyboard_double_arrow_down_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

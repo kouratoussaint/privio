@@ -20,6 +20,7 @@ import '../conversations/connection_requests_screen.dart' show ConnectionRequest
 import '../conversations/conversation_details.dart';
 import '../../core/motion/motion.dart';
 import '../../core/motion/illustrations.dart';
+import '../groups/group_screens.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -65,19 +66,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
     return all.where((c) {
       if (c.archived) return false;
       if (c.isGroup && !together) return false;
-      final inMessages =
-          !c.blocked &&
-          q.isNotEmpty &&
-          (local[c.id] ?? const <ChatMessage>[]).any(
-            (m) => !m.isDeleted && (m.body ?? '').toLowerCase().contains(q),
-          );
-      final matches =
-          inMessages ||
-          q.isEmpty ||
-          c.title.toLowerCase().contains(q) ||
-          (c.peerHandle ?? '').toLowerCase().contains(q) ||
-          (!c.blocked && (c.lastBody ?? '').toLowerCase().contains(q));
-      return matches &&
+      return matchesSearch(c, q, local) &&
           switch (_filter) {
             ConversationFilter.all => true,
             ConversationFilter.unread => c.unreadCount > 0,
@@ -89,7 +78,6 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final p = PrivioPalette.of(context);
     final conversations = ref.watch(conversationsProvider);
     final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
     if (!together && _filter == ConversationFilter.groups) _filter = ConversationFilter.all;
@@ -98,7 +86,9 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
             ?.where((c) => !c.archived && c.unreadCount > 0 && (together || !c.isGroup))
             .length ??
         0;
-    final archivedCount = conversations.value?.where((c) => c.archived).length ?? 0;
+    // Lot 7.2c1 : séparés, les groupes archivés sont dans l'onglet Groupes.
+    final archivedCount =
+        conversations.value?.where((c) => c.archived && (together || !c.isGroup)).length ?? 0;
     final offline = ref.watch(offlineProvider);
 
     return BrandScaffold(
@@ -118,56 +108,30 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
               PrivioSpacing.l,
               PrivioSpacing.m,
             ),
-            child: TextField(
-              key: const Key('discussions.search'),
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Rechercher',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: p.field,
-                contentPadding: const EdgeInsets.symmetric(vertical: PrivioSpacing.m),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(PrivioRadius.large + 4),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(PrivioRadius.large + 4),
-                  borderSide: BorderSide.none,
-                ),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Effacer la recherche',
-                        onPressed: _search.clear,
-                        icon: const Icon(Icons.close),
-                      ),
-              ),
-            ),
+            child: ListSearchField(key: const Key('discussions.search'), controller: _search),
           ),
           SizedBox(
             height: 48,
-            child: _FilterBar(
+            child: FilterBar(
               chips: [
-                _FilterChip(
+                FilterPill(
                   label: 'Toutes',
                   selected: _filter == ConversationFilter.all,
                   onTap: () => setState(() => _filter = ConversationFilter.all),
                 ),
-                _FilterChip(
+                FilterPill(
                   label: 'Non lues',
                   count: unreadTotal,
                   selected: _filter == ConversationFilter.unread,
                   onTap: () => setState(() => _filter = ConversationFilter.unread),
                 ),
-                _FilterChip(
+                FilterPill(
                   label: 'Épinglées',
                   selected: _filter == ConversationFilter.pinned,
                   onTap: () => setState(() => _filter = ConversationFilter.pinned),
                 ),
                 if (together)
-                  _FilterChip(
+                  FilterPill(
                     key: const Key('filter.groups'),
                     label: 'Groupes',
                     selected: _filter == ConversationFilter.groups,
@@ -186,7 +150,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
               leading: const Icon(Icons.archive_outlined),
               title: Text('Archivées ($archivedCount)'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(Routes.archived),
+              onTap: () =>
+                  context.push(together ? Routes.archived : Routes.archivedOf('discussions')),
             ),
           Expanded(
             child: switch (conversations) {
@@ -217,10 +182,10 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
 /// Barre des filtres (lot 4.4, R-09) : les 4 filtres restent visibles sur un écran
 /// étroit (320 dp) : marges resserrées et texte légèrement réduit, jamais sous 11 px
 /// (85 % de sa taille). Au-delà (très grande police), la barre défile.
-class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.chips});
+class FilterBar extends StatelessWidget {
+  const FilterBar({super.key, required this.chips});
 
-  final List<_FilterChip> chips;
+  final List<FilterPill> chips;
 
   static const minScale = 0.85;
 
@@ -304,8 +269,8 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class FilterPill extends StatelessWidget {
+  const FilterPill({
     super.key,
     required this.label,
     required this.selected,
@@ -320,7 +285,7 @@ class _FilterChip extends StatelessWidget {
   final int count;
   final bool isDense;
 
-  _FilterChip dense() => _FilterChip(
+  FilterPill dense() => FilterPill(
     key: key,
     label: label,
     selected: selected,
@@ -349,7 +314,7 @@ class _FilterChip extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 44),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: isDense ? _FilterBar.densePad : PrivioSpacing.m,
+                horizontal: isDense ? FilterBar.densePad : PrivioSpacing.m,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -362,7 +327,7 @@ class _FilterChip extends StatelessWidget {
                     ),
                   ),
                   if (count > 0) ...[
-                    SizedBox(width: isDense ? _FilterBar.denseBadgeGap : PrivioSpacing.s),
+                    SizedBox(width: isDense ? FilterBar.denseBadgeGap : PrivioSpacing.s),
                     _CountBadge(count: count, compact: isDense),
                   ],
                 ],
@@ -387,8 +352,8 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      constraints: BoxConstraints(minWidth: compact ? _FilterBar.denseBadgeMin : 22),
-      height: compact ? _FilterBar.denseBadgeMin : 22,
+      constraints: BoxConstraints(minWidth: compact ? FilterBar.denseBadgeMin : 22),
+      height: compact ? FilterBar.denseBadgeMin : 22,
       padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -569,7 +534,29 @@ Future<void> showConversationActions(
                 : const Text('Un nouveau message la fera réapparaître dans la liste.'),
             onTap: () => Navigator.pop(ctx, 'archive'),
           ),
-          // Lot 7.2b1 : supprimer (discussion) ; un groupe se supprime depuis sa fiche.
+          // Lot 7.2c1 : un groupe se quitte (et disparaît de la liste) ; le créateur et les
+          // administrateurs peuvent aussi le supprimer pour tous.
+          if (summary.isGroup)
+            ListTile(
+              key: const Key('conv.leave'),
+              leading: Icon(Icons.logout, color: Theme.of(ctx).colorScheme.error),
+              title: Text(
+                'Quitter et supprimer',
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(ctx, 'leave'),
+            ),
+          if (summary.isGroup && summary.isAdmin && !summary.isClosed)
+            ListTile(
+              key: const Key('conv.delete_group'),
+              leading: Icon(Icons.delete_forever_outlined, color: Theme.of(ctx).colorScheme.error),
+              title: Text(
+                'Supprimer le groupe pour tous',
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+          // Lot 7.2b1 : supprimer une discussion à deux.
           if (!summary.isGroup)
             ListTile(
               key: const Key('conv.delete'),
@@ -587,6 +574,10 @@ Future<void> showConversationActions(
   if (action == null || !context.mounted) return;
   if (action == 'delete') {
     await chooseDelete(context, ref, summary);
+    return;
+  }
+  if (action == 'leave') {
+    await confirmLeaveGroup(context, ref, summary);
     return;
   }
   try {
@@ -781,6 +772,63 @@ class ConversationTile extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lot 7.2c1 : recherche dans une liste (discussions ou groupes) : nom, identifiant, dernier
+/// message, et messages encore présents sur ce téléphone.
+bool matchesSearch(ConversationSummary c, String q, Map<String, List<ChatMessage>> local) {
+  if (q.isEmpty) return true;
+  final inMessages =
+      !c.blocked &&
+      (local[c.id] ?? const <ChatMessage>[]).any(
+        (m) => !m.isDeleted && (m.body ?? '').toLowerCase().contains(q),
+      );
+  return inMessages ||
+      c.title.toLowerCase().contains(q) ||
+      (c.peerHandle ?? '').toLowerCase().contains(q) ||
+      (!c.blocked && (c.lastBody ?? '').toLowerCase().contains(q));
+}
+
+/// Champ « Rechercher » des listes (Discussions, Groupes).
+class ListSearchField extends StatelessWidget {
+  const ListSearchField({super.key, required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = PrivioPalette.of(context);
+    final search = controller;
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => TextField(
+        controller: search,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Rechercher',
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: p.field,
+          contentPadding: const EdgeInsets.symmetric(vertical: PrivioSpacing.m),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(PrivioRadius.large + 4),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(PrivioRadius.large + 4),
+            borderSide: BorderSide.none,
+          ),
+          suffixIcon: search.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Effacer la recherche',
+                  onPressed: search.clear,
+                  icon: const Icon(Icons.close),
+                ),
         ),
       ),
     );

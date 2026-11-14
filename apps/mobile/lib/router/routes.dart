@@ -15,6 +15,10 @@ abstract final class Routes {
   static const newGroup = '/new-group';
   static const blockedUsers = '/blocked-users';
   static const archived = '/archived';
+
+  /// Lot 7.2c1 : archives d'une seule liste (« discussions » ou « groupes ») quand les
+  /// groupes sont séparés des discussions.
+  static String archivedOf(String kind) => '$archived?kind=$kind';
   static const help = '/help';
   static const deleteAccount = '/delete-account';
   static const appLock = '/app-lock';

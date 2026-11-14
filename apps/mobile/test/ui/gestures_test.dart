@@ -114,6 +114,8 @@ void main() {
           updatedAt: now,
         ),
       );
+      // Déjà lus : la discussion s'ouvre en bas (lot 7.2c1 : sinon, sur le premier non lu).
+      await d.messaging.markConversation('conv-bob', deliveredUpTo: now, readUpTo: now);
       await tester.pumpWidget(
         ProviderScope(overrides: d.overrides, retry: (_, _) => null, child: const PrivioApp()),
       );

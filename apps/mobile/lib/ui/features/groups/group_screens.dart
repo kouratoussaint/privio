@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -205,11 +207,63 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
   Map<String, FoundUser> _selected = {};
   bool _busy = false;
 
+  /// Lot 7.2c1 : photo choisie avant la création (déjà réduite, sans métadonnées).
+  Uint8List? _photo;
+
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('new_group.photo.camera'),
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Prendre une photo'),
+              onTap: () => Navigator.pop(ctx, 'camera'),
+            ),
+            ListTile(
+              key: const Key('new_group.photo.gallery'),
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choisir dans la galerie'),
+              onTap: () => Navigator.pop(ctx, 'gallery'),
+            ),
+            if (_photo != null)
+              ListTile(
+                key: const Key('new_group.photo.remove'),
+                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                title: const Text('Retirer la photo'),
+                onTap: () => Navigator.pop(ctx, 'remove'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 'remove') {
+      setState(() => _photo = null);
+      return;
+    }
+    try {
+      final source = choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery;
+      final raw = await ref
+          .read(appLockProvider.notifier)
+          .runExternal(() => ref.read(photoPickerProvider).pick(source));
+      if (raw == null) return;
+      final photo = await ref.read(photoPreparerProvider)(raw, avatar: true);
+      if (mounted) setState(() => _photo = photo.bytes);
+    } on Object catch (e) {
+      if (mounted) _toast(context, toAppFailure(e).message);
+    }
   }
 
   Future<void> _create() async {
@@ -234,12 +288,32 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
             description: description,
             ttlSeconds: ref.read(privacyProvider).value?.defaultTtlSeconds ?? 259200,
           );
+      // Lot 7.2c1 : la photo choisie part juste après la création. Un échec n'annule pas
+      // le groupe : elle pourra être ajoutée depuis la fiche.
+      var photoFailed = false;
+      final photo = _photo;
+      if (photo != null) {
+        try {
+          await ref.read(messagingApiProvider).setGroupAvatar(id, photo);
+          countDataW(ref, sent: photo.length);
+          await ref.read(conversationsProvider.notifier).refresh();
+        } on Object catch (_) {
+          photoFailed = true;
+        }
+      }
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       ref.read(feedbackProvider).sound(PrivioSound.success);
       context.pushReplacement(Routes.chat(id));
       messenger.showSnackBar(
-        successSnack(createdGroupMessage(invited), key: const Key('group.created')),
+        photoFailed
+            ? const SnackBar(
+                key: Key('group.created'),
+                content: Text(
+                  'Groupe créé. La photo n’a pas pu être ajoutée\u202F: réessayez depuis la fiche.',
+                ),
+              )
+            : successSnack(createdGroupMessage(invited), key: const Key('group.created')),
       );
     } on Object catch (e) {
       if (mounted) _toast(context, toAppFailure(e).message);
@@ -256,12 +330,67 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
     body: ListView(
       padding: const EdgeInsets.all(PrivioSpacing.xl),
       children: [
-        TextField(
-          key: const Key('group.title'),
-          controller: _title,
-          maxLength: 60,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Nom du groupe'),
+        // Lot 7.2c1 : photo du groupe dès la création (facultative), à côté du nom.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 4, right: PrivioSpacing.m),
+              child: Semantics(
+                button: true,
+                label: _photo == null
+                    ? 'Ajouter une photo du groupe'
+                    : 'Changer la photo du groupe',
+                child: InkWell(
+                  key: const Key('new_group.photo'),
+                  customBorder: const CircleBorder(),
+                  onTap: _busy ? null : _pickPhoto,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        foregroundImage: _photo == null ? null : MemoryImage(_photo!),
+                        child: Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 24,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      if (_photo != null)
+                        Positioned(
+                          right: -4,
+                          bottom: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: PrivioPalette.of(context).sheet, width: 2),
+                            ),
+                            child: Icon(
+                              Icons.edit_rounded,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextField(
+                key: const Key('group.title'),
+                controller: _title,
+                maxLength: 60,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(labelText: 'Nom du groupe'),
+              ),
+            ),
+          ],
         ),
         TextField(
           key: const Key('group.description'),
@@ -664,34 +793,7 @@ class GroupInfoScreen extends ConsumerWidget {
   }
 
   Future<void> _leave(BuildContext context, WidgetRef ref, ConversationSummary s) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Quitter «\u202F${s.title}\u202F»\u202F?'),
-        content: Text(
-          s.isOwner
-              ? 'Le groupe sera confié à l’administrateur (ou au membre) le plus ancien. '
-                    'Vous ne verrez plus ses messages.'
-              : 'Vous ne verrez plus les messages de ce groupe.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-          FilledButton(
-            key: const Key('group.leave.confirm'),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Quitter'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    try {
-      await groupAction(ref, conversationId, (api) => api.leaveGroup(conversationId));
-      if (context.mounted) context.go(Routes.groups);
-    } on Object catch (e) {
-      if (context.mounted) _toast(context, toAppFailure(e).message);
-    }
+    if (await confirmLeaveGroup(context, ref, s) && context.mounted) context.go(Routes.groups);
   }
 
   /// Lot 7.1b : accepter (la personne entre, message système) ou refuser une demande.
@@ -748,6 +850,18 @@ class GroupInfoScreen extends ConsumerWidget {
                 icon: Icons.groups_rounded,
                 onEdit: s.canEditInfo ? () => _editPhoto(context, ref, s) : null,
               ),
+              // Lot 7.2c1 : ajouter ou changer la photo, sans avoir à deviner le geste.
+              if (s.canEditInfo)
+                Center(
+                  child: TextButton.icon(
+                    key: const Key('group.photo.edit'),
+                    onPressed: () => _editPhoto(context, ref, s),
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    label: Text(
+                      s.groupAvatarPath == null ? 'Ajouter une photo' : 'Changer la photo',
+                    ),
+                  ),
+                ),
               const SizedBox(height: PrivioSpacing.l),
               Text(s.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
               Text(
@@ -1028,5 +1142,39 @@ class GroupInfoScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// « Quitter et supprimer » un groupe (fiche, ou appui long dans la liste ; lot 7.2c1).
+/// Vrai si la personne a quitté le groupe.
+Future<bool> confirmLeaveGroup(BuildContext context, WidgetRef ref, ConversationSummary s) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Quitter «\u202F${s.title}\u202F»\u202F?'),
+      content: Text(
+        s.isOwner
+            ? 'Le groupe sera confié à l’administrateur (ou au membre) le plus ancien. '
+                  'Vous ne verrez plus ses messages.'
+            : 'Vous ne verrez plus les messages de ce groupe.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        FilledButton(
+          key: const Key('group.leave.confirm'),
+          style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Quitter'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return false;
+  try {
+    await groupAction(ref, s.id, (api) => api.leaveGroup(s.id));
+    return true;
+  } on Object catch (e) {
+    if (context.mounted) _toast(context, toAppFailure(e).message);
+    return false;
   }
 }

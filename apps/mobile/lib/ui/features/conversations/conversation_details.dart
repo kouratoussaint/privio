@@ -115,7 +115,36 @@ class FicheAvatar extends StatelessWidget {
           key: const Key('fiche.avatar'),
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: avatar,
+          // Lot 7.2c1 : pastille appareil photo pour ceux qui peuvent changer la photo.
+          child: onEdit == null
+              ? avatar
+              : Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    avatar,
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        key: const Key('fiche.avatar.badge'),
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 3,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.photo_camera_rounded,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

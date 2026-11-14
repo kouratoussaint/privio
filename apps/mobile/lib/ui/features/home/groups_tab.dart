@@ -14,13 +14,49 @@ import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
-import 'discussions_tab.dart' show AnimatedOfflineBanner, ConversationTile;
+import 'discussions_tab.dart'
+    show
+        AnimatedOfflineBanner,
+        FilterBar,
+        FilterPill,
+        ListSearchField,
+        SwipeableConversationTile,
+        matchesSearch;
 import '../../core/motion/illustrations.dart';
+import '../../../state/providers.dart';
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
-class GroupsTab extends ConsumerWidget {
+class GroupsTab extends ConsumerStatefulWidget {
   const GroupsTab({super.key});
+
+  @override
+  ConsumerState<GroupsTab> createState() => _GroupsTabState();
+}
+
+/// Lot 7.2c1 : filtres de l'onglet Groupes (comme ceux de Discussions).
+enum GroupFilter { all, unread, pinned }
+
+class _GroupsTabState extends ConsumerState<GroupsTab> {
+  final _search = TextEditingController();
+  GroupFilter _filter = GroupFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  String get _query => _search.text.trim().toLowerCase();
+
+  /// Recherche ou filtre en cours : seuls les groupes correspondants sont montrés.
+  bool get _narrowed => _query.isNotEmpty || _filter != GroupFilter.all;
 
   Future<void> _respond(
     BuildContext context,
@@ -59,14 +95,27 @@ class GroupsTab extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
     final myRequests = ref.watch(myJoinRequestsProvider).value ?? const <MyJoinRequest>[];
     final notices = ref.watch(groupDeletionNoticesProvider).value ?? const <GroupDeletionNotice>[];
     final conversations = ref.watch(conversationsProvider);
-    final groups = (conversations.value ?? const <ConversationSummary>[])
-        .where((c) => c.isGroup && !c.archived)
+    final all = (conversations.value ?? const <ConversationSummary>[])
+        .where((c) => c.isGroup)
         .toList();
+    final local = ref.read(localCacheProvider).allMessages;
+    final groups = all
+        .where((c) => !c.archived && matchesSearch(c, _query, local))
+        .where(
+          (c) => switch (_filter) {
+            GroupFilter.all => true,
+            GroupFilter.unread => c.unreadCount > 0,
+            GroupFilter.pinned => c.pinned,
+          },
+        )
+        .toList();
+    final unreadCount = all.where((c) => !c.archived && c.unreadCount > 0).length;
+    final archivedCount = all.where((c) => c.archived).length;
     final offline = ref.watch(offlineProvider);
 
     return BrandScaffold(
@@ -89,13 +138,68 @@ class GroupsTab extends ConsumerWidget {
         label: const Text('Nouveau groupe'),
       ),
       // Lot 7.2a : fond blanc, comme la liste des discussions.
-      body: ColoredBox(
+      // (Material : les lignes touchables y dessinent leur effet d'appui.)
+      body: Material(
         color: PrivioPalette.of(context).sheet,
         child: Column(
           children: [
-            AnimatedOfflineBanner(offline: offline, top: PrivioSpacing.s),
+            // Lot 7.2c1 : recherche et filtres, comme dans Discussions.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                PrivioSpacing.l,
+                PrivioSpacing.l,
+                PrivioSpacing.l,
+                PrivioSpacing.m,
+              ),
+              child: ListSearchField(key: const Key('groups.search'), controller: _search),
+            ),
+            SizedBox(
+              height: 48,
+              child: FilterBar(
+                chips: [
+                  FilterPill(
+                    key: const Key('groups.filter.all'),
+                    label: 'Tous',
+                    selected: _filter == GroupFilter.all,
+                    onTap: () => setState(() => _filter = GroupFilter.all),
+                  ),
+                  FilterPill(
+                    key: const Key('groups.filter.unread'),
+                    label: 'Non lus',
+                    count: unreadCount,
+                    selected: _filter == GroupFilter.unread,
+                    onTap: () => setState(() => _filter = GroupFilter.unread),
+                  ),
+                  FilterPill(
+                    key: const Key('groups.filter.pinned'),
+                    label: 'Épinglés',
+                    selected: _filter == GroupFilter.pinned,
+                    onTap: () => setState(() => _filter = GroupFilter.pinned),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: PrivioSpacing.s),
+            AnimatedOfflineBanner(offline: offline),
+            if (archivedCount > 0 && !_narrowed)
+              ListTile(
+                key: const Key('groups.archived'),
+                leading: const Icon(Icons.archive_outlined),
+                title: Text('Archivés ($archivedCount)'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.archivedOf('groupes')),
+              ),
             Expanded(
-              child: _body(context, ref, conversations, invitations, groups, myRequests, notices),
+              child: _body(
+                context,
+                ref,
+                conversations,
+                _narrowed ? const [] : invitations,
+                groups,
+                _narrowed ? const [] : myRequests,
+                _narrowed ? const [] : notices,
+                hasArchived: archivedCount > 0,
+              ),
             ),
           ],
         ),
@@ -110,8 +214,9 @@ class GroupsTab extends ConsumerWidget {
     List<GroupInvitation> invitations,
     List<ConversationSummary> groups,
     List<MyJoinRequest> myRequests,
-    List<GroupDeletionNotice> notices,
-  ) {
+    List<GroupDeletionNotice> notices, {
+    bool hasArchived = false,
+  }) {
     final theme = Theme.of(context);
     if (!conversations.hasValue && conversations.isLoading) return const SkeletonList();
     if (conversations case AsyncError(:final error)) {
@@ -135,7 +240,28 @@ class GroupsTab extends ConsumerWidget {
     return RefreshIndicator(
       key: const Key('groups.refresh'),
       onRefresh: reload,
-      child: invitations.isEmpty && groups.isEmpty && myRequests.isEmpty && notices.isEmpty
+      child: _narrowed && groups.isEmpty
+          ? LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: EmptyView(
+                    key: const Key('groups.no_match'),
+                    icon: Icons.search_off_rounded,
+                    title: 'Aucun groupe trouvé',
+                    message: _query.isNotEmpty
+                        ? 'Aucun groupe ne correspond à «\u202F${_search.text.trim()}\u202F».'
+                        : 'Aucun groupe dans ce filtre.',
+                  ),
+                ),
+              ),
+            )
+          : invitations.isEmpty &&
+                groups.isEmpty &&
+                myRequests.isEmpty &&
+                notices.isEmpty &&
+                !hasArchived
           ? LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -154,7 +280,7 @@ class GroupsTab extends ConsumerWidget {
             )
           : ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
+              padding: const EdgeInsets.only(top: PrivioSpacing.s, bottom: 96),
               children: [
                 // Lot 7.2b1 : groupes supprimés par un administrateur (avis à fermer).
                 for (final n in notices)
@@ -205,7 +331,8 @@ class GroupsTab extends ConsumerWidget {
                     ),
                   const SizedBox(height: PrivioSpacing.m),
                 ],
-                for (final g in groups) ConversationTile(summary: g),
+                // Lot 7.2c1 : glisser pour épingler ou archiver, appui long pour plus.
+                for (final g in groups) SwipeableConversationTile(summary: g),
               ],
             ),
     );

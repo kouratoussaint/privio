@@ -219,3 +219,16 @@ Demandés par le commanditaire après test sur téléphone :
   (photo du correspondant) comme dans un groupe (photo du membre, ou ses initiales). Elle se
   place à côté du dernier message d'une suite du même auteur ; dans un groupe, le nom de
   l'auteur n'apparaît qu'en tête de sa suite.
+
+## Amendement 16 — Lot 7.2c : confort (14 novembre 2026)
+- Ajouts au lot : photo du groupe visible et ajoutable dès la création ; dans l'onglet Groupes,
+  recherche et filtres comme dans Discussions ; actions rapides sur les groupes (épingler,
+  archiver, quitter et supprimer, supprimer pour tous).
+- Messages épinglés : dans une discussion à deux, les deux personnes ; dans un groupe, les
+  administrateurs ; 3 au plus à la fois.
+- Favoris et messages épinglés **s'effacent avec le message** : ils ne prolongent jamais sa
+  durée de vie (engagement d'effacement inchangé).
+- Notifications d'un groupe : option « Mentions seulement » (en plus de la sourdine).
+- Découpage : 7.2c1 (photo du groupe, Groupes, actions rapides, bouton « descendre »,
+  repère des non lus), puis 7.2c2 (sélection multiple, infos du message, épinglés, favoris,
+  mentions seulement).

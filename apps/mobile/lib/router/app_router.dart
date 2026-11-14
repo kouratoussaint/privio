@@ -59,7 +59,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.newConversation, builder: (_, _) => const NewConversationScreen()),
       GoRoute(path: Routes.newGroup, builder: (_, _) => const NewGroupScreen()),
       GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
-      GoRoute(path: Routes.archived, builder: (_, _) => const ArchivedScreen()),
+      GoRoute(
+        path: Routes.archived,
+        builder: (_, state) => ArchivedScreen(kind: state.uri.queryParameters['kind']),
+      ),
       GoRoute(path: Routes.requests, builder: (_, _) => const ConnectionRequestsScreen()),
       GoRoute(path: Routes.console, builder: (_, _) => const ConsoleScreen()),
       GoRoute(path: Routes.mySupport, builder: (_, _) => const MySupportScreen()),

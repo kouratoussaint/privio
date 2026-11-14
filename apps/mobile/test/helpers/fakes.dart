@@ -431,9 +431,22 @@ class FakeMessagingApi implements MessagingApi {
   @override
   Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived}) async {
     _net();
+    // Lot 7.2c1 : états propres à chaque groupe (épinglé, archivé).
+    if (groups.containsKey(conversationId)) {
+      if (pinned != null) {
+        pinned ? groupPinned.add(conversationId) : groupPinned.remove(conversationId);
+      }
+      if (archived != null) {
+        archived ? groupArchived.add(conversationId) : groupArchived.remove(conversationId);
+      }
+      return;
+    }
     this.pinned = pinned ?? this.pinned;
     this.archived = archived ?? this.archived;
   }
+
+  final Set<String> groupPinned = {};
+  final Set<String> groupArchived = {};
 
   @override
   Future<void> signalTyping(String conversationId) async => typingSignals++;
@@ -538,7 +551,8 @@ class FakeMessagingApi implements MessagingApi {
       peerDisplayName: bob.displayName,
       peerDeleted: false,
       blocked: blockedFlag ?? blocked.contains(bob.id),
-      unreadCount: list.where((m) => m.senderId != me).length,
+      // Lot 7.2c1 : comme le serveur, les messages lus ne comptent plus.
+      unreadCount: list.where((m) => m.senderId != me && _unread(id, m)).length,
       sortAt: last?.sentAt ?? DateTime.now(),
       lastMessageId: last?.id,
       lastSenderId: last?.senderId,
@@ -1225,6 +1239,12 @@ class FakeMessagingApi implements MessagingApi {
   DateTime? lastRead(String id) =>
       marks.where((m) => m.$1 == id && m.$3 != null).map((m) => m.$3).lastOrNull;
 
+  /// Message reçu après le dernier « lu » (non lu).
+  bool _unread(String id, ChatMessage m) {
+    final read = lastRead(id);
+    return read == null || m.sentAt.isAfter(read);
+  }
+
   @override
   Future<List<BlockedUser>> listBlockedUsers() async => [
     if (blocked.contains(bob.id))
@@ -1335,7 +1355,7 @@ class FakeMessagingApi implements MessagingApi {
       peerDisplayName: null,
       peerDeleted: false,
       blocked: false,
-      unreadCount: list.where((m) => m.senderId != me && !m.isSystem).length,
+      unreadCount: list.where((m) => m.senderId != me && !m.isSystem && _unread(g.id, m)).length,
       sortAt: last?.sentAt ?? g.createdAt,
       lastMessageId: last?.id,
       lastSenderId: last?.senderId,
@@ -1345,8 +1365,8 @@ class FakeMessagingApi implements MessagingApi {
       lastExpiresAt: last?.expiresAt,
       lastKind: last?.kind ?? 'text',
       ttlSeconds: conversationTtl,
-      pinned: false,
-      archived: false,
+      pinned: groupPinned.contains(g.id),
+      archived: groupArchived.contains(g.id),
       mutedUntil: muted[g.id],
       groupTitle: g.title,
       groupDescription: g.description,
