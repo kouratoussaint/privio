@@ -167,6 +167,12 @@ abstract interface class MessagingApi {
   Future<List<JoinRequest>> listGroupJoinRequests(String conversationId);
   Future<void> respondToJoinRequest(String requestId, {required bool approve});
 
+  // Lot 7.2b1 : supprimer une discussion (chez moi / pour nous deux) ou un groupe (pour tous).
+  /// Renvoie 'deleted' ou 'requested' (accord de l'autre personne attendu).
+  Future<String> deleteConversation(String conversationId, {required bool everyone});
+  Future<List<GroupDeletionNotice>> listGroupDeletionNotices();
+  Future<void> dismissGroupDeletionNotice(String id);
+
   // Lot 7.2a : confidentialité propre à une discussion ou un groupe.
   Future<ConversationPrivacy> getConversationPrivacy(String conversationId);
   Future<void> setConversationPrivacy(
@@ -720,4 +726,20 @@ class SupabaseMessagingApi implements MessagingApi {
     ConversationPrivacy privacy, {
     required bool group,
   }) => _call('set_conversation_privacy', privacy.toRpc(conversationId, group: group));
+
+  @override
+  Future<String> deleteConversation(String conversationId, {required bool everyone}) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'delete_conversation',
+      params: {'p_conversation_id': conversationId, 'p_scope': everyone ? 'everyone' : 'me'},
+    ) as String,
+  );
+
+  @override
+  Future<List<GroupDeletionNotice>> listGroupDeletionNotices() async =>
+      (await _rows('list_group_deletion_notices')).map(GroupDeletionNotice.fromJson).toList();
+
+  @override
+  Future<void> dismissGroupDeletionNotice(String id) =>
+      _call('dismiss_group_deletion_notice', {'p_id': id});
 }

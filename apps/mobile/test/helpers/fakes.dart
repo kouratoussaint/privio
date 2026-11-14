@@ -232,6 +232,14 @@ class FakeLocalFlags implements LocalFlags {
   @override
   Future<void> setQuickReaction(String emoji) async => quick = emoji;
 
+  /// Les tests d'avant le lot 7.2b1 ouvrent les groupes depuis Discussions : « ensemble ».
+  /// L'application, elle, sépare par défaut (testé dans test/ui/suppression_test.dart).
+  bool groupsTogether = true;
+  @override
+  Future<bool> groupsInDiscussions() async => groupsTogether;
+  @override
+  Future<void> setGroupsInDiscussions(bool value) async => groupsTogether = value;
+
   FakeLocalFlags({this.onboarding = false, this.permissions = false});
 
   bool onboarding;
@@ -538,6 +546,7 @@ class FakeMessagingApi implements MessagingApi {
       mutedUntil: muted[id],
       clearedBefore: clearedBefore[id],
       clearRequestBy: clearRequests[id],
+      clearRequestDelete: deleteRequests.contains(id),
       clearRequestExpiresAt: clearRequests[id] == null
           ? null
           : DateTime.now().add(const Duration(hours: 24)),
@@ -589,7 +598,67 @@ class FakeMessagingApi implements MessagingApi {
     return presences[userId] ?? const UserPresence();
   }
 
+  // --- Lot 7.2b1 : suppression -------------------------------------------------------
+  /// Discussions supprimées chez moi (instant) ; elles reviennent avec un nouveau message.
+  final Map<String, DateTime> hiddenAt = {};
+
+  /// Demandes « pour nous deux » qui sont des suppressions.
+  final Set<String> deleteRequests = {};
+  final List<GroupDeletionNotice> deletionNotices = [];
+  final List<String> dismissedNotices = [];
+
+  bool _hiddenNow(String id) {
+    final at = hiddenAt[id];
+    if (at == null) return false;
+    return !(messages[id] ?? const <ChatMessage>[]).any((m) => m.sentAt.isAfter(at));
+  }
+
+  void _hide(String id) {
+    _wipeMine(id);
+    hiddenAt[id] = DateTime.now();
+  }
+
+  void _wipeMine(String id) {
+    messages[id]?.clear();
+    clearedBefore[id] = DateTime.now();
+  }
+
+  @override
+  Future<String> deleteConversation(String conversationId, {required bool everyone}) async {
+    _net();
+    final g = groups[conversationId];
+    if (g != null) {
+      if (!everyone) throw const AppFailure(FailureCode.unknown);
+      if (!g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+      groups.remove(conversationId);
+      messages.remove(conversationId);
+      return 'deleted';
+    }
+    if (!everyone) {
+      _hide(conversationId);
+      return 'deleted';
+    }
+    if (blocked.contains(bob.id)) throw const AppFailure(FailureCode.clearNotAllowed);
+    clearRequests[conversationId] = me;
+    deleteRequests.add(conversationId);
+    return 'requested';
+  }
+
+  @override
+  Future<List<GroupDeletionNotice>> listGroupDeletionNotices() async {
+    _net();
+    return List.of(deletionNotices);
+  }
+
+  @override
+  Future<void> dismissGroupDeletionNotice(String id) async {
+    _net();
+    dismissedNotices.add(id);
+    deletionNotices.removeWhere((n) => n.id == id);
+  }
+
   void _wipe(String id) {
+    deleteRequests.remove(id);
     messages[id]?.clear();
     clearRequests.remove(id);
     clearedBefore[id] = DateTime.now();
@@ -624,9 +693,15 @@ class FakeMessagingApi implements MessagingApi {
     if (by == null || by == me) throw const AppFailure(FailureCode.clearRequestNotFound);
     if (!accept) {
       clearRequests.remove(conversationId);
+      deleteRequests.remove(conversationId);
       return 'refused';
     }
+    final delete = deleteRequests.contains(conversationId);
     _wipe(conversationId);
+    if (delete) {
+      _hide(conversationId);
+      return 'deleted';
+    }
     return 'cleared';
   }
 
@@ -673,7 +748,7 @@ class FakeMessagingApi implements MessagingApi {
 
   Future<List<ConversationSummary>> _listRaw() async => [
     for (final id in conversations.keys)
-      if (!groups.containsKey(id)) _summary(id),
+      if (!groups.containsKey(id) && !_hiddenNow(id)) _summary(id),
     for (final g in groups.values)
       if (g.roles.containsKey(me)) _groupSummary(g),
   ];
@@ -1130,7 +1205,16 @@ class FakeMessagingApi implements MessagingApi {
     String conversationId, {
     DateTime? deliveredUpTo,
     DateTime? readUpTo,
-  }) async {}
+  }) async {
+    marks.add((conversationId, deliveredUpTo, readUpTo));
+  }
+
+  /// Lot 7.2b1 : accusés envoyés (discussion, distribué jusqu'à, lu jusqu'à).
+  final List<(String, DateTime?, DateTime?)> marks = [];
+
+  /// Dernier « lu » envoyé pour une discussion.
+  DateTime? lastRead(String id) =>
+      marks.where((m) => m.$1 == id && m.$3 != null).map((m) => m.$3).lastOrNull;
 
   @override
   Future<List<BlockedUser>> listBlockedUsers() async => [

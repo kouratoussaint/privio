@@ -59,6 +59,7 @@ class ConversationSummary {
     this.clearedBefore,
     this.clearRequestBy,
     this.clearRequestExpiresAt,
+    this.clearRequestDelete = false,
   });
 
   final String id;
@@ -118,6 +119,9 @@ class ConversationSummary {
   final String? clearRequestBy;
   final DateTime? clearRequestExpiresAt;
 
+  /// Lot 7.2b1 : la demande en cours est une suppression (sinon : vider).
+  final bool clearRequestDelete;
+
   bool get isGroup => kind == 'group';
   bool get isOwner => myRole == 'owner';
   bool get isAdmin => myRole == 'owner' || myRole == 'admin';
@@ -170,6 +174,7 @@ class ConversationSummary {
     'cleared_before': clearedBefore?.toUtc().toIso8601String(),
     'clear_request_by': clearRequestBy,
     'clear_request_expires_at': clearRequestExpiresAt?.toUtc().toIso8601String(),
+    'clear_request_delete': clearRequestDelete,
   };
 
   /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
@@ -218,6 +223,7 @@ class ConversationSummary {
     clearedBefore: clearedBefore,
     clearRequestBy: clearRequestBy,
     clearRequestExpiresAt: clearRequestExpiresAt,
+    clearRequestDelete: clearRequestDelete,
   );
 
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
@@ -257,6 +263,7 @@ class ConversationSummary {
     clearedBefore: _date(j['cleared_before']),
     clearRequestBy: j['clear_request_by'] as String?,
     clearRequestExpiresAt: _date(j['clear_request_expires_at']),
+    clearRequestDelete: j['clear_request_delete'] as bool? ?? false,
   );
 }
 
@@ -1004,4 +1011,19 @@ class ConversationPrivacy {
       'p_show_about': showAbout,
     },
   };
+}
+
+/// Lot 7.2b1 : avis « Le groupe X a été supprimé » (onglet Groupes).
+class GroupDeletionNotice {
+  const GroupDeletionNotice({required this.id, required this.title, required this.deletedAt});
+
+  final String id;
+  final String title;
+  final DateTime deletedAt;
+
+  factory GroupDeletionNotice.fromJson(Map<String, dynamic> j) => GroupDeletionNotice(
+    id: j['id'] as String,
+    title: j['title'] as String? ?? 'Groupe',
+    deletedAt: DateTime.parse(j['deleted_at'] as String),
+  );
 }

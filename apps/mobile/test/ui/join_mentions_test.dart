@@ -170,6 +170,8 @@ void main() {
     expect(find.text('DEMANDES POUR REJOINDRE (2)'), findsOneWidget);
     await _scrollTo(tester, 'join_request.r2');
     expect(find.text('déjà retiré du groupe'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('join_request.r1')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('join_request.r1.approve')));
     await tester.pumpAndSettle();
     expect(find.text('Awa a rejoint le groupe.'), findsOneWidget);

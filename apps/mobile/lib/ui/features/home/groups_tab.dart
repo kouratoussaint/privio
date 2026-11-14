@@ -61,6 +61,7 @@ class GroupsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
     final myRequests = ref.watch(myJoinRequestsProvider).value ?? const <MyJoinRequest>[];
+    final notices = ref.watch(groupDeletionNoticesProvider).value ?? const <GroupDeletionNotice>[];
     final conversations = ref.watch(conversationsProvider);
     final groups = (conversations.value ?? const <ConversationSummary>[])
         .where((c) => c.isGroup && !c.archived)
@@ -96,7 +97,9 @@ class GroupsTab extends ConsumerWidget {
                 padding: EdgeInsets.only(top: PrivioSpacing.s),
                 child: OfflineBanner(),
               ),
-            Expanded(child: _body(context, ref, conversations, invitations, groups, myRequests)),
+            Expanded(
+              child: _body(context, ref, conversations, invitations, groups, myRequests, notices),
+            ),
           ],
         ),
       ),
@@ -110,6 +113,7 @@ class GroupsTab extends ConsumerWidget {
     List<GroupInvitation> invitations,
     List<ConversationSummary> groups,
     List<MyJoinRequest> myRequests,
+    List<GroupDeletionNotice> notices,
   ) {
     final theme = Theme.of(context);
     if (!conversations.hasValue && conversations.isLoading) return const LoadingView();
@@ -127,13 +131,14 @@ class GroupsTab extends ConsumerWidget {
         ref.read(conversationsProvider.notifier).refresh(),
         ref.refresh(invitationsProvider.future).then((_) {}, onError: (Object _) {}),
         ref.refresh(myJoinRequestsProvider.future).then((_) {}, onError: (Object _) {}),
+        ref.refresh(groupDeletionNoticesProvider.future).then((_) {}, onError: (Object _) {}),
       ]);
     }
 
     return RefreshIndicator(
       key: const Key('groups.refresh'),
       onRefresh: reload,
-      child: invitations.isEmpty && groups.isEmpty && myRequests.isEmpty
+      child: invitations.isEmpty && groups.isEmpty && myRequests.isEmpty && notices.isEmpty
           ? LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -154,6 +159,27 @@ class GroupsTab extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(top: PrivioSpacing.m, bottom: 96),
               children: [
+                // Lot 7.2b1 : groupes supprimés par un administrateur (avis à fermer).
+                for (final n in notices)
+                  ListTile(
+                    key: Key('notice.${n.id}'),
+                    leading: Icon(Icons.delete_outline, color: theme.colorScheme.onSurfaceVariant),
+                    title: Text('Le groupe «\u202F${n.title}\u202F» a été supprimé'),
+                    subtitle: const Text('Par un administrateur du groupe'),
+                    trailing: IconButton(
+                      key: Key('notice.dismiss.${n.id}'),
+                      tooltip: 'Fermer',
+                      icon: const Icon(Icons.close),
+                      onPressed: () async {
+                        try {
+                          await ref.read(messagingApiProvider).dismissGroupDeletionNotice(n.id);
+                        } on Object catch (_) {
+                          // Hors connexion : l'avis reviendra et pourra être fermé plus tard.
+                        }
+                        ref.invalidate(groupDeletionNoticesProvider);
+                      },
+                    ),
+                  ),
                 if (invitations.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),

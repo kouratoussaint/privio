@@ -322,6 +322,11 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
       final list = await api.listConversations();
       state = AsyncData(list);
       final cache = ref.read(localCacheProvider);
+      // Lot 7.2b1 : discussion supprimée, groupe supprimé ou quitté : la copie locale part.
+      final kept = {for (final c in list) c.id};
+      for (final old in cache.conversations) {
+        if (!kept.contains(old.id)) await cache.putMessages(old.id, const []);
+      }
       await cache.putConversations(list);
       // Discussions vidées : la copie gardée sur ce téléphone est effacée aussi.
       for (final c in list) {
@@ -449,6 +454,25 @@ class ChatState {
       ChatState(messages: messages ?? this.messages, pending: pending ?? this.pending);
 }
 
+/// Lot 7.2b1 : discussion réellement à l'écran (application au premier plan et déverrouillée,
+/// discussion au-dessus de tout), ou null. Seule celle-ci peut être marquée « lue » ;
+/// les autres ne reçoivent que « distribué ».
+final chatOnScreenProvider = NotifierProvider<ChatOnScreen, String?>(ChatOnScreen.new);
+
+class ChatOnScreen extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void show(String conversationId) {
+    if (ref.mounted) state = conversationId;
+  }
+
+  /// Appelé après la fermeture de l'écran : l'application peut déjà être fermée.
+  void hide(String conversationId) {
+    if (ref.mounted && state == conversationId) state = null;
+  }
+}
+
 final chatProvider = AsyncNotifierProvider.autoDispose.family<ChatController, ChatState, String>(
   ChatController.new,
 );
@@ -500,6 +524,13 @@ class ChatController extends AsyncNotifier<ChatState> {
       // Un message en attente vient de partir : on affiche la version du serveur.
       if (mine(next) < mine(prev)) unawaited(reload());
     });
+    // Lot 7.2b1 : la discussion revient à l'écran : ce qui s'y trouve est maintenant lu.
+    ref.listen(chatOnScreenProvider, (prev, next) {
+      if (next == conversationId && prev != conversationId) {
+        final current = state.value;
+        if (current != null) _markRead(current.messages);
+      }
+    });
     unawaited(Future<void>.microtask(reload));
     return ChatState(
       messages: cache.messages(conversationId),
@@ -507,15 +538,23 @@ class ChatController extends AsyncNotifier<ChatState> {
     );
   }
 
+  /// « Lu » seulement si la discussion est vraiment à l'écran (lot 7.2b1) : rechargée sous
+  /// la fiche, application réduite, téléphone ou Privio verrouillés, elle n'envoie que
+  /// « distribué ».
   void _markRead(List<ChatMessage> messages) {
     final me = ref.read(currentUserIdProvider);
     final lastIncoming = messages.where((m) => m.senderId != me).map((m) => m.sentAt);
     if (lastIncoming.isEmpty) return;
     final latest = lastIncoming.reduce((a, b) => a.isAfter(b) ? a : b);
+    final onScreen = ref.read(chatOnScreenProvider) == conversationId;
     unawaited(
       ref
           .read(messagingApiProvider)
-          .markConversation(conversationId, deliveredUpTo: latest, readUpTo: latest)
+          .markConversation(
+            conversationId,
+            deliveredUpTo: latest,
+            readUpTo: onScreen ? latest : null,
+          )
           .then((_) => ref.invalidate(conversationsProvider))
           .catchError((Object _) {}),
     );
@@ -961,6 +1000,33 @@ Future<T> groupAction<T>(
       ..invalidate(chatProvider(conversationId));
   }
 }
+
+// ------------------------------------------------------------------------
+// Lot 7.2b1 : groupes dans l'onglet Discussions, ou seulement dans Groupes (par défaut)
+// ------------------------------------------------------------------------
+final groupsInDiscussionsProvider = AsyncNotifierProvider<GroupsInDiscussionsController, bool>(
+  GroupsInDiscussionsController.new,
+);
+
+class GroupsInDiscussionsController extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() => ref.watch(localFlagsProvider).groupsInDiscussions();
+
+  Future<void> set(bool value) async {
+    await ref.read(localFlagsProvider).setGroupsInDiscussions(value);
+    state = AsyncData(value);
+  }
+}
+
+/// Avis « Le groupe X a été supprimé » (onglet Groupes), à jour en temps réel.
+final groupDeletionNoticesProvider = FutureProvider.autoDispose<List<GroupDeletionNotice>>((ref) {
+  if (ref.watch(currentUserIdProvider) == null) return const [];
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    final e = next.value?.event;
+    if (e == 'group_deleted' || e == 'resume' || e == 'reconnected') ref.invalidateSelf();
+  });
+  return ref.watch(messagingApiProvider).listGroupDeletionNotices();
+});
 
 // ------------------------------------------------------------------------
 // Réaction du double appui (lot 2.F), réglable dans les Paramètres

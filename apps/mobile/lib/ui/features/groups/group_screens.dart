@@ -999,9 +999,27 @@ class GroupInfoScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('group.leave'),
                 leading: Icon(Icons.logout, color: theme.colorScheme.error),
-                title: Text('Quitter le groupe', style: TextStyle(color: theme.colorScheme.error)),
+                // Lot 7.2b1 : quitter retire aussi le groupe de votre liste.
+                title: Text(
+                  'Quitter et supprimer',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+                subtitle: const Text('Le groupe disparaît de votre liste'),
                 onTap: () => _leave(context, ref, s),
               ),
+              // Lot 7.2b1 : le créateur et les administrateurs le suppriment pour tous.
+              if (admin) ...[
+                const SettingsDivider(),
+                ListTile(
+                  key: const Key('group.delete'),
+                  leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
+                  title: Text(
+                    'Supprimer le groupe pour tous',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  onTap: () => chooseDelete(context, ref, s),
+                ),
+              ],
             ],
           ),
         ],

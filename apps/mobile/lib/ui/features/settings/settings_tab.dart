@@ -237,6 +237,20 @@ class SettingsTab extends ConsumerWidget {
                   subtitle: const Text('Sans nom ni contenu.'),
                 ),
                 const SettingsDivider(),
+                // Lot 7.2b1 : groupes séparés des discussions (par défaut) ou ensemble.
+                SwitchListTile(
+                  key: const Key('settings.groups_together'),
+                  value: ref.watch(groupsInDiscussionsProvider).value ?? false,
+                  secondary: Icon(Icons.forum_outlined, color: p.accentText),
+                  title: const Text('Groupes dans Discussions'),
+                  subtitle: Text(
+                    ref.watch(groupsInDiscussionsProvider).value ?? false
+                        ? 'Les groupes apparaissent aussi dans Discussions.'
+                        : 'Séparés\u202F: les groupes sont seulement dans l’onglet Groupes.',
+                  ),
+                  onChanged: (v) => ref.read(groupsInDiscussionsProvider.notifier).set(v),
+                ),
+                const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.quick_reaction'),
                   leading: Icon(Icons.touch_app_outlined, color: p.accentText),

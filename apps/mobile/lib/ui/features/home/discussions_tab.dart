@@ -17,6 +17,7 @@ import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/swipe_actions.dart';
 import '../conversations/connection_requests_screen.dart' show ConnectionRequestsBanner;
+import '../conversations/conversation_details.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -57,8 +58,11 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
   List<ConversationSummary> _apply(List<ConversationSummary> all) {
     final q = _search.text.trim().toLowerCase();
     final local = ref.read(localCacheProvider).allMessages;
+    // Lot 7.2b1 : groupes et discussions séparés (par défaut) : pas de groupe ici.
+    final together = ref.read(groupsInDiscussionsProvider).value ?? false;
     return all.where((c) {
       if (c.archived) return false;
+      if (c.isGroup && !together) return false;
       final inMessages =
           !c.blocked &&
           q.isNotEmpty &&
@@ -85,8 +89,13 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
   Widget build(BuildContext context) {
     final p = PrivioPalette.of(context);
     final conversations = ref.watch(conversationsProvider);
+    final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
+    if (!together && _filter == ConversationFilter.groups) _filter = ConversationFilter.all;
     final unreadTotal =
-        conversations.value?.where((c) => !c.archived && c.unreadCount > 0).length ?? 0;
+        conversations.value
+            ?.where((c) => !c.archived && c.unreadCount > 0 && (together || !c.isGroup))
+            .length ??
+        0;
     final archivedCount = conversations.value?.where((c) => c.archived).length ?? 0;
     final offline = ref.watch(offlineProvider);
 
@@ -155,12 +164,13 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
                   selected: _filter == ConversationFilter.pinned,
                   onTap: () => setState(() => _filter = ConversationFilter.pinned),
                 ),
-                _FilterChip(
-                  key: const Key('filter.groups'),
-                  label: 'Groupes',
-                  selected: _filter == ConversationFilter.groups,
-                  onTap: () => setState(() => _filter = ConversationFilter.groups),
-                ),
+                if (together)
+                  _FilterChip(
+                    key: const Key('filter.groups'),
+                    label: 'Groupes',
+                    selected: _filter == ConversationFilter.groups,
+                    onTap: () => setState(() => _filter = ConversationFilter.groups),
+                  ),
               ],
             ),
           ),
@@ -533,11 +543,26 @@ Future<void> showConversationActions(
                 : const Text('Un nouveau message la fera réapparaître dans la liste.'),
             onTap: () => Navigator.pop(ctx, 'archive'),
           ),
+          // Lot 7.2b1 : supprimer (discussion) ; un groupe se supprime depuis sa fiche.
+          if (!summary.isGroup)
+            ListTile(
+              key: const Key('conv.delete'),
+              leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+              title: Text(
+                'Supprimer la discussion',
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
         ],
       ),
     ),
   );
   if (action == null || !context.mounted) return;
+  if (action == 'delete') {
+    await chooseDelete(context, ref, summary);
+    return;
+  }
   try {
     await ref
         .read(conversationsProvider.notifier)

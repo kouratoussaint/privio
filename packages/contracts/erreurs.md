@@ -164,3 +164,14 @@ renvoient un statut (`invalid`, `member`, `pending`, `declined`, `full`, `open`,
 | `PRIVACY_SETTING_INVALID` | `set_conversation_privacy` | en ligne, photo ou À propos demandés pour un groupe |
 | `NOT_MEMBER` | `get_conversation_privacy`, `set_conversation_privacy` | discussion dont on ne fait pas partie |
 
+### Suppression (lot 7.2b1)
+| Code | Origine | Signification |
+|---|---|---|
+| `NOT_ADMIN` | `delete_conversation` | groupe : seuls le créateur et les administrateurs le suppriment |
+| `GROUP_CLOSED` | `delete_conversation` | groupe fermé par Privio (sous modération) |
+| `CLEAR_SCOPE_INVALID` | `delete_conversation` | choix inconnu, ou « chez moi » pour un groupe (on le quitte) |
+| `CLEAR_NOT_ALLOWED` | `delete_conversation` | « pour nous deux » impossible (blocage, compte supprimé) |
+
+`delete_conversation` renvoie `deleted` ou `requested` (accord attendu) ;
+`respond_clear_request` renvoie aussi `deleted` quand la demande acceptée était une suppression.
+

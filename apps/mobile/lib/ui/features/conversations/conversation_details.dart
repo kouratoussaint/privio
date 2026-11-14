@@ -2,19 +2,21 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/messaging.dart';
+import '../../../router/routes.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/privacy_providers.dart';
 import '../../../state/profile_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import 'photo_widgets.dart';
 import 'voice_widgets.dart';
-import '../../../state/privacy_providers.dart';
 
 /// Lot 7.1a : éléments communs aux fiches contact et groupe.
 
@@ -669,5 +671,123 @@ class ConversationPrivacySection extends ConsumerWidget {
           ),
       ],
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lot 7.2b1 : supprimer une discussion ou un groupe.
+// ---------------------------------------------------------------------------
+
+/// Discussion à deux : « Seulement chez moi » ou « Pour nous deux » (accord de l'autre).
+/// Groupe (créateur, administrateurs) : supprimé pour tous. Après suppression, retour à la
+/// liste. Renvoie 'deleted', 'requested' ou null.
+Future<String?> chooseDelete(BuildContext context, WidgetRef ref, ConversationSummary s) async {
+  final bool everyone;
+  if (s.isGroup) {
+    if (!s.isAdmin) return null;
+    everyone = true;
+  } else {
+    final peerOk = !(s.blocked || s.peerDeleted);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                PrivioSpacing.l,
+                0,
+                PrivioSpacing.l,
+                PrivioSpacing.s,
+              ),
+              child: Text('Supprimer la discussion', style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+            if (peerOk)
+              ListTile(
+                key: const Key('delete.everyone'),
+                leading: const Icon(Icons.group_remove_outlined),
+                title: const Text('Pour nous deux'),
+                subtitle: Text(
+                  '${s.title} doit accepter. Ensuite la discussion disparaît des deux côtés, '
+                  'sans laisser de trace.',
+                ),
+                onTap: () => Navigator.pop(ctx, 'everyone'),
+              ),
+            ListTile(
+              key: const Key('delete.me'),
+              leading: const Icon(Icons.person_remove_outlined),
+              title: const Text('Seulement chez moi'),
+              subtitle: Text(
+                'Elle disparaît de votre liste et votre copie est effacée. Si ${s.title} vous '
+                'écrit à nouveau, elle revient, vide.',
+              ),
+              onTap: () => Navigator.pop(ctx, 'me'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return null;
+    everyone = choice == 'everyone';
+  }
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(
+        s.isGroup
+            ? 'Supprimer « ${s.title} » pour tous ?'
+            : everyone
+            ? 'Demander à ${s.title} de supprimer la discussion ?'
+            : 'Supprimer la discussion chez vous ?',
+      ),
+      content: Text(
+        s.isGroup
+            ? 'Tous les messages, photos et vocaux sont effacés et tous les membres sont '
+                  'retirés. Chacun verra « Le groupe a été supprimé ». Cette action ne '
+                  'peut pas être annulée.'
+            : everyone
+            ? 'Si ${s.title} accepte, tous les messages disparaissent définitivement et la '
+                  'discussion est retirée des deux côtés. La demande expire au bout de 24 heures.'
+            : 'Les messages disparaissent définitivement de votre téléphone. Cette action ne '
+                  'peut pas être annulée.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        FilledButton(
+          key: const Key('delete.confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(ctx).colorScheme.error,
+            foregroundColor: Theme.of(ctx).colorScheme.onError,
+          ),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(everyone && !s.isGroup ? 'Envoyer la demande' : 'Supprimer'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return null;
+  final messenger = ScaffoldMessenger.of(context);
+  final router = GoRouter.of(context);
+  try {
+    final r = await ref.read(messagingApiProvider).deleteConversation(s.id, everyone: everyone);
+    await ref.read(conversationsProvider.notifier).refresh();
+    if (r == 'deleted') {
+      router.go(s.isGroup ? Routes.groups : Routes.discussions);
+      messenger.showSnackBar(
+        SnackBar(
+          key: const Key('delete.done'),
+          content: Text(s.isGroup ? 'Groupe supprimé.' : 'Discussion supprimée.'),
+        ),
+      );
+    } else {
+      messenger.showSnackBar(SnackBar(content: Text('Demande envoyée à ${s.title}.')));
+    }
+    return r;
+  } on Object catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    return null;
   }
 }

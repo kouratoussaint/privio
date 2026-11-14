@@ -267,6 +267,17 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                   onTap: () => _toggle(peerId, summary.title, block: !iBlocked),
                 ),
               const SettingsDivider(),
+              // Lot 7.2b1 : supprimer chez moi, ou pour nous deux (avec accord).
+              ListTile(
+                key: const Key('contact.delete'),
+                leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                title: Text(
+                  'Supprimer la discussion',
+                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
+                ),
+                onTap: () => chooseDelete(context, ref, summary),
+              ),
+              const SettingsDivider(),
               ListTile(
                 key: const Key('contact.report'),
                 leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),

@@ -12,6 +12,7 @@ import '../../../data/services/push_service.dart'
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
+import '../../../domain/models/messaging.dart';
 
 /// Navigation MVP validée : Discussions / Groupes / Paramètres, et rien d'autre.
 /// Active aussi les notifications (lot 4.1) et ouvre la discussion d'une notification touchée.
@@ -93,13 +94,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       });
     });
     final shell = widget.shell;
-    final unread =
-        ref
-            .watch(conversationsProvider)
-            .value
-            ?.where((c) => !c.archived && c.unreadCount > 0)
-            .length ??
-        0;
+    // Lot 7.2b1 : séparés (par défaut), les groupes non lus comptent dans l'onglet Groupes.
+    final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
+    final unreadList =
+        ref.watch(conversationsProvider).value?.where((c) => !c.archived && c.unreadCount > 0) ??
+        const <ConversationSummary>[];
+    final unread = unreadList.where((c) => together || !c.isGroup).length;
+    final unreadGroups = together ? 0 : unreadList.where((c) => c.isGroup).length;
     // Lot 4.7 : les demandes de connexion reçues comptent dans la pastille Discussions.
     final requests = ref.watch(incomingRequestCountProvider);
     final invitations = ref.watch(invitationsProvider).value?.length ?? 0;
@@ -124,7 +125,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               icon: Icons.groups_outlined,
               selectedIcon: Icons.groups,
               label: 'Groupes',
-              badge: invitations,
+              badge: invitations + unreadGroups,
             ),
             const PrivioNavItem(
               icon: Icons.settings_outlined,

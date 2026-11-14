@@ -56,6 +56,8 @@ class SupabaseRealtimeService implements RealtimeService {
     'disconnected',
     // Lot 7.1b : demande d'adhésion reçue, acceptée, refusée ou annulée.
     'join_request',
+    // Lot 7.2b1 : groupe supprimé par un administrateur.
+    'group_deleted',
   ];
   static const _retryDelays = [
     Duration(seconds: 2),

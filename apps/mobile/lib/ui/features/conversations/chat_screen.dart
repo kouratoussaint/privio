@@ -83,12 +83,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   VoiceRecorderController get _voice => ref.read(voiceRecorderControllerProvider.notifier);
   late final AppLifecycleListener _lifecycle;
 
+  /// Lot 7.2b1 : la discussion n'est « lue » que si elle est vraiment à l'écran.
+  late final ChatOnScreen _onScreen;
+  bool _appShown = true;
+  bool? _wasOnScreen;
+
+  void _syncOnScreen(bool onScreen) {
+    if (_wasOnScreen == onScreen) return;
+    _wasOnScreen = onScreen;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      onScreen ? _onScreen.show(widget.conversationId) : _onScreen.hide(widget.conversationId);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _onScreen = ref.read(chatOnScreenProvider.notifier);
     // Application mise en arrière-plan pendant un enregistrement : arrêt et préécoute.
     _lifecycle = AppLifecycleListener(
+      // Lot 7.2b1 : application cachée (réduite, téléphone verrouillé) : plus « à l'écran ».
+      onShow: () => setState(() => _appShown = true),
       onHide: () {
+        // Pas d'image affichée quand l'application est cachée : on retire tout de suite
+        // (sans attendre la prochaine image).
+        _appShown = false;
+        _wasOnScreen = false;
+        _onScreen.hide(widget.conversationId);
+        setState(() {});
         if (ref.read(voiceRecorderControllerProvider) is VoiceRecording) {
           unawaited(_voice.stop().then(_afterVoiceStop));
         }
@@ -107,6 +130,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    final id = widget.conversationId;
+    final onScreen = _onScreen;
+    unawaited(Future<void>.microtask(() => onScreen.hide(id)));
     _lifecycle.dispose();
     _tick?.cancel();
     _poll?.cancel();
@@ -459,6 +485,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _toast('Demande annulée.');
       } else {
         final r = await api.respondClearRequest(widget.conversationId, accept: accept);
+        if (r == 'deleted') {
+          // Lot 7.2b1 : demande de suppression acceptée : retour à la liste.
+          await ref.read(conversationsProvider.notifier).refresh();
+          if (!mounted) return;
+          final messenger = ScaffoldMessenger.of(context);
+          context.go(Routes.discussions);
+          messenger.showSnackBar(const SnackBar(content: Text('Discussion supprimée.')));
+          return;
+        }
         _toast(r == 'cleared' ? 'Discussion vidée.' : 'Demande refusée.');
       }
     } on Object catch (e) {
@@ -664,6 +699,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final offline = ref.watch(offlineProvider);
     final query = _searchCtrl.text.trim().toLowerCase();
     final voice = ref.watch(voiceRecorderControllerProvider);
+    // Lot 7.2b1 : à l'écran = application visible, Privio déverrouillé, discussion au-dessus
+    // (ni fiche, ni feuille, ni fenêtre par-dessus).
+    _syncOnScreen(
+      _appShown &&
+          (ModalRoute.of(context)?.isCurrent ?? true) &&
+          !(ref.watch(appLockProvider).value?.locked ?? false),
+    );
     // Lot 7.1b : membres du groupe, pour proposer et mettre en valeur les @mentions.
     final mentionMembers = isGroup
         ? ref.watch(mentionMembersProvider(widget.conversationId)).value ?? const <GroupMember>[]
@@ -1915,6 +1957,7 @@ class _ClearRequestBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final p = PrivioPalette.of(context);
     final mine = summary.clearRequestBy == me;
+    final delete = summary.clearRequestDelete;
     return Semantics(
       liveRegion: true,
       child: Container(
@@ -1936,13 +1979,21 @@ class _ClearRequestBanner extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.cleaning_services_outlined, size: 18, color: p.accentText),
+                Icon(
+                  delete ? Icons.delete_outline : Icons.cleaning_services_outlined,
+                  size: 18,
+                  color: p.accentText,
+                ),
                 const SizedBox(width: PrivioSpacing.s),
                 Expanded(
+                  // Lot 7.2b1 : la demande peut être une suppression de la discussion.
                   child: Text(
                     mine
                         ? 'Demande envoyée\u202F: en attente de l’accord de ${summary.title} pour '
-                              'vider toute la discussion.'
+                              '${delete ? 'supprimer la discussion' : 'vider toute la discussion'}.'
+                        : delete
+                        ? '${summary.title} propose de supprimer la discussion pour vous deux. '
+                              'Tout disparaîtra, sans trace.'
                         : '${summary.title} propose de vider toute la discussion pour vous deux. '
                               'Tout disparaîtra, sans trace.',
                     style: theme.textTheme.bodySmall,
@@ -1969,7 +2020,7 @@ class _ClearRequestBanner extends StatelessWidget {
                       FilledButton(
                         key: const Key('clear.accept'),
                         onPressed: () => onRespond(true),
-                        child: const Text('Accepter et vider'),
+                        child: Text(delete ? 'Accepter et supprimer' : 'Accepter et vider'),
                       ),
                     ],
             ),

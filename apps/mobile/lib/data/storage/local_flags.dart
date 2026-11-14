@@ -18,6 +18,10 @@ abstract interface class LocalFlags {
   Future<String> quickReaction();
   Future<void> setQuickReaction(String emoji);
 
+  /// Lot 7.2b1 : groupes aussi dans l'onglet Discussions (faux par défaut : séparés).
+  Future<bool> groupsInDiscussions();
+  Future<void> setGroupsInDiscussions(bool value);
+
   // Économie de données (lot 4.2).
   /// 'always', 'wifi' ou 'never' (téléchargement automatique des photos).
   Future<String> photoAutoDownload();
@@ -38,6 +42,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _quick = 'privio.quick_reaction';
   static const _autoPhoto = 'privio.photo_auto_download';
   static const _usage = 'privio.data_usage';
+  static const _groupsInDiscussions = 'privio.groups_in_discussions';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -68,6 +73,12 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setQuickReaction(String emoji) => _prefs.setString(_quick, emoji);
+
+  @override
+  Future<bool> groupsInDiscussions() async => (await _prefs.getBool(_groupsInDiscussions)) ?? false;
+
+  @override
+  Future<void> setGroupsInDiscussions(bool value) => _prefs.setBool(_groupsInDiscussions, value);
 
   @override
   Future<String> photoAutoDownload() async => (await _prefs.getString(_autoPhoto)) ?? 'always';

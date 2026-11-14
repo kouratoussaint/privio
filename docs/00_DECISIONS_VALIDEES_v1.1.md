@@ -198,3 +198,15 @@ Demandés par le commanditaire après test sur téléphone :
   créés pour Privio, illustrations animées dessinées en code) ; réglage « Sons et vibrations
   dans l'application » activé par défaut ; « réduire les animations » du téléphone respecté.
 
+## Amendement 14 — Lu à l'écran, suppressions, groupes séparés (14 novembre 2026, lot 7.2b1)
+- 7.2b découpé : 7.2b1 (ces corrections, livré d'abord), puis 7.2b2 (animations et sons).
+- « Lu » n'est envoyé que si la discussion est vraiment à l'écran (application au premier plan
+  et déverrouillée, discussion au-dessus de tout) ; sinon seulement « distribué ».
+- Supprimer une discussion à deux : « Seulement chez moi » (elle revient, vide, avec un
+  nouveau message) ou « Pour nous deux » (accord de l'autre, comme pour vider).
+- Supprimer un groupe : le créateur **et les administrateurs**, pour tous ; chaque membre voit
+  une ligne « Le groupe X a été supprimé » dans l'onglet Groupes (pas de notification). Un
+  membre « Quitte et supprime ». Un groupe fermé par Privio ne se supprime pas.
+- Groupes et discussions **séparés par défaut** ; réglage « Groupes dans Discussions » dans
+  Paramètres pour les remettre ensemble.
+
