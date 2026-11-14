@@ -176,7 +176,7 @@ class AppFailure implements Exception {
       'Saisissez le numéro complet (8 chiffres, ou avec l’indicatif).',
     FailureCode.searchTooShort => 'Saisissez au moins 2 caractères.',
     FailureCode.accountNotFound => 'Ce compte n’existe plus.',
-    FailureCode.aboutTooLong => '« À propos » : 140 caractères au plus.',
+    FailureCode.aboutTooLong => '«\u202FÀ propos\u202F»\u202F: 140 caractères au plus.',
     FailureCode.otpInvalidOrExpired =>
       'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
     FailureCode.smsRateLimited =>
