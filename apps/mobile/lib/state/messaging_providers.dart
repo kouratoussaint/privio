@@ -195,6 +195,14 @@ class OutboxController extends Notifier<List<OutboxItem>> {
         // L'expéditeur revoit / réécoute son envoi sans le retélécharger.
         await _cache.putMedia(LocalCache.messageMediaKey(sent.id), media, sent.expiresAt);
         if (item.isPhoto) ref.invalidate(photoQuotaProvider);
+      } else if (item.kind == 'sticker') {
+        sent = await api.sendSticker(
+          conversationId: item.conversationId,
+          clientMsgId: item.clientId,
+          sticker: item.body,
+          replyToId: item.replyToId,
+          ttlSeconds: item.ttlSeconds,
+        );
       } else {
         sent = await api.sendMessage(
           conversationId: item.conversationId,
@@ -437,6 +445,7 @@ class PendingMessage {
 
   bool get isVoice => kind == 'voice';
   bool get isPhoto => kind == 'photo';
+  bool get isSticker => kind == 'sticker';
 
   /// Refusé par le serveur (sinon : simplement en attente du réseau).
   final bool failed;
@@ -621,6 +630,24 @@ class ChatController extends AsyncNotifier<ChatState> {
           ttlSeconds: ttlSeconds,
           mentions: mentions,
         );
+    await outbox.enqueue(item);
+    final sent = await outbox.sendOne(item);
+    if (sent == null) return;
+    await _showSent(sent, item.replyToId);
+  }
+
+  /// Lot 7.3a : autocollant ; même parcours que le texte (file, reprise hors connexion).
+  Future<void> sendSticker(String sticker, {String? replyToId, int? ttlSeconds}) async {
+    final item = OutboxItem(
+      clientId: uuidV4(),
+      conversationId: conversationId,
+      body: sticker,
+      createdAt: DateTime.now(),
+      replyToId: replyToId,
+      ttlSeconds: ttlSeconds,
+      kind: 'sticker',
+    );
+    final outbox = ref.read(outboxProvider.notifier);
     await outbox.enqueue(item);
     final sent = await outbox.sendOne(item);
     if (sent == null) return;

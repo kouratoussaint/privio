@@ -21,7 +21,6 @@ import '../../../state/privacy_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/voice_providers.dart';
 import '../../core/widgets/avatar.dart';
-import '../../core/widgets/privacy_pattern.dart';
 import '../../core/widgets/swipe_actions.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
@@ -37,6 +36,8 @@ import '../../core/motion/motion.dart';
 import '../../../state/feedback_providers.dart';
 import '../../core/motion/illustrations.dart';
 import 'message_extras.dart';
+import 'expression_panel.dart';
+import '../settings/wallpaper.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -86,6 +87,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   List<ChatMessage> _shown = const [];
   String _shownQuery = '';
   final _ghosts = <String, (ChatMessage, int)>{};
+
+  // Lot 7.3a : panneau des émojis et autocollants (à la place du clavier).
+  bool _panel = false;
+
+  void _togglePanel() {
+    if (_panel) {
+      setState(() => _panel = false);
+      _focus.requestFocus();
+    } else {
+      FocusScope.of(context).unfocus();
+      setState(() => _panel = true);
+    }
+  }
+
+  double _panelHeight(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height;
+    return (h * 0.38).clamp(220.0, 320.0);
+  }
+
+  Future<void> _sendSticker(StickerInfo s) async {
+    final replyTo = _replyTo;
+    final ttl = _nextTtl;
+    setState(() {
+      _replyTo = null;
+      _nextTtl = null;
+    });
+    ref.read(feedbackProvider).sound(PrivioSound.sent);
+    await _guard(() => _chat.sendSticker(s.id, replyToId: replyTo?.id, ttlSeconds: ttl));
+  }
 
   // Lot 7.2c2 : sélection multiple, bandeau des épinglés, retour depuis les favoris.
   final _selected = <String>{};
@@ -409,6 +439,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _onScreen = ref.read(chatOnScreenProvider.notifier);
     _listScroll.addListener(_onListScroll);
+    // Lot 7.3a : toucher le champ de saisie ferme le panneau des émojis.
+    _focus.addListener(() {
+      if (_focus.hasFocus && _panel && mounted) setState(() => _panel = false);
+    });
     // Application mise en arrière-plan pendant un enregistrement : arrêt et préécoute.
     _lifecycle = AppLifecycleListener(
       // Lot 7.2b1 : application cachée (réduite, téléphone verrouillé) : plus « à l'écran ».
@@ -914,9 +948,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         key: Key('react.$e'),
                         tooltip: e == myReaction ? 'Retirer $e' : 'Réagir $e',
                         isSelected: e == myReaction,
+                        // Sept boutons sur un écran étroit (320 dp).
+                        visualDensity: VisualDensity.compact,
                         onPressed: () => Navigator.pop(ctx, 'react:$e'),
                         icon: Text(e, style: Theme.of(ctx).textTheme.headlineSmall),
                       ),
+                    // Lot 7.3a : n'importe quel émoji.
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      key: const Key('react.more'),
+                      tooltip: 'Autres émojis',
+                      onPressed: () => Navigator.pop(ctx, 'react_more'),
+                      icon: const Icon(Icons.add_reaction_outlined),
+                    ),
                   ],
                 ),
               ),
@@ -989,7 +1033,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
     if (action == null || !mounted) return;
-    if (action.startsWith('react:')) {
+    if (action == 'react_more') {
+      final emoji = await pickReactionEmoji(context);
+      if (emoji == null || !mounted) return;
+      ref.read(feedbackProvider).sound(PrivioSound.reaction);
+      await _guard(() => _chat.toggleReaction(m.id, emoji));
+    } else if (action.startsWith('react:')) {
       ref.read(feedbackProvider).sound(PrivioSound.reaction);
       await _guard(() => _chat.toggleReaction(m.id, action.substring(6)));
     } else if (action == 'reply') {
@@ -1095,7 +1144,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         .where(
           (m) =>
               query.isEmpty ||
-              (!m.isDeleted && !m.isSystem && (m.body ?? '').toLowerCase().contains(query)),
+              (!m.isDeleted &&
+                  !m.isSystem &&
+                  !m.isSticker &&
+                  (m.body ?? '').toLowerCase().contains(query)),
         )
         .toList();
     final appearing = visible == null ? const <String>{} : _track(visible, query, me);
@@ -1145,9 +1197,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     // Lot 7.2c2 : « retour » annule d'abord la sélection.
     return PopScope(
-      canPop: !_selecting,
+      canPop: !_selecting && !_panel,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _selecting) setState(_selected.clear);
+        if (didPop) return;
+        if (_selecting) {
+          setState(_selected.clear);
+        } else if (_panel) {
+          setState(() => _panel = false);
+        }
       },
       child: Scaffold(
         backgroundColor: p.chatBackground,
@@ -1292,7 +1349,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       ),
               ),
-        body: PrivacyPattern(
+        // Lot 7.3a : fond choisi (motif Privio par défaut).
+        body: ChatWallpaper(
+          conversationId: widget.conversationId,
           child: Column(
             children: [
               if (offline)
@@ -1458,6 +1517,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ? null
                         : _pickPhoto,
                     busy: _preparingPhoto,
+                    onEmojiTap: voice is VoiceRecording ? null : _togglePanel,
+                    panelOpen: _panel,
                     photosLeft: ref.watch(photoQuotaProvider).value?.remaining,
                     ttlActive: _nextTtl != null,
                     strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
@@ -1487,6 +1548,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                   ),
+                // Lot 7.3a : émojis et autocollants, à la place du clavier.
+                if (_panel && voice is! VoiceRecording)
+                  ExpressionPanel(
+                    controller: _composer,
+                    onSticker: (s) => unawaited(_sendSticker(s)),
+                    height: _panelHeight(context),
+                  ),
               ],
             ],
           ),
@@ -1499,6 +1567,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 /// Citation d'un message : texte, « Message vocal » ou « 📷 Photo » (avec sa légende).
 String? quoteLabel(String? kind, String? preview) => switch (kind) {
   'voice' => 'Message vocal',
+  'sticker' =>
+    'Autocollant${stickerOf(preview) == null ? '' : ' «\u202F${stickerOf(preview)!.label}\u202F»'}',
   'photo' => preview == null || preview.isEmpty ? '📷 Photo' : '📷 $preview',
   _ => preview,
 };
@@ -1681,7 +1751,12 @@ class _MessageList extends StatelessWidget {
         sender: isGroup && !outgoing && firstOfRun ? (m.senderName ?? 'Ancien membre') : null,
         text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
         mentions: {for (final id in m.mentions) ?memberNames[id]: id == me},
-        content: m.hasPlayableVoice
+        // Lot 7.3a : autocollant, ou grands émojis.
+        bare: !m.isDeleted && (m.isSticker || (m.kind == 'text' && isJumboEmoji(m.body))),
+        jumbo: !m.isDeleted && m.kind == 'text' && m.mentions.isEmpty && isJumboEmoji(m.body),
+        content: m.isSticker && !m.isDeleted
+            ? StickerImage(id: m.body, size: 140)
+            : m.hasPlayableVoice
             ? VoiceMessageContent(message: m, outgoing: outgoing, onError: onVoiceError)
             : m.hasViewablePhoto
             ? PhotoMessageContent(
@@ -1789,7 +1864,10 @@ class _MessageList extends StatelessWidget {
             key: Key('pending.${pm.clientId}'),
             outgoing: true,
             text: pm.body,
-            content: pm.isVoice
+            bare: pm.isSticker,
+            content: pm.isSticker
+                ? StickerImage(id: pm.body, size: 140)
+                : pm.isVoice
                 ? PendingVoiceContent(durationMs: pm.durationMs)
                 : pm.isPhoto
                 ? PhotoMessageContent(
@@ -2023,7 +2101,15 @@ class _Bubble extends StatelessWidget {
     this.avatar,
     this.pinned = false,
     this.favorite = false,
+    this.bare = false,
+    this.jumbo = false,
   });
+
+  /// Lot 7.3a : autocollant ou grands émojis : sans fond de bulle (heure dans une pastille).
+  final bool bare;
+
+  /// Lot 7.3a : 1 à 3 émojis seuls, affichés en grand.
+  final bool jumbo;
 
   final bool outgoing;
   final String text;
@@ -2066,7 +2152,7 @@ class _Bubble extends StatelessWidget {
     final p = PrivioPalette.of(context);
     final bg = outgoing ? p.bubbleOut : p.bubbleIn;
     final fg = outgoing ? p.onBubbleOut : p.onBubbleIn;
-    final meta = outgoing ? p.bubbleOutMeta : p.bubbleInMeta;
+    final meta = outgoing && !bare ? p.bubbleOutMeta : p.bubbleInMeta;
     final metaStyle = theme.textTheme.labelSmall?.copyWith(
       fontSize: kBubbleMetaSize,
       fontWeight: FontWeight.w400,
@@ -2088,8 +2174,8 @@ class _Bubble extends StatelessWidget {
     );
 
     final bubble = Material(
-      color: bg,
-      elevation: outgoing || theme.brightness == Brightness.dark ? 0 : 0.5,
+      color: bare ? Colors.transparent : bg,
+      elevation: bare || outgoing || theme.brightness == Brightness.dark ? 0 : 0.5,
       shadowColor: PrivioColors.navy.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: radius,
@@ -2157,6 +2243,8 @@ class _Bubble extends StatelessWidget {
                                 text,
                                 style: theme.textTheme.bodyLarge?.copyWith(
                                   color: fg,
+                                  fontSize: jumbo ? 44 : null,
+                                  height: jumbo ? 1.15 : null,
                                   fontStyle: italic ? FontStyle.italic : FontStyle.normal,
                                 ),
                               )
@@ -2182,52 +2270,58 @@ class _Bubble extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   if (status != null)
-                    Text(status!, style: metaStyle)
+                    _MetaPill(
+                      bare: bare,
+                      child: Text(status!, style: metaStyle),
+                    )
                   else
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Lot 7.2c2 : épinglé, favori.
-                        if (pinned) ...[
-                          Icon(
-                            Icons.push_pin_rounded,
-                            key: const Key('bubble.pinned'),
-                            size: 11,
-                            color: meta,
-                            semanticLabel: 'épinglé',
-                          ),
-                          const SizedBox(width: 3),
+                    _MetaPill(
+                      bare: bare,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Lot 7.2c2 : épinglé, favori.
+                          if (pinned) ...[
+                            Icon(
+                              Icons.push_pin_rounded,
+                              key: const Key('bubble.pinned'),
+                              size: 11,
+                              color: meta,
+                              semanticLabel: 'épinglé',
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          if (favorite) ...[
+                            Icon(
+                              Icons.star_rounded,
+                              key: const Key('bubble.favorite'),
+                              size: 12,
+                              color: meta,
+                              semanticLabel: 'favori',
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Text('${time ?? ''}${edited ? ' · modifié' : ''}', style: metaStyle),
+                          if (remaining != null) ...[
+                            const SizedBox(width: 5),
+                            Icon(Icons.timer_outlined, size: 11, color: meta),
+                            const SizedBox(width: 2),
+                            Text(
+                              remaining!,
+                              semanticsLabel: 'expire dans $remaining',
+                              style: metaStyle,
+                            ),
+                          ],
+                          if (delivery != null) ...[
+                            const SizedBox(width: 4),
+                            _DeliveryIcon(
+                              delivery: delivery!,
+                              color: meta,
+                              readColor: outgoing && !bare ? p.onBubbleOut : p.accentText,
+                            ),
+                          ],
                         ],
-                        if (favorite) ...[
-                          Icon(
-                            Icons.star_rounded,
-                            key: const Key('bubble.favorite'),
-                            size: 12,
-                            color: meta,
-                            semanticLabel: 'favori',
-                          ),
-                          const SizedBox(width: 3),
-                        ],
-                        Text('${time ?? ''}${edited ? ' · modifié' : ''}', style: metaStyle),
-                        if (remaining != null) ...[
-                          const SizedBox(width: 5),
-                          Icon(Icons.timer_outlined, size: 11, color: meta),
-                          const SizedBox(width: 2),
-                          Text(
-                            remaining!,
-                            semanticsLabel: 'expire dans $remaining',
-                            style: metaStyle,
-                          ),
-                        ],
-                        if (delivery != null) ...[
-                          const SizedBox(width: 4),
-                          _DeliveryIcon(
-                            delivery: delivery!,
-                            color: meta,
-                            readColor: outgoing ? p.onBubbleOut : p.accentText,
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                 ],
               ),
@@ -2461,7 +2555,13 @@ class _Composer extends StatelessWidget {
     this.photosLeft,
     this.ttlActive = false,
     this.onChanged,
+    this.onEmojiTap,
+    this.panelOpen = false,
   });
+
+  /// Lot 7.3a : bouton émojis / autocollants (ou clavier quand le panneau est ouvert).
+  final VoidCallback? onEmojiTap;
+  final bool panelOpen;
 
   /// Bouton photo (absent pendant une modification ou un enregistrement).
   final VoidCallback? onPhotoTap;
@@ -2552,12 +2652,24 @@ class _Composer extends StatelessWidget {
                                 contentPadding: EdgeInsets.fromLTRB(
                                   onTtlTap == null ? 20 : 4,
                                   14,
-                                  onPhotoTap == null && !busy ? 20 : 4,
+                                  onPhotoTap == null && !busy && onEmojiTap == null ? 20 : 4,
                                   14,
                                 ),
                               ),
                             ),
                           ),
+                          if (onEmojiTap != null)
+                            IconButton(
+                              key: const Key('composer.emoji'),
+                              tooltip: panelOpen ? 'Clavier' : 'Émojis et autocollants',
+                              onPressed: onEmojiTap,
+                              icon: Icon(
+                                panelOpen
+                                    ? Icons.keyboard_alt_outlined
+                                    : Icons.emoji_emotions_outlined,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           if (busy)
                             const Padding(
                               key: Key('composer.photo_busy'),
@@ -2836,4 +2948,26 @@ class _ScrollDownButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lot 7.3a : heure et état d'un autocollant ou de grands émojis, lisibles sur le fond.
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.bare, required this.child});
+
+  final bool bare;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => !bare
+      ? child
+      : DecoratedBox(
+          decoration: BoxDecoration(
+            color: PrivioPalette.of(context).bubbleIn.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            child: child,
+          ),
+        );
 }

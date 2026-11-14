@@ -52,6 +52,7 @@ dependencies:
   connectivity_plus: ^7.3.2
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.5.0
+  emoji_picker_flutter: ^4.5.4
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +76,7 @@ flutter:
   assets:
     - assets/brand/
     - assets/sounds/
+    - assets/stickers/privio/
   fonts:
     - family: Inter
       fonts:

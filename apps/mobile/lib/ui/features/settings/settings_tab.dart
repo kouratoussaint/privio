@@ -20,6 +20,7 @@ import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/settings_card.dart';
 import 'my_profile_screen.dart';
 import '../../../state/feedback_providers.dart';
+import 'wallpaper.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
 class SettingsTab extends ConsumerWidget {
@@ -248,6 +249,20 @@ class SettingsTab extends ConsumerWidget {
                     'Envoi, réception, effacement… Rien en mode silencieux du téléphone.',
                   ),
                   onChanged: (v) => ref.read(soundsEnabledProvider.notifier).set(v),
+                ),
+                const SettingsDivider(),
+                // Lot 7.3a : fond d'écran par défaut des discussions.
+                ListTile(
+                  key: const Key('settings.wallpaper'),
+                  leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
+                  title: const Text('Fond d’écran des discussions'),
+                  subtitle: const Text('Motifs, couleurs ou une de vos photos'),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  // Au-dessus des onglets, comme les autres écrans des Paramètres.
+                  onTap: () => Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).push(MaterialPageRoute<void>(builder: (_) => const WallpaperScreen())),
                 ),
                 const SettingsDivider(),
                 // Lot 7.2b1 : groupes séparés des discussions (par défaut) ou ensemble.

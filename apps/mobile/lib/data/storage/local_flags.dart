@@ -22,6 +22,12 @@ abstract interface class LocalFlags {
   Future<bool> soundsEnabled();
   Future<void> setSoundsEnabled(bool value);
 
+  /// Lot 7.3a : fond d'écran des discussions ([conversationId] null : celui par défaut).
+  /// Valeurs : `pattern:nom`, `color:nom` ou `photo:chemin local` ; null :
+  /// pas de choix (par défaut, ou comme le réglage général pour une discussion).
+  Future<String?> wallpaper(String? conversationId);
+  Future<void> setWallpaper(String? conversationId, String? value);
+
   /// Lot 7.2b1 : groupes aussi dans l'onglet Discussions (faux par défaut : séparés).
   Future<bool> groupsInDiscussions();
   Future<void> setGroupsInDiscussions(bool value);
@@ -48,6 +54,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _usage = 'privio.data_usage';
   static const _groupsInDiscussions = 'privio.groups_in_discussions';
   static const _sounds = 'privio.sounds_enabled';
+  static const _wallpaper = 'privio.wallpaper';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -78,6 +85,16 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setQuickReaction(String emoji) => _prefs.setString(_quick, emoji);
+
+  @override
+  Future<String?> wallpaper(String? conversationId) =>
+      _prefs.getString(conversationId == null ? _wallpaper : '$_wallpaper.$conversationId');
+
+  @override
+  Future<void> setWallpaper(String? conversationId, String? value) {
+    final key = conversationId == null ? _wallpaper : '$_wallpaper.$conversationId';
+    return value == null ? _prefs.remove(key) : _prefs.setString(key, value);
+  }
 
   @override
   Future<bool> soundsEnabled() async => (await _prefs.getBool(_sounds)) ?? true;

@@ -21,6 +21,7 @@ import '../conversations/conversation_details.dart';
 import '../../core/motion/motion.dart';
 import '../../core/motion/illustrations.dart';
 import '../groups/group_screens.dart';
+import '../conversations/expression_panel.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -651,6 +652,9 @@ class ConversationTile extends ConsumerWidget {
         // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
         'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
       ConversationSummary(lastKind: 'voice') => '$who🎤 Message vocal',
+      // Lot 7.3a : autocollant (son nom, pas son identifiant).
+      ConversationSummary(lastKind: 'sticker', :final lastBody) =>
+        '$who🙂 ${stickerOf(lastBody)?.label ?? 'Autocollant'}',
       ConversationSummary(lastKind: 'photo', :final lastBody) =>
         '$who📷 ${lastBody == null || lastBody.isEmpty ? 'Photo' : lastBody}',
       _ => '$who${summary.lastBody ?? ''}',
@@ -785,12 +789,12 @@ bool matchesSearch(ConversationSummary c, String q, Map<String, List<ChatMessage
   final inMessages =
       !c.blocked &&
       (local[c.id] ?? const <ChatMessage>[]).any(
-        (m) => !m.isDeleted && (m.body ?? '').toLowerCase().contains(q),
+        (m) => !m.isDeleted && !m.isSticker && (m.body ?? '').toLowerCase().contains(q),
       );
   return inMessages ||
       c.title.toLowerCase().contains(q) ||
       (c.peerHandle ?? '').toLowerCase().contains(q) ||
-      (!c.blocked && (c.lastBody ?? '').toLowerCase().contains(q));
+      (!c.blocked && c.lastKind != 'sticker' && (c.lastBody ?? '').toLowerCase().contains(q));
 }
 
 /// Champ « Rechercher » des listes (Discussions, Groupes).

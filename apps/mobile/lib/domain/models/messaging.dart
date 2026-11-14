@@ -410,6 +410,9 @@ class ChatMessage {
   bool get isVoice => kind == 'voice';
   bool get isPhoto => kind == 'photo';
 
+  /// Lot 7.3a : autocollant intégré à l'application ; [body] le désigne (« série/nom »).
+  bool get isSticker => kind == 'sticker';
+
   /// Photo encore affichable (ni supprimée, ni sans fichier).
   bool get hasViewablePhoto => isPhoto && !isDeleted && mediaPath != null;
 

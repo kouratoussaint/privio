@@ -101,6 +101,9 @@ Future<void> _openReports(WidgetTester tester, TestDeps deps) async {
     200,
     scrollable: find.byType(Scrollable).last,
   );
+  // Lot 7.3a : une ligne de plus dans Paramètres : on s'assure qu'elle est bien visible.
+  await tester.ensureVisible(find.byKey(const Key('settings.console')));
+  await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('settings.console')));
   await tester.pumpAndSettle();
   await _type(tester, _pin);

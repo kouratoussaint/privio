@@ -96,4 +96,14 @@ status, err = rpc("set_notify_mode", {"p_conversation_id": conv, "p_mode": "ment
 check(status == 400 and err.get("message") == "NOT_GROUP", "pas pour une discussion à deux", err)
 status, err = rpc("push_targets", {"p_token": "x", "p_message_id": ids[3]}, TA)
 check(status in (401, 403, 404), "destinataires des notifications : réservé au serveur", err)
-print("Lot 7.2c2 (épinglés, favoris, infos, mentions seulement) : OK")
+
+# --- Lot 7.3a : autocollant ---------------------------------------------------------------
+status, rows = rpc("send_sticker", {"p_conversation_id": conv, "p_client_msg_id": str(uuid.uuid4()),
+                                    "p_sticker": "privio/merci"}, TA)
+check(status == 200 and rows and rows[0]["id"], "autocollant envoyé", rows)
+_, msgs = rpc("get_messages", {"p_conversation_id": conv}, TB)
+check(any(m["kind"] == "sticker" and m["body"] == "privio/merci" for m in msgs), "B reçoit l'autocollant")
+status, err = rpc("send_sticker", {"p_conversation_id": conv, "p_client_msg_id": str(uuid.uuid4()),
+                                   "p_sticker": "../../etc/passwd"}, TA)
+check(status == 400 and err.get("message") == "BODY_INVALID", "nom invalide refusé", err)
+print("Lot 7.2c2 (épinglés, favoris, infos, mentions seulement, autocollants) : OK")

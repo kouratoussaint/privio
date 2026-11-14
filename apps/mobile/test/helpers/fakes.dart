@@ -238,6 +238,14 @@ class FakeLocalFlags implements LocalFlags {
   /// L'application, elle, sépare par défaut (testé dans test/ui/suppression_test.dart).
   bool groupsTogether = true;
 
+  /// Lot 7.3a : fonds d'écran (null : par défaut).
+  final Map<String?, String> wallpapers = {};
+  @override
+  Future<String?> wallpaper(String? conversationId) async => wallpapers[conversationId];
+  @override
+  Future<void> setWallpaper(String? conversationId, String? value) async =>
+      value == null ? wallpapers.remove(conversationId) : wallpapers[conversationId] = value;
+
   /// Lot 7.2b2 : sons et vibrations (activés par défaut).
   bool sounds = true;
   @override
@@ -1164,6 +1172,38 @@ class FakeMessagingApi implements MessagingApi {
       ),
       updatedAt: now,
       mentions: g == null ? const [] : mentions.where(g.roles.containsKey).toList(),
+    );
+    final list = messages[conversationId] ??= [];
+    if (!list.any((x) => x.id == m.id)) list.add(m);
+    return m;
+  }
+
+  /// Lot 7.3a : autocollants envoyés.
+  final List<String> sentStickers = [];
+
+  @override
+  Future<ChatMessage> sendSticker({
+    required String conversationId,
+    required String clientMsgId,
+    required String sticker,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    _net();
+    if (!RegExp(r'^[a-z0-9_]{1,40}/[a-z0-9_]{1,40}$').hasMatch(sticker)) {
+      throw const AppFailure(FailureCode.bodyInvalid);
+    }
+    sentStickers.add(sticker);
+    final now = DateTime.now();
+    final m = ChatMessage(
+      id: 'srv-$clientMsgId',
+      senderId: me,
+      kind: 'sticker',
+      body: sticker,
+      replyToId: replyToId,
+      sentAt: now,
+      expiresAt: now.add(Duration(seconds: conversationTtl)),
+      updatedAt: now,
     );
     final list = messages[conversationId] ??= [];
     if (!list.any((x) => x.id == m.id)) list.add(m);

@@ -29,6 +29,7 @@ import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
 import '../conversations/message_extras.dart';
+import '../settings/wallpaper.dart';
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -921,6 +922,19 @@ class GroupInfoScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 // Lot 7.2a : le choix s'ouvre ici, on reste sur la fiche.
                 onTap: () => chooseClear(context, ref, s),
+              ),
+              // Lot 7.3a : fond d'écran propre à cette discussion.
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('fiche.wallpaper'),
+                leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
+                title: const Text('Fond d’écran'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => WallpaperScreen(conversationId: s.id, title: s.title),
+                  ),
+                ),
               ),
             ],
           ),

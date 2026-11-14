@@ -36,6 +36,15 @@ abstract interface class MessagingApi {
 
   /// Vocal : envoyé à la fonction voice-send, qui MESURE le son avant de le publier.
   /// Idempotent par [clientMsgId] (un renvoi renvoie le même message).
+  /// Lot 7.3a : autocollant (« série/nom ») ; aucune image n'est envoyée.
+  Future<ChatMessage> sendSticker({
+    required String conversationId,
+    required String clientMsgId,
+    required String sticker,
+    String? replyToId,
+    int? ttlSeconds,
+  });
+
   Future<ChatMessage> sendVoice({
     required String conversationId,
     required String clientMsgId,
@@ -309,6 +318,34 @@ class SupabaseMessagingApi implements MessagingApi {
       expiresAt: DateTime.parse(row['expires_at'] as String),
       updatedAt: sentAt,
       mentions: mentions,
+    );
+  }
+
+  @override
+  Future<ChatMessage> sendSticker({
+    required String conversationId,
+    required String clientMsgId,
+    required String sticker,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    final row = (await _rows('send_sticker', {
+      'p_conversation_id': conversationId,
+      'p_client_msg_id': clientMsgId,
+      'p_sticker': sticker,
+      'p_reply_to_id': replyToId,
+      'p_ttl_seconds': ttlSeconds,
+    })).single;
+    final sentAt = DateTime.parse(row['sent_at'] as String);
+    return ChatMessage(
+      id: row['id'] as String,
+      senderId: _client.auth.currentUser?.id,
+      kind: 'sticker',
+      body: sticker,
+      replyToId: replyToId,
+      sentAt: sentAt,
+      expiresAt: DateTime.parse(row['expires_at'] as String),
+      updatedAt: sentAt,
     );
   }
 

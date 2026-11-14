@@ -19,6 +19,7 @@ import 'conversation_details.dart';
 import 'report_sheet.dart';
 import '../../core/widgets/settings_card.dart';
 import 'message_extras.dart';
+import '../settings/wallpaper.dart';
 
 /// Fiche contact (depuis une discussion) : photo en grand, « À propos », durée, sourdine,
 /// « Vider », médias, groupes en commun, blocage et signalement (lot 7.1a).
@@ -206,6 +207,20 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 // Lot 7.2a : le choix s'ouvre ici, on reste sur la fiche.
                 onTap: () => chooseClear(context, ref, summary),
+              ),
+              // Lot 7.3a : fond d'écran propre à cette discussion.
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('fiche.wallpaper'),
+                leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
+                title: const Text('Fond d’écran'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        WallpaperScreen(conversationId: summary.id, title: summary.title),
+                  ),
+                ),
               ),
             ],
           ),

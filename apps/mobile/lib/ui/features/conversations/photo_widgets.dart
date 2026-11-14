@@ -12,6 +12,7 @@ import '../../../data/services/photo_picker.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
+import 'photo_editor.dart';
 
 /// Largeur d'une photo dans une bulle ; la hauteur suit les proportions (bornées).
 const double kPhotoBubbleWidth = 236;
@@ -412,6 +413,18 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
         ),
         title: Text(many ? '${_index + 1} sur ${_photos.length}' : 'Envoyer une photo'),
         actions: [
+          // Lot 7.3a : pivoter, recadrer, dessiner.
+          IconButton(
+            key: const Key('photo.compose.edit'),
+            tooltip: 'Retoucher cette photo',
+            onPressed: () async {
+              final edited = await Navigator.of(context).push<PreparedPhoto>(
+                MaterialPageRoute(builder: (_) => PhotoEditorScreen(photo: _photos[_index])),
+              );
+              if (edited != null && mounted) setState(() => _photos[_index] = edited);
+            },
+            icon: const Icon(Icons.tune_rounded),
+          ),
           if (many)
             IconButton(
               key: const Key('photo.compose.remove'),

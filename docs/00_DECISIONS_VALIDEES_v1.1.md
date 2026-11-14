@@ -232,3 +232,18 @@ Demandés par le commanditaire après test sur téléphone :
 - Découpage : 7.2c1 (photo du groupe, Groupes, actions rapides, bouton « descendre »,
   repère des non lus), puis 7.2c2 (sélection multiple, infos du message, épinglés, favoris,
   mentions seulement).
+
+## Amendement 17 — Lot 7.3 : expression (14 novembre 2026)
+- Google a fermé le service Tenor aux applications le 30 juin 2026 : **KLIPY** fournit les
+  GIF ; « tout public » par défaut, avec un réglage ; images de la recherche servies par
+  KLIPY (seulement quand l'onglet GIF est ouvert) ; le GIF choisi est copié dans le
+  stockage privé de Privio et s'efface avec le message.
+- Autocollants : 24 dessins originaux (mascotte « Bulle »), en français ; ajustements et
+  éventuelles expressions en mooré et dioula plus tard.
+- Aperçu des liens préparé par le serveur de Privio (le site ne voit pas les personnes) ;
+  réglage « Aperçus des liens » dans Confidentialité, activé par défaut.
+- Fond d'écran : par défaut dans Paramètres, et propre à une discussion depuis sa fiche ;
+  une photo choisie reste sur le téléphone.
+- Vue unique : photos et vocaux.
+- Découpage : 7.3a (émojis, autocollants, retouche photo, fond d'écran), puis 7.3b (vue
+  unique, GIF, aperçus des liens).
