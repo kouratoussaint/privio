@@ -18,6 +18,7 @@ import '../../core/widgets/ttl_picker.dart';
 import 'conversation_details.dart';
 import 'report_sheet.dart';
 import '../../core/widgets/settings_card.dart';
+import 'message_extras.dart';
 
 /// Fiche contact (depuis une discussion) : photo en grand, « À propos », durée, sourdine,
 /// « Vider », médias, groupes en commun, blocage et signalement (lot 7.1a).
@@ -210,7 +211,12 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
           ),
           const SettingsSectionTitle('Médias'),
           SettingsCard(
-            children: [ConversationMediaSection(conversationId: summary.id, title: summary.title)],
+            children: [
+              ConversationMediaSection(conversationId: summary.id, title: summary.title),
+              const SettingsDivider(),
+              // Lot 7.2c2 : mes messages favoris.
+              FavoritesRow(conversationId: summary.id, title: summary.title),
+            ],
           ),
           const SettingsSectionTitle('Confidentialité de cette discussion'),
           SettingsCard(children: [ConversationPrivacySection(summary: summary)]),

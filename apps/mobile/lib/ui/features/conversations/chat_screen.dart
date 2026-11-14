@@ -36,6 +36,7 @@ import 'chat_motion.dart';
 import '../../core/motion/motion.dart';
 import '../../../state/feedback_providers.dart';
 import '../../core/motion/illustrations.dart';
+import 'message_extras.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -85,6 +86,177 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   List<ChatMessage> _shown = const [];
   String _shownQuery = '';
   final _ghosts = <String, (ChatMessage, int)>{};
+
+  // Lot 7.2c2 : sélection multiple, bandeau des épinglés, retour depuis les favoris.
+  final _selected = <String>{};
+  int _pinIndex = 0;
+  bool _jumping = false;
+  bool get _selecting => _selected.isNotEmpty;
+
+  void _toggleSelect(ChatMessage m) {
+    if (m.isDeleted || m.isSystem) return;
+    setState(() => _selected.contains(m.id) ? _selected.remove(m.id) : _selected.add(m.id));
+  }
+
+  bool _isShown(String id) {
+    final now = DateTime.now();
+    return (ref.read(chatProvider(widget.conversationId)).value?.messages ?? const []).any(
+      (m) => m.id == id && m.isVisibleAt(now) && !m.isDeleted,
+    );
+  }
+
+  /// Bandeau des épinglés : montre le message affiché, puis passe au suivant.
+  Future<void> _openPinned(List<MessageRef> pins) async {
+    final r = pins[_pinIndex % pins.length];
+    setState(() => _pinIndex = (_pinIndex + 1) % pins.length);
+    if (_isShown(r.id)) {
+      await _scrollToMessage(r.id);
+    } else {
+      await showMessageRef(context, r, title: 'Message épinglé');
+    }
+  }
+
+  Future<void> _togglePin(ChatMessage m, {required bool pinned}) async {
+    await _guard(() async {
+      await ref.read(messagingApiProvider).pinMessage(m.id, pin: !pinned);
+      ref.invalidate(pinnedMessagesProvider(widget.conversationId));
+      ref.read(feedbackProvider).haptic(Haptic.light);
+      if (mounted) _toast(pinned ? 'Message désépinglé.' : 'Message épinglé.');
+    });
+  }
+
+  Future<void> _setFavorite(List<ChatMessage> ms, {required bool on}) async {
+    final ids = [
+      for (final m in ms)
+        if (!m.isDeleted && !m.isSystem) m.id,
+    ];
+    if (ids.isEmpty) return;
+    await _guard(() async {
+      await ref.read(messagingApiProvider).setFavorites(ids, on: on);
+      ref.invalidate(favoriteMessagesProvider(widget.conversationId));
+      ref.read(feedbackProvider).haptic(Haptic.light);
+      if (!mounted) return;
+      final n = ids.length;
+      _toast(
+        on
+            ? (n > 1 ? '$n messages ajoutés aux favoris.' : 'Ajouté aux favoris.')
+            : (n > 1 ? '$n messages retirés des favoris.' : 'Retiré des favoris.'),
+      );
+    });
+  }
+
+  /// Sélection : supprimer pour moi, ou pour tout le monde si chaque message le permet.
+  Future<void> _deleteSelection(List<ChatMessage> chosen, ConversationSummary? summary) async {
+    if (chosen.isEmpty) return;
+    final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
+    final me = ref.read(currentUserIdProvider);
+    final now = DateTime.now();
+    final adminGroup = (summary?.isGroup ?? false) && (summary?.isAdmin ?? false);
+    final canAll = chosen.every(
+      (m) => !m.isDeleted && (m.senderId == me ? rules.canDeleteForAll(m, now) : adminGroup),
+    );
+    final n = chosen.length;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('select.delete_me'),
+              leading: const Icon(Icons.visibility_off_outlined),
+              title: Text(n > 1 ? 'Supprimer les $n messages pour moi' : 'Supprimer pour moi'),
+              onTap: () => Navigator.pop(ctx, 'me'),
+            ),
+            if (canAll)
+              ListTile(
+                key: const Key('select.delete_all'),
+                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                title: Text(
+                  n > 1
+                      ? 'Supprimer les $n messages pour tout le monde'
+                      : 'Supprimer pour tout le monde',
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                ),
+                onTap: () => Navigator.pop(ctx, 'all'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 'all') {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(
+            n > 1
+                ? 'Supprimer $n messages pour tout le monde\u202F?'
+                : 'Supprimer pour tout le monde\u202F?',
+          ),
+          content: const Text('Ils seront remplacés par «\u202FMessage supprimé\u202F» chez tous.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+            FilledButton(
+              key: const Key('select.delete_all.confirm'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Supprimer'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+      ref.read(feedbackProvider).sound(PrivioSound.deletedForAll);
+    }
+    setState(_selected.clear);
+    await _guard(() async {
+      for (final m in chosen) {
+        if (choice == 'all') {
+          await _chat.deleteForEveryone(m.id);
+        } else {
+          await _chat.deleteForMe(m.id);
+        }
+      }
+    });
+  }
+
+  PreferredSizeWidget _selectionBar(
+    List<ChatMessage> chosen,
+    Set<String> favoriteIds,
+    ConversationSummary? summary,
+  ) {
+    final n = chosen.length;
+    final allFavorite = chosen.isNotEmpty && chosen.every((m) => favoriteIds.contains(m.id));
+    return AppBar(
+      key: const Key('select.bar'),
+      toolbarHeight: 64,
+      leading: IconButton(
+        key: const Key('select.close'),
+        tooltip: 'Annuler la sélection',
+        icon: const Icon(Icons.close),
+        onPressed: () => setState(_selected.clear),
+      ),
+      title: Text('$n sélectionné${n > 1 ? 's' : ''}', key: const Key('select.count')),
+      actions: [
+        IconButton(
+          key: const Key('select.favorite'),
+          tooltip: allFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+          icon: Icon(allFavorite ? Icons.star_rounded : Icons.star_outline_rounded),
+          onPressed: () async {
+            await _setFavorite(chosen, on: !allFavorite);
+            if (mounted) setState(_selected.clear);
+          },
+        ),
+        IconButton(
+          key: const Key('select.delete'),
+          tooltip: 'Supprimer',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: () => _deleteSelection(chosen, summary),
+        ),
+      ],
+    );
+  }
 
   // Lot 7.2c1 : repère « X messages non lus » et bouton « descendre ».
   final _openedAt = DateTime.now();
@@ -280,8 +452,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
-  void _toast(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  // Lot 7.2c2 : un nouveau message remplace le précédent (pas de file d'attente : après
+  // trois « Message épinglé. », l'erreur du quatrième s'affiche tout de suite).
+  void _toast(String text) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _guard(Future<void> Function() run) async {
     try {
@@ -713,67 +888,103 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final myReaction = m.reactions.where((r) => r.userId == me).firstOrNull?.emoji;
     final summary = ref.read(conversationSummaryProvider(widget.conversationId));
     final adminDelete = !mine && (summary?.isGroup ?? false) && (summary?.isAdmin ?? false);
+    // Lot 7.2c2 : épingler (à deux : les deux ; groupe : administrateurs), favori, infos.
+    final canPin = !(summary?.isGroup ?? false) || (summary?.isAdmin ?? false);
+    final pinned = (ref.read(pinnedMessagesProvider(widget.conversationId)).value ?? const []).any(
+      (r) => r.id == m.id,
+    );
+    final favorite = (ref.read(favoriteMessagesProvider(widget.conversationId)).value ?? const [])
+        .any((r) => r.id == m.id);
     final action = await showModalBottomSheet<String>(
+      isScrollControlled: true,
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (final e in kQuickReactions)
-                    IconButton(
-                      key: Key('react.$e'),
-                      tooltip: e == myReaction ? 'Retirer $e' : 'Réagir $e',
-                      isSelected: e == myReaction,
-                      onPressed: () => Navigator.pop(ctx, 'react:$e'),
-                      icon: Text(e, style: Theme.of(ctx).textTheme.headlineSmall),
-                    ),
-                ],
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              key: const Key('action.reply'),
-              leading: const Icon(Icons.reply),
-              title: const Text('Répondre'),
-              onTap: () => Navigator.pop(ctx, 'reply'),
-            ),
-            if (mine && rules.canEdit(m, now))
-              ListTile(
-                key: const Key('action.edit'),
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Modifier'),
-                onTap: () => Navigator.pop(ctx, 'edit'),
-              ),
-            ListTile(
-              key: const Key('action.delete_me'),
-              leading: const Icon(Icons.visibility_off_outlined),
-              title: const Text('Supprimer pour moi'),
-              onTap: () => Navigator.pop(ctx, 'delete_me'),
-            ),
-            if (!mine)
-              ListTile(
-                key: const Key('action.report'),
-                leading: Icon(Icons.flag_outlined, color: Theme.of(ctx).colorScheme.error),
-                title: const Text('Signaler'),
-                onTap: () => Navigator.pop(ctx, 'report'),
-              ),
-            if ((mine && rules.canDeleteForAll(m, now)) || adminDelete)
-              ListTile(
-                key: const Key('action.delete_all'),
-                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
-                title: Text(
-                  'Supprimer pour tout le monde',
-                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (final e in kQuickReactions)
+                      IconButton(
+                        key: Key('react.$e'),
+                        tooltip: e == myReaction ? 'Retirer $e' : 'Réagir $e',
+                        isSelected: e == myReaction,
+                        onPressed: () => Navigator.pop(ctx, 'react:$e'),
+                        icon: Text(e, style: Theme.of(ctx).textTheme.headlineSmall),
+                      ),
+                  ],
                 ),
-                onTap: () => Navigator.pop(ctx, 'delete_all'),
               ),
-          ],
+              const Divider(),
+              ListTile(
+                key: const Key('action.reply'),
+                leading: const Icon(Icons.reply),
+                title: const Text('Répondre'),
+                onTap: () => Navigator.pop(ctx, 'reply'),
+              ),
+              if (mine && rules.canEdit(m, now))
+                ListTile(
+                  key: const Key('action.edit'),
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Modifier'),
+                  onTap: () => Navigator.pop(ctx, 'edit'),
+                ),
+              if (canPin)
+                ListTile(
+                  key: const Key('action.pin'),
+                  leading: Icon(pinned ? Icons.push_pin : Icons.push_pin_outlined),
+                  title: Text(pinned ? 'Désépingler' : 'Épingler'),
+                  onTap: () => Navigator.pop(ctx, 'pin'),
+                ),
+              ListTile(
+                key: const Key('action.favorite'),
+                leading: Icon(favorite ? Icons.star_rounded : Icons.star_outline_rounded),
+                title: Text(favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'),
+                onTap: () => Navigator.pop(ctx, 'favorite'),
+              ),
+              if (mine)
+                ListTile(
+                  key: const Key('action.info'),
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('Infos'),
+                  onTap: () => Navigator.pop(ctx, 'info'),
+                ),
+              ListTile(
+                key: const Key('action.select'),
+                leading: const Icon(Icons.checklist_rounded),
+                title: const Text('Sélectionner'),
+                onTap: () => Navigator.pop(ctx, 'select'),
+              ),
+              ListTile(
+                key: const Key('action.delete_me'),
+                leading: const Icon(Icons.visibility_off_outlined),
+                title: const Text('Supprimer pour moi'),
+                onTap: () => Navigator.pop(ctx, 'delete_me'),
+              ),
+              if (!mine)
+                ListTile(
+                  key: const Key('action.report'),
+                  leading: Icon(Icons.flag_outlined, color: Theme.of(ctx).colorScheme.error),
+                  title: const Text('Signaler'),
+                  onTap: () => Navigator.pop(ctx, 'report'),
+                ),
+              if ((mine && rules.canDeleteForAll(m, now)) || adminDelete)
+                ListTile(
+                  key: const Key('action.delete_all'),
+                  leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                  title: Text(
+                    'Supprimer pour tout le monde',
+                    style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                  ),
+                  onTap: () => Navigator.pop(ctx, 'delete_all'),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -783,6 +994,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await _guard(() => _chat.toggleReaction(m.id, action.substring(6)));
     } else if (action == 'reply') {
       _startReply(m);
+    } else if (action == 'pin') {
+      await _togglePin(m, pinned: pinned);
+    } else if (action == 'favorite') {
+      await _setFavorite([m], on: !favorite);
+    } else if (action == 'info') {
+      await showMessageInfo(context, m, group: summary?.isGroup ?? false);
+    } else if (action == 'select') {
+      _toggleSelect(m);
     } else if (action == 'edit') {
       setState(() {
         _replyTo = null;
@@ -891,336 +1110,386 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
     _voice.onAutoStop = _afterVoiceStop;
     _voice.onNearEnd = () => unawaited(HapticFeedback.mediumImpact());
+    // Lot 7.2c2 : épinglés, favoris, sélection.
+    final pins =
+        ref.watch(pinnedMessagesProvider(widget.conversationId)).value ?? const <MessageRef>[];
+    final favoriteIds = <String>{
+      for (final f
+          in ref.watch(favoriteMessagesProvider(widget.conversationId)).value ??
+              const <MessageRef>[])
+        f.id,
+    };
+    final pinnedIds = {for (final r in pins) r.id};
+    if (visible != null && _selected.isNotEmpty) {
+      final ids = {
+        for (final m in visible)
+          if (!m.isDeleted) m.id,
+      };
+      _selected.removeWhere((id) => !ids.contains(id));
+    }
+    final chosen = [
+      for (final m in visible ?? const <ChatMessage>[])
+        if (_selected.contains(m.id)) m,
+    ];
+    // Retour depuis les favoris : la discussion montre le message.
+    final jump = ref.watch(jumpToMessageProvider);
+    if (jump != null && jump.$1 == widget.conversationId && chat.hasValue && !_jumping) {
+      _jumping = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        ref.read(jumpToMessageProvider.notifier).clear();
+        await _scrollToMessage(jump.$2);
+        _jumping = false;
+      });
+    }
 
-    return Scaffold(
-      backgroundColor: p.chatBackground,
-      appBar: AppBar(
-        titleSpacing: 0,
-        toolbarHeight: 64,
-        actions: [
-          IconButton(
-            key: const Key('chat.search'),
-            tooltip: _searching ? 'Fermer la recherche' : 'Rechercher dans la discussion',
-            onPressed: () => setState(() {
-              _searching = !_searching;
-              _searchCtrl.clear();
-            }),
-            icon: Icon(_searching ? Icons.close : Icons.search),
-          ),
-          if (canSetTtl && !_searching)
-            _TtlPill(
-              ttlSeconds: summary?.ttlSeconds ?? 259200,
-              onTap: () => _chooseConversationTtl(summary),
-            ),
-          if (summary != null && !_searching)
-            PopupMenuButton<String>(
-              key: const Key('chat.menu'),
-              tooltip: 'Plus d’options',
-              onSelected: (v) {
-                if (v == 'clear') unawaited(_chooseClear(summary));
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  key: Key('chat.clear'),
-                  value: 'clear',
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.cleaning_services_outlined),
-                    title: Text('Vider la discussion'),
+    // Lot 7.2c2 : « retour » annule d'abord la sélection.
+    return PopScope(
+      canPop: !_selecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selecting) setState(_selected.clear);
+      },
+      child: Scaffold(
+        backgroundColor: p.chatBackground,
+        appBar: _selecting
+            ? _selectionBar(chosen, favoriteIds, summary)
+            : AppBar(
+                titleSpacing: 0,
+                toolbarHeight: 64,
+                actions: [
+                  IconButton(
+                    key: const Key('chat.search'),
+                    tooltip: _searching ? 'Fermer la recherche' : 'Rechercher dans la discussion',
+                    onPressed: () => setState(() {
+                      _searching = !_searching;
+                      _searchCtrl.clear();
+                    }),
+                    icon: Icon(_searching ? Icons.close : Icons.search),
                   ),
-                ),
-              ],
-            ),
-        ],
-        title: _searching
-            ? TextField(
-                key: const Key('chat.search_input'),
-                controller: _searchCtrl,
-                autofocus: true,
-                onChanged: (_) => setState(() {}),
-                style: TextStyle(color: p.onHeader),
-                cursorColor: p.onHeader,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher dans les messages',
-                  hintStyle: TextStyle(color: p.onHeaderMuted),
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                ),
-              )
-            : InkWell(
-                key: const Key('chat.contact'),
-                borderRadius: BorderRadius.circular(PrivioRadius.medium),
-                onTap: summary == null || (!isGroup && summary.peerId == null)
-                    ? null
-                    // Lot 7.2a : « Vider » se fait sur la fiche ; la discussion se recharge.
-                    : () => context.push(Routes.contact(widget.conversationId)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
-                  child: LayoutBuilder(
-                    // Écran étroit et grande police : l'avatar s'efface avant le nom.
-                    builder: (context, box) => Row(
-                      children: [
-                        if (box.maxWidth >= 120) ...[
-                          UserAvatar(
-                            name: title,
-                            avatarPath: summary?.avatarPath,
-                            seed: isGroup
-                                ? widget.conversationId
-                                : (summary?.peerId ?? widget.conversationId),
-                            radius: 20,
-                            ring: p.onHeaderMuted,
-                            icon: isGroup ? Icons.groups_rounded : null,
-                          ),
-                          const SizedBox(width: PrivioSpacing.m),
-                        ],
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(title, overflow: TextOverflow.ellipsis),
-                              if (typing)
-                                // Lot 7.2b2 : trois points qui sautillent.
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TypingDots(color: p.onHeaderMuted),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
-                                        key: const Key('chat.typing'),
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: p.onHeaderMuted,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else if (isGroup)
-                                Text(
-                                  '${summary!.memberCount} membre${summary.memberCount > 1 ? 's' : ''}',
-                                  key: const Key('chat.members'),
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: p.onHeaderMuted),
-                                )
-                              else if (presence.isNotEmpty)
-                                Text(
-                                  presence,
-                                  key: const Key('chat.presence'),
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: p.onHeaderMuted),
-                                )
-                              else if (summary?.peerHandle != null)
-                                Text(
-                                  '@${summary!.peerHandle}',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: p.onHeaderMuted),
-                                ),
-                            ],
+                  if (canSetTtl && !_searching)
+                    _TtlPill(
+                      ttlSeconds: summary?.ttlSeconds ?? 259200,
+                      onTap: () => _chooseConversationTtl(summary),
+                    ),
+                  if (summary != null && !_searching)
+                    PopupMenuButton<String>(
+                      key: const Key('chat.menu'),
+                      tooltip: 'Plus d’options',
+                      onSelected: (v) {
+                        if (v == 'clear') unawaited(_chooseClear(summary));
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          key: Key('chat.clear'),
+                          value: 'clear',
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.cleaning_services_outlined),
+                            title: Text('Vider la discussion'),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-      ),
-      body: PrivacyPattern(
-        child: Column(
-          children: [
-            if (offline)
-              const Padding(
-                padding: EdgeInsets.only(top: PrivioSpacing.s),
-                child: OfflineBanner(),
-              ),
-            if (summary?.clearRequestBy != null && !isGroup)
-              _ClearRequestBanner(summary: summary!, me: me, onRespond: _respondClear),
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: switch (chat) {
-                      AsyncData(:final value) => _MessageList(
-                        messages: visible!,
-                        unreadMarker: marker,
-                        ghosts: [for (final g in _ghosts.values) g],
-                        onGhostGone: (id) {
-                          if (mounted) setState(() => _ghosts.remove(id));
-                        },
-                        appearing: appearing,
-                        avatarOf: (id) => _avatarOf(id, summary, mentionMembers),
-                        searching: query.isNotEmpty,
-                        offline: offline,
-                        pending: query.isEmpty ? value.pending : const [],
-                        me: me,
-                        now: now,
-                        summary: summary,
-                        onRetry: _retry,
-                        onLongPress: (m) => _showActions(m, mine: m.senderId == me),
-                        onSwipeReply: _startReply,
-                        onSwipeDelete: _swipeDelete,
-                        onDoubleTap: _quickReact,
-                        onQuoteTap: (id) => unawaited(_scrollToMessage(id)),
-                        scrollController: _listScroll,
-                        messageKeys: _messageKeys,
-                        highlightedId: _highlightedId,
-                        onReactionTap: (m, emoji) {
-                          ref.read(feedbackProvider).sound(PrivioSound.reaction);
-                          unawaited(_guard(() => _chat.toggleReaction(m.id, emoji)));
-                        },
-                        onVoiceError: (f) => _toast(f.message),
-                        onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
-                        ttlSeconds: summary?.ttlSeconds ?? 259200,
-                        peerName: summary?.title ?? 'Votre contact',
-                        onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
-                        isGroup: isGroup,
-                        memberNames: {for (final m in mentionMembers) m.userId: m.displayName},
-                      ),
-                      AsyncError(:final error) => ErrorView(
-                        message: toAppFailure(error).message,
-                        onRetry: () => ref.invalidate(chatProvider(widget.conversationId)),
-                      ),
-                      _ => const SkeletonList(bubbles: true, rows: 6),
-                    },
-                  ),
-                  // Lot 7.2c1 : bouton « descendre », avec les nouveaux messages arrivés.
-                  Positioned(
-                    right: PrivioSpacing.m,
-                    bottom: PrivioSpacing.m,
-                    child: _ScrollDownButton(
-                      visible: _awayFromBottom && query.isEmpty,
-                      count: _newBelow,
-                      onTap: _scrollToBottom,
-                    ),
-                  ),
                 ],
-              ),
-            ),
-            if (chat case AsyncError(:final error)
-                when toAppFailure(error).code == FailureCode.notMember)
-              const Padding(
-                padding: EdgeInsets.all(PrivioSpacing.l),
-                child: NoticeBanner(
-                  key: Key('chat.not_member'),
-                  message: 'Vous ne faites plus partie de ce groupe.',
-                ),
-              )
-            else if (summary?.isClosed ?? false)
-              const Padding(
-                padding: EdgeInsets.all(PrivioSpacing.l),
-                child: NoticeBanner(
-                  key: Key('chat.group_closed'),
-                  message: 'Ce groupe a été fermé par Privio. Plus personne ne peut y écrire.',
-                ),
-              )
-            else if (isGroup && !canPost)
-              const Padding(
-                padding: EdgeInsets.all(PrivioSpacing.l),
-                child: NoticeBanner(
-                  key: Key('chat.posting_restricted'),
-                  message: 'Seuls les administrateurs peuvent envoyer des messages dans ce groupe.',
-                ),
-              )
-            else if (summary?.blocked ?? false)
-              _BlockedBanner(peerId: summary?.peerId, name: summary?.title ?? '')
-            else ...[
-              if (_replyTo != null || _editing != null)
-                _ComposerContext(
-                  label: _editing != null ? 'Modifier le message' : 'Répondre à',
-                  text: switch ((_editing ?? _replyTo)!) {
-                    ChatMessage(isVoice: true, :final durationMs) =>
-                      'Message vocal (${formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))})',
-                    ChatMessage(isPhoto: true, :final body) => quoteLabel('photo', body)!,
-                    final m => m.body ?? '',
-                  },
-                  onCancel: () => setState(() {
-                    if (_editing != null) _composer.clear();
-                    _editing = null;
-                    _replyTo = null;
-                  }),
-                ),
-              if (_nextTtl != null && _editing == null)
-                _ComposerContext(
-                  key: const Key('composer.ttl_chip'),
-                  icon: Icons.timer_outlined,
-                  label: 'Ce message',
-                  text: formatTtl(_nextTtl!),
-                  compact: true,
-                  onCancel: () => setState(() => _nextTtl = null),
-                ),
-              if (isGroup && _editing == null && voice is! VoiceRecording)
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _composer,
-                  builder: (context, value, _) {
-                    final q = activeMention(value);
-                    if (q == null) return const SizedBox.shrink();
-                    final candidates = mentionCandidates(mentionMembers, q.query, me: me);
-                    if (candidates.isEmpty) return const SizedBox.shrink();
-                    return MentionSuggestions(
-                      candidates: candidates,
-                      onPick: (m) => _pickMention(q, m),
-                    );
-                  },
-                ),
-              if (voice is VoicePreview)
-                VoicePreviewBar(
-                  preview: voice,
-                  onSend: _sendVoice,
-                  onError: (f) => _toast(f.message),
-                )
-              else
-                _Composer(
-                  controller: _composer,
-                  focusNode: _focus,
-                  onChanged: (_) {
-                    _chat.notifyTyping();
-                    _onMentionInput(isGroup);
-                  },
-                  onTtlTap: _editing != null || voice is VoiceRecording
-                      ? null
-                      : () => _chooseMessageTtl(summary),
-                  onPhotoTap: _editing != null || voice is VoiceRecording || _preparingPhoto
-                      ? null
-                      : _pickPhoto,
-                  busy: _preparingPhoto,
-                  photosLeft: ref.watch(photoQuotaProvider).value?.remaining,
-                  ttlActive: _nextTtl != null,
-                  strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
-                  trailing: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _composer,
-                    // Lot 7.2b2 : le micro se change en bouton d'envoi (et inversement).
-                    builder: (context, value, _) => AnimatedSwitcher(
-                      duration: Motion.of(context, Motion.fast),
-                      transitionBuilder: (child, a) => FadeTransition(
-                        opacity: a,
-                        child: ScaleTransition(
-                          scale: Tween(begin: 0.6, end: 1.0).animate(a),
-                          child: RotationTransition(
-                            turns: Tween(begin: -0.08, end: 0.0).animate(a),
-                            child: child,
+                title: _searching
+                    ? TextField(
+                        key: const Key('chat.search_input'),
+                        controller: _searchCtrl,
+                        autofocus: true,
+                        onChanged: (_) => setState(() {}),
+                        style: TextStyle(color: p.onHeader),
+                        cursorColor: p.onHeader,
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher dans les messages',
+                          hintStyle: TextStyle(color: p.onHeaderMuted),
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                      )
+                    : InkWell(
+                        key: const Key('chat.contact'),
+                        borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                        onTap: summary == null || (!isGroup && summary.peerId == null)
+                            ? null
+                            // Lot 7.2a : « Vider » se fait sur la fiche ; la discussion se recharge.
+                            : () => context.push(Routes.contact(widget.conversationId)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
+                          child: LayoutBuilder(
+                            // Écran étroit et grande police : l'avatar s'efface avant le nom.
+                            builder: (context, box) => Row(
+                              children: [
+                                if (box.maxWidth >= 120) ...[
+                                  UserAvatar(
+                                    name: title,
+                                    avatarPath: summary?.avatarPath,
+                                    seed: isGroup
+                                        ? widget.conversationId
+                                        : (summary?.peerId ?? widget.conversationId),
+                                    radius: 20,
+                                    ring: p.onHeaderMuted,
+                                    icon: isGroup ? Icons.groups_rounded : null,
+                                  ),
+                                  const SizedBox(width: PrivioSpacing.m),
+                                ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(title, overflow: TextOverflow.ellipsis),
+                                      if (typing)
+                                        // Lot 7.2b2 : trois points qui sautillent.
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TypingDots(color: p.onHeaderMuted),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
+                                                key: const Key('chat.typing'),
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context).textTheme.bodySmall
+                                                    ?.copyWith(
+                                                      color: p.onHeaderMuted,
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      else if (isGroup)
+                                        Text(
+                                          '${summary!.memberCount} membre${summary.memberCount > 1 ? 's' : ''}',
+                                          key: const Key('chat.members'),
+                                          style: Theme.of(context).textTheme.bodySmall
+                                              ?.copyWith(color: p.onHeaderMuted),
+                                        )
+                                      else if (presence.isNotEmpty)
+                                        Text(
+                                          presence,
+                                          key: const Key('chat.presence'),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context).textTheme.bodySmall
+                                              ?.copyWith(color: p.onHeaderMuted),
+                                        )
+                                      else if (summary?.peerHandle != null)
+                                        Text(
+                                          '@${summary!.peerHandle}',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context).textTheme.bodySmall
+                                              ?.copyWith(color: p.onHeaderMuted),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      child: KeyedSubtree(
-                        key: ValueKey(_trailingKind(value, voice)),
-                        child: _trailing(
-                          value,
-                          voice,
-                          Theme.of(context).brightness == Brightness.dark,
+              ),
+        body: PrivacyPattern(
+          child: Column(
+            children: [
+              if (offline)
+                const Padding(
+                  padding: EdgeInsets.only(top: PrivioSpacing.s),
+                  child: OfflineBanner(),
+                ),
+              if (summary?.clearRequestBy != null && !isGroup)
+                _ClearRequestBanner(summary: summary!, me: me, onRespond: _respondClear),
+              // Lot 7.2c2 : messages épinglés.
+              if (pins.isNotEmpty && query.isEmpty && !_selecting)
+                PinnedBanner(pins: pins, index: _pinIndex, onTap: () => _openPinned(pins)),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: switch (chat) {
+                        AsyncData(:final value) => _MessageList(
+                          messages: visible!,
+                          unreadMarker: marker,
+                          pinnedIds: pinnedIds,
+                          favoriteIds: favoriteIds,
+                          selectedIds: _selected,
+                          onToggleSelect: _toggleSelect,
+                          ghosts: [for (final g in _ghosts.values) g],
+                          onGhostGone: (id) {
+                            if (mounted) setState(() => _ghosts.remove(id));
+                          },
+                          appearing: appearing,
+                          avatarOf: (id) => _avatarOf(id, summary, mentionMembers),
+                          searching: query.isNotEmpty,
+                          offline: offline,
+                          pending: query.isEmpty ? value.pending : const [],
+                          me: me,
+                          now: now,
+                          summary: summary,
+                          onRetry: _retry,
+                          onLongPress: (m) => _showActions(m, mine: m.senderId == me),
+                          onSwipeReply: _startReply,
+                          onSwipeDelete: _swipeDelete,
+                          onDoubleTap: _quickReact,
+                          onQuoteTap: (id) => unawaited(_scrollToMessage(id)),
+                          scrollController: _listScroll,
+                          messageKeys: _messageKeys,
+                          highlightedId: _highlightedId,
+                          onReactionTap: (m, emoji) {
+                            ref.read(feedbackProvider).sound(PrivioSound.reaction);
+                            unawaited(_guard(() => _chat.toggleReaction(m.id, emoji)));
+                          },
+                          onVoiceError: (f) => _toast(f.message),
+                          onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
+                          ttlSeconds: summary?.ttlSeconds ?? 259200,
+                          peerName: summary?.title ?? 'Votre contact',
+                          onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
+                          isGroup: isGroup,
+                          memberNames: {for (final m in mentionMembers) m.userId: m.displayName},
+                        ),
+                        AsyncError(:final error) => ErrorView(
+                          message: toAppFailure(error).message,
+                          onRetry: () => ref.invalidate(chatProvider(widget.conversationId)),
+                        ),
+                        _ => const SkeletonList(bubbles: true, rows: 6),
+                      },
+                    ),
+                    // Lot 7.2c1 : bouton « descendre », avec les nouveaux messages arrivés.
+                    Positioned(
+                      right: PrivioSpacing.m,
+                      bottom: PrivioSpacing.m,
+                      child: _ScrollDownButton(
+                        visible: _awayFromBottom && query.isEmpty,
+                        count: _newBelow,
+                        onTap: _scrollToBottom,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (chat case AsyncError(:final error)
+                  when toAppFailure(error).code == FailureCode.notMember)
+                const Padding(
+                  padding: EdgeInsets.all(PrivioSpacing.l),
+                  child: NoticeBanner(
+                    key: Key('chat.not_member'),
+                    message: 'Vous ne faites plus partie de ce groupe.',
+                  ),
+                )
+              else if (summary?.isClosed ?? false)
+                const Padding(
+                  padding: EdgeInsets.all(PrivioSpacing.l),
+                  child: NoticeBanner(
+                    key: Key('chat.group_closed'),
+                    message: 'Ce groupe a été fermé par Privio. Plus personne ne peut y écrire.',
+                  ),
+                )
+              else if (isGroup && !canPost)
+                const Padding(
+                  padding: EdgeInsets.all(PrivioSpacing.l),
+                  child: NoticeBanner(
+                    key: Key('chat.posting_restricted'),
+                    message:
+                        'Seuls les administrateurs peuvent envoyer des messages dans ce groupe.',
+                  ),
+                )
+              else if (summary?.blocked ?? false)
+                _BlockedBanner(peerId: summary?.peerId, name: summary?.title ?? '')
+              else ...[
+                if (_replyTo != null || _editing != null)
+                  _ComposerContext(
+                    label: _editing != null ? 'Modifier le message' : 'Répondre à',
+                    text: switch ((_editing ?? _replyTo)!) {
+                      ChatMessage(isVoice: true, :final durationMs) =>
+                        'Message vocal (${formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))})',
+                      ChatMessage(isPhoto: true, :final body) => quoteLabel('photo', body)!,
+                      final m => m.body ?? '',
+                    },
+                    onCancel: () => setState(() {
+                      if (_editing != null) _composer.clear();
+                      _editing = null;
+                      _replyTo = null;
+                    }),
+                  ),
+                if (_nextTtl != null && _editing == null)
+                  _ComposerContext(
+                    key: const Key('composer.ttl_chip'),
+                    icon: Icons.timer_outlined,
+                    label: 'Ce message',
+                    text: formatTtl(_nextTtl!),
+                    compact: true,
+                    onCancel: () => setState(() => _nextTtl = null),
+                  ),
+                if (isGroup && _editing == null && voice is! VoiceRecording)
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _composer,
+                    builder: (context, value, _) {
+                      final q = activeMention(value);
+                      if (q == null) return const SizedBox.shrink();
+                      final candidates = mentionCandidates(mentionMembers, q.query, me: me);
+                      if (candidates.isEmpty) return const SizedBox.shrink();
+                      return MentionSuggestions(
+                        candidates: candidates,
+                        onPick: (m) => _pickMention(q, m),
+                      );
+                    },
+                  ),
+                if (voice is VoicePreview)
+                  VoicePreviewBar(
+                    preview: voice,
+                    onSend: _sendVoice,
+                    onError: (f) => _toast(f.message),
+                  )
+                else
+                  _Composer(
+                    controller: _composer,
+                    focusNode: _focus,
+                    onChanged: (_) {
+                      _chat.notifyTyping();
+                      _onMentionInput(isGroup);
+                    },
+                    onTtlTap: _editing != null || voice is VoiceRecording
+                        ? null
+                        : () => _chooseMessageTtl(summary),
+                    onPhotoTap: _editing != null || voice is VoiceRecording || _preparingPhoto
+                        ? null
+                        : _pickPhoto,
+                    busy: _preparingPhoto,
+                    photosLeft: ref.watch(photoQuotaProvider).value?.remaining,
+                    ttlActive: _nextTtl != null,
+                    strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
+                    trailing: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _composer,
+                      // Lot 7.2b2 : le micro se change en bouton d'envoi (et inversement).
+                      builder: (context, value, _) => AnimatedSwitcher(
+                        duration: Motion.of(context, Motion.fast),
+                        transitionBuilder: (child, a) => FadeTransition(
+                          opacity: a,
+                          child: ScaleTransition(
+                            scale: Tween(begin: 0.6, end: 1.0).animate(a),
+                            child: RotationTransition(
+                              turns: Tween(begin: -0.08, end: 0.0).animate(a),
+                              child: child,
+                            ),
+                          ),
+                        ),
+                        child: KeyedSubtree(
+                          key: ValueKey(_trailingKind(value, voice)),
+                          child: _trailing(
+                            value,
+                            voice,
+                            Theme.of(context).brightness == Brightness.dark,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -1246,6 +1515,10 @@ String dayLabel(DateTime at, DateTime now) {
 
 class _MessageList extends StatelessWidget {
   const _MessageList({
+    this.pinnedIds = const {},
+    this.favoriteIds = const {},
+    this.selectedIds = const {},
+    this.onToggleSelect,
     required this.onSwipeReply,
     required this.onSwipeDelete,
     required this.onDoubleTap,
@@ -1279,6 +1552,12 @@ class _MessageList extends StatelessWidget {
 
   /// Lot 7.2c1 : premier message non lu à l'ouverture, et nombre de non lus.
   final (String, int)? unreadMarker;
+
+  /// Lot 7.2c2 : messages épinglés, favoris, sélectionnés (sélection multiple).
+  final Set<String> pinnedIds;
+  final Set<String> favoriteIds;
+  final Set<String> selectedIds;
+  final void Function(ChatMessage m)? onToggleSelect;
 
   final bool isGroup;
 
@@ -1423,6 +1702,8 @@ class _MessageList extends StatelessWidget {
         reactions: m.reactions,
         me: me,
         onLongPress: ghost == null ? () => onLongPress(m) : null,
+        pinned: pinnedIds.contains(m.id),
+        favorite: favoriteIds.contains(m.id),
         onReactionTap: ghost == null ? (emoji) => onReactionTap(m, emoji) : null,
         avatar: who == null
             ? null
@@ -1455,34 +1736,46 @@ class _MessageList extends StatelessWidget {
           key: messageKeys.putIfAbsent(m.id, GlobalKey.new),
           duration: const Duration(milliseconds: 250),
           decoration: BoxDecoration(
-            color: m.id == highlightedId
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.14)
+            color: m.id == highlightedId || selectedIds.contains(m.id)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.16)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: SwipeActions(
-            right: m.isDeleted
-                ? null
-                : SwipeAction(
-                    icon: Icons.reply,
-                    label: 'Répondre',
-                    onTriggered: () => onSwipeReply(m),
+          // Lot 7.2c2 : en sélection, toucher un message le coche ou le décoche.
+          child: selectedIds.isNotEmpty
+              ? Semantics(
+                  selected: selectedIds.contains(m.id),
+                  child: GestureDetector(
+                    key: Key('select.${m.id}'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onToggleSelect?.call(m),
+                    onLongPress: () => onToggleSelect?.call(m),
+                    child: AbsorbPointer(child: bubble),
                   ),
-            left: SwipeAction(
-              icon: Icons.delete_outline,
-              label: 'Supprimer',
-              color: error,
-              onTriggered: () => onSwipeDelete(m),
-            ),
-            // Lot 7.2b2 : message reçu à l'instant (fondu) ; supprimé pour tout le monde
-            // (la bulle se froisse).
-            child: AppearIn(
-              animate: appearing.contains(m.id),
-              offset: const Offset(-0.04, 0.1),
-              scale: 0.96,
-              child: CrumpleSwitch(deleted: m.isDeleted, child: bubble),
-            ),
-          ),
+                )
+              : SwipeActions(
+                  right: m.isDeleted
+                      ? null
+                      : SwipeAction(
+                          icon: Icons.reply,
+                          label: 'Répondre',
+                          onTriggered: () => onSwipeReply(m),
+                        ),
+                  left: SwipeAction(
+                    icon: Icons.delete_outline,
+                    label: 'Supprimer',
+                    color: error,
+                    onTriggered: () => onSwipeDelete(m),
+                  ),
+                  // Lot 7.2b2 : message reçu à l'instant (fondu) ; supprimé pour tout le monde
+                  // (la bulle se froisse).
+                  child: AppearIn(
+                    animate: appearing.contains(m.id),
+                    offset: const Offset(-0.04, 0.1),
+                    scale: 0.96,
+                    child: CrumpleSwitch(deleted: m.isDeleted, child: bubble),
+                  ),
+                ),
         ),
       );
     }
@@ -1728,10 +2021,16 @@ class _Bubble extends StatelessWidget {
     this.onReactionTap,
     this.mentions = const {},
     this.avatar,
+    this.pinned = false,
+    this.favorite = false,
   });
 
   final bool outgoing;
   final String text;
+
+  /// Lot 7.2c2 : petites icônes à côté de l'heure.
+  final bool pinned;
+  final bool favorite;
 
   /// Lot 7.2b2 : photo de l'auteur à gauche d'un message reçu (vide : place gardée pour
   /// aligner les messages d'une même suite) ; null : pas de colonne de photo.
@@ -1888,6 +2187,27 @@ class _Bubble extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Lot 7.2c2 : épinglé, favori.
+                        if (pinned) ...[
+                          Icon(
+                            Icons.push_pin_rounded,
+                            key: const Key('bubble.pinned'),
+                            size: 11,
+                            color: meta,
+                            semanticLabel: 'épinglé',
+                          ),
+                          const SizedBox(width: 3),
+                        ],
+                        if (favorite) ...[
+                          Icon(
+                            Icons.star_rounded,
+                            key: const Key('bubble.favorite'),
+                            size: 12,
+                            color: meta,
+                            semanticLabel: 'favori',
+                          ),
+                          const SizedBox(width: 3),
+                        ],
                         Text('${time ?? ''}${edited ? ' · modifié' : ''}', style: metaStyle),
                         if (remaining != null) ...[
                           const SizedBox(width: 5),

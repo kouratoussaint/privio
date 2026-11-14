@@ -1027,3 +1027,82 @@ class GroupDeletionNotice {
     deletedAt: DateTime.parse(j['deleted_at'] as String),
   );
 }
+
+/// Lot 7.2c2 : message épinglé ou favori (aperçu pour le bandeau et la liste des favoris).
+class MessageRef {
+  const MessageRef({
+    required this.id,
+    required this.senderId,
+    required this.senderName,
+    required this.kind,
+    required this.body,
+    required this.sentAt,
+    required this.at,
+    this.expiresAt,
+  });
+
+  final String id;
+  final String? senderId;
+  final String? senderName;
+  final String kind;
+  final String? body;
+  final DateTime sentAt;
+
+  /// Épinglé le / ajouté aux favoris le.
+  final DateTime at;
+  final DateTime? expiresAt;
+
+  factory MessageRef.pinned(Map<String, dynamic> j) => MessageRef(
+    id: j['message_id'] as String,
+    senderId: j['sender_id'] as String?,
+    senderName: j['sender_name'] as String?,
+    kind: j['kind'] as String? ?? 'text',
+    body: j['body'] as String?,
+    sentAt: DateTime.parse(j['sent_at'] as String),
+    at: DateTime.parse(j['pinned_at'] as String),
+  );
+
+  factory MessageRef.favorite(Map<String, dynamic> j) => MessageRef(
+    id: j['message_id'] as String,
+    senderId: j['sender_id'] as String?,
+    senderName: j['sender_name'] as String?,
+    kind: j['kind'] as String? ?? 'text',
+    body: j['body'] as String?,
+    sentAt: DateTime.parse(j['sent_at'] as String),
+    at: DateTime.parse(j['created_at'] as String),
+    expiresAt: j['expires_at'] == null ? null : DateTime.parse(j['expires_at'] as String),
+  );
+}
+
+/// Lot 7.2c2 : infos d'un de mes messages, pour un destinataire.
+class MessageReceipt {
+  const MessageReceipt({
+    required this.userId,
+    required this.name,
+    required this.delivered,
+    required this.read,
+    this.deliveredAt,
+    this.readAt,
+    this.receiptsHidden = false,
+  });
+
+  final String userId;
+  final String name;
+  final bool delivered;
+  final DateTime? deliveredAt;
+  final bool read;
+  final DateTime? readAt;
+
+  /// La personne a désactivé ses accusés de lecture : la lecture n'est pas connue.
+  final bool receiptsHidden;
+
+  factory MessageReceipt.fromJson(Map<String, dynamic> j) => MessageReceipt(
+    userId: j['user_id'] as String,
+    name: j['display_name'] as String? ?? 'Ancien membre',
+    delivered: j['delivered'] as bool? ?? false,
+    deliveredAt: j['delivered_at'] == null ? null : DateTime.parse(j['delivered_at'] as String),
+    read: j['read'] as bool? ?? false,
+    readAt: j['read_at'] == null ? null : DateTime.parse(j['read_at'] as String),
+    receiptsHidden: j['receipts_hidden'] as bool? ?? false,
+  );
+}

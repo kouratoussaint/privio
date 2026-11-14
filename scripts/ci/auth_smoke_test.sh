@@ -96,6 +96,7 @@ python3 "$(dirname "$0")/invitation_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/join_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/finitions_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV"
 python3 "$(dirname "$0")/suppression_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
+python3 "$(dirname "$0")/confort_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/console_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/moderation_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Dernier : déconnecte le téléphone de B.

@@ -173,6 +173,17 @@ abstract interface class MessagingApi {
   Future<List<GroupDeletionNotice>> listGroupDeletionNotices();
   Future<void> dismissGroupDeletionNotice(String id);
 
+  // Lot 7.2c2 : épinglés, favoris, infos d'un message, « Mentions seulement ».
+  Future<void> pinMessage(String messageId, {required bool pin});
+  Future<List<MessageRef>> listPinnedMessages(String conversationId);
+  Future<int> setFavorites(List<String> messageIds, {required bool on});
+  Future<List<MessageRef>> listFavorites(String conversationId);
+  Future<List<MessageReceipt>> getMessageInfo(String messageId);
+
+  /// 'all' ou 'mentions'.
+  Future<String> getNotifyMode(String conversationId);
+  Future<void> setNotifyMode(String conversationId, String mode);
+
   // Lot 7.2a : confidentialité propre à une discussion ou un groupe.
   Future<ConversationPrivacy> getConversationPrivacy(String conversationId);
   Future<void> setConversationPrivacy(
@@ -742,4 +753,50 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<void> dismissGroupDeletionNotice(String id) =>
       _call('dismiss_group_deletion_notice', {'p_id': id});
+
+  @override
+  Future<void> pinMessage(String messageId, {required bool pin}) =>
+      _call('pin_message', {'p_message_id': messageId, 'p_pin': pin});
+
+  @override
+  Future<List<MessageRef>> listPinnedMessages(String conversationId) async => (await _rows(
+    'list_pinned_messages',
+    {'p_conversation_id': conversationId},
+  )).map(MessageRef.pinned).toList();
+
+  @override
+  Future<int> setFavorites(List<String> messageIds, {required bool on}) => _guard(
+    () async =>
+        (await _client.rpc<dynamic>(
+          'set_message_favorites',
+          params: {'p_message_ids': messageIds, 'p_on': on},
+        ) as num?)?.toInt() ??
+        0,
+  );
+
+  @override
+  Future<List<MessageRef>> listFavorites(String conversationId) async => (await _rows(
+    'list_favorite_messages',
+    {'p_conversation_id': conversationId},
+  )).map(MessageRef.favorite).toList();
+
+  @override
+  Future<List<MessageReceipt>> getMessageInfo(String messageId) async => (await _rows(
+    'get_message_info',
+    {'p_message_id': messageId},
+  )).map(MessageReceipt.fromJson).toList();
+
+  @override
+  Future<String> getNotifyMode(String conversationId) => _guard(
+    () async =>
+        (await _client.rpc<dynamic>(
+          'get_notify_mode',
+          params: {'p_conversation_id': conversationId},
+        ) as String?) ??
+        'all',
+  );
+
+  @override
+  Future<void> setNotifyMode(String conversationId, String mode) =>
+      _call('set_notify_mode', {'p_conversation_id': conversationId, 'p_mode': mode});
 }

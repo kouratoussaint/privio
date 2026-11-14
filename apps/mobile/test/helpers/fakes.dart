@@ -577,6 +577,140 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   /// Messages encore visibles pour moi (après un « vider » éventuel).
+  // -------------------------------------------------------------------------
+  // Lot 7.2c2 : épinglés, favoris, infos d'un message, « Mentions seulement »
+  // -------------------------------------------------------------------------
+  final Map<String, List<String>> pins = {};
+  final Set<String> favorites = {};
+  final Map<String, String> notifyModes = {};
+
+  /// Infos renvoyées pour un message (sinon : Bob, distribué, pas lu).
+  final Map<String, List<MessageReceipt>> receipts = {};
+
+  (String, ChatMessage)? _lookup(String messageId) {
+    for (final e in messages.entries) {
+      for (final m in e.value) {
+        if (m.id == messageId) return (e.key, m);
+      }
+    }
+    return null;
+  }
+
+  bool _usable(ChatMessage m) =>
+      !m.isDeleted &&
+      !m.isSystem &&
+      m.expiresAt.isAfter(DateTime.now()) &&
+      !hiddenForMe.contains(m.id);
+
+  (String, ChatMessage) _requireUsable(String messageId) {
+    final found = _lookup(messageId);
+    if (found == null || found.$2.isSystem || hiddenForMe.contains(messageId)) {
+      throw const AppFailure(FailureCode.messageNotFound);
+    }
+    if (found.$2.isDeleted) throw const AppFailure(FailureCode.messageDeleted);
+    if (!found.$2.expiresAt.isAfter(DateTime.now())) {
+      throw const AppFailure(FailureCode.messageExpired);
+    }
+    return found;
+  }
+
+  MessageRef _ref(ChatMessage m) => MessageRef(
+    id: m.id,
+    senderId: m.senderId,
+    senderName: m.senderName ?? (m.senderId == bob.id ? bob.displayName : null),
+    kind: m.kind,
+    body: m.body,
+    sentAt: m.sentAt,
+    at: m.sentAt,
+    expiresAt: m.expiresAt,
+  );
+
+  @override
+  Future<void> pinMessage(String messageId, {required bool pin}) async {
+    _net();
+    final (conv, m) = _requireUsable(messageId);
+    final g = groups[conv];
+    if (g != null && !g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+    final list = pins[conv] ??= [];
+    if (!pin) {
+      list.remove(m.id);
+      return;
+    }
+    if (list.contains(m.id)) return;
+    final active = list.where((id) {
+      final found = _lookup(id);
+      return found != null && _usable(found.$2);
+    });
+    if (active.length >= 3) throw const AppFailure(FailureCode.pinLimitReached);
+    list.add(m.id);
+  }
+
+  @override
+  Future<List<MessageRef>> listPinnedMessages(String conversationId) async {
+    _net();
+    return [
+      for (final id in (pins[conversationId] ?? const <String>[]).reversed)
+        if (_lookup(id) case (_, final m)? when _usable(m)) _ref(m),
+    ];
+  }
+
+  @override
+  Future<int> setFavorites(List<String> messageIds, {required bool on}) async {
+    _net();
+    var n = 0;
+    for (final id in messageIds) {
+      if (on) {
+        _requireUsable(id);
+        if (favorites.add(id)) n++;
+      } else if (favorites.remove(id)) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  @override
+  Future<List<MessageRef>> listFavorites(String conversationId) async {
+    _net();
+    final list = [
+      for (final m in messages[conversationId] ?? const <ChatMessage>[])
+        if (favorites.contains(m.id) && _usable(m)) _ref(m),
+    ];
+    return list.reversed.toList();
+  }
+
+  @override
+  Future<List<MessageReceipt>> getMessageInfo(String messageId) async {
+    _net();
+    final (_, m) = _requireUsable(messageId);
+    if (m.senderId != me) throw const AppFailure(FailureCode.notSender);
+    return receipts[messageId] ??
+        [
+          MessageReceipt(
+            userId: bob.id,
+            name: bob.displayName,
+            delivered: true,
+            deliveredAt: m.sentAt.add(const Duration(seconds: 2)),
+            read: false,
+          ),
+        ];
+  }
+
+  @override
+  Future<String> getNotifyMode(String conversationId) async {
+    _net();
+    return notifyModes[conversationId] ?? 'all';
+  }
+
+  @override
+  Future<void> setNotifyMode(String conversationId, String mode) async {
+    _net();
+    if (mode == 'mentions' && !groups.containsKey(conversationId)) {
+      throw const AppFailure(FailureCode.notGroup);
+    }
+    notifyModes[conversationId] = mode;
+  }
+
   List<ChatMessage> _visible(String id) {
     final before = clearedBefore[id];
     return [

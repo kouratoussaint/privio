@@ -28,6 +28,7 @@ import '../conversations/report_sheet.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
+import '../conversations/message_extras.dart';
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -909,6 +910,9 @@ class GroupInfoScreen extends ConsumerWidget {
                 subtitle: Text(s.isMuted(now) ? 'Notifications coupées' : 'Notifications actives'),
                 onTap: () => _mute(context, ref, s),
               ),
+              // Lot 7.2c2 : notifié seulement quand on vous @mentionne.
+              const SettingsDivider(),
+              MentionsOnlyTile(conversationId: s.id),
               const SettingsDivider(),
               ListTile(
                 key: const Key('group.clear'),
@@ -922,7 +926,11 @@ class GroupInfoScreen extends ConsumerWidget {
           ),
           const SettingsSectionTitle('Médias'),
           SettingsCard(
-            children: [ConversationMediaSection(conversationId: s.id, title: s.title)],
+            children: [
+              ConversationMediaSection(conversationId: s.id, title: s.title),
+              const SettingsDivider(),
+              FavoritesRow(conversationId: s.id, title: s.title),
+            ],
           ),
           const SettingsSectionTitle('Confidentialité dans ce groupe'),
           SettingsCard(children: [ConversationPrivacySection(summary: s)]),

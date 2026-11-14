@@ -1044,3 +1044,47 @@ class QuickReactionController extends AsyncNotifier<String> {
     state = AsyncData(emoji);
   }
 }
+
+// ------------------------------------------------------------------------
+// Lot 7.2c2 : messages épinglés, favoris, infos d'un message, « Mentions seulement »
+// ------------------------------------------------------------------------
+
+/// Épinglés d'une discussion (les plus récents d'abord), à jour à chaque signal.
+final pinnedMessagesProvider = FutureProvider.autoDispose.family<List<MessageRef>, String>((
+  ref,
+  conversationId,
+) {
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    final s = next.value;
+    if (s == null || s.event == 'typing' || s.event == 'receipt') return;
+    if (s.conversationId == null || s.conversationId == conversationId) ref.invalidateSelf();
+  });
+  return ref.watch(messagingApiProvider).listPinnedMessages(conversationId);
+});
+
+/// Mes favoris dans une discussion.
+final favoriteMessagesProvider = FutureProvider.autoDispose.family<List<MessageRef>, String>(
+  (ref, conversationId) => ref.watch(messagingApiProvider).listFavorites(conversationId),
+);
+
+/// Infos d'un de mes messages (distribué, lu, par destinataire).
+final messageInfoProvider = FutureProvider.autoDispose.family<List<MessageReceipt>, String>(
+  (ref, messageId) => ref.watch(messagingApiProvider).getMessageInfo(messageId),
+);
+
+/// Notifications d'un groupe : 'all' ou 'mentions'.
+final notifyModeProvider = FutureProvider.autoDispose.family<String, String>(
+  (ref, conversationId) => ref.watch(messagingApiProvider).getNotifyMode(conversationId),
+);
+
+/// Message à montrer en ouvrant (ou en revenant à) la discussion (depuis les favoris).
+final jumpToMessageProvider = NotifierProvider<JumpToMessage, (String, String)?>(JumpToMessage.new);
+
+class JumpToMessage extends Notifier<(String, String)?> {
+  @override
+  (String, String)? build() => null;
+
+  void request(String conversationId, String messageId) => state = (conversationId, messageId);
+
+  void clear() => state = null;
+}
