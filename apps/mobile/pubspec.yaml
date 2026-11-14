@@ -74,6 +74,7 @@ flutter:
   generate: false
   assets:
     - assets/brand/
+    - assets/sounds/
   fonts:
     - family: Inter
       fonts:

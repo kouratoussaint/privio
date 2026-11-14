@@ -69,7 +69,8 @@ void main() {
     expect(find.byKey(const Key('chat.mic')), findsOneWidget);
     expect(find.byKey(const Key('chat.send')), findsNothing);
     await tester.enterText(find.byKey(const Key('chat.input')), 'Bonjour');
-    await tester.pump();
+    // Lot 7.2b2 : le micro se transforme en bouton Envoyer (animation).
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('chat.send')), findsOneWidget);
     expect(find.byKey(const Key('chat.mic')), findsNothing);
   });
@@ -145,6 +146,9 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('chat.mic')));
     await tester.pump();
+    // Lot 7.2b2 : vibration au démarrage ; ensuite rien avant l’avertissement.
+    expect(haptics, ['HapticFeedbackType.mediumImpact']);
+    haptics.clear();
     await _advance(tester, const Duration(seconds: 24));
     expect(haptics, isEmpty);
     await _advance(tester, const Duration(seconds: 2));

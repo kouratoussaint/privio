@@ -5,6 +5,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/motion/illustrations.dart';
 
 /// Écran 07 — autorisations facultatives. Un refus ne bloque jamais l'application.
 /// Micro, appareil photo et contacts seront demandés au moment de leur usage.
@@ -54,7 +55,14 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
         ),
         children: [
           const SizedBox(height: PrivioSpacing.xxl),
-          Icon(Icons.notifications_active_outlined, size: 72, color: theme.colorScheme.primary),
+          // Lot 7.2b2 : la cloche sonne.
+          const Center(
+            child: FloatingIcon(
+              icon: Icons.notifications_active_outlined,
+              size: 52,
+              motion: IconMotion.ring,
+            ),
+          ),
           const SizedBox(height: PrivioSpacing.xl),
           Text('Restez informé', style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: PrivioSpacing.m),

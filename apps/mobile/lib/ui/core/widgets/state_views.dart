@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/privio_tokens.dart';
+import '../motion/illustrations.dart';
 
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key, this.label = 'Chargement…'});
@@ -58,7 +59,8 @@ class EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: theme.colorScheme.primary),
+            // Lot 7.2b2 : l'illustration flotte doucement.
+            FloatingIcon(icon: icon, size: 44),
             const SizedBox(height: PrivioSpacing.l),
             Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: PrivioSpacing.s),

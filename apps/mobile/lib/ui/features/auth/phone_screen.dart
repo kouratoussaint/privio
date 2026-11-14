@@ -9,6 +9,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../router/routes.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/motion/illustrations.dart';
 
 /// Écran 04 — saisie du numéro (formulaire téléphone uniquement).
 class PhoneScreen extends ConsumerStatefulWidget {
@@ -66,6 +67,11 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
           child: _busy ? const Text('Envoi du code…') : const Text('Recevoir le code'),
         ),
         children: [
+          // Lot 7.2b2 : le SMS arrive.
+          const Center(
+            child: FloatingIcon(icon: Icons.sms_outlined, size: 36, motion: IconMotion.pulse),
+          ),
+          const SizedBox(height: PrivioSpacing.l),
           Text(
             'Quel est votre numéro\u202F? Vous recevrez un code par SMS.',
             style: theme.textTheme.bodyLarge,

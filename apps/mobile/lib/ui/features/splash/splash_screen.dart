@@ -6,6 +6,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/privio_brand.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/motion/illustrations.dart';
 
 /// Écran 01 — initialisation. La navigation est pilotée par le routeur.
 class SplashScreen extends ConsumerWidget {
@@ -20,15 +21,16 @@ class SplashScreen extends ConsumerWidget {
               message: toAppFailure(session.error!).message,
               onRetry: () => ref.invalidate(sessionControllerProvider),
             )
+          // Lot 7.2b2 : logo qui respire et points de chargement.
           : const Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  PrivioSymbol(size: 112),
-                  SizedBox(height: PrivioSpacing.l),
+                  AnimatedLogo(),
+                  SizedBox(height: PrivioSpacing.s),
                   PrivioWordmark(),
                   SizedBox(height: PrivioSpacing.xl),
-                  LoadingView(),
+                  LoadingDots(),
                 ],
               ),
             ),

@@ -14,6 +14,8 @@ import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/settings_card.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Lecture d'un QR code : l'écran caméra, remplacé dans les tests (pas de caméra).
 final qrScannerProvider = Provider<Future<String?> Function(BuildContext context)>(
@@ -98,11 +100,17 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       if (!mounted) return;
       switch (r.status) {
         case JoinStatus.joined || JoinStatus.member when r.conversationId != null:
+          if (r.status == JoinStatus.joined) {
+            ref.read(feedbackProvider).sound(PrivioSound.success);
+          }
           _open(r.conversationId!);
           return;
         case JoinStatus.requested:
           ref.invalidate(myJoinRequestsProvider);
-          _toast('Demande envoyée. Vous serez prévenu quand elle sera acceptée.');
+          ref.read(feedbackProvider).sound(PrivioSound.success);
+          ScaffoldMessenger.of(context).showSnackBar(
+            successSnack('Demande envoyée. Vous serez prévenu quand elle sera acceptée.'),
+          );
           setState(() => _preview = _with(JoinStatus.pending, r.conversationId));
         default:
           setState(() => _preview = _with(r.status));

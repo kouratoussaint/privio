@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'privio_palette.dart';
 import 'privio_tokens.dart';
+import '../../ui/core/motion/motion.dart';
 
 /// Thèmes clair et sombre : unique source de vérité des couleurs, typographies et
 /// composants. Aucun widget ne code une couleur ou un style de texte en dur.
@@ -134,6 +135,13 @@ abstract final class PrivioTheme {
 
     return ThemeData(
       useMaterial3: true,
+      // Lot 7.2b2 : transitions d'écran communes (glissement léger et fondu).
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: PrivioPageTransitionsBuilder(),
+          TargetPlatform.iOS: PrivioPageTransitionsBuilder(),
+        },
+      ),
       colorScheme: s,
       fontFamily: fontFamily,
       fontFamilyFallback: fallbackFonts,

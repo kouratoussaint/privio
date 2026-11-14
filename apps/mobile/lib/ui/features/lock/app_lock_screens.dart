@@ -11,9 +11,12 @@ import '../../../data/storage/app_lock_store.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/session_controller.dart';
-import '../../core/widgets/privio_brand.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/settings_card.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
+import '../../core/motion/motion.dart';
+import '../../core/motion/illustrations.dart';
 
 // ---------------------------------------------------------------------------
 // Pavé numérique (sans champ texte : aucun clavier, aucune suggestion, aucun presse-papiers)
@@ -118,10 +121,11 @@ class PinDots extends StatelessWidget {
         children: [
           for (var i = 0; i < kPinLength; i++)
             AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              width: 14,
-              height: 14,
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutBack,
+              margin: EdgeInsets.symmetric(horizontal: i < filled ? 7 : 8),
+              width: i < filled ? 16 : 14,
+              height: i < filled ? 16 : 14,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: i < filled ? c : Colors.transparent,
@@ -144,11 +148,15 @@ class PinEntry extends StatefulWidget {
     this.error = false,
     this.enabled = true,
     this.extra,
+    this.shake = 0,
   });
 
   final String title;
   final String? message;
   final bool error;
+
+  /// Change à chaque code refusé : les points se secouent.
+  final int shake;
   final bool enabled;
   final Widget? extra;
 
@@ -190,7 +198,10 @@ class PinEntryState extends State<PinEntry> {
       children: [
         Text(widget.title, style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
         const SizedBox(height: PrivioSpacing.l),
-        PinDots(filled: _pin.length, error: widget.error),
+        ShakeOnChange(
+          value: widget.shake,
+          child: PinDots(filled: _pin.length, error: widget.error),
+        ),
         SizedBox(
           height: 48,
           child: Center(
@@ -306,6 +317,9 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   Timer? _tick;
   bool _waiting = false;
 
+  /// Lot 7.2b2 : nombre de codes faux (secoue les points à chaque erreur).
+  int _misses = 0;
+
   @override
   void initState() {
     super.initState();
@@ -346,14 +360,23 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         case Unlocked():
           _message = null;
           _error = false;
+          ref.read(feedbackProvider)
+            ..sound(PrivioSound.unlocked)
+            ..haptic(Haptic.light);
         case WrongPin(:final remainingBeforeWait):
           _error = true;
+          _misses++;
+          ref.read(feedbackProvider)
+            ..sound(PrivioSound.pinError)
+            ..haptic(Haptic.heavy);
           _message = remainingBeforeWait <= 2
               ? 'Code incorrect. Encore $remainingBeforeWait essai${remainingBeforeWait > 1 ? 's' : ''} avant une attente.'
               : 'Code incorrect.';
         case MustWait():
           _error = true;
           _message = null;
+          _misses++;
+          ref.read(feedbackProvider).haptic(Haptic.heavy);
       }
     });
   }
@@ -377,11 +400,12 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                 : Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const PrivioSymbol(size: 64),
-                      const SizedBox(height: PrivioSpacing.l),
+                      const AnimatedLogo(size: 64),
+                      const SizedBox(height: PrivioSpacing.s),
                       PinEntry(
                         title: 'Saisissez votre code Privio',
                         error: _error,
+                        shake: _misses,
                         enabled: wait == null,
                         message: wait != null
                             ? 'Trop d’essais. Réessayez dans ${formatWait(remaining!)}.'
@@ -672,10 +696,9 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
           await lock.changePin(pin);
         }
         if (!mounted) return;
+        ref.read(feedbackProvider).sound(PrivioSound.success);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.flow == PinFlow.create ? 'Verrouillage activé.' : 'Code modifié.'),
-          ),
+          successSnack(widget.flow == PinFlow.create ? 'Verrouillage activé.' : 'Code modifié.'),
         );
         context.pop();
     }

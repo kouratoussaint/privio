@@ -10,6 +10,7 @@ import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
 import '../../core/widgets/settings_card.dart';
+import '../../core/motion/illustrations.dart';
 
 /// Aide : questions fréquentes et contact de l'assistance (lot 2.5).
 class HelpScreen extends ConsumerWidget {
@@ -116,7 +117,9 @@ class HelpScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Aide et assistance')),
       body: SettingsListView(
         children: [
-          const SettingsSectionTitle('Questions fréquentes', first: true),
+          // Lot 7.2b2 : en-tête illustré.
+          const Center(child: FloatingIcon(icon: Icons.support_agent, size: 40)),
+          const SettingsSectionTitle('Questions fréquentes'),
           SettingsCard(
             children: [
               for (final (q, a) in faq)

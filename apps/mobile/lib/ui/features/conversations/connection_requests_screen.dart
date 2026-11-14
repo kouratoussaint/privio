@@ -12,6 +12,8 @@ import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Demandes de connexion (lot 4.7) : reçues (accepter, refuser, bloquer) et envoyées
 /// (en attente, refusées, expirées).
@@ -152,7 +154,12 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
         ConnectionAction.refuse => 'Demande refusée.',
         ConnectionAction.block => '${r.displayName} est bloqué.',
       };
-      messenger.showSnackBar(SnackBar(content: Text(done)));
+      if (action == ConnectionAction.accept) {
+        ref.read(feedbackProvider).sound(PrivioSound.success);
+        messenger.showSnackBar(successSnack(done));
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text(done)));
+      }
       if (conv != null) unawaited(router.push(Routes.chat(conv)));
     } on Object catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));

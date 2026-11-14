@@ -13,6 +13,7 @@ import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
 import '../../../domain/models/messaging.dart';
+import '../../core/motion/motion.dart';
 
 /// Navigation MVP validée : Discussions / Groupes / Paramètres, et rien d'autre.
 /// Active aussi les notifications (lot 4.1) et ouvre la discussion d'une notification touchée.
@@ -246,9 +247,15 @@ class _NavButton extends StatelessWidget {
             const Spacer(),
             Badge(
               isLabelVisible: item.badge > 0,
-              label: Text(badgeText),
+              // Lot 7.2b2 : la pastille saute quand le nombre change ; l'icône de l'onglet
+              // choisi rebondit.
+              label: PopOnChange(value: badgeText, child: Text(badgeText)),
               backgroundColor: accent,
-              child: Icon(selected ? item.selectedIcon : item.icon, color: color, size: 24),
+              child: PopOnChange(
+                value: selected,
+                pop: selected,
+                child: Icon(selected ? item.selectedIcon : item.icon, color: color, size: 24),
+              ),
             ),
             const SizedBox(height: PrivioSpacing.xs),
             Text(

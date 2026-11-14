@@ -249,8 +249,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(const Key('avatar.photo.u2/avatar.jpg')),
-      findsOneWidget,
-      reason: 'en-tête de la discussion',
+      findsNWidgets(2),
+      reason: 'en-tête de la discussion et à côté du message reçu',
     );
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();

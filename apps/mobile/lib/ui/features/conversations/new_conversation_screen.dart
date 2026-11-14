@@ -14,6 +14,8 @@ import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import '../../../core/theme/privio_palette.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Écran 09 — trouver une personne par son identifiant Privio (ou son numéro, si elle
 /// l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
@@ -98,8 +100,9 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       final status = await api.connectionStatus(user.id);
       if (!mounted) return;
       setState(() => _status = status);
+      ref.read(feedbackProvider).sound(PrivioSound.success);
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Demande envoyée à ${user.displayName}.')));
+          .showSnackBar(successSnack('Demande envoyée à ${user.displayName}.'));
     } on Object catch (e) {
       if (mounted) setState(() => _message = toAppFailure(e).message);
     } finally {

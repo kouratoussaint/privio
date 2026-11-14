@@ -35,6 +35,8 @@ import 'package:privio/state/messaging_providers.dart';
 import 'package:privio/state/providers.dart';
 import 'package:privio/state/push_providers.dart';
 import 'package:privio/state/session_controller.dart';
+import 'package:privio/state/feedback_providers.dart';
+import 'package:privio/data/services/sound_service.dart';
 
 class FakeAuthService implements AuthService {
   FakeAuthService({this.signedIn = false});
@@ -235,6 +237,13 @@ class FakeLocalFlags implements LocalFlags {
   /// Les tests d'avant le lot 7.2b1 ouvrent les groupes depuis Discussions : « ensemble ».
   /// L'application, elle, sépare par défaut (testé dans test/ui/suppression_test.dart).
   bool groupsTogether = true;
+
+  /// Lot 7.2b2 : sons et vibrations (activés par défaut).
+  bool sounds = true;
+  @override
+  Future<bool> soundsEnabled() async => sounds;
+  @override
+  Future<void> setSoundsEnabled(bool value) async => sounds = value;
   @override
   Future<bool> groupsInDiscussions() async => groupsTogether;
   @override
@@ -1798,6 +1807,14 @@ class FakeVoiceRecorder implements VoiceRecorder {
 }
 
 /// Faux lecteur : retient ce qui est joué ; [finish] simule la fin du son.
+/// Lot 7.2b2 : sons joués (aucune lecture réelle dans les tests).
+class FakeSoundPlayer implements SoundPlayer {
+  final List<PrivioSound> played = [];
+
+  @override
+  Future<void> play(PrivioSound sound) async => played.add(sound);
+}
+
 class FakeAudioEngine implements AudioEngine {
   final _position = StreamController<Duration>.broadcast();
   final _completed = StreamController<void>.broadcast();
@@ -2294,6 +2311,7 @@ class TestDeps {
   final realtime = FakeRealtimeService();
   final recorder = FakeVoiceRecorder();
   final audio = FakeAudioEngine();
+  final sounds = FakeSoundPlayer();
   final photos = FakePhotoPicker();
   final lockStore = MemoryAppLockStore();
   final biometrics = FakeBiometricGate();
@@ -2319,6 +2337,7 @@ class TestDeps {
     realtimeServiceProvider.overrideWithValue(realtime),
     voiceRecorderProvider.overrideWithValue(recorder),
     audioEngineProvider.overrideWithValue(audio),
+    soundPlayerProvider.overrideWithValue(sounds),
     photoPickerProvider.overrideWithValue(photos),
     // Préparation synchrone (pas d'isolat dans les tests de widgets).
     photoPreparerProvider.overrideWithValue(

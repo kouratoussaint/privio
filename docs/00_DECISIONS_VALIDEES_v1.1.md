@@ -210,3 +210,12 @@ Demandés par le commanditaire après test sur téléphone :
 - Groupes et discussions **séparés par défaut** ; réglage « Groupes dans Discussions » dans
   Paramètres pour les remettre ensemble.
 
+
+## Amendement 15 — Animations, sons, photos à côté des messages (14 novembre 2026, lot 7.2b2)
+- Liste d'animations et de sons validée (amendement 13) ; réglage « Sons et vibrations »
+  activé par défaut. Sons courts créés pour Privio (aucun son tiers), muets en mode silencieux
+  du téléphone ; « Réduire les animations » du téléphone respecté.
+- Ajout demandé : **photo de l'auteur à côté des messages reçus**, dans une discussion
+  (photo du correspondant) comme dans un groupe (photo du membre, ou ses initiales). Elle se
+  place à côté du dernier message d'une suite du même auteur ; dans un groupe, le nom de
+  l'auteur n'apparaît qu'en tête de sa suite.

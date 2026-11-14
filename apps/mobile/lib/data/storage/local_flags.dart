@@ -18,6 +18,10 @@ abstract interface class LocalFlags {
   Future<String> quickReaction();
   Future<void> setQuickReaction(String emoji);
 
+  /// Lot 7.2b2 : sons et vibrations dans l'application (vrai par défaut).
+  Future<bool> soundsEnabled();
+  Future<void> setSoundsEnabled(bool value);
+
   /// Lot 7.2b1 : groupes aussi dans l'onglet Discussions (faux par défaut : séparés).
   Future<bool> groupsInDiscussions();
   Future<void> setGroupsInDiscussions(bool value);
@@ -43,6 +47,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _autoPhoto = 'privio.photo_auto_download';
   static const _usage = 'privio.data_usage';
   static const _groupsInDiscussions = 'privio.groups_in_discussions';
+  static const _sounds = 'privio.sounds_enabled';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -73,6 +78,12 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setQuickReaction(String emoji) => _prefs.setString(_quick, emoji);
+
+  @override
+  Future<bool> soundsEnabled() async => (await _prefs.getBool(_sounds)) ?? true;
+
+  @override
+  Future<void> setSoundsEnabled(bool value) => _prefs.setBool(_sounds, value);
 
   @override
   Future<bool> groupsInDiscussions() async => (await _prefs.getBool(_groupsInDiscussions)) ?? false;

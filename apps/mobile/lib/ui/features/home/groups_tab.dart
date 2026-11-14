@@ -14,7 +14,8 @@ import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/state_views.dart';
-import 'discussions_tab.dart' show ConversationTile, OfflineBanner;
+import 'discussions_tab.dart' show AnimatedOfflineBanner, ConversationTile;
+import '../../core/motion/illustrations.dart';
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
@@ -92,11 +93,7 @@ class GroupsTab extends ConsumerWidget {
         color: PrivioPalette.of(context).sheet,
         child: Column(
           children: [
-            if (offline)
-              const Padding(
-                padding: EdgeInsets.only(top: PrivioSpacing.s),
-                child: OfflineBanner(),
-              ),
+            AnimatedOfflineBanner(offline: offline, top: PrivioSpacing.s),
             Expanded(
               child: _body(context, ref, conversations, invitations, groups, myRequests, notices),
             ),
@@ -116,7 +113,7 @@ class GroupsTab extends ConsumerWidget {
     List<GroupDeletionNotice> notices,
   ) {
     final theme = Theme.of(context);
-    if (!conversations.hasValue && conversations.isLoading) return const LoadingView();
+    if (!conversations.hasValue && conversations.isLoading) return const SkeletonList();
     if (conversations case AsyncError(:final error)) {
       return ErrorView(
         message: toAppFailure(error).message,

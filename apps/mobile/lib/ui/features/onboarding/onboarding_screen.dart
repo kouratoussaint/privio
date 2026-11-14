@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/privio_theme.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../state/session_controller.dart';
-import '../../core/widgets/privio_brand.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/motion/illustrations.dart';
 
 /// Écran 02 — engagements affichés (formulation validée A2, voir docs/adr/ADR-002) :
 /// aucune promesse de chiffrement côté serveur ni de protection absolue contre les captures.
@@ -69,8 +69,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
               children: [
                 const SizedBox(height: PrivioSpacing.xl),
-                const Center(child: PrivioSymbol(size: 88)),
-                const SizedBox(height: PrivioSpacing.l),
+                const Center(child: AnimatedLogo(size: 80)),
                 Text(
                   'Bienvenue sur Privio',
                   style: theme.textTheme.headlineSmall,
@@ -90,7 +89,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(icon, color: theme.colorScheme.primary),
+                          // Lot 7.2b2 : chaque engagement a son icône animée.
+                          FloatingIcon(
+                            icon: icon,
+                            size: 22,
+                            motion: switch (icon) {
+                              Icons.timer_outlined => IconMotion.vanish,
+                              Icons.lock_outline => IconMotion.pulse,
+                              _ => IconMotion.float,
+                            },
+                          ),
                           const SizedBox(width: PrivioSpacing.m),
                           Expanded(
                             child: Column(

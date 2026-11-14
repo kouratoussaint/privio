@@ -10,12 +10,15 @@ import 'state/messaging_providers.dart';
 import 'state/privacy_providers.dart';
 import 'ui/features/moderation/moderation_gate.dart';
 import 'ui/features/lock/app_lock_screens.dart';
+import 'state/feedback_providers.dart';
 
 class PrivioApp extends ConsumerWidget {
   const PrivioApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Lot 7.2b2 : réglage « Sons et vibrations » lu dès le démarrage.
+    ref.listen(soundsEnabledProvider, (_, _) {});
     // Réseau (DATA-006, DATA-007) : coupure signalée aussitôt ; au retour, les envois en
     // attente partent et la liste se met à jour sans geste.
     ref.listen(netKindProvider, (previous, next) {

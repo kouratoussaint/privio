@@ -19,6 +19,7 @@ import '../lock/app_lock_screens.dart' show delayLabel;
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/settings_card.dart';
 import 'my_profile_screen.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
 class SettingsTab extends ConsumerWidget {
@@ -235,6 +236,18 @@ class SettingsTab extends ConsumerWidget {
                   secondary: Icon(Icons.notifications_outlined, color: p.accentText),
                   title: const Text('Notifications'),
                   subtitle: const Text('Sans nom ni contenu.'),
+                ),
+                const SettingsDivider(),
+                // Lot 7.2b2 : sons courts et vibrations (activés par défaut).
+                SwitchListTile(
+                  key: const Key('settings.sounds'),
+                  value: ref.watch(soundsEnabledProvider).value ?? true,
+                  secondary: Icon(Icons.volume_up_outlined, color: p.accentText),
+                  title: const Text('Sons et vibrations'),
+                  subtitle: const Text(
+                    'Envoi, réception, effacement… Rien en mode silencieux du téléphone.',
+                  ),
+                  onChanged: (v) => ref.read(soundsEnabledProvider.notifier).set(v),
                 ),
                 const SettingsDivider(),
                 // Lot 7.2b1 : groupes séparés des discussions (par défaut) ou ensemble.

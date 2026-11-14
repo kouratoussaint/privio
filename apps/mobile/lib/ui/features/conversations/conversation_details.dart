@@ -17,6 +17,8 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import 'photo_widgets.dart';
 import 'voice_widgets.dart';
+import 'chat_motion.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Lot 7.1a : éléments communs aux fiches contact et groupe.
 
@@ -427,7 +429,12 @@ String muteLabel(ConversationSummary s, DateTime now) {
 /// Choix (chez moi / pour nous deux ou pour tous), confirmation, puis vidage. L'écran
 /// appelant reste affiché ; la discussion se recharge si elle est ouverte en dessous.
 /// Renvoie 'cleared', 'requested' ou null (annulé, ou échec signalé).
-Future<String?> chooseClear(BuildContext context, WidgetRef ref, ConversationSummary s) async {
+Future<String?> chooseClear(
+  BuildContext context,
+  WidgetRef ref,
+  ConversationSummary s, {
+  bool sweep = true,
+}) async {
   final everyoneAllowed = s.isGroup ? s.isAdmin : !(s.blocked || s.peerDeleted);
   final choice = await showModalBottomSheet<String>(
     context: context,
@@ -516,6 +523,12 @@ Future<String?> chooseClear(BuildContext context, WidgetRef ref, ConversationSum
     ref
       ..invalidate(chatProvider(s.id))
       ..invalidate(conversationMediaProvider(s.id));
+    // Lot 7.2b2 : son de balayage ; depuis une fiche, le balai traverse l'écran (dans la
+    // discussion, ce sont les bulles qui s'effacent en cascade).
+    if (r != 'requested') {
+      ref.read(feedbackProvider).sound(PrivioSound.cleared);
+      if (sweep && context.mounted) showSweep(context);
+    }
     messenger.showSnackBar(
       SnackBar(
         key: const Key('clear.done'),

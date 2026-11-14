@@ -10,6 +10,8 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/motion/illustrations.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Écran 05 — vérification du code SMS. Renvoi possible après 60 s (aligné sur
 /// `auth.sms.max_frequency`). La navigation suivante est décidée par le routeur.
@@ -63,6 +65,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     });
     try {
       await ref.read(authServiceProvider).verifyOtp(phoneE164: widget.phoneE164, code: code);
+      // Lot 7.2b2 : son de réussite.
+      ref.read(feedbackProvider).sound(PrivioSound.success);
       await ref.read(sessionControllerProvider.notifier).onOtpVerified();
     } on Object catch (e) {
       if (mounted) {
@@ -101,6 +105,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           child: _busy ? const Text('Vérification…') : const Text('Valider'),
         ),
         children: [
+          const Center(child: FloatingIcon(icon: Icons.mark_chat_unread_outlined, size: 36)),
+          const SizedBox(height: PrivioSpacing.l),
           Text(
             'Saisissez le code à 6 chiffres envoyé par SMS au '
             '${PhoneNumber.format(widget.phoneE164)}.',

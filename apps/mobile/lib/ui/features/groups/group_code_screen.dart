@@ -9,6 +9,8 @@ import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/settings_card.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Code d'invitation d'un groupe (administrateurs), créé à la première ouverture.
 final groupInviteCodeProvider = FutureProvider.autoDispose.family<String, String>(
@@ -36,7 +38,9 @@ class _GroupCodeScreenState extends ConsumerState<GroupCodeScreen> {
 
   Future<void> _copy(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
-    if (mounted) _toast('Code copié.');
+    if (!mounted) return;
+    ref.read(feedbackProvider).sound(PrivioSound.success);
+    ScaffoldMessenger.of(context).showSnackBar(successSnack('Code copié.'));
   }
 
   Future<void> _change() async {
@@ -64,7 +68,8 @@ class _GroupCodeScreenState extends ConsumerState<GroupCodeScreen> {
       final code = await ref.read(messagingApiProvider).resetGroupInviteCode(widget.conversationId);
       if (!mounted) return;
       setState(() => _reset = code);
-      _toast('Nouveau code créé.');
+      ref.read(feedbackProvider).sound(PrivioSound.success);
+      ScaffoldMessenger.of(context).showSnackBar(successSnack('Nouveau code créé.'));
     } on Object catch (e) {
       if (mounted) _toast(toAppFailure(e).message);
     } finally {

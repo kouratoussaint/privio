@@ -32,6 +32,10 @@ import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
 import 'conversation_details.dart';
+import 'chat_motion.dart';
+import '../../core/motion/motion.dart';
+import '../../../state/feedback_providers.dart';
+import '../../core/motion/illustrations.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -74,6 +78,62 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageKeys = <String, GlobalKey>{};
   String? _highlightedId;
   Timer? _highlightTimer;
+
+  // Lot 7.2b2 : suivi des messages pour les animer (apparition, dissolution).
+  final _seen = <String>{};
+  bool _seeded = false;
+  List<ChatMessage> _shown = const [];
+  String _shownQuery = '';
+  final _ghosts = <String, (ChatMessage, int)>{};
+
+  /// Compare les messages affichés à la fois précédente : renvoie ceux qui viennent
+  /// d'arriver (et joue le son de réception), garde ceux qui viennent de disparaître le
+  /// temps de leur dissolution.
+  Set<String> _track(List<ChatMessage> visible, String query, String? me) {
+    final ids = {for (final m in visible) m.id};
+    final appearing = <String>{};
+    if (!_seeded) {
+      _seen.addAll(ids);
+      _seeded = true;
+    } else {
+      for (final m in visible) {
+        if (_seen.add(m.id) && m.senderId != me && !m.isSystem) appearing.add(m.id);
+      }
+      if (query.isEmpty && _shownQuery.isEmpty) {
+        final gone =
+            _shown
+                .where((m) => !ids.contains(m.id) && !m.isSystem && !_ghosts.containsKey(m.id))
+                .toList()
+              ..sort((a, b) => b.sentAt.compareTo(a.sentAt));
+        final cascade = gone.length >= 3;
+        for (final (i, m) in gone.take(40).indexed) {
+          _ghosts[m.id] = (m, cascade ? i : 0);
+        }
+      }
+    }
+    _shown = visible;
+    _shownQuery = query;
+    if (appearing.isNotEmpty && ref.read(chatOnScreenProvider) == widget.conversationId) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref.read(feedbackProvider).sound(PrivioSound.received),
+      );
+    }
+    return appearing;
+  }
+
+  /// Photo à côté des messages reçus : celle du contact, ou celle du membre du groupe.
+  ({String name, String? path, String seed})? _avatarOf(
+    String senderId,
+    ConversationSummary? summary,
+    List<GroupMember> members,
+  ) {
+    if (summary == null) return null;
+    if (!summary.isGroup) {
+      return (name: summary.title, path: summary.peerAvatarPath, seed: summary.peerId ?? senderId);
+    }
+    final m = members.where((x) => x.userId == senderId).firstOrNull;
+    return (name: m?.displayName ?? '?', path: m?.avatarPath, seed: senderId);
+  }
 
   /// Lot 7.1b : personnes choisies dans la liste « @ » (identifiant → nom inséré).
   final _mentionPicks = <String, String>{};
@@ -173,6 +233,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final mentions = mentionedIds(text, _mentionPicks);
       _mentionPicks.clear();
       setState(() => _nextTtl = null);
+      ref.read(feedbackProvider).sound(PrivioSound.sent);
       await _guard(
         () => _chat.send(text, replyToId: replyTo?.id, ttlSeconds: ttl, mentions: mentions),
       );
@@ -270,6 +331,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _replyTo = null;
         _nextTtl = null;
       });
+      ref.read(feedbackProvider).sound(PrivioSound.sent);
       // Un message par photo ; un échec n'empêche pas les suivantes (« Non envoyé »).
       for (final (i, d) in drafts.indexed) {
         await _chat.sendPhoto(
@@ -304,6 +366,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   // ---------------------------------------------------------------- vocaux
   Future<void> _startVoice({required bool locked}) async {
     FocusScope.of(context).unfocus();
+    ref.read(feedbackProvider)
+      ..sound(PrivioSound.voiceStart)
+      ..haptic(Haptic.medium);
     try {
       final permission = await _voice.start(locked: locked);
       if (!mounted) return;
@@ -324,6 +389,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _afterVoiceStop(VoiceStopResult result) {
     if (!mounted) return;
+    ref.read(feedbackProvider).sound(PrivioSound.voiceStop);
     if (result == VoiceStopResult.tooShort) {
       _toast(const AppFailure(FailureCode.voiceTooShort).message);
     } else if (result == VoiceStopResult.failed) {
@@ -362,6 +428,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _replyTo = null;
       _nextTtl = null;
     });
+    ref.read(feedbackProvider).sound(PrivioSound.sent);
     await _guard(
       () => _chat.sendVoice(
         preview.audio,
@@ -376,6 +443,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Bouton de droite : envoyer (texte saisi ou modification), micro (champ vide),
   /// ou arrêter (enregistrement verrouillé). Le micro garde la même place pendant un
   /// enregistrement maintenu, pour ne pas interrompre le geste.
+  String _trailingKind(TextEditingValue value, VoiceRecState rec) {
+    if (rec is VoiceRecording && rec.locked) return 'stop';
+    if (rec is VoiceRecording || (value.text.trim().isEmpty && _editing == null)) return 'mic';
+    return _editing != null ? 'edit' : 'send';
+  }
+
   Widget _trailing(TextEditingValue value, VoiceRecState rec, bool dark) {
     if (rec is VoiceRecording && rec.locked) {
       return SizedBox(
@@ -426,8 +499,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Double appui : réaction par défaut (réglable) ; un second double appui la retire.
   Future<void> _quickReact(ChatMessage m) async {
     if (m.isDeleted || m.isSystem) return;
-    unawaited(HapticFeedback.lightImpact());
     final emoji = ref.read(quickReactionProvider).value ?? '❤️';
+    // Lot 7.2b2 : l'émoji s'envole au-dessus de la bulle.
+    showReactionBurst(context, _messageKeys[m.id], emoji);
+    ref.read(feedbackProvider)
+      ..haptic(Haptic.light)
+      ..sound(PrivioSound.reaction);
     await _guard(() => _chat.toggleReaction(m.id, emoji));
   }
 
@@ -466,14 +543,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
     if (choice == 'me') await _guard(() => _chat.deleteForMe(m.id));
-    if (choice == 'all') await _guard(() => _chat.deleteForEveryone(m.id));
+    if (choice == 'all') {
+      ref.read(feedbackProvider).sound(PrivioSound.deletedForAll);
+      await _guard(() => _chat.deleteForEveryone(m.id));
+    }
   }
 
   /// Vider la discussion (lot 4.3) : chez moi, ou pour tout le monde (1:1 : avec l'accord
   /// de l'autre ; groupe : administrateurs).
   /// Lot 7.2a : même parcours que depuis la fiche (choix, confirmation, vidage).
   Future<void> _chooseClear(ConversationSummary s) async {
-    final r = await chooseClear(context, ref, s);
+    final r = await chooseClear(context, ref, s, sweep: false);
     if (r != null && mounted) await _afterClear();
   }
 
@@ -623,6 +703,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
     if (action == null || !mounted) return;
     if (action.startsWith('react:')) {
+      ref.read(feedbackProvider).sound(PrivioSound.reaction);
       await _guard(() => _chat.toggleReaction(m.id, action.substring(6)));
     } else if (action == 'reply') {
       _startReply(m);
@@ -666,7 +747,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
       );
-      if (ok == true) await _guard(() => _chat.deleteForEveryone(m.id));
+      if (ok == true) {
+        ref.read(feedbackProvider).sound(PrivioSound.deletedForAll);
+        await _guard(() => _chat.deleteForEveryone(m.id));
+      }
     }
   }
 
@@ -710,6 +794,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final mentionMembers = isGroup
         ? ref.watch(mentionMembersProvider(widget.conversationId)).value ?? const <GroupMember>[]
         : const <GroupMember>[];
+    // Lot 7.2b2 : messages affichés, nouveaux (fondu) et disparus (dissolution).
+    final visible = chat.value?.messages
+        .where((m) => m.isVisibleAt(now))
+        .where(
+          (m) =>
+              query.isEmpty ||
+              (!m.isDeleted && !m.isSystem && (m.body ?? '').toLowerCase().contains(query)),
+        )
+        .toList();
+    final appearing = visible == null ? const <String>{} : _track(visible, query, me);
     _voice.onAutoStop = _afterVoiceStop;
     _voice.onNearEnd = () => unawaited(HapticFeedback.mediumImpact());
 
@@ -803,13 +897,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             children: [
                               Text(title, overflow: TextOverflow.ellipsis),
                               if (typing)
-                                Text(
-                                  isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
-                                  key: const Key('chat.typing'),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: p.onHeaderMuted,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                                // Lot 7.2b2 : trois points qui sautillent.
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TypingDots(color: p.onHeaderMuted),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        isGroup ? 'quelqu’un écrit…' : 'en train d’écrire…',
+                                        key: const Key('chat.typing'),
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: p.onHeaderMuted,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 )
                               else if (isGroup)
                                 Text(
@@ -855,16 +960,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: switch (chat) {
                 AsyncData(:final value) => _MessageList(
-                  messages: value.messages
-                      .where((m) => m.isVisibleAt(now))
-                      .where(
-                        (m) =>
-                            query.isEmpty ||
-                            (!m.isDeleted &&
-                                !m.isSystem &&
-                                (m.body ?? '').toLowerCase().contains(query)),
-                      )
-                      .toList(),
+                  messages: visible!,
+                  ghosts: [for (final g in _ghosts.values) g],
+                  onGhostGone: (id) {
+                    if (mounted) setState(() => _ghosts.remove(id));
+                  },
+                  appearing: appearing,
+                  avatarOf: (id) => _avatarOf(id, summary, mentionMembers),
                   searching: query.isNotEmpty,
                   offline: offline,
                   pending: query.isEmpty ? value.pending : const [],
@@ -880,7 +982,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   scrollController: _listScroll,
                   messageKeys: _messageKeys,
                   highlightedId: _highlightedId,
-                  onReactionTap: (m, emoji) => _guard(() => _chat.toggleReaction(m.id, emoji)),
+                  onReactionTap: (m, emoji) {
+                    ref.read(feedbackProvider).sound(PrivioSound.reaction);
+                    unawaited(_guard(() => _chat.toggleReaction(m.id, emoji)));
+                  },
                   onVoiceError: (f) => _toast(f.message),
                   onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
                   ttlSeconds: summary?.ttlSeconds ?? 259200,
@@ -893,7 +998,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   message: toAppFailure(error).message,
                   onRetry: () => ref.invalidate(chatProvider(widget.conversationId)),
                 ),
-                _ => const LoadingView(),
+                _ => const SkeletonList(bubbles: true, rows: 6),
               },
             ),
             if (chat case AsyncError(:final error)
@@ -988,8 +1093,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
                   trailing: ValueListenableBuilder<TextEditingValue>(
                     valueListenable: _composer,
-                    builder: (context, value, _) =>
-                        _trailing(value, voice, Theme.of(context).brightness == Brightness.dark),
+                    // Lot 7.2b2 : le micro se change en bouton d'envoi (et inversement).
+                    builder: (context, value, _) => AnimatedSwitcher(
+                      duration: Motion.of(context, Motion.fast),
+                      transitionBuilder: (child, a) => FadeTransition(
+                        opacity: a,
+                        child: ScaleTransition(
+                          scale: Tween(begin: 0.6, end: 1.0).animate(a),
+                          child: RotationTransition(
+                            turns: Tween(begin: -0.08, end: 0.0).animate(a),
+                            child: child,
+                          ),
+                        ),
+                      ),
+                      child: KeyedSubtree(
+                        key: ValueKey(_trailingKind(value, voice)),
+                        child: _trailing(
+                          value,
+                          voice,
+                          Theme.of(context).brightness == Brightness.dark,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -1043,12 +1168,27 @@ class _MessageList extends StatelessWidget {
     this.isGroup = false,
     this.highlightedId,
     this.memberNames = const {},
+    this.ghosts = const [],
+    this.onGhostGone,
+    this.appearing = const {},
+    this.avatarOf,
   });
 
   final bool isGroup;
 
   /// Noms des membres (identifiant → nom) pour mettre en valeur les @mentions.
   final Map<String, String> memberNames;
+
+  /// Lot 7.2b2 : messages qui viennent de disparaître (expirés, vidés, supprimés chez
+  /// moi), affichés le temps de leur dissolution ; avec leur ordre dans la cascade.
+  final List<(ChatMessage, int)> ghosts;
+  final void Function(String id)? onGhostGone;
+
+  /// Messages reçus à l'instant : ils apparaissent en fondu.
+  final Set<String> appearing;
+
+  /// Photo de l'auteur d'un message reçu (null : pas de photo à côté des messages).
+  final ({String name, String? path, String seed})? Function(String senderId)? avatarOf;
   final ScrollController scrollController;
 
   /// Une clé par message, gardée par l'écran (les clés « objet » comparent l'identité,
@@ -1085,7 +1225,7 @@ class _MessageList extends StatelessWidget {
         message: 'La recherche porte sur les messages encore présents sur ce téléphone.',
       );
     }
-    if (messages.isEmpty && pending.isEmpty) {
+    if (messages.isEmpty && pending.isEmpty && ghosts.isEmpty) {
       return EmptyView(
         icon: Icons.timer_outlined,
         title: 'Aucun message',
@@ -1094,13 +1234,21 @@ class _MessageList extends StatelessWidget {
     }
     final items = <Widget>[];
     String? lastDay;
-    for (final m in messages) {
+    final error = Theme.of(context).colorScheme.error;
+    // Lot 7.2b2 : les messages en train de disparaître restent à leur place le temps de
+    // se dissoudre.
+    final ghostOrder = {for (final (g, i) in ghosts) g.id: i};
+    final entries = [...messages, for (final (g, _) in ghosts) g]
+      ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+    for (final (index, m) in entries.indexed) {
+      final ghost = ghostOrder[m.id];
       final day = dayLabel(m.sentAt, now);
       if (day != lastDay) {
         items.add(_DayChip(label: day));
         lastDay = day;
       }
       if (m.isSystem) {
+        if (ghost != null) continue;
         final ttl = m.systemTtlSeconds;
         if (ttl != null) {
           final who = m.senderId == me ? 'Vous avez' : '${m.senderName ?? peerName} a';
@@ -1117,7 +1265,82 @@ class _MessageList extends StatelessWidget {
         }
         continue;
       }
-      final error = Theme.of(context).colorScheme.error;
+      final outgoing = m.senderId == me;
+      // Photo de l'auteur : à côté du dernier message d'une suite du même auteur.
+      final next = index + 1 < entries.length ? entries[index + 1] : null;
+      final prev = index > 0 ? entries[index - 1] : null;
+      // Dans un groupe, le nom de l'auteur en tête de sa suite seulement.
+      final firstOfRun =
+          prev == null ||
+          prev.isSystem ||
+          prev.senderId != m.senderId ||
+          dayLabel(prev.sentAt, now) != day;
+      final lastOfRun =
+          next == null ||
+          next.isSystem ||
+          next.senderId != m.senderId ||
+          dayLabel(next.sentAt, now) != day;
+      final who = outgoing || avatarOf == null ? null : avatarOf!(m.senderId ?? '');
+      final bubble = _Bubble(
+        key: ghost == null ? Key('message.${m.id}') : null,
+        // Pas de double appui sur un vocal : il retarderait de 300 ms ses boutons
+        // (lecture, vitesse) ; on y réagit par l'appui long.
+        onDoubleTap: ghost != null || m.isDeleted || m.hasPlayableVoice
+            ? null
+            : () => onDoubleTap(m),
+        onQuoteTap: m.replyToId == null ? null : () => onQuoteTap(m.replyToId!),
+        outgoing: outgoing,
+        sender: isGroup && !outgoing && firstOfRun ? (m.senderName ?? 'Ancien membre') : null,
+        text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
+        mentions: {for (final id in m.mentions) ?memberNames[id]: id == me},
+        content: m.hasPlayableVoice
+            ? VoiceMessageContent(message: m, outgoing: outgoing, onError: onVoiceError)
+            : m.hasViewablePhoto
+            ? PhotoMessageContent(
+                photo: PhotoRef.message(m),
+                width: m.width,
+                height: m.height,
+                outgoing: outgoing,
+                caption: m.body,
+                onOpen: (bytes) => onOpenPhoto(m, bytes),
+              )
+            : null,
+        italic: m.isDeleted,
+        quote: m.isDeleted ? null : quoteLabel(m.replyKind, m.replyPreview),
+        time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
+        edited: m.editedAt != null && !m.isDeleted,
+        remaining: formatRemaining(m.expiresAt, now: now),
+        delivery: outgoing && !m.isDeleted ? deliveryOf(m, summary) : null,
+        reactions: m.reactions,
+        me: me,
+        onLongPress: ghost == null ? () => onLongPress(m) : null,
+        onReactionTap: ghost == null ? (emoji) => onReactionTap(m, emoji) : null,
+        avatar: who == null
+            ? null
+            : (lastOfRun
+                  ? UserAvatar(
+                      key: Key('message.avatar.${m.id}'),
+                      name: who.name,
+                      avatarPath: who.path,
+                      seed: who.seed,
+                      radius: 14,
+                    )
+                  : const SizedBox.shrink()),
+      );
+      if (ghost != null) {
+        items.add(
+          IgnorePointer(
+            key: ValueKey('ghost.${m.id}'),
+            child: DissolveOut(
+              // Discussion vidée : cascade du plus récent au plus ancien.
+              delay: Duration(milliseconds: 45 * ghost),
+              onDone: () => onGhostGone?.call(m.id),
+              child: bubble,
+            ),
+          ),
+        );
+        continue;
+      }
       items.add(
         AnimatedContainer(
           key: messageKeys.putIfAbsent(m.id, GlobalKey.new),
@@ -1142,42 +1365,13 @@ class _MessageList extends StatelessWidget {
               color: error,
               onTriggered: () => onSwipeDelete(m),
             ),
-            child: _Bubble(
-              key: Key('message.${m.id}'),
-              // Pas de double appui sur un vocal : il retarderait de 300 ms ses boutons
-              // (lecture, vitesse) ; on y réagit par l'appui long.
-              onDoubleTap: m.isDeleted || m.hasPlayableVoice ? null : () => onDoubleTap(m),
-              onQuoteTap: m.replyToId == null ? null : () => onQuoteTap(m.replyToId!),
-              outgoing: m.senderId == me,
-              sender: isGroup && m.senderId != me ? (m.senderName ?? 'Ancien membre') : null,
-              text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
-              mentions: {for (final id in m.mentions) ?memberNames[id]: id == me},
-              content: m.hasPlayableVoice
-                  ? VoiceMessageContent(
-                      message: m,
-                      outgoing: m.senderId == me,
-                      onError: onVoiceError,
-                    )
-                  : m.hasViewablePhoto
-                  ? PhotoMessageContent(
-                      photo: PhotoRef.message(m),
-                      width: m.width,
-                      height: m.height,
-                      outgoing: m.senderId == me,
-                      caption: m.body,
-                      onOpen: (bytes) => onOpenPhoto(m, bytes),
-                    )
-                  : null,
-              italic: m.isDeleted,
-              quote: m.isDeleted ? null : quoteLabel(m.replyKind, m.replyPreview),
-              time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
-              edited: m.editedAt != null && !m.isDeleted,
-              remaining: formatRemaining(m.expiresAt, now: now),
-              delivery: m.senderId == me && !m.isDeleted ? deliveryOf(m, summary) : null,
-              reactions: m.reactions,
-              me: me,
-              onLongPress: () => onLongPress(m),
-              onReactionTap: (emoji) => onReactionTap(m, emoji),
+            // Lot 7.2b2 : message reçu à l'instant (fondu) ; supprimé pour tout le monde
+            // (la bulle se froisse).
+            child: AppearIn(
+              animate: appearing.contains(m.id),
+              offset: const Offset(-0.04, 0.1),
+              scale: 0.96,
+              child: CrumpleSwitch(deleted: m.isDeleted, child: bubble),
             ),
           ),
         ),
@@ -1185,26 +1379,31 @@ class _MessageList extends StatelessWidget {
     }
     for (final pm in pending) {
       items.add(
-        _Bubble(
-          key: Key('pending.${pm.clientId}'),
-          outgoing: true,
-          text: pm.body,
-          content: pm.isVoice
-              ? PendingVoiceContent(durationMs: pm.durationMs)
-              : pm.isPhoto
-              ? PhotoMessageContent(
-                  photo: PhotoRef.pending(pm.clientId),
-                  width: pm.width,
-                  height: pm.height,
-                  outgoing: true,
-                  caption: pm.body,
-                )
-              : null,
-          status: pm.failed
-              ? 'Non envoyé · Toucher pour réessayer'
-              : (offline ? 'En attente de réseau' : 'Envoi…'),
-          failed: pm.failed,
-          onTap: () => onRetry(pm),
+        // Lot 7.2b2 : la bulle monte depuis la zone de saisie.
+        AppearIn(
+          key: ValueKey('pending-in.${pm.clientId}'),
+          offset: const Offset(0.05, 0.6),
+          child: _Bubble(
+            key: Key('pending.${pm.clientId}'),
+            outgoing: true,
+            text: pm.body,
+            content: pm.isVoice
+                ? PendingVoiceContent(durationMs: pm.durationMs)
+                : pm.isPhoto
+                ? PhotoMessageContent(
+                    photo: PhotoRef.pending(pm.clientId),
+                    width: pm.width,
+                    height: pm.height,
+                    outgoing: true,
+                    caption: pm.body,
+                  )
+                : null,
+            status: pm.failed
+                ? 'Non envoyé · Toucher pour réessayer'
+                : (offline ? 'En attente de réseau' : 'Envoi…'),
+            failed: pm.failed,
+            onTap: () => onRetry(pm),
+          ),
         ),
       );
     }
@@ -1419,10 +1618,15 @@ class _Bubble extends StatelessWidget {
     this.onLongPress,
     this.onReactionTap,
     this.mentions = const {},
+    this.avatar,
   });
 
   final bool outgoing;
   final String text;
+
+  /// Lot 7.2b2 : photo de l'auteur à gauche d'un message reçu (vide : place gardée pour
+  /// aligner les messages d'une même suite) ; null : pas de colonne de photo.
+  final Widget? avatar;
 
   /// Lot 7.1b : noms mentionnés dans [text] (vrai : c'est moi).
   final Map<String, bool> mentions;
@@ -1604,30 +1808,46 @@ class _Bubble extends StatelessWidget {
       ),
     );
 
+    final body = ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * 0.8 - (avatar == null ? 0 : 34),
+      ),
+      child: Padding(
+        // Réaction présente : sa place est réservée DANS la zone de la bulle (sinon
+        // elle serait visible mais impossible à toucher) ; elle ne recouvre ni le
+        // texte, ni le message suivant.
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: counts.isEmpty
+            ? bubble
+            : Stack(
+                children: [
+                  Padding(padding: const EdgeInsets.only(bottom: 14), child: bubble),
+                  Positioned(
+                    bottom: 0,
+                    left: outgoing ? 10 : null,
+                    right: outgoing ? null : 10,
+                    child: _ReactionPill(counts: counts, mine: mine, onTap: onReactionTap),
+                  ),
+                ],
+              ),
+      ),
+    );
     return Align(
       alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
-        child: Padding(
-          // Réaction présente : sa place est réservée DANS la zone de la bulle (sinon
-          // elle serait visible mais impossible à toucher) ; elle ne recouvre ni le
-          // texte, ni le message suivant.
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: counts.isEmpty
-              ? bubble
-              : Stack(
-                  children: [
-                    Padding(padding: const EdgeInsets.only(bottom: 14), child: bubble),
-                    Positioned(
-                      bottom: 0,
-                      left: outgoing ? 10 : null,
-                      right: outgoing ? null : 10,
-                      child: _ReactionPill(counts: counts, mine: mine, onTap: onReactionTap),
-                    ),
-                  ],
+      child: avatar == null
+          ? body
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(bottom: counts.isEmpty ? 4 : 18),
+                  child: SizedBox(width: 28, child: avatar),
                 ),
-        ),
-      ),
+                const SizedBox(width: 6),
+                Flexible(child: body),
+              ],
+            ),
     );
   }
 }
@@ -1651,34 +1871,38 @@ class _ReactionPill extends StatelessWidget {
         for (final e in counts.entries)
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: Semantics(
-              button: true,
-              label: e.key == mine ? 'Retirer ma réaction ${e.key}' : 'Réagir ${e.key}',
-              child: GestureDetector(
-                key: Key('reaction.${e.key}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap == null ? null : () => onTap!(e.key),
-                child: Container(
-                  height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: e.key == mine
-                        ? Color.alphaBlend(p.accentText.withValues(alpha: 0.18), p.sheet)
-                        : (dark ? p.field : p.sheet),
-                    borderRadius: BorderRadius.circular(11),
-                    boxShadow: [
-                      BoxShadow(
-                        color: PrivioColors.navy.withValues(alpha: dark ? 0.4 : 0.14),
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
+            // Lot 7.2b2 : la réaction « pop » quand elle apparaît ou change de nombre.
+            child: PopOnChange(
+              value: '${e.key}${e.value}',
+              child: Semantics(
+                button: true,
+                label: e.key == mine ? 'Retirer ma réaction ${e.key}' : 'Réagir ${e.key}',
+                child: GestureDetector(
+                  key: Key('reaction.${e.key}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onTap == null ? null : () => onTap!(e.key),
+                  child: Container(
+                    height: 22,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: e.key == mine
+                          ? Color.alphaBlend(p.accentText.withValues(alpha: 0.18), p.sheet)
+                          : (dark ? p.field : p.sheet),
+                      borderRadius: BorderRadius.circular(11),
+                      boxShadow: [
+                        BoxShadow(
+                          color: PrivioColors.navy.withValues(alpha: dark ? 0.4 : 0.14),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: ExcludeSemantics(
+                      child: Text(
+                        e.value > 1 ? '${e.key} ${e.value}' : e.key,
+                        style: const TextStyle(fontSize: 12, height: 1.1),
                       ),
-                    ],
-                  ),
-                  child: ExcludeSemantics(
-                    child: Text(
-                      e.value > 1 ? '${e.key} ${e.value}' : e.key,
-                      style: const TextStyle(fontSize: 12, height: 1.1),
                     ),
                   ),
                 ),
@@ -1704,9 +1928,14 @@ class _DeliveryIcon extends StatelessWidget {
       Delivery.delivered => (Icons.done_all, 'Reçu', color),
       Delivery.read => (Icons.done_all, 'Lu', readColor),
     };
+    // Lot 7.2b2 : les coches se dessinent quand l'état change.
     return Semantics(
       label: label,
-      child: Icon(icon, key: Key('delivery.${delivery.name}'), size: 14, color: tint),
+      child: AnimatedTicks(
+        key: Key('delivery.${delivery.name}'),
+        twice: icon == Icons.done_all,
+        color: tint,
+      ),
     );
   }
 }

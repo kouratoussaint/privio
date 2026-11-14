@@ -24,6 +24,8 @@ import '../conversations/conversation_details.dart';
 import '../conversations/contact_screen.dart';
 import '../conversations/report_sheet.dart';
 import '../../core/widgets/settings_card.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -234,9 +236,10 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
           );
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
+      ref.read(feedbackProvider).sound(PrivioSound.success);
       context.pushReplacement(Routes.chat(id));
       messenger.showSnackBar(
-        SnackBar(key: const Key('group.created'), content: Text(createdGroupMessage(invited))),
+        successSnack(createdGroupMessage(invited), key: const Key('group.created')),
       );
     } on Object catch (e) {
       if (mounted) _toast(context, toAppFailure(e).message);

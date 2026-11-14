@@ -18,6 +18,8 @@ import '../../core/widgets/state_views.dart';
 import '../../core/widgets/swipe_actions.dart';
 import '../conversations/connection_requests_screen.dart' show ConnectionRequestsBanner;
 import '../conversations/conversation_details.dart';
+import '../../core/motion/motion.dart';
+import '../../core/motion/illustrations.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -175,7 +177,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
             ),
           ),
           const SizedBox(height: PrivioSpacing.s),
-          if (offline) const OfflineBanner(),
+          AnimatedOfflineBanner(offline: offline),
           // Lot 4.7 : demandes de connexion reçues (ou refus récents) en tête de liste.
           const ConnectionRequestsBanner(),
           if (archivedCount > 0)
@@ -203,7 +205,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
                 message: toAppFailure(error).message,
                 onRetry: () => ref.invalidate(conversationsProvider),
               ),
-              _ => const LoadingView(),
+              _ => const SkeletonList(),
             },
           ),
         ],
@@ -431,6 +433,30 @@ class _List extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lot 7.2b2 : le bandeau « hors connexion » glisse en place puis se retire.
+class AnimatedOfflineBanner extends StatelessWidget {
+  const AnimatedOfflineBanner({super.key, required this.offline, this.top = 0});
+
+  final bool offline;
+  final double top;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: Motion.of(context, Motion.medium),
+    transitionBuilder: (child, a) => SizeTransition(
+      sizeFactor: CurvedAnimation(parent: a, curve: Motion.enter),
+      child: FadeTransition(opacity: a, child: child),
+    ),
+    child: offline
+        ? Padding(
+            key: const ValueKey('offline'),
+            padding: EdgeInsets.only(top: top),
+            child: const OfflineBanner(),
+          )
+        : const SizedBox(key: ValueKey('online'), width: double.infinity),
+  );
 }
 
 /// Hors connexion : les discussions enregistrées sur le téléphone restent lisibles.

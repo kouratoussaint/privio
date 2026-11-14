@@ -15,6 +15,8 @@ import '../../../state/session_controller.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../conversations/conversation_details.dart' show FicheAvatar;
+import '../../core/widgets/success_snack.dart';
+import '../../../state/feedback_providers.dart';
 
 /// Lot 7.2a — « Ma fiche » (Paramètres → ligne du profil) : comme la fiche d'un contact,
 /// mais modifiable : photo (prendre, choisir, retirer, voir en grand), nom, À propos.
@@ -142,7 +144,8 @@ Future<void> editMyName(BuildContext context, WidgetRef ref, String current) asy
   try {
     await ref.read(accountApiProvider).setDisplayName(text);
     await ref.read(sessionControllerProvider.notifier).refreshAccount();
-    messenger.showSnackBar(const SnackBar(content: Text('Nom enregistré.')));
+    ref.read(feedbackProvider).sound(PrivioSound.success);
+    messenger.showSnackBar(successSnack('Nom enregistré.'));
   } on Object catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
   }
@@ -216,7 +219,7 @@ Future<void> editMyAbout(BuildContext context, WidgetRef ref, String? current) a
     await ref.read(accountApiProvider).setAbout(text);
     await ref.read(sessionControllerProvider.notifier).refreshAccount();
     messenger.showSnackBar(
-      SnackBar(content: Text(text.trim().isEmpty ? 'À propos retiré.' : 'À propos enregistré.')),
+      successSnack(text.trim().isEmpty ? 'À propos retiré.' : 'À propos enregistré.'),
     );
   } on Object catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
@@ -276,11 +279,10 @@ Future<void> editMyAvatar(BuildContext context, WidgetRef ref, {required bool ha
       countDataW(ref, sent: photo.bytes.length);
     }
     await ref.read(sessionControllerProvider.notifier).refreshAccount();
+    ref.read(feedbackProvider).sound(PrivioSound.success);
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          choice == 'remove' ? 'Photo de profil retirée.' : 'Photo de profil mise à jour.',
-        ),
+      successSnack(
+        choice == 'remove' ? 'Photo de profil retirée.' : 'Photo de profil mise à jour.',
       ),
     );
   } on Object catch (e) {
