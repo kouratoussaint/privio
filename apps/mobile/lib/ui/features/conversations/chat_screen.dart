@@ -38,6 +38,8 @@ import '../../core/motion/illustrations.dart';
 import 'message_extras.dart';
 import 'expression_panel.dart';
 import '../settings/wallpaper.dart';
+import 'rich_messages.dart';
+import 'gif_picker.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -115,6 +117,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
     ref.read(feedbackProvider).sound(PrivioSound.sent);
     await _guard(() => _chat.sendSticker(s.id, replyToId: replyTo?.id, ttlSeconds: ttl));
+  }
+
+  /// Lot 7.3b : GIF choisi dans la recherche.
+  Future<void> _sendGif(GifResult g) async {
+    final replyTo = _replyTo;
+    final ttl = _nextTtl;
+    setState(() {
+      _replyTo = null;
+      _nextTtl = null;
+    });
+    ref.read(feedbackProvider).sound(PrivioSound.sent);
+    await _guard(() => _chat.sendGif(g, replyToId: replyTo?.id, ttlSeconds: ttl));
   }
 
   // Lot 7.2c2 : sélection multiple, bandeau des épinglés, retour depuis les favoris.
@@ -624,6 +638,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           caption: d.caption,
           replyToId: i == 0 ? replyTo?.id : null,
           ttlSeconds: ttl,
+          viewOnce: d.viewOnce,
         );
       }
     } on Object catch (e) {
@@ -632,6 +647,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (mounted && _preparingPhoto) setState(() => _preparingPhoto = false);
       if (mounted) ref.invalidate(photoQuotaProvider);
     }
+  }
+
+  /// Lot 7.3b : ouvrir une photo / un vocal en vue unique, puis le refermer pour de bon.
+  String? _openingViewOnce;
+
+  Future<void> _openViewOnce(ChatMessage m, String? peerName) async {
+    if (_openingViewOnce != null) return;
+    setState(() => _openingViewOnce = m.id);
+    Uint8List bytes;
+    try {
+      bytes = await _chat.openViewOnce(m);
+    } on Object catch (e) {
+      if (mounted) {
+        setState(() => _openingViewOnce = null);
+        _toast(toAppFailure(e).message);
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _openingViewOnce = null);
+    if (m.kind == 'voice') {
+      await showViewOnceVoice(context, bytes);
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              ViewOncePhotoScreen(bytes: bytes, title: m.senderName ?? peerName ?? 'Photo'),
+        ),
+      );
+    }
+    await _chat.closeViewOnce(m.id);
   }
 
   void _openPhoto(ChatMessage m, Uint8List bytes, String? peerName) {
@@ -704,14 +750,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (open == true) await openMicrophoneSettings();
   }
 
+  /// Lot 7.3b : le prochain vocal part en vue unique.
+  bool _voiceOnce = false;
+
   Future<void> _sendVoice() async {
     final preview = await _voice.take();
     if (preview == null || !mounted) return;
     final replyTo = _replyTo;
     final ttl = _nextTtl;
+    final once = _voiceOnce;
     setState(() {
       _replyTo = null;
       _nextTtl = null;
+      _voiceOnce = false;
     });
     ref.read(feedbackProvider).sound(PrivioSound.sent);
     await _guard(
@@ -721,6 +772,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         waveform: preview.waveform,
         replyToId: replyTo?.id,
         ttlSeconds: ttl,
+        viewOnce: once,
       ),
     );
   }
@@ -1403,6 +1455,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           },
                           onVoiceError: (f) => _toast(f.message),
                           onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
+                          onOpenViewOnce: (m) => unawaited(_openViewOnce(m, summary?.title)),
+                          openingViewOnce: _openingViewOnce,
                           ttlSeconds: summary?.ttlSeconds ?? 259200,
                           peerName: summary?.title ?? 'Votre contact',
                           onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
@@ -1465,6 +1519,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ChatMessage(isVoice: true, :final durationMs) =>
                         'Message vocal (${formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))})',
                       ChatMessage(isPhoto: true, :final body) => quoteLabel('photo', body)!,
+                      ChatMessage(isGif: true) => 'GIF',
+                      ChatMessage(isSticker: true, :final body) => quoteLabel('sticker', body)!,
                       final m => m.body ?? '',
                     },
                     onCancel: () => setState(() {
@@ -1501,6 +1557,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     preview: voice,
                     onSend: _sendVoice,
                     onError: (f) => _toast(f.message),
+                    viewOnce: _voiceOnce,
+                    onViewOnce: (v) => setState(() => _voiceOnce = v),
                   )
                 else
                   _Composer(
@@ -1553,6 +1611,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ExpressionPanel(
                     controller: _composer,
                     onSticker: (s) => unawaited(_sendSticker(s)),
+                    onGif: (g) => unawaited(_sendGif(g)),
                     height: _panelHeight(context),
                   ),
               ],
@@ -1570,6 +1629,7 @@ String? quoteLabel(String? kind, String? preview) => switch (kind) {
   'sticker' =>
     'Autocollant${stickerOf(preview) == null ? '' : ' «\u202F${stickerOf(preview)!.label}\u202F»'}',
   'photo' => preview == null || preview.isEmpty ? '📷 Photo' : '📷 $preview',
+  'gif' => 'GIF',
   _ => preview,
 };
 
@@ -1618,7 +1678,13 @@ class _MessageList extends StatelessWidget {
     this.appearing = const {},
     this.avatarOf,
     this.unreadMarker,
+    this.onOpenViewOnce,
+    this.openingViewOnce,
   });
+
+  /// Lot 7.3b : ouvrir une photo ou un vocal reçu en vue unique.
+  final void Function(ChatMessage m)? onOpenViewOnce;
+  final String? openingViewOnce;
 
   /// Lot 7.2c1 : premier message non lu à l'ouverture, et nombre de non lus.
   final (String, int)? unreadMarker;
@@ -1754,8 +1820,22 @@ class _MessageList extends StatelessWidget {
         // Lot 7.3a : autocollant, ou grands émojis.
         bare: !m.isDeleted && (m.isSticker || (m.kind == 'text' && isJumboEmoji(m.body))),
         jumbo: !m.isDeleted && m.kind == 'text' && m.mentions.isEmpty && isJumboEmoji(m.body),
+        // Lot 7.3b : aperçu du lien au-dessus du texte.
+        attachment: m.linkPreview != null && !m.isDeleted
+            ? LinkPreviewCard(preview: m.linkPreview!, outgoing: outgoing)
+            : null,
         content: m.isSticker && !m.isDeleted
             ? StickerImage(id: m.body, size: 140)
+            : m.viewOnce && !m.isDeleted
+            ? ViewOnceContent(
+                message: m,
+                outgoing: outgoing,
+                isGroup: isGroup,
+                opening: openingViewOnce == m.id,
+                onOpen: ghost == null && onOpenViewOnce != null ? () => onOpenViewOnce!(m) : null,
+              )
+            : m.isGif && !m.isDeleted
+            ? GifImage(message: m)
             : m.hasPlayableVoice
             ? VoiceMessageContent(message: m, outgoing: outgoing, onError: onVoiceError)
             : m.hasViewablePhoto
@@ -1867,6 +1947,10 @@ class _MessageList extends StatelessWidget {
             bare: pm.isSticker,
             content: pm.isSticker
                 ? StickerImage(id: pm.body, size: 140)
+                : pm.viewOnce
+                ? PendingViewOnceContent(voice: pm.isVoice)
+                : pm.isGif
+                ? const PendingGifContent()
                 : pm.isVoice
                 ? PendingVoiceContent(durationMs: pm.durationMs)
                 : pm.isPhoto
@@ -2103,7 +2187,11 @@ class _Bubble extends StatelessWidget {
     this.favorite = false,
     this.bare = false,
     this.jumbo = false,
+    this.attachment,
   });
+
+  /// Lot 7.3b : aperçu d'un lien, au-dessus du texte.
+  final Widget? attachment;
 
   /// Lot 7.3a : autocollant ou grands émojis : sans fond de bulle (heure dans une pastille).
   final bool bare;
@@ -2233,6 +2321,7 @@ class _Bubble extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ?attachment,
                   Align(
                     alignment: Alignment.centerLeft,
                     widthFactor: 1,

@@ -13,6 +13,7 @@ import '../../../domain/models/messaging.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
 import 'photo_editor.dart';
+import 'rich_messages.dart';
 
 /// Largeur d'une photo dans une bulle ; la hauteur suit les proportions (bornées).
 const double kPhotoBubbleWidth = 236;
@@ -323,10 +324,13 @@ const kMaxPhotosPerPick = 5;
 
 /// Une photo prête à partir, avec sa légende.
 class PhotoDraft {
-  const PhotoDraft(this.photo, this.caption);
+  const PhotoDraft(this.photo, this.caption, {this.viewOnce = false});
 
   final PreparedPhoto photo;
   final String caption;
+
+  /// Lot 7.3b : photo en vue unique (sans légende).
+  final bool viewOnce;
 }
 
 /// Aperçu avant envoi (lot 4.5 : une ou plusieurs photos). On fait défiler les photos,
@@ -346,6 +350,7 @@ class PhotoComposeScreen extends StatefulWidget {
 class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
   late final List<PreparedPhoto> _photos = [...widget.photos];
   late final List<String> _captions = List.filled(widget.photos.length, '', growable: true);
+  late final List<bool> _once = List.filled(widget.photos.length, false, growable: true);
   final _caption = TextEditingController();
   final _pages = PageController();
   int _index = 0;
@@ -368,6 +373,7 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
     setState(() {
       _photos.removeAt(i);
       _captions.removeAt(i);
+      _once.removeAt(i);
       if (_index >= _photos.length) _index = _photos.length - 1;
     });
     _caption.text = _captions[_index];
@@ -377,7 +383,8 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
   void _send() {
     _captions[_index] = _caption.text;
     Navigator.pop(context, [
-      for (final (i, p) in _photos.indexed) PhotoDraft(p, _captions[i].trim()),
+      for (final (i, p) in _photos.indexed)
+        PhotoDraft(p, _once[i] ? '' : _captions[i].trim(), viewOnce: _once[i]),
     ]);
   }
 
@@ -500,9 +507,19 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // Lot 7.3b : vue unique (une photo en vue unique n'a pas de légende).
+                  ViewOnceToggle(
+                    key: const Key('photo.compose.once'),
+                    value: _once[_index],
+                    onChanged: (v) => setState(() => _once[_index] = v),
+                    color: Colors.white,
+                    activeColor: Colors.white,
+                    onActiveColor: Colors.black,
+                  ),
                   Expanded(
                     child: TextField(
                       key: const Key('photo.caption'),
+                      enabled: !_once[_index],
                       controller: _caption,
                       minLines: 1,
                       maxLines: 4,
@@ -511,7 +528,9 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                       style: const TextStyle(color: Colors.white),
                       cursorColor: Colors.white,
                       decoration: InputDecoration(
-                        hintText: many ? 'Légende de cette photo' : 'Ajouter une légende',
+                        hintText: _once[_index]
+                            ? 'Vue unique\u202F: sans légende'
+                            : (many ? 'Légende de cette photo' : 'Ajouter une légende'),
                         hintStyle: const TextStyle(color: Colors.white60),
                         counterText: '',
                         filled: true,

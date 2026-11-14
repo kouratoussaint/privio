@@ -52,6 +52,7 @@ abstract interface class MessagingApi {
     String? replyToId,
     int? ttlSeconds,
     List<int>? waveform,
+    bool viewOnce = false,
   });
 
   /// Son d'un vocal, téléchargé du stockage privé avec le jeton de l'utilisateur
@@ -67,10 +68,32 @@ abstract interface class MessagingApi {
     String? caption,
     String? replyToId,
     int? ttlSeconds,
+    bool viewOnce = false,
   });
 
   /// Photo d'un message (stockage privé, avec le jeton ; refusée après expiration).
   Future<Uint8List> downloadPhoto(String mediaPath);
+
+  // Lot 7.3b : vue unique, GIF, aperçus des liens.
+  /// Ouvre une photo ou un vocal en vue unique (lisible 2 minutes, jusqu'à la fermeture).
+  Future<void> openViewOnce(String messageId);
+  Future<void> closeViewOnce(String messageId);
+
+  /// Recherche (ou tendances si [query] est vide) ; [filter] : « g » ou « pg13 ».
+  Future<(List<GifResult>, bool)> searchGifs(String query, {int page = 1, String filter = 'g'});
+  Future<ChatMessage> sendGif({
+    required String conversationId,
+    required String clientMsgId,
+    required String slug,
+    String? replyToId,
+    int? ttlSeconds,
+    String filter = 'g',
+  });
+  Future<Uint8List> downloadGif(String mediaPath);
+
+  /// Demande au serveur l'aperçu du premier lien de MON message (sans effet sinon).
+  Future<void> requestLinkPreview(String messageId);
+  Future<Uint8List> downloadLinkImage(String imagePath);
 
   /// Photo de profil d'une personne visible (jamais en cas de blocage).
   Future<Uint8List> downloadAvatar(String avatarPath);
@@ -357,6 +380,7 @@ class SupabaseMessagingApi implements MessagingApi {
     String? replyToId,
     int? ttlSeconds,
     List<int>? waveform,
+    bool viewOnce = false,
   }) => _guard(() async {
     final res = await _client.functions.invoke(
       'voice-send',
@@ -368,6 +392,7 @@ class SupabaseMessagingApi implements MessagingApi {
         'reply_to_id': ?replyToId,
         if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
         if (waveform != null && waveform.isNotEmpty) 'waveform': waveform.join(','),
+        if (viewOnce) 'view_once': '1',
       },
     );
     final row = Map<String, dynamic>.from(res.data as Map);
@@ -381,8 +406,9 @@ class SupabaseMessagingApi implements MessagingApi {
       sentAt: sentAt,
       expiresAt: DateTime.parse(row['expires_at'] as String),
       updatedAt: sentAt,
-      mediaPath: row['media_path'] as String?,
+      mediaPath: viewOnce ? null : row['media_path'] as String?,
       durationMs: (row['media_duration_ms'] as num?)?.toInt(),
+      viewOnce: viewOnce,
     );
   });
 
@@ -398,6 +424,7 @@ class SupabaseMessagingApi implements MessagingApi {
     String? caption,
     String? replyToId,
     int? ttlSeconds,
+    bool viewOnce = false,
   }) => _guard(() async {
     final res = await _client.functions.invoke(
       'photo-send',
@@ -406,9 +433,10 @@ class SupabaseMessagingApi implements MessagingApi {
       queryParameters: {
         'conversation_id': conversationId,
         'client_msg_id': clientMsgId,
-        if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
+        if (!viewOnce && caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
         'reply_to_id': ?replyToId,
         if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
+        if (viewOnce) 'view_once': '1',
       },
     );
     final row = Map<String, dynamic>.from(res.data as Map);
@@ -422,6 +450,73 @@ class SupabaseMessagingApi implements MessagingApi {
       sentAt: sentAt,
       expiresAt: DateTime.parse(row['expires_at'] as String),
       updatedAt: sentAt,
+      mediaPath: viewOnce ? null : row['media_path'] as String?,
+      width: (row['media_width'] as num?)?.toInt(),
+      height: (row['media_height'] as num?)?.toInt(),
+      viewOnce: viewOnce,
+    );
+  });
+
+  @override
+  Future<Uint8List> downloadPhoto(String mediaPath) =>
+      _guard(() => _client.storage.from('photos').download(mediaPath));
+
+  @override
+  Future<void> openViewOnce(String messageId) =>
+      _call('open_view_once', {'p_message_id': messageId});
+
+  @override
+  Future<void> closeViewOnce(String messageId) =>
+      _call('close_view_once', {'p_message_id': messageId});
+
+  @override
+  Future<(List<GifResult>, bool)> searchGifs(String query, {int page = 1, String filter = 'g'}) =>
+      _guard(() async {
+        final res = await _client.functions.invoke(
+          'gif-search',
+          method: HttpMethod.get,
+          queryParameters: {'q': query, 'page': '$page', 'filter': filter},
+        );
+        final data = Map<String, dynamic>.from(res.data as Map);
+        return (
+          [
+            for (final g in data['items'] as List<dynamic>? ?? const [])
+              GifResult.fromJson(Map<String, dynamic>.from(g as Map)),
+          ],
+          data['has_next'] as bool? ?? false,
+        );
+      });
+
+  @override
+  Future<ChatMessage> sendGif({
+    required String conversationId,
+    required String clientMsgId,
+    required String slug,
+    String? replyToId,
+    int? ttlSeconds,
+    String filter = 'g',
+  }) => _guard(() async {
+    final res = await _client.functions.invoke(
+      'gif-send',
+      queryParameters: {
+        'conversation_id': conversationId,
+        'client_msg_id': clientMsgId,
+        'slug': slug,
+        'filter': filter,
+        'reply_to_id': ?replyToId,
+        if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
+      },
+    );
+    final row = Map<String, dynamic>.from(res.data as Map);
+    final sentAt = DateTime.parse(row['sent_at'] as String);
+    return ChatMessage(
+      id: row['id'] as String,
+      kind: 'gif',
+      senderId: _client.auth.currentUser?.id,
+      replyToId: replyToId,
+      sentAt: sentAt,
+      expiresAt: DateTime.parse(row['expires_at'] as String),
+      updatedAt: sentAt,
       mediaPath: row['media_path'] as String?,
       width: (row['media_width'] as num?)?.toInt(),
       height: (row['media_height'] as num?)?.toInt(),
@@ -429,8 +524,17 @@ class SupabaseMessagingApi implements MessagingApi {
   });
 
   @override
-  Future<Uint8List> downloadPhoto(String mediaPath) =>
-      _guard(() => _client.storage.from('photos').download(mediaPath));
+  Future<Uint8List> downloadGif(String mediaPath) =>
+      _guard(() => _client.storage.from('gifs').download(mediaPath));
+
+  @override
+  Future<void> requestLinkPreview(String messageId) => _guard(
+    () => _client.functions.invoke('link-preview', queryParameters: {'message_id': messageId}),
+  );
+
+  @override
+  Future<Uint8List> downloadLinkImage(String imagePath) =>
+      _guard(() => _client.storage.from('previews').download(imagePath));
 
   @override
   Future<Uint8List> downloadAvatar(String avatarPath) =>

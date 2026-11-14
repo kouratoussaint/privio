@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../domain/models/messaging.dart';
+import 'gif_picker.dart';
 
 /// Lot 7.3a : émojis et autocollants Privio.
 
@@ -147,6 +149,7 @@ class ExpressionPanel extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onSticker,
+    this.onGif,
     this.height = 300,
   });
 
@@ -155,6 +158,9 @@ class ExpressionPanel extends StatelessWidget {
 
   final TextEditingController controller;
   final ValueChanged<StickerInfo> onSticker;
+
+  /// Lot 7.3b : onglet GIF (absent si null).
+  final ValueChanged<GifResult>? onGif;
   final double height;
 
   @override
@@ -167,16 +173,18 @@ class ExpressionPanel extends StatelessWidget {
       child: SizedBox(
         height: height,
         child: DefaultTabController(
-          length: 2,
+          length: onGif == null ? 2 : 3,
           child: Column(
             children: [
               TabBar(
                 labelColor: theme.colorScheme.primary,
                 indicatorColor: theme.colorScheme.primary,
                 unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-                tabs: const [
-                  Tab(key: Key('expression.tab.emoji'), text: 'Émojis', height: 40),
-                  Tab(key: Key('expression.tab.stickers'), text: 'Autocollants', height: 40),
+                tabs: [
+                  const Tab(key: Key('expression.tab.emoji'), text: 'Émojis', height: 40),
+                  const Tab(key: Key('expression.tab.stickers'), text: 'Autocollants', height: 40),
+                  if (onGif != null)
+                    const Tab(key: Key('expression.tab.gifs'), text: 'GIF', height: 40),
                 ],
               ),
               Expanded(
@@ -209,6 +217,7 @@ class ExpressionPanel extends StatelessWidget {
                           ),
                       ],
                     ),
+                    if (onGif case final onGif?) GifPicker(onGif: onGif),
                   ],
                 ),
               ),

@@ -238,6 +238,18 @@ class FakeLocalFlags implements LocalFlags {
   /// L'application, elle, sépare par défaut (testé dans test/ui/suppression_test.dart).
   bool groupsTogether = true;
 
+  /// Lot 7.3b : contenu des GIF, aperçus des liens.
+  String gif = 'g';
+  bool previews = true;
+  @override
+  Future<String> gifFilter() async => gif;
+  @override
+  Future<void> setGifFilter(String value) async => gif = value;
+  @override
+  Future<bool> linkPreviews() async => previews;
+  @override
+  Future<void> setLinkPreviews(bool value) async => previews = value;
+
   /// Lot 7.3a : fonds d'écran (null : par défaut).
   final Map<String?, String> wallpapers = {};
   @override
@@ -405,6 +417,12 @@ class FakeMessagingApi implements MessagingApi {
     width: clearBody ? null : m.width,
     height: clearBody ? null : m.height,
     senderName: m.senderName,
+    waveform: m.waveform,
+    mentions: m.mentions,
+    viewOnce: m.viewOnce,
+    opened: m.opened,
+    openedCount: m.openedCount,
+    linkPreview: clearBody ? null : m.linkPreview,
   );
 
   @override
@@ -1178,6 +1196,192 @@ class FakeMessagingApi implements MessagingApi {
     return m;
   }
 
+  // -------------------------------------------------------------------------
+  // Lot 7.3b : vue unique, GIF, aperçus des liens
+  // -------------------------------------------------------------------------
+  final List<String> sentViewOnce = [];
+
+  /// Fichier d'un message en vue unique (rendu lisible à l'ouverture).
+  final Map<String, String> viewOncePaths = {};
+  final List<String> viewOnceOpened = [];
+  final List<String> viewOnceClosed = [];
+
+  /// Reçoit une photo en vue unique (de Bob).
+  ChatMessage receiveViewOncePhoto(String conversationId) {
+    final now = DateTime.now();
+    final id = 'srv-${_seq++}';
+    final path = '$conversationId/$id.jpg';
+    storedPhotos[path] = testJpeg(width: 40, height: 30);
+    final m = ChatMessage(
+      id: id,
+      kind: 'photo',
+      senderId: bob.id,
+      sentAt: now,
+      expiresAt: now.add(const Duration(hours: 72)),
+      updatedAt: now,
+      width: 40,
+      height: 30,
+      viewOnce: true,
+    );
+    viewOncePaths[id] = path;
+    (messages[conversationId] ??= []).add(m);
+    return m;
+  }
+
+  @override
+  Future<void> openViewOnce(String messageId) async {
+    _net();
+    final found = _lookup(messageId);
+    if (found == null ||
+        !found.$2.viewOnce ||
+        found.$2.senderId == me ||
+        viewOnceOpened.contains(messageId)) {
+      throw const AppFailure(FailureCode.viewOnceUnavailable);
+    }
+    viewOnceOpened.add(messageId);
+    _replace(
+      messageId,
+      (m) => ChatMessage(
+        id: m.id,
+        kind: m.kind,
+        senderId: m.senderId,
+        sentAt: m.sentAt,
+        expiresAt: m.expiresAt,
+        updatedAt: DateTime.now(),
+        width: m.width,
+        height: m.height,
+        durationMs: m.durationMs,
+        mediaPath: viewOncePaths[m.id],
+        viewOnce: true,
+        opened: true,
+      ),
+    );
+  }
+
+  @override
+  Future<void> closeViewOnce(String messageId) async {
+    _net();
+    viewOnceClosed.add(messageId);
+    _replace(
+      messageId,
+      (m) => ChatMessage(
+        id: m.id,
+        kind: m.kind,
+        senderId: m.senderId,
+        sentAt: m.sentAt,
+        expiresAt: m.expiresAt,
+        updatedAt: DateTime.now(),
+        width: m.width,
+        height: m.height,
+        durationMs: m.durationMs,
+        viewOnce: true,
+        opened: true,
+      ),
+    );
+  }
+
+  List<GifResult> gifResults = [
+    for (var i = 0; i < 6; i++)
+      GifResult(
+        slug: 'gif-$i',
+        url: 'https://static.klipy.com/gif-$i.webp',
+        width: 200,
+        height: 150,
+      ),
+  ];
+  final List<(String, String)> gifSearches = [];
+  final List<String> sentGifs = [];
+  final Map<String, Uint8List> storedGifs = {};
+  AppFailure? gifFailure;
+
+  @override
+  Future<(List<GifResult>, bool)> searchGifs(
+    String query, {
+    int page = 1,
+    String filter = 'g',
+  }) async {
+    _net();
+    gifSearches.add((query, filter));
+    if (gifFailure != null) throw gifFailure!;
+    return (gifResults, false);
+  }
+
+  @override
+  Future<ChatMessage> sendGif({
+    required String conversationId,
+    required String clientMsgId,
+    required String slug,
+    String? replyToId,
+    int? ttlSeconds,
+    String filter = 'g',
+  }) async {
+    _net();
+    if (gifFailure != null) throw gifFailure!;
+    sentGifs.add(slug);
+    final now = DateTime.now();
+    final path = '$conversationId/$clientMsgId';
+    storedGifs[path] = testJpeg(width: 200, height: 150);
+    final m = ChatMessage(
+      id: 'srv-$clientMsgId',
+      kind: 'gif',
+      senderId: me,
+      replyToId: replyToId,
+      sentAt: now,
+      expiresAt: now.add(Duration(seconds: conversationTtl)),
+      updatedAt: now,
+      mediaPath: path,
+      width: 200,
+      height: 150,
+    );
+    final list = messages[conversationId] ??= [];
+    if (!list.any((x) => x.id == m.id)) list.add(m);
+    return m;
+  }
+
+  @override
+  Future<Uint8List> downloadGif(String mediaPath) async {
+    _net();
+    final b = storedGifs[mediaPath];
+    if (b == null) throw const AppFailure(FailureCode.mediaNotFound);
+    return b;
+  }
+
+  final List<String> previewRequests = [];
+
+  /// Aperçu « préparé par le serveur » pour les messages contenant ce lien.
+  LinkPreview? nextPreview;
+
+  @override
+  Future<void> requestLinkPreview(String messageId) async {
+    _net();
+    previewRequests.add(messageId);
+    final p = nextPreview;
+    if (p == null) return;
+    _replace(
+      messageId,
+      (m) => ChatMessage(
+        id: m.id,
+        kind: m.kind,
+        senderId: m.senderId,
+        body: m.body,
+        sentAt: m.sentAt,
+        expiresAt: m.expiresAt,
+        updatedAt: DateTime.now(),
+        linkPreview: p,
+      ),
+    );
+  }
+
+  final Map<String, Uint8List> storedLinkImages = {};
+
+  @override
+  Future<Uint8List> downloadLinkImage(String imagePath) async {
+    _net();
+    final b = storedLinkImages[imagePath];
+    if (b == null) throw const AppFailure(FailureCode.mediaNotFound);
+    return b;
+  }
+
   /// Lot 7.3a : autocollants envoyés.
   final List<String> sentStickers = [];
 
@@ -1229,9 +1433,11 @@ class FakeMessagingApi implements MessagingApi {
     String? replyToId,
     int? ttlSeconds,
     List<int>? waveform,
+    bool viewOnce = false,
   }) async {
     sentClientIds.add(clientMsgId);
     sentWaveforms[clientMsgId] = waveform;
+    if (viewOnce) sentViewOnce.add(clientMsgId);
     sentTtls.add(ttlSeconds);
     _net();
     if (voiceFailure != null) throw voiceFailure!;
@@ -1256,10 +1462,12 @@ class FakeMessagingApi implements MessagingApi {
         ),
       ),
       updatedAt: now,
-      mediaPath: path,
+      mediaPath: viewOnce ? null : path,
       durationMs: 5000,
       waveform: waveform,
+      viewOnce: viewOnce,
     );
+    if (viewOnce) viewOncePaths[m.id] = path;
     list.add(m);
     return m;
   }
@@ -1295,9 +1503,14 @@ class FakeMessagingApi implements MessagingApi {
     String? caption,
     String? replyToId,
     int? ttlSeconds,
+    bool viewOnce = false,
   }) async {
     sentClientIds.add(clientMsgId);
     sentCaptions.add(caption);
+    if (viewOnce) sentViewOnce.add(clientMsgId);
+    if (viewOnce && caption != null && caption.trim().isNotEmpty) {
+      throw const AppFailure(FailureCode.bodyInvalid);
+    }
     _net();
     final list = messages[conversationId] ??= [];
     final existing = list.where((m) => m.id == 'srv-$clientMsgId').firstOrNull;
@@ -1323,10 +1536,12 @@ class FakeMessagingApi implements MessagingApi {
         ),
       ),
       updatedAt: now,
-      mediaPath: path,
+      mediaPath: viewOnce ? null : path,
       width: 40,
       height: 30,
+      viewOnce: viewOnce,
     );
+    if (viewOnce) viewOncePaths[m.id] = path;
     list.add(m);
     return m;
   }

@@ -98,6 +98,11 @@ Deno.serve(async (req) => {
     if (prep.state === "sent") return await publish();
     if (!prep.path) return fail("MEDIA_NOT_FOUND");
     reserved = prep.path;
+    // Lot 7.3b : vue unique (sans légende), demandée avant la publication.
+    if (q.get("view_once") === "1") {
+      if (caption) return fail("BODY_INVALID");
+      await rpc("mark_media_view_once", { p_client_msg_id: clientMsgId }, user);
+    }
 
     // 2. Vérification et nettoyage.
     const raw = new Uint8Array(await req.arrayBuffer());

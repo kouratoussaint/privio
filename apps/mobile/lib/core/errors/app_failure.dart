@@ -43,6 +43,8 @@ enum FailureCode {
   notGroup,
   notAdmin,
   pinLimitReached,
+  viewOnceUnavailable,
+  gifUnavailable,
   notOwner,
   roleInvalid,
   groupFull,
@@ -135,6 +137,9 @@ class AppFailure implements Exception {
     FailureCode.cameraUnavailable => 'L’appareil photo ou la galerie n’est pas disponible.',
     FailureCode.notGroup => 'Cette action n’est possible que dans un groupe.',
     FailureCode.notAdmin => 'Seuls les administrateurs du groupe peuvent faire cela.',
+    FailureCode.viewOnceUnavailable => 'Ce message en vue unique a déjà été ouvert.',
+    FailureCode.gifUnavailable =>
+      'Les GIF sont momentanément indisponibles. Réessayez dans un instant.',
     FailureCode.pinLimitReached =>
       'Trois messages sont déjà épinglés. Désépinglez-en un pour en épingler un autre.',
     FailureCode.notOwner => 'Seul le propriétaire du groupe peut faire cela.',
@@ -235,6 +240,9 @@ const _serverCodes = <String, FailureCode>{
   'NOT_GROUP': FailureCode.notGroup,
   'NOT_ADMIN': FailureCode.notAdmin,
   'PIN_LIMIT_REACHED': FailureCode.pinLimitReached,
+  'VIEW_ONCE_UNAVAILABLE': FailureCode.viewOnceUnavailable,
+  'GIF_UNAVAILABLE': FailureCode.gifUnavailable,
+  'GIF_NOT_FOUND': FailureCode.gifUnavailable,
   'NOT_OWNER': FailureCode.notOwner,
   'ROLE_INVALID': FailureCode.roleInvalid,
   'SETTING_INVALID': FailureCode.roleInvalid,

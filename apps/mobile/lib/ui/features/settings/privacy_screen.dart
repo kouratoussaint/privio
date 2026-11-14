@@ -15,6 +15,7 @@ import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/ttl_picker.dart';
 import '../lock/app_lock_screens.dart' show delayLabel;
+import '../../../state/providers.dart';
 
 /// Écran 23 — confidentialité et sécurité (lot 4.3). Chaque réglage est appliqué par le
 /// serveur ; « mes contacts » = personnes avec qui l'on a une discussion à deux.
@@ -237,6 +238,13 @@ class PrivacyScreen extends ConsumerWidget {
             'Pour effacer une discussion entière\u202F: fiche du contact ou du groupe, '
             '«\u202FVider la discussion\u202F».',
           ),
+          // Lot 7.3b : aperçus des liens, contenu des GIF (réglages de ce téléphone).
+          const SettingsSectionTitle('Liens et GIF'),
+          const _ContentSettings(),
+          const SettingsNote(
+            'L’aperçu d’un lien est préparé par le serveur Privio : votre téléphone ne '
+            'contacte pas le site, et vos contacts non plus.',
+          ),
           const SettingsSectionTitle('Sécurité'),
           SettingsCard(
             children: [
@@ -301,6 +309,95 @@ class _ConnectionRequestsTile extends ConsumerWidget {
                 ref.invalidate(acceptConnectionRequestsProvider);
               }
             },
+    );
+  }
+}
+
+/// Lot 7.3b : aperçus des liens (activés par défaut) et contenu des GIF (tout public par
+/// défaut). Réglages gardés sur ce téléphone.
+class _ContentSettings extends ConsumerStatefulWidget {
+  const _ContentSettings();
+
+  @override
+  ConsumerState<_ContentSettings> createState() => _ContentSettingsState();
+}
+
+class _ContentSettingsState extends ConsumerState<_ContentSettings> {
+  bool? _previews;
+  String? _gif;
+
+  @override
+  void initState() {
+    super.initState();
+    final flags = ref.read(localFlagsProvider);
+    flags.linkPreviews().then((v) {
+      if (mounted) setState(() => _previews = v);
+    });
+    flags.gifFilter().then((v) {
+      if (mounted) setState(() => _gif = v);
+    });
+  }
+
+  Future<void> _pickGif() async {
+    final current = _gif ?? 'g';
+    final next = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<String>(
+          groupValue: current,
+          onChanged: (v) => Navigator.pop(ctx, v),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                key: Key('privacy.gif.g'),
+                value: 'g',
+                title: Text('Tout public'),
+                subtitle: Text('Recommandé.'),
+              ),
+              RadioListTile<String>(
+                key: Key('privacy.gif.pg13'),
+                value: 'pg13',
+                title: Text('Modéré'),
+                subtitle: Text('Quelques contenus moins adaptés aux enfants.'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (next == null || next == current) return;
+    await ref.read(localFlagsProvider).setGifFilter(next);
+    if (mounted) setState(() => _gif = next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = PrivioPalette.of(context);
+    return SettingsCard(
+      children: [
+        SwitchListTile(
+          key: const Key('privacy.link_previews'),
+          value: _previews ?? true,
+          secondary: Icon(Icons.link_rounded, color: p.accentText),
+          title: const Text('Aperçus des liens'),
+          subtitle: const Text('Titre et image des liens que vous envoyez.'),
+          onChanged: _previews == null
+              ? null
+              : (v) async {
+                  await ref.read(localFlagsProvider).setLinkPreviews(v);
+                  if (mounted) setState(() => _previews = v);
+                },
+        ),
+        ListTile(
+          key: const Key('privacy.gif'),
+          leading: Icon(Icons.gif_box_outlined, color: p.accentText),
+          title: const Text('Contenu des GIF'),
+          subtitle: Text((_gif ?? 'g') == 'pg13' ? 'Modéré' : 'Tout public'),
+          onTap: _pickGif,
+        ),
+      ],
     );
   }
 }

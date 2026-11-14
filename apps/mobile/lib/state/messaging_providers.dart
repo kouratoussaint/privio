@@ -182,6 +182,7 @@ class OutboxController extends Notifier<List<OutboxItem>> {
                 replyToId: item.replyToId,
                 ttlSeconds: item.ttlSeconds,
                 waveform: item.waveform,
+                viewOnce: item.viewOnce,
               )
             : await api.sendPhoto(
                 conversationId: item.conversationId,
@@ -190,11 +191,24 @@ class OutboxController extends Notifier<List<OutboxItem>> {
                 caption: item.body.isEmpty ? null : item.body,
                 replyToId: item.replyToId,
                 ttlSeconds: item.ttlSeconds,
+                viewOnce: item.viewOnce,
               );
         countData(ref, sent: media.length);
-        // L'expéditeur revoit / réécoute son envoi sans le retélécharger.
-        await _cache.putMedia(LocalCache.messageMediaKey(sent.id), media, sent.expiresAt);
+        // L'expéditeur revoit / réécoute son envoi sans le retélécharger (sauf vue unique :
+        // personne ne le revoit, pas même l'expéditeur).
+        if (!item.viewOnce) {
+          await _cache.putMedia(LocalCache.messageMediaKey(sent.id), media, sent.expiresAt);
+        }
         if (item.isPhoto) ref.invalidate(photoQuotaProvider);
+      } else if (item.isGif) {
+        sent = await api.sendGif(
+          conversationId: item.conversationId,
+          clientMsgId: item.clientId,
+          slug: item.body,
+          replyToId: item.replyToId,
+          ttlSeconds: item.ttlSeconds,
+          filter: await ref.read(localFlagsProvider).gifFilter(),
+        );
       } else if (item.kind == 'sticker') {
         sent = await api.sendSticker(
           conversationId: item.conversationId,
@@ -434,11 +448,13 @@ class PendingMessage {
     this.durationMs,
     this.width,
     this.height,
+    this.viewOnce = false,
   });
 
   final String clientId;
   final String body;
   final String kind;
+  final bool viewOnce;
   final int? durationMs;
   final int? width;
   final int? height;
@@ -446,6 +462,7 @@ class PendingMessage {
   bool get isVoice => kind == 'voice';
   bool get isPhoto => kind == 'photo';
   bool get isSticker => kind == 'sticker';
+  bool get isGif => kind == 'gif';
 
   /// Refusé par le serveur (sinon : simplement en attente du réseau).
   final bool failed;
@@ -509,6 +526,7 @@ class ChatController extends AsyncNotifier<ChatState> {
           durationMs: o.durationMs,
           width: o.width,
           height: o.height,
+          viewOnce: o.viewOnce,
         ),
   ];
 
@@ -567,6 +585,30 @@ class ChatController extends AsyncNotifier<ChatState> {
           .then((_) => ref.invalidate(conversationsProvider))
           .catchError((Object _) {}),
     );
+  }
+
+  /// Lot 7.3b : ouvre une photo ou un vocal en vue unique et renvoie ses octets.
+  /// Rien n'est mis en cache : le média ne vit qu'en mémoire, le temps de l'affichage.
+  Future<Uint8List> openViewOnce(ChatMessage m) async {
+    final api = ref.read(messagingApiProvider);
+    await api.openViewOnce(m.id);
+    await reload();
+    final fresh = state.value?.messages.where((x) => x.id == m.id).firstOrNull;
+    final path = fresh?.mediaPath;
+    if (path == null) throw const AppFailure(FailureCode.mediaNotFound);
+    final bytes = m.kind == 'voice' ? await api.downloadVoice(path) : await api.downloadPhoto(path);
+    countData(ref, received: bytes.length);
+    return bytes;
+  }
+
+  /// Lot 7.3b : fermeture de la vue unique (le média devient illisible pour moi).
+  Future<void> closeViewOnce(String messageId) async {
+    try {
+      await ref.read(messagingApiProvider).closeViewOnce(messageId);
+    } on Object catch (_) {
+      // Sans réseau : le serveur referme de lui-même au bout de 2 minutes.
+    }
+    await reload();
   }
 
   Future<void> reload() async {
@@ -634,6 +676,39 @@ class ChatController extends AsyncNotifier<ChatState> {
     final sent = await outbox.sendOne(item);
     if (sent == null) return;
     await _showSent(sent, item.replyToId);
+    // Lot 7.3b : un lien → le serveur prépare son aperçu (si le réglage le permet).
+    if (_hasLink(body) && await ref.read(localFlagsProvider).linkPreviews()) {
+      unawaited(
+        ref
+            .read(messagingApiProvider)
+            .requestLinkPreview(sent.id)
+            .then((_) => reload())
+            .catchError((Object _) {}),
+      );
+    }
+  }
+
+  static final _link = RegExp(r'https?://\S', caseSensitive: false);
+  static bool _hasLink(String text) => _link.hasMatch(text);
+
+  /// Lot 7.3b : GIF choisi dans la recherche ; même parcours que le texte.
+  Future<void> sendGif(GifResult gif, {String? replyToId, int? ttlSeconds}) async {
+    final item = OutboxItem(
+      clientId: uuidV4(),
+      conversationId: conversationId,
+      body: gif.slug,
+      createdAt: DateTime.now(),
+      replyToId: replyToId,
+      ttlSeconds: ttlSeconds,
+      kind: 'gif',
+      width: gif.width,
+      height: gif.height,
+    );
+    final outbox = ref.read(outboxProvider.notifier);
+    await outbox.enqueue(item);
+    final sent = await outbox.sendOne(item);
+    if (sent == null) return;
+    await _showSent(sent, item.replyToId);
   }
 
   /// Lot 7.3a : autocollant ; même parcours que le texte (file, reprise hors connexion).
@@ -662,6 +737,7 @@ class ChatController extends AsyncNotifier<ChatState> {
     String? replyToId,
     int? ttlSeconds,
     List<int>? waveform,
+    bool viewOnce = false,
   }) async {
     final item = OutboxItem(
       clientId: uuidV4(),
@@ -673,6 +749,7 @@ class ChatController extends AsyncNotifier<ChatState> {
       kind: 'voice',
       durationMs: durationMs,
       waveform: waveform,
+      viewOnce: viewOnce,
     );
     final outbox = ref.read(outboxProvider.notifier);
     await outbox.enqueue(item, media: audio);
@@ -687,6 +764,7 @@ class ChatController extends AsyncNotifier<ChatState> {
     String? caption,
     String? replyToId,
     int? ttlSeconds,
+    bool viewOnce = false,
   }) async {
     final item = OutboxItem(
       clientId: uuidV4(),
@@ -696,6 +774,7 @@ class ChatController extends AsyncNotifier<ChatState> {
       replyToId: replyToId,
       ttlSeconds: ttlSeconds,
       kind: 'photo',
+      viewOnce: viewOnce,
       width: photo.width,
       height: photo.height,
     );

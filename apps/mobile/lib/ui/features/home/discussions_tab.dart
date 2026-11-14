@@ -655,6 +655,8 @@ class ConversationTile extends ConsumerWidget {
       // Lot 7.3a : autocollant (son nom, pas son identifiant).
       ConversationSummary(lastKind: 'sticker', :final lastBody) =>
         '$who🙂 ${stickerOf(lastBody)?.label ?? 'Autocollant'}',
+      // Lot 7.3b : GIF.
+      ConversationSummary(lastKind: 'gif') => '${who}GIF',
       ConversationSummary(lastKind: 'photo', :final lastBody) =>
         '$who📷 ${lastBody == null || lastBody.isEmpty ? 'Photo' : lastBody}',
       _ => '$who${summary.lastBody ?? ''}',

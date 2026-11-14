@@ -10,6 +10,7 @@ import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../state/voice_providers.dart';
+import 'rich_messages.dart';
 
 /// « 0:07 », « 1:05 ».
 String formatVoiceDuration(Duration d) {
@@ -450,10 +451,16 @@ class VoicePreviewBar extends ConsumerWidget {
     required this.preview,
     required this.onSend,
     required this.onError,
+    this.viewOnce = false,
+    this.onViewOnce,
   });
 
   final VoicePreview preview;
   final VoidCallback onSend;
+
+  /// Lot 7.3b : vocal en vue unique (null : pas d'interrupteur).
+  final bool viewOnce;
+  final ValueChanged<bool>? onViewOnce;
   final void Function(AppFailure failure) onError;
 
   @override
@@ -537,6 +544,15 @@ class VoicePreviewBar extends ConsumerWidget {
                       semanticsLabel: spokenVoiceDuration(total),
                       style: theme.textTheme.labelMedium,
                     ),
+                    if (onViewOnce != null)
+                      ViewOnceToggle(
+                        key: const Key('voice.once'),
+                        value: viewOnce,
+                        onChanged: onViewOnce!,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        activeColor: p.accentText,
+                        onActiveColor: theme.colorScheme.surface,
+                      ),
                   ],
                 ),
               ),

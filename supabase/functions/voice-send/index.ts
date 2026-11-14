@@ -106,6 +106,10 @@ Deno.serve(async (req) => {
     );
     if (prep.state === "sent") return await publish(req, sendParams);
     if (!prep.path) return fail("MEDIA_NOT_FOUND");
+    // Lot 7.3b : vue unique, demandée avant la publication (le message en hérite).
+    if (q.get("view_once") === "1") {
+      await rpc("mark_media_view_once", { p_client_msg_id: clientMsgId }, userHeaders(req));
+    }
 
     // 2. Mesure par le serveur.
     const bytes = new Uint8Array(await req.arrayBuffer());

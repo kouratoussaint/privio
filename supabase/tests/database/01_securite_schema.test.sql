@@ -30,7 +30,8 @@ select is(
   (select string_agg(p.proname::text, ',' order by p.proname::text collate "C")
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'private' and has_function_privilege('authenticated', p.oid, 'execute')),
-  'can_read_avatar,can_read_evidence,can_read_photo,can_read_voice,can_see_message,is_member,session_is_active,shares_conversation',
+  -- Lot 7.3b : GIF, aperçus des liens, règles de lecture du stockage.
+  'can_read_avatar,can_read_evidence,can_read_gif,can_read_photo,can_read_preview,can_read_voice,can_see_message,is_member,session_is_active,shares_conversation',
   'seules les fonctions privées utilisées par la RLS sont exécutables par authenticated');
 
 select is_empty($$

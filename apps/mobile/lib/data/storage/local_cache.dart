@@ -22,7 +22,11 @@ class OutboxItem {
     this.height,
     this.waveform,
     this.mentions = const [],
+    this.viewOnce = false,
   });
+
+  /// Lot 7.3b : photo ou vocal en vue unique (jamais gardé chez l'expéditeur).
+  final bool viewOnce;
 
   final String clientId;
   final String conversationId;
@@ -52,6 +56,9 @@ class OutboxItem {
 
   bool get isVoice => kind == 'voice';
   bool get isPhoto => kind == 'photo';
+
+  /// Lot 7.3b : GIF ([body] : son identifiant chez KLIPY ; dimensions pour l'attente).
+  bool get isGif => kind == 'gif';
   bool get hasMedia => isVoice || isPhoto;
 
   /// Un message jamais parti n'attend pas indéfiniment : 72 h au plus.
@@ -71,6 +78,7 @@ class OutboxItem {
     height: height,
     waveform: waveform,
     mentions: mentions,
+    viewOnce: viewOnce,
     failed: failed ?? this.failed,
   );
 
@@ -88,6 +96,7 @@ class OutboxItem {
     'height': height,
     'waveform': waveform,
     'mentions': mentions,
+    'view_once': viewOnce,
   };
 
   factory OutboxItem.fromJson(Map<String, dynamic> j) => OutboxItem(
@@ -104,6 +113,7 @@ class OutboxItem {
     height: (j['height'] as num?)?.toInt(),
     waveform: (j['waveform'] as List<dynamic>?)?.map((v) => (v as num).toInt()).toList(),
     mentions: [for (final v in (j['mentions'] as List<dynamic>? ?? const [])) v as String],
+    viewOnce: j['view_once'] as bool? ?? false,
   );
 }
 

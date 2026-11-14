@@ -370,10 +370,23 @@ class ChatMessage {
     this.senderName,
     this.waveform,
     this.mentions = const [],
+    this.viewOnce = false,
+    this.opened = false,
+    this.openedCount,
+    this.linkPreview,
   });
 
   final String id;
   final String kind;
+
+  /// Lot 7.3b : photo ou vocal en vue unique ; ouvert par moi ; nombre d'ouvertures (mes
+  /// envois seulement).
+  final bool viewOnce;
+  final bool opened;
+  final int? openedCount;
+
+  /// Lot 7.3b : aperçu du premier lien (préparé par le serveur).
+  final LinkPreview? linkPreview;
 
   /// Nom de l'expéditeur (groupes) ; null pour un compte supprimé.
   final String? senderName;
@@ -413,11 +426,14 @@ class ChatMessage {
   /// Lot 7.3a : autocollant intégré à l'application ; [body] le désigne (« série/nom »).
   bool get isSticker => kind == 'sticker';
 
+  /// Lot 7.3b : GIF (copié dans le stockage privé de Privio).
+  bool get isGif => kind == 'gif';
+
   /// Photo encore affichable (ni supprimée, ni sans fichier).
-  bool get hasViewablePhoto => isPhoto && !isDeleted && mediaPath != null;
+  bool get hasViewablePhoto => isPhoto && !viewOnce && !isDeleted && mediaPath != null;
 
   /// Vocal encore écoutable (ni supprimé, ni sans fichier).
-  bool get hasPlayableVoice => isVoice && !isDeleted && mediaPath != null;
+  bool get hasPlayableVoice => isVoice && !viewOnce && !isDeleted && mediaPath != null;
 
   /// Message système « durée réglée » : nouvelle durée en secondes, sinon null.
   int? get systemTtlSeconds =>
@@ -446,6 +462,10 @@ class ChatMessage {
     'sender_name': senderName,
     'media_waveform': waveform,
     'mentions': mentions,
+    'view_once': viewOnce,
+    'opened': opened,
+    'opened_count': openedCount,
+    'link_preview': linkPreview?.toJson(),
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -477,8 +497,80 @@ class ChatMessage {
       senderName: j['sender_name'] as String?,
       waveform: (j['media_waveform'] as List<dynamic>?)?.map((v) => (v as num).toInt()).toList(),
       mentions: [for (final v in (j['mentions'] as List<dynamic>? ?? const [])) v as String],
+      viewOnce: j['view_once'] as bool? ?? false,
+      opened: j['opened'] as bool? ?? false,
+      openedCount: (j['opened_count'] as num?)?.toInt(),
+      linkPreview: j['link_preview'] == null
+          ? null
+          : LinkPreview.fromJson(Map<String, dynamic>.from(j['link_preview'] as Map)),
     );
   }
+}
+
+/// Lot 7.3b : aperçu d'un lien.
+class LinkPreview {
+  const LinkPreview({
+    required this.url,
+    this.title,
+    this.description,
+    this.site,
+    this.imagePath,
+    this.imageWidth,
+    this.imageHeight,
+  });
+
+  final String url;
+  final String? title;
+  final String? description;
+  final String? site;
+  final String? imagePath;
+  final int? imageWidth;
+  final int? imageHeight;
+
+  Map<String, dynamic> toJson() => {
+    'url': url,
+    'title': title,
+    'description': description,
+    'site': site,
+    'image_path': imagePath,
+    'image_width': imageWidth,
+    'image_height': imageHeight,
+  };
+
+  factory LinkPreview.fromJson(Map<String, dynamic> j) => LinkPreview(
+    url: j['url'] as String? ?? '',
+    title: j['title'] as String?,
+    description: j['description'] as String?,
+    site: j['site'] as String?,
+    imagePath: j['image_path'] as String?,
+    imageWidth: (j['image_width'] as num?)?.toInt(),
+    imageHeight: (j['image_height'] as num?)?.toInt(),
+  );
+}
+
+/// Lot 7.3b : GIF proposé par la recherche (aperçu servi par KLIPY).
+class GifResult {
+  const GifResult({
+    required this.slug,
+    required this.url,
+    required this.width,
+    required this.height,
+    this.title = '',
+  });
+
+  final String slug;
+  final String url;
+  final int width;
+  final int height;
+  final String title;
+
+  factory GifResult.fromJson(Map<String, dynamic> j) => GifResult(
+    slug: j['slug'] as String,
+    url: j['url'] as String,
+    width: (j['width'] as num).toInt(),
+    height: (j['height'] as num).toInt(),
+    title: j['title'] as String? ?? '',
+  );
 }
 
 /// Photos du jour (PHOTO-005) : limite, utilisées, restantes, remise à zéro.

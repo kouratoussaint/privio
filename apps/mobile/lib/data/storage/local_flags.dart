@@ -22,6 +22,14 @@ abstract interface class LocalFlags {
   Future<bool> soundsEnabled();
   Future<void> setSoundsEnabled(bool value);
 
+  /// Lot 7.3b : contenu des GIF : « g » (tout public, par défaut) ou « pg13 » (modéré).
+  Future<String> gifFilter();
+  Future<void> setGifFilter(String value);
+
+  /// Lot 7.3b : aperçus des liens que j'envoie (activés par défaut).
+  Future<bool> linkPreviews();
+  Future<void> setLinkPreviews(bool value);
+
   /// Lot 7.3a : fond d'écran des discussions ([conversationId] null : celui par défaut).
   /// Valeurs : `pattern:nom`, `color:nom` ou `photo:chemin local` ; null :
   /// pas de choix (par défaut, ou comme le réglage général pour une discussion).
@@ -55,6 +63,8 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _groupsInDiscussions = 'privio.groups_in_discussions';
   static const _sounds = 'privio.sounds_enabled';
   static const _wallpaper = 'privio.wallpaper';
+  static const _gifFilter = 'privio.gif_filter';
+  static const _linkPreviews = 'privio.link_previews';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -85,6 +95,19 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setQuickReaction(String emoji) => _prefs.setString(_quick, emoji);
+
+  @override
+  Future<String> gifFilter() async => (await _prefs.getString(_gifFilter)) == 'pg13' ? 'pg13' : 'g';
+
+  @override
+  Future<void> setGifFilter(String value) =>
+      _prefs.setString(_gifFilter, value == 'pg13' ? 'pg13' : 'g');
+
+  @override
+  Future<bool> linkPreviews() async => (await _prefs.getBool(_linkPreviews)) ?? true;
+
+  @override
+  Future<void> setLinkPreviews(bool value) => _prefs.setBool(_linkPreviews, value);
 
   @override
   Future<String?> wallpaper(String? conversationId) =>

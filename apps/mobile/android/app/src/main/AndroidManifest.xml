@@ -52,4 +52,11 @@
     </application>
     <!-- Requête PROCESS_TEXT du modèle Flutter retirée : pas d'envoi de texte sélectionné
          vers d'autres applications (SEC-007/SEC-008). -->
+    <!-- Lot 7.3b : ouvrir le lien d'un aperçu dans le navigateur (Android 11+). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
 </manifest>
