@@ -24,6 +24,9 @@ abstract interface class AccountApi {
   Future<String> setAvatar(Uint8List jpeg);
   Future<void> removeAvatar();
 
+  /// Lot 7.1a : « À propos » (140 caractères ; vide = retiré). Renvoie le texte enregistré.
+  Future<String?> setAbout(String text);
+
   /// Lot 5.3 : suspension ou avertissement en cours pour ce compte.
   Future<ModerationStatus> moderationStatus();
   Future<void> submitAppeal(String sanctionId, String text);
@@ -108,4 +111,8 @@ class SupabaseAccountApi implements AccountApi {
   @override
   Future<void> acknowledgeWarning(String sanctionId) =>
       _rpc('acknowledge_warning', {'p_sanction_id': sanctionId});
+
+  @override
+  Future<String?> setAbout(String text) async =>
+      await _rpc('set_my_about', {'p_about': text}) as String?;
 }

@@ -110,6 +110,27 @@ class FakeAccountApi implements AccountApi {
         const Account(userId: 'u1', phoneE164: '+22670000001', phoneDiscoverable: false);
   }
 
+  /// Lot 7.1a : « À propos » enregistré.
+  @override
+  Future<String?> setAbout(String text) async {
+    final t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (t.length > 140) throw const AppFailure(FailureCode.unknown);
+    final a = account!;
+    final p = a.profile!;
+    account = Account(
+      userId: a.userId,
+      phoneE164: a.phoneE164,
+      phoneDiscoverable: a.phoneDiscoverable,
+      profile: Profile(
+        handle: p.handle,
+        displayName: p.displayName,
+        about: t.isEmpty ? null : t,
+        avatarPath: p.avatarPath,
+      ),
+    );
+    return t.isEmpty ? null : t;
+  }
+
   @override
   Future<Profile> createProfile({required String handle, required String displayName}) async {
     if (takenHandles.contains(handle)) throw const AppFailure(FailureCode.handleTaken);
@@ -383,6 +404,34 @@ class FakeMessagingApi implements MessagingApi {
 
   final List<Map<String, Object?>> reports = [];
   bool accountDeleted = false;
+
+  /// Lot 7.1a : fiches (À propos visible, groupes en commun).
+  final contactAbout = <String, String>{};
+  final commonGroups = <String, List<CommonGroup>>{};
+
+  @override
+  Future<ContactProfile?> getContactProfile(String userId) async {
+    _net();
+    final c = conversations.values.where((c) => c.peerId == userId).firstOrNull;
+    if (c == null) return null;
+    return ContactProfile(
+      userId: userId,
+      handle: c.peerHandle ?? 'inconnu',
+      displayName: c.peerDisplayName ?? '',
+      about: contactAbout[userId],
+      avatarPath: c.peerAvatarPath,
+    );
+  }
+
+  @override
+  Future<List<CommonGroup>> listCommonGroups(String userId) async =>
+      commonGroups[userId] ?? const [];
+
+  @override
+  Future<List<ChatMessage>> listConversationMedia(String conversationId) async => [
+    for (final m in _messagesFor(conversationId).reversed)
+      if ((m.kind == 'photo' || m.kind == 'voice') && m.mediaPath != null && m.deletedAt == null) m,
+  ];
 
   /// Lot 5.4 : demandes d'assistance et réponses.
   final supportRequests = <SupportRequest>[];

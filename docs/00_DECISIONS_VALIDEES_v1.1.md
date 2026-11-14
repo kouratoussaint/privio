@@ -168,3 +168,12 @@ Demandés par le commanditaire après test sur téléphone :
   dans Aide → Mes demandes ; pour continuer, la personne envoie une nouvelle demande.
   Détails : ADR-018.
 
+## Amendement 12 — Fiches, invitations par code, @mentions (14 novembre 2026, lot 7.1)
+- Lot 7.1 découpé : 7.1a (fiches contact et groupe) puis 7.1b (rejoindre un groupe, @mentions).
+- « À propos » : 140 caractères ; visible par défaut par « Mes contacts » (réglage « Qui voit
+  mon À propos » : tout le monde, mes contacts, personne).
+- Médias de la discussion : seulement ceux encore présents (72 h au plus), jamais enregistrables.
+- 7.1b : invitation de l'extérieur par code et QR code dans l'application (pas de lien web) ;
+  accord d'un administrateur obligatoire par défaut, désactivable par groupe ; une @mention
+  notifie la personne même si le groupe est en sourdine.
+

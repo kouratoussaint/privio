@@ -132,6 +132,13 @@ abstract interface class MessagingApi {
   Future<PrivacySettings> getMyPrivacy();
   Future<void> setMyPrivacy(PrivacySettings settings);
 
+  /// Lot 7.1a : fiche d'un contact (null : aucune discussion commune).
+  Future<ContactProfile?> getContactProfile(String userId);
+  Future<List<CommonGroup>> listCommonGroups(String userId);
+
+  /// Photos et vocaux encore présents dans la discussion (72 h au plus).
+  Future<List<ChatMessage>> listConversationMedia(String conversationId);
+
   /// L'application est ouverte ([online]) ou passe en arrière-plan.
   Future<void> touchPresence({required bool online});
   Future<UserPresence> getPresence(String userId);
@@ -492,6 +499,22 @@ class SupabaseMessagingApi implements MessagingApi {
 
   @override
   Future<void> setMyPrivacy(PrivacySettings settings) => _call('set_my_privacy', settings.toRpc());
+
+  @override
+  Future<ContactProfile?> getContactProfile(String userId) async {
+    final rows = await _rows('get_contact_profile', {'p_user_id': userId});
+    return rows.isEmpty ? null : ContactProfile.fromJson(rows.first);
+  }
+
+  @override
+  Future<List<CommonGroup>> listCommonGroups(String userId) async =>
+      (await _rows('list_common_groups', {'p_user_id': userId})).map(CommonGroup.fromJson).toList();
+
+  @override
+  Future<List<ChatMessage>> listConversationMedia(String conversationId) async => (await _rows(
+    'list_conversation_media',
+    {'p_conversation_id': conversationId},
+  )).map(mediaMessageFromJson).toList();
 
   @override
   Future<void> touchPresence({required bool online}) =>

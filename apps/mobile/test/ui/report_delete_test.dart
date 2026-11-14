@@ -90,6 +90,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('chat.contact')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('contact.report')),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('contact.report')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('report.include')), findsNothing, reason: 'pas de message visé');

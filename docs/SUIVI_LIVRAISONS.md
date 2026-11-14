@@ -1,6 +1,6 @@
 # PRIVIO — Suivi des livraisons
 
-Mis à jour à chaque livraison. Dernière mise à jour : 14/11/2026 — 4.4 à 4.8 et 5.1 à 5.4 validés sur téléphone ; ordre décidé : étapes 7 et 8 avant l'étape 6 (préparation du pilote), puis 9 après le pilote. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
+Mis à jour à chaque livraison. Dernière mise à jour : 14/11/2026 — 4.4 à 4.8 et 5.1 à 5.4 validés sur téléphone ; 7.1a livré (à tester) ; ordre décidé : étapes 7 et 8 avant l'étape 6 (préparation du pilote), puis 9 après le pilote. Statuts : ✅ validé · 🧪 livré, à tester · 🔨 en cours · ⏳ à venir · ⛔ bloqué.
 
 Chaque lot se clôt par : CI verte + APK (sauf lots serveur) + vos tests sur téléphone.
 Un lot n'est validé qu'après votre retour.
@@ -77,7 +77,8 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 7 — Discussions enrichies (après la console, avant l'étape 6)
 | Lot | Contenu | Statut |
 |---|---|---|
-| 7.1 | Fiche contact et groupe : photo en grand, « À propos », médias de la discussion, sourdine à deux, durée et « Vider » depuis la fiche, groupes en commun, lien d'invitation et demandes d'adhésion, @mentions | ⏳ |
+| 7.1a | Fiches contact et groupe : photo en grand (toucher la photo ; « Changer » pour les administrateurs du groupe), **À propos** (140 caractères, Paramètres → À propos ; réglage « Qui voit mon À propos », par défaut mes contacts), durée des messages, notifications (sourdine 8 h / 1 semaine / toujours, aussi pour une discussion à deux) et « Vider » depuis la fiche, **médias** de la discussion (photos en grille, vocaux, effacés avec leurs messages, jamais enregistrables), **groupes en commun**. **Tests** : écrire son À propos et vérifier qu'un contact le voit (et qu'un membre de groupe non contact ne le voit pas) ; ouvrir la photo d'un contact ; envoyer une photo et un vocal puis Fiche → Médias ; sourdine 8 h ; groupes en commun | 🧪 14/11/2026 |
+| 7.1b | Rejoindre un groupe et @mentions : code d'invitation et QR code (administrateurs, réinitialisable), écran « Rejoindre un groupe », demandes d'adhésion (accord d'un administrateur par défaut, réglable par groupe), @mentions notifiées même en sourdine | ⏳ |
 | 7.2 | Confort : bouton « descendre », repère « X non lus », sélection multiple, infos du message, messages épinglés et favoris, notifications par discussion | ⏳ |
 | 7.3 | Expression : émojis, autocollants Privio, GIF (service externe via le serveur, sans clé dans l'application), légende / recadrage / dessin sur photo, aperçu des liens, fond d'écran, vue unique pour les médias | ⏳ |
 

@@ -91,6 +91,8 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Désactivé'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('settings.lock')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings.lock')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('lock.enabled')));
@@ -226,6 +228,8 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    await tester.ensureVisible(find.byKey(const Key('settings.lock')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings.lock')));
     await tester.pumpAndSettle();
 

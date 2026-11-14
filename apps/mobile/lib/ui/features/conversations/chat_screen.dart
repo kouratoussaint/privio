@@ -793,7 +793,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 borderRadius: BorderRadius.circular(PrivioRadius.medium),
                 onTap: summary == null || (!isGroup && summary.peerId == null)
                     ? null
-                    : () => context.push(Routes.contact(widget.conversationId)),
+                    : () async {
+                        // Lot 7.1a : « Vider » depuis la fiche revient ici avec son choix.
+                        final r = await context.push<String>(Routes.contact(widget.conversationId));
+                        if (r == 'clear' && mounted) await _chooseClear(summary);
+                      },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
                   child: LayoutBuilder(

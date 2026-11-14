@@ -548,7 +548,11 @@ class PrivacySettings {
     this.avatar = 'everyone',
     this.groupInvites = 'everyone',
     this.defaultTtlSeconds,
+    this.about = 'contacts',
   });
+
+  /// Lot 7.1a : qui voit mon « À propos » (par défaut : mes contacts).
+  final String about;
 
   final String presence;
   final bool readReceipts;
@@ -567,7 +571,9 @@ class PrivacySettings {
     String? groupInvites,
     int? defaultTtlSeconds,
     bool clearDefaultTtl = false,
+    String? about,
   }) => PrivacySettings(
+    about: about ?? this.about,
     presence: presence ?? this.presence,
     readReceipts: readReceipts ?? this.readReceipts,
     typing: typing ?? this.typing,
@@ -583,6 +589,7 @@ class PrivacySettings {
     avatar: j['avatar_visibility'] as String? ?? 'everyone',
     groupInvites: j['group_invites'] as String? ?? 'everyone',
     defaultTtlSeconds: (j['default_ttl_seconds'] as num?)?.toInt(),
+    about: j['about_visibility'] as String? ?? 'contacts',
   );
 
   Map<String, dynamic> toRpc() => {
@@ -592,7 +599,72 @@ class PrivacySettings {
     'p_avatar_visibility': avatar,
     'p_group_invites': groupInvites,
     'p_default_ttl_seconds': defaultTtlSeconds,
+    'p_about_visibility': about,
   };
+}
+
+/// Fiche d'un contact (lot 7.1a) : « À propos » et photo selon ses réglages.
+class ContactProfile {
+  const ContactProfile({
+    required this.userId,
+    required this.handle,
+    required this.displayName,
+    this.about,
+    this.avatarPath,
+  });
+
+  final String userId;
+  final String handle;
+  final String displayName;
+  final String? about;
+  final String? avatarPath;
+
+  factory ContactProfile.fromJson(Map<String, dynamic> j) => ContactProfile(
+    userId: j['user_id'] as String,
+    handle: j['handle'] as String,
+    displayName: j['display_name'] as String? ?? '',
+    about: j['about'] as String?,
+    avatarPath: j['avatar_path'] as String?,
+  );
+}
+
+/// Groupe en commun avec un contact (lot 7.1a).
+class CommonGroup {
+  const CommonGroup({
+    required this.id,
+    required this.title,
+    required this.memberCount,
+    this.avatarPath,
+  });
+
+  final String id;
+  final String title;
+  final int memberCount;
+  final String? avatarPath;
+
+  factory CommonGroup.fromJson(Map<String, dynamic> j) => CommonGroup(
+    id: j['conversation_id'] as String,
+    title: j['title'] as String? ?? 'Groupe',
+    memberCount: (j['member_count'] as num?)?.toInt() ?? 0,
+    avatarPath: j['avatar_path'] as String?,
+  );
+}
+
+/// Média encore présent dans une discussion (lot 7.1a), sous forme de message.
+ChatMessage mediaMessageFromJson(Map<String, dynamic> j) {
+  final sentAt = DateTime.parse(j['sent_at'] as String);
+  return ChatMessage(
+    id: j['message_id'] as String,
+    kind: j['kind'] as String,
+    senderId: j['sender_id'] as String?,
+    sentAt: sentAt,
+    expiresAt: DateTime.parse(j['expires_at'] as String),
+    updatedAt: sentAt,
+    mediaPath: j['media_path'] as String?,
+    durationMs: (j['media_duration_ms'] as num?)?.toInt(),
+    width: (j['media_width'] as num?)?.toInt(),
+    height: (j['media_height'] as num?)?.toInt(),
+  );
 }
 
 /// Libellé d'une visibilité.

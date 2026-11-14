@@ -139,6 +139,11 @@ class PrivacyScreen extends ConsumerWidget {
           s.presence,
         ),
         'avatar' => ('Photo de profil', 'Les autres voient vos initiales à la place.', s.avatar),
+        'about' => (
+          'À propos',
+          'Votre court texte de présentation, affiché sur votre fiche.',
+          s.about,
+        ),
         _ => (
           'Invitations dans les groupes',
           'Les personnes non autorisées ne peuvent pas vous inviter (sans qu’on le leur dise). '
@@ -157,6 +162,7 @@ class PrivacyScreen extends ConsumerWidget {
       await _save(context, ref, switch (which) {
         'presence' => s.copyWith(presence: v),
         'avatar' => s.copyWith(avatar: v),
+        'about' => s.copyWith(about: v),
         _ => s.copyWith(groupInvites: v),
       });
     }
@@ -180,6 +186,14 @@ class PrivacyScreen extends ConsumerWidget {
             title: const Text('Photo de profil'),
             subtitle: Text(visibilityLabel(s.avatar)),
             onTap: () => visibility('avatar'),
+          ),
+          // Lot 7.1a : par défaut, seulement les contacts.
+          ListTile(
+            key: const Key('privacy.about'),
+            leading: Icon(Icons.info_outline, color: p.accentText),
+            title: const Text('À propos'),
+            subtitle: Text(visibilityLabel(s.about)),
+            onTap: () => visibility('about'),
           ),
           ListTile(
             key: const Key('privacy.invites'),

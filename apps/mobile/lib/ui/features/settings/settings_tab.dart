@@ -71,6 +71,25 @@ class SettingsTab extends ConsumerWidget {
     if (picked != null) await ref.read(quickReactionProvider.notifier).set(picked);
   }
 
+  /// « À propos » : 140 caractères au plus, vide pour le retirer.
+  Future<void> _editAbout(BuildContext context, WidgetRef ref, String? current) async {
+    final text = await showDialog<String>(
+      context: context,
+      builder: (_) => _AboutDialog(initial: current ?? ''),
+    );
+    if (text == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(accountApiProvider).setAbout(text);
+      await ref.read(sessionControllerProvider.notifier).refreshAccount();
+      messenger.showSnackBar(
+        SnackBar(content: Text(text.trim().isEmpty ? 'À propos retiré.' : 'À propos enregistré.')),
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    }
+  }
+
   Future<void> _toggleDiscoverable(BuildContext context, WidgetRef ref, bool value) async {
     try {
       await ref.read(sessionControllerProvider.notifier).setPhoneDiscoverable(value);
@@ -232,6 +251,25 @@ class SettingsTab extends ConsumerWidget {
                 ],
               ),
             const _SectionTitle('Confidentialité'),
+            // Lot 7.1a : « À propos » (140 caractères), visible selon Confidentialité.
+            if (profile != null)
+              _Card(
+                children: [
+                  ListTile(
+                    key: const Key('settings.about'),
+                    leading: Icon(Icons.info_outline, color: p.accentText),
+                    title: const Text('À propos'),
+                    subtitle: Text(
+                      (profile.about ?? '').isEmpty
+                          ? 'Ajouter un court texte de présentation'
+                          : profile.about!,
+                    ),
+                    trailing: Icon(Icons.edit_outlined, color: secondary),
+                    onTap: () => _editAbout(context, ref, profile.about),
+                  ),
+                ],
+              ),
+            if (profile != null) const SizedBox(height: PrivioSpacing.l),
             _Card(
               children: [
                 ListTile(
@@ -456,4 +494,61 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Divider(indent: 56, height: 1);
+}
+
+class _AboutDialog extends StatefulWidget {
+  const _AboutDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_AboutDialog> createState() => _AboutDialogState();
+}
+
+class _AboutDialogState extends State<_AboutDialog> {
+  late final _text = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('about.dialog'),
+      title: const Text('À propos'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Par exemple\u202F: «\u202FDisponible\u202F», «\u202FAu travail\u202F». Qui le voit se '
+            'règle dans Confidentialité.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: PrivioSpacing.m),
+          TextField(
+            key: const Key('about.text'),
+            controller: _text,
+            maxLength: 140,
+            maxLines: 3,
+            minLines: 1,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(hintText: 'Votre court texte'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        FilledButton(
+          key: const Key('about.save'),
+          onPressed: () => Navigator.pop(context, _text.text),
+          child: const Text('Enregistrer'),
+        ),
+      ],
+    );
+  }
 }

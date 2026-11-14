@@ -46,8 +46,8 @@ grant execute on function pg_temp.v(text), pg_temp.as_user(char), pg_temp.uid(ch
 select pg_temp.as_user('a');
 set local role authenticated;
 select results_eq($$ select * from public.get_my_privacy() $$,
-  $$ values ('contacts'::text, true, true, 'everyone'::text, 'everyone'::text, null::integer) $$,
-  'par défaut : présence aux contacts, accusés et écriture actifs, photo et invitations ouvertes');
+  $$ values ('contacts'::text, true, true, 'everyone'::text, 'everyone'::text, null::integer, 'contacts'::text) $$,
+  'par défaut : présence aux contacts, accusés et écriture actifs, photo et invitations ouvertes, À propos aux contacts');
 select throws_ok($$ select pg_temp.privacy('amis', true, true, 'everyone', 'everyone', null) $$,
   'P0001', 'PRIVACY_SETTING_INVALID', 'valeur inconnue : refusée');
 select throws_ok($$ select pg_temp.privacy('everyone', null, true, 'everyone', 'everyone', null) $$,

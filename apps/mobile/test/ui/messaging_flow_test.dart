@@ -90,6 +90,12 @@ void main() {
     await tester.tap(find.byKey(const Key('chat.contact')));
     await tester.pumpAndSettle();
     expect(find.text('@bob_ouaga'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('contact.block')),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('contact.block')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('contact.block.confirm')));
@@ -108,6 +114,12 @@ void main() {
     await tester.tap(find.byType(BackButton)); // pageBack() cherche « Back » (anglais)
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paramètres'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings.blocked')),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settings.blocked')));
     await tester.pumpAndSettle();
@@ -177,6 +189,12 @@ void main() {
     await tester.tap(find.byKey(const Key('search.write')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('chat.contact')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('contact.block')),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('contact.block')));
     await tester.pumpAndSettle();

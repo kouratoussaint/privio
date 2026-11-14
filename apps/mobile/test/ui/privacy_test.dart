@@ -75,7 +75,7 @@ void main() {
     await _openPrivacy(tester);
     expect(
       find.text('Mes contacts'),
-      findsOneWidget,
+      findsNWidgets(2), // présence et « À propos » (lot 7.1a)
       reason: 'présence\u202F: contacts par défaut',
     );
 
@@ -97,7 +97,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(deps.messaging.privacy.groupInvites, 'nobody');
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('privacy.receipts')),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('privacy.receipts')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('privacy.typing')),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('privacy.typing')));
     await tester.pumpAndSettle();
@@ -138,6 +152,12 @@ void main() {
     final deps = _deps()..messaging.failPrivacy = true;
     await _start(tester, deps);
     await _openPrivacy(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('privacy.receipts')),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('privacy.receipts')));
     await tester.pumpAndSettle();
     expect(find.text('Réglage de confidentialité invalide.'), findsOneWidget);

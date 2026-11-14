@@ -140,3 +140,8 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | `ACCOUNT_NOT_FOUND` | `console_account`, `console_sanction_user` | compte inexistant ou supprimé |
 | `SUPPORT_REPLY_INVALID` | `console_reply_support` | réponse de 2 à 1 000 caractères |
 
+### Fiches (lot 7.1a)
+| Code | Origine | Signification |
+|---|---|---|
+| `ABOUT_TOO_LONG` | `set_my_about` | « À propos » de plus de 140 caractères |
+

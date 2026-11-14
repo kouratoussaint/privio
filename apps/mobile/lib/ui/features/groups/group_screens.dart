@@ -19,6 +19,7 @@ import '../../../state/providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/ttl_picker.dart';
+import '../conversations/conversation_details.dart';
 import '../conversations/contact_screen.dart';
 import '../conversations/report_sheet.dart';
 
@@ -701,23 +702,14 @@ class GroupInfoScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xl),
         children: [
-          Center(
-            child: Semantics(
-              button: s.canEditInfo,
-              label: s.canEditInfo ? 'Changer la photo du groupe' : 'Photo du groupe',
-              child: InkWell(
-                key: const Key('group.photo'),
-                customBorder: const CircleBorder(),
-                onTap: s.canEditInfo ? () => _editPhoto(context, ref, s) : null,
-                child: UserAvatar(
-                  name: s.title,
-                  avatarPath: s.groupAvatarPath,
-                  seed: s.id,
-                  radius: 48,
-                  icon: Icons.groups_rounded,
-                ),
-              ),
-            ),
+          // Lot 7.1a : toucher la photo l'ouvre en grand ; les administrateurs la changent.
+          FicheAvatar(
+            key: const Key('group.photo'),
+            name: s.title,
+            path: s.groupAvatarPath,
+            seed: s.id,
+            icon: Icons.groups_rounded,
+            onEdit: s.canEditInfo ? () => _editPhoto(context, ref, s) : null,
           ),
           const SizedBox(height: PrivioSpacing.l),
           Text(s.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
@@ -764,6 +756,17 @@ class GroupInfoScreen extends ConsumerWidget {
             subtitle: Text(s.isMuted(now) ? 'Notifications coupées' : 'Notifications actives'),
             onTap: () => _mute(context, ref, s),
           ),
+          ListTile(
+            key: const Key('group.clear'),
+            leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
+            title: const Text('Vider la discussion'),
+            trailing: const Icon(Icons.chevron_right),
+            // La discussion ouvre son propre choix (chez moi / pour tous si administrateur).
+            onTap: () => context.pop('clear'),
+          ),
+          const Divider(height: PrivioSpacing.xl),
+          ConversationMediaSection(conversationId: s.id, title: s.title),
+          const Divider(height: PrivioSpacing.xl),
           // Groupe fermé par Privio (lot 5.3) : plus de réglage d'écriture ni d'invitation.
           if (s.isAdmin && !s.isClosed) ...[
             SwitchListTile(
