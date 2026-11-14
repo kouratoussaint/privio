@@ -93,8 +93,9 @@ python3 "$(dirname "$0")/push_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL
 python3 "$(dirname "$0")/privacy_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
 python3 "$(dirname "$0")/connection_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/invitation_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
+python3 "$(dirname "$0")/join_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/console_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/moderation_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Dernier : déconnecte le téléphone de B.
 python3 "$(dirname "$0")/support_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/console/modération/assistance : OK"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/codes et mentions/console/modération/assistance : OK"

@@ -79,6 +79,7 @@ enum FailureCode {
   searchTooShort,
   accountNotFound,
   aboutTooLong,
+  joinRequestNotFound,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -177,6 +178,7 @@ class AppFailure implements Exception {
     FailureCode.searchTooShort => 'Saisissez au moins 2 caractères.',
     FailureCode.accountNotFound => 'Ce compte n’existe plus.',
     FailureCode.aboutTooLong => '«\u202FÀ propos\u202F»\u202F: 140 caractères au plus.',
+    FailureCode.joinRequestNotFound => 'Cette demande a déjà été traitée ou a été annulée.',
     FailureCode.otpInvalidOrExpired =>
       'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
     FailureCode.smsRateLimited =>
@@ -267,6 +269,7 @@ const _serverCodes = <String, FailureCode>{
   'SEARCH_TOO_SHORT': FailureCode.searchTooShort,
   'ACCOUNT_NOT_FOUND': FailureCode.accountNotFound,
   'ABOUT_TOO_LONG': FailureCode.aboutTooLong,
+  'JOIN_REQUEST_NOT_FOUND': FailureCode.joinRequestNotFound,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

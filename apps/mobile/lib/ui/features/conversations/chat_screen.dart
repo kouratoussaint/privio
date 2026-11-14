@@ -15,6 +15,7 @@ import '../../../data/services/audio/voice_recorder.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
+import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/privacy_providers.dart';
 import '../../../state/providers.dart';
@@ -26,6 +27,7 @@ import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
 import '../../../data/services/photo_picker.dart' show PhotoSource;
 import '../../core/widgets/ttl_picker.dart';
+import '../groups/mentions.dart';
 import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
@@ -71,6 +73,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageKeys = <String, GlobalKey>{};
   String? _highlightedId;
   Timer? _highlightTimer;
+
+  /// Lot 7.1b : personnes choisies dans la liste « @ » (identifiant → nom inséré).
+  final _mentionPicks = <String, String>{};
+  bool _mentionOpen = false;
 
   ChatController get _chat => ref.read(chatProvider(widget.conversationId).notifier);
   VoiceRecorderController get _voice => ref.read(voiceRecorderControllerProvider.notifier);
@@ -136,9 +142,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await _guard(() => _chat.edit(editing.id, text));
     } else {
       final ttl = _nextTtl;
+      // Seules les mentions encore présentes dans le texte comptent.
+      final mentions = mentionedIds(text, _mentionPicks);
+      _mentionPicks.clear();
       setState(() => _nextTtl = null);
-      await _guard(() => _chat.send(text, replyToId: replyTo?.id, ttlSeconds: ttl));
+      await _guard(
+        () => _chat.send(text, replyToId: replyTo?.id, ttlSeconds: ttl, mentions: mentions),
+      );
     }
+  }
+
+  /// Une mention commence (« @ » tapé) : la liste des membres est relue une fois.
+  void _onMentionInput(bool isGroup) {
+    if (!isGroup) return;
+    final open = activeMention(_composer.value) != null;
+    if (open && !_mentionOpen) ref.invalidate(mentionMembersProvider(widget.conversationId));
+    _mentionOpen = open;
+  }
+
+  void _pickMention(MentionQuery q, GroupMember m) {
+    _composer.value = insertMention(_composer.value, q, m.displayName);
+    _mentionPicks[m.userId] = m.displayName;
+    _mentionOpen = false;
+    _focus.requestFocus();
   }
 
   Future<void> _chooseConversationTtl(ConversationSummary? summary) async {
@@ -728,6 +754,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final offline = ref.watch(offlineProvider);
     final query = _searchCtrl.text.trim().toLowerCase();
     final voice = ref.watch(voiceRecorderControllerProvider);
+    // Lot 7.1b : membres du groupe, pour proposer et mettre en valeur les @mentions.
+    final mentionMembers = isGroup
+        ? ref.watch(mentionMembersProvider(widget.conversationId)).value ?? const <GroupMember>[]
+        : const <GroupMember>[];
     _voice.onAutoStop = _afterVoiceStop;
     _voice.onNearEnd = () => unawaited(HapticFeedback.mediumImpact());
 
@@ -908,6 +938,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   peerName: summary?.title ?? 'Votre contact',
                   onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
                   isGroup: isGroup,
+                  memberNames: {for (final m in mentionMembers) m.userId: m.displayName},
                 ),
                 AsyncError(:final error) => ErrorView(
                   message: toAppFailure(error).message,
@@ -968,6 +999,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   compact: true,
                   onCancel: () => setState(() => _nextTtl = null),
                 ),
+              if (isGroup && _editing == null && voice is! VoiceRecording)
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _composer,
+                  builder: (context, value, _) {
+                    final q = activeMention(value);
+                    if (q == null) return const SizedBox.shrink();
+                    final candidates = mentionCandidates(mentionMembers, q.query, me: me);
+                    if (candidates.isEmpty) return const SizedBox.shrink();
+                    return MentionSuggestions(
+                      candidates: candidates,
+                      onPick: (m) => _pickMention(q, m),
+                    );
+                  },
+                ),
               if (voice is VoicePreview)
                 VoicePreviewBar(
                   preview: voice,
@@ -978,7 +1023,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _Composer(
                   controller: _composer,
                   focusNode: _focus,
-                  onChanged: (_) => _chat.notifyTyping(),
+                  onChanged: (_) {
+                    _chat.notifyTyping();
+                    _onMentionInput(isGroup);
+                  },
                   onTtlTap: _editing != null || voice is VoiceRecording
                       ? null
                       : () => _chooseMessageTtl(summary),
@@ -1045,9 +1093,13 @@ class _MessageList extends StatelessWidget {
     this.offline = false,
     this.isGroup = false,
     this.highlightedId,
+    this.memberNames = const {},
   });
 
   final bool isGroup;
+
+  /// Noms des membres (identifiant → nom) pour mettre en valeur les @mentions.
+  final Map<String, String> memberNames;
   final ScrollController scrollController;
 
   /// Une clé par message, gardée par l'écran (les clés « objet » comparent l'identité,
@@ -1150,6 +1202,7 @@ class _MessageList extends StatelessWidget {
               outgoing: m.senderId == me,
               sender: isGroup && m.senderId != me ? (m.senderName ?? 'Ancien membre') : null,
               text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
+              mentions: {for (final id in m.mentions) ?memberNames[id]: id == me},
               content: m.hasPlayableVoice
                   ? VoiceMessageContent(
                       message: m,
@@ -1416,10 +1469,14 @@ class _Bubble extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.onReactionTap,
+    this.mentions = const {},
   });
 
   final bool outgoing;
   final String text;
+
+  /// Lot 7.1b : noms mentionnés dans [text] (vrai : c'est moi).
+  final Map<String, bool> mentions;
 
   /// Nom de l'auteur, affiché en tête des messages reçus dans un groupe.
   final String? sender;
@@ -1534,13 +1591,33 @@ class _Bubble extends StatelessWidget {
                     widthFactor: 1,
                     child:
                         content ??
-                        Text(
-                          text,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: fg,
-                            fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-                          ),
-                        ),
+                        (mentions.isEmpty
+                            ? Text(
+                                text,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: fg,
+                                  fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+                                ),
+                              )
+                            : Text.rich(
+                                key: const Key('bubble.mentions'),
+                                mentionSpan(
+                                  text,
+                                  names: mentions,
+                                  style: theme.textTheme.bodyLarge?.copyWith(color: fg),
+                                  mention: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: outgoing ? fg : p.accentText,
+                                  ),
+                                  mine: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: outgoing ? fg : p.accentText,
+                                    backgroundColor: (outgoing ? fg : p.accentText).withValues(
+                                      alpha: 0.16,
+                                    ),
+                                  ),
+                                ),
+                              )),
                   ),
                   const SizedBox(height: 2),
                   if (status != null)

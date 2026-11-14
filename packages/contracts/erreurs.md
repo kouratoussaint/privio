@@ -145,3 +145,13 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 |---|---|---|
 | `ABOUT_TOO_LONG` | `set_my_about` | « À propos » de plus de 140 caractères |
 
+### Rejoindre un groupe, @mentions (lot 7.1b)
+| Code | Origine | Signification |
+|---|---|---|
+| `JOIN_REQUEST_NOT_FOUND` | `respond_to_join_request` | demande inconnue, déjà traitée, annulée ou expirée |
+| `GROUP_CLOSED` | `get_group_invite_code`, `reset_group_invite_code`, `set_group_join_approval`, `respond_to_join_request` | groupe fermé par Privio : plus de code ni d'entrée |
+| `BODY_INVALID` | `send_message` | plus de 50 mentions |
+
+Un code faux n'est pas une erreur : `preview_group_by_code` et `join_group_by_code`
+renvoient un statut (`invalid`, `member`, `pending`, `declined`, `full`, `open`,
+`approval`, puis `joined` ou `requested`), pour que les essais restent comptés.

@@ -157,6 +157,7 @@ class OutboxController extends Notifier<List<OutboxItem>> {
           body: item.body,
           replyToId: item.replyToId,
           ttlSeconds: item.ttlSeconds,
+          mentions: item.mentions,
         );
       }
       await _cache.removeOutbox(item.clientId);
@@ -514,7 +515,13 @@ class ChatController extends AsyncNotifier<ChatState> {
   /// Envoi : le message entre d'abord dans la file locale chiffrée (il survit à une
   /// coupure ou à la fermeture de l'app), puis part ; hors connexion il attend et
   /// repart seul, avec le MÊME identifiant client (pas de doublon côté serveur).
-  Future<void> send(String text, {String? clientId, String? replyToId, int? ttlSeconds}) async {
+  Future<void> send(
+    String text, {
+    String? clientId,
+    String? replyToId,
+    int? ttlSeconds,
+    List<String> mentions = const [],
+  }) async {
     final body = text.trim();
     if (body.isEmpty) return;
     final outbox = ref.read(outboxProvider.notifier);
@@ -528,6 +535,7 @@ class ChatController extends AsyncNotifier<ChatState> {
           createdAt: DateTime.now(),
           replyToId: replyToId,
           ttlSeconds: ttlSeconds,
+          mentions: mentions,
         );
     await outbox.enqueue(item);
     final sent = await outbox.sendOne(item);

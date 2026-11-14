@@ -13,6 +13,7 @@ import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/data_providers.dart';
+import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/privacy_providers.dart';
 import '../../../state/providers.dart';
@@ -685,6 +686,26 @@ class GroupInfoScreen extends ConsumerWidget {
     }
   }
 
+  /// Lot 7.1b : accepter (la personne entre, message système) ou refuser une demande.
+  Future<void> _answerJoin(
+    BuildContext context,
+    WidgetRef ref,
+    JoinRequest r, {
+    required bool approve,
+  }) => _run(context, ref, () async {
+    try {
+      await groupAction(
+        ref,
+        conversationId,
+        (api) => api.respondToJoinRequest(r.id, approve: approve),
+      );
+    } finally {
+      ref
+        ..invalidate(groupJoinRequestsProvider(conversationId))
+        ..invalidate(groupJoinSettingsProvider(conversationId));
+    }
+  }, done: approve ? '${r.displayName} a rejoint le groupe.' : 'Demande refusée.');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -694,6 +715,11 @@ class GroupInfoScreen extends ConsumerWidget {
     final me = ref.watch(currentUserIdProvider);
     if (s == null) return Scaffold(appBar: AppBar(), body: const LoadingView());
     final now = DateTime.now();
+    final admin = s.isAdmin && !s.isClosed;
+    final joinSettings = admin ? ref.watch(groupJoinSettingsProvider(conversationId)).value : null;
+    final requests = admin
+        ? ref.watch(groupJoinRequestsProvider(conversationId)).value ?? const <JoinRequest>[]
+        : const <JoinRequest>[];
     final active = (members.value ?? const <GroupMember>[]).where((m) => !m.invited).toList();
     final invited = (members.value ?? const <GroupMember>[]).where((m) => m.invited).toList();
 
@@ -800,6 +826,67 @@ class GroupInfoScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            // Lot 7.1b : entrée par code — demande à accepter (par défaut) ou entrée directe.
+            SwitchListTile(
+              key: const Key('group.join_approval'),
+              value: joinSettings?.approvalRequired ?? true,
+              secondary: Icon(Icons.how_to_reg_outlined, color: p.accentText),
+              title: const Text('Approuver les nouveaux membres'),
+              subtitle: Text(
+                joinSettings?.approvalRequired ?? true
+                    ? 'Avec le code, on envoie une demande à accepter'
+                    : 'Avec le code, on entre directement',
+              ),
+              onChanged: joinSettings == null
+                  ? null
+                  : (v) => _run(context, ref, () async {
+                      await ref
+                          .read(messagingApiProvider)
+                          .setGroupJoinApproval(conversationId, required: v);
+                      ref.invalidate(groupJoinSettingsProvider(conversationId));
+                    }),
+            ),
+          ],
+          if (s.isAdmin && !s.isClosed && requests.isNotEmpty) ...[
+            const Divider(height: PrivioSpacing.xxl),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+              child: Text(
+                'Demandes pour rejoindre (${requests.length})',
+                key: const Key('group.join_requests'),
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+            for (final r in requests)
+              ListTile(
+                key: Key('join_request.${r.id}'),
+                leading: UserAvatar(name: r.displayName, seed: r.userId, radius: 20),
+                title: Text(r.displayName),
+                subtitle: Text(
+                  [
+                    if (r.handle != null) '@${r.handle}',
+                    if (r.wasRemoved) 'déjà retiré du groupe',
+                  ].join(' · '),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: Key('join_request.${r.id}.decline'),
+                      tooltip: 'Refuser',
+                      onPressed: () => _answerJoin(context, ref, r, approve: false),
+                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.error),
+                    ),
+                    IconButton.filled(
+                      key: Key('join_request.${r.id}.approve'),
+                      tooltip: 'Accepter',
+                      onPressed: () => _answerJoin(context, ref, r, approve: true),
+                      // Couleur explicite : la ligne impose sinon la sienne à l'icône.
+                      icon: Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary),
+                    ),
+                  ],
+                ),
+              ),
           ],
           const Divider(height: PrivioSpacing.xxl),
           Padding(
@@ -817,6 +904,15 @@ class GroupInfoScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (s.isAdmin && !s.isClosed)
+            ListTile(
+              key: const Key('group.code'),
+              leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),
+              title: const Text('Inviter avec un code ou un QR code'),
+              subtitle: const Text('Pour les personnes qui ne sont pas dans vos contacts'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(Routes.groupCode(conversationId)),
+            ),
           if (members.isLoading && !members.hasValue) const LinearProgressIndicator(),
           for (final m in [...active, ...invited])
             ListTile(

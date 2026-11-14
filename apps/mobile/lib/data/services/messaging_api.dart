@@ -31,6 +31,7 @@ abstract interface class MessagingApi {
     required String body,
     String? replyToId,
     int? ttlSeconds,
+    List<String> mentions = const [],
   });
 
   /// Vocal : envoyé à la fonction voice-send, qui MESURE le son avant de le publier.
@@ -150,6 +151,21 @@ abstract interface class MessagingApi {
   /// Réponse à une demande de l'autre personne : 'cleared' ou 'refused'.
   Future<String> respondClearRequest(String conversationId, {required bool accept});
   Future<void> cancelClearRequest(String conversationId);
+
+  // Lot 7.1b : rejoindre un groupe par code (ou QR code), demandes d'adhésion.
+  /// Code du groupe (administrateurs), créé au premier appel.
+  Future<String> getGroupInviteCode(String conversationId);
+
+  /// Nouveau code : l'ancien cesse aussitôt de fonctionner.
+  Future<String> resetGroupInviteCode(String conversationId);
+  Future<GroupJoinSettings> getGroupJoinSettings(String conversationId);
+  Future<void> setGroupJoinApproval(String conversationId, {required bool required});
+  Future<GroupPreview> previewGroupByCode(String code);
+  Future<JoinResult> joinGroupByCode(String code);
+  Future<void> cancelJoinRequest(String conversationId);
+  Future<List<MyJoinRequest>> listMyJoinRequests();
+  Future<List<JoinRequest>> listGroupJoinRequests(String conversationId);
+  Future<void> respondToJoinRequest(String requestId, {required bool approve});
 }
 
 class SupabaseMessagingApi implements MessagingApi {
@@ -247,6 +263,7 @@ class SupabaseMessagingApi implements MessagingApi {
     required String body,
     String? replyToId,
     int? ttlSeconds,
+    List<String> mentions = const [],
   }) async {
     final row = (await _rows('send_message', {
       'p_conversation_id': conversationId,
@@ -254,6 +271,8 @@ class SupabaseMessagingApi implements MessagingApi {
       'p_body': body,
       'p_reply_to_id': replyToId,
       'p_ttl_seconds': ttlSeconds,
+      // Seulement s'il y en a : un serveur d'avant le lot 7.1b reste compatible.
+      if (mentions.isNotEmpty) 'p_mentions': mentions,
     })).single;
     final sentAt = DateTime.parse(row['sent_at'] as String);
     return ChatMessage(
@@ -264,6 +283,7 @@ class SupabaseMessagingApi implements MessagingApi {
       sentAt: sentAt,
       expiresAt: DateTime.parse(row['expires_at'] as String),
       updatedAt: sentAt,
+      mentions: mentions,
     );
   }
 
@@ -625,4 +645,58 @@ class SupabaseMessagingApi implements MessagingApi {
     if (me == null) throw const AppFailure(FailureCode.authRequired);
     await _client.from('blocks').delete().eq('blocker_id', me).eq('blocked_id', userId);
   });
+
+  @override
+  Future<String> getGroupInviteCode(String conversationId) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'get_group_invite_code',
+      params: {'p_conversation_id': conversationId},
+    ) as String,
+  );
+
+  @override
+  Future<String> resetGroupInviteCode(String conversationId) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'reset_group_invite_code',
+      params: {'p_conversation_id': conversationId},
+    ) as String,
+  );
+
+  @override
+  Future<GroupJoinSettings> getGroupJoinSettings(String conversationId) async =>
+      GroupJoinSettings.fromJson(
+        (await _rows('get_group_join_settings', {'p_conversation_id': conversationId})).single,
+      );
+
+  @override
+  Future<void> setGroupJoinApproval(String conversationId, {required bool required}) => _call(
+    'set_group_join_approval',
+    {'p_conversation_id': conversationId, 'p_required': required},
+  );
+
+  @override
+  Future<GroupPreview> previewGroupByCode(String code) async =>
+      GroupPreview.fromJson((await _rows('preview_group_by_code', {'p_code': code})).single);
+
+  @override
+  Future<JoinResult> joinGroupByCode(String code) async =>
+      JoinResult.fromJson((await _rows('join_group_by_code', {'p_code': code})).single);
+
+  @override
+  Future<void> cancelJoinRequest(String conversationId) =>
+      _call('cancel_join_request', {'p_conversation_id': conversationId});
+
+  @override
+  Future<List<MyJoinRequest>> listMyJoinRequests() async =>
+      (await _rows('list_my_join_requests')).map(MyJoinRequest.fromJson).toList();
+
+  @override
+  Future<List<JoinRequest>> listGroupJoinRequests(String conversationId) async => (await _rows(
+    'list_group_join_requests',
+    {'p_conversation_id': conversationId},
+  )).map(JoinRequest.fromJson).toList();
+
+  @override
+  Future<void> respondToJoinRequest(String requestId, {required bool approve}) =>
+      _call('respond_to_join_request', {'p_request_id': requestId, 'p_approve': approve});
 }

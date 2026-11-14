@@ -54,6 +54,8 @@ class SupabaseRealtimeService implements RealtimeService {
     // Lot 5.4 : réponse de l'assistance ; téléphone déconnecté par l'assistance.
     'support',
     'disconnected',
+    // Lot 7.1b : demande d'adhésion reçue, acceptée, refusée ou annulée.
+    'join_request',
   ];
   static const _retryDelays = [
     Duration(seconds: 2),

@@ -60,15 +60,19 @@ async function accessToken(sa: ServiceAccount): Promise<string> {
 
 export type SendResult = "sent" | "invalid_token" | "failed";
 
+/** Mention dans un groupe (lot 7.1b) : envoyée même si le groupe est en sourdine. */
+export const MENTION_BODY = "Vous avez été mentionné dans un groupe";
+
 /** Notification GÉNÉRIQUE : aucun nom, aucun contenu ; masquée sur l'écran verrouillé. */
 export function sendGeneric(
   sa: ServiceAccount,
   token: string,
   conversationId: string,
   isGroup: boolean,
+  mentioned = false,
 ): Promise<SendResult> {
   return sendNotification(sa, token, {
-    body: isGroup ? "Nouveau message dans un groupe" : "Nouveau message",
+    body: mentioned ? MENTION_BODY : isGroup ? "Nouveau message dans un groupe" : "Nouveau message",
     data: { type: "message", conversation_id: conversationId },
     // Une seule notification par discussion (les suivantes la remplacent).
     tag: conversationId,
@@ -103,6 +107,26 @@ export function sendInvitation(sa: ServiceAccount, token: string): Promise<SendR
     body: INVITATION_BODY,
     data: { type: "invitation" },
     tag: "privio-invitations",
+  });
+}
+
+/** Demandes d'adhésion à un groupe (lot 7.1b) : ni nom du groupe, ni nom de la personne. */
+export const JOIN_BODIES: Record<string, string> = {
+  join_request: "Nouvelle demande pour rejoindre un groupe",
+  join_approved: "Votre demande pour rejoindre un groupe a été acceptée",
+};
+
+/** Demande reçue (administrateurs : la fiche du groupe) ou acceptée (le groupe s'ouvre). */
+export function sendJoinEvent(
+  sa: ServiceAccount,
+  token: string,
+  event: string,
+  conversationId: string,
+): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: JOIN_BODIES[event] ?? "Privio",
+    data: { type: event, conversation_id: conversationId },
+    tag: `privio-join-${conversationId}`,
   });
 }
 

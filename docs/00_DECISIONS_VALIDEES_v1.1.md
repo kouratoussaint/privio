@@ -176,4 +176,7 @@ Demandés par le commanditaire après test sur téléphone :
 - 7.1b : invitation de l'extérieur par code et QR code dans l'application (pas de lien web) ;
   accord d'un administrateur obligatoire par défaut, désactivable par groupe ; une @mention
   notifie la personne même si le groupe est en sourdine.
+- Précisions de mise en œuvre (7.1b, ADR-019) : 20 essais de code par heure (réglable dans la
+  console) ; une personne retirée par un administrateur repasse toujours par une demande ;
+  après un refus, pas de nouvelle demande pendant 24 h.
 

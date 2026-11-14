@@ -878,9 +878,11 @@ class FakeMessagingApi implements MessagingApi {
     required String body,
     String? replyToId,
     int? ttlSeconds,
+    List<String> mentions = const [],
   }) async {
     sentClientIds.add(clientMsgId);
     sentTtls.add(ttlSeconds);
+    sentMentions.add(mentions);
     _net();
     if (failNextSend) {
       failNextSend = false;
@@ -910,11 +912,15 @@ class FakeMessagingApi implements MessagingApi {
         ),
       ),
       updatedAt: now,
+      mentions: g == null ? const [] : mentions.where(g.roles.containsKey).toList(),
     );
     final list = messages[conversationId] ??= [];
     if (!list.any((x) => x.id == m.id)) list.add(m);
     return m;
   }
+
+  /// Mentions envoyées avec chaque message texte (lot 7.1b).
+  final List<List<String>> sentMentions = [];
 
   /// Sons déposés côté « serveur » (chemin → octets) et téléchargements effectués.
   final Map<String, Uint8List> storedVoices = {};
@@ -1185,7 +1191,12 @@ class FakeMessagingApi implements MessagingApi {
   }
 
   /// Simule un message reçu dans un groupe.
-  ChatMessage receiveInGroup(String id, String senderId, String body) {
+  ChatMessage receiveInGroup(
+    String id,
+    String senderId,
+    String body, {
+    List<String> mentions = const [],
+  }) {
     final now = DateTime.now();
     final m = ChatMessage(
       id: 'srv-${_seq++}',
@@ -1195,6 +1206,7 @@ class FakeMessagingApi implements MessagingApi {
       sentAt: now,
       expiresAt: now.add(const Duration(hours: 72)),
       updatedAt: now,
+      mentions: mentions,
     );
     (messages[id] ??= []).add(m);
     return m;
@@ -1411,6 +1423,145 @@ class FakeMessagingApi implements MessagingApi {
     g.avatarPath = null;
     groupEvent(conversationId, 'photo_removed');
   }
+
+  // ------------------------------------------------------------------------
+  // Lot 7.1b : codes, demandes d'adhésion
+  // ------------------------------------------------------------------------
+  /// Groupes connus par code (code → groupe ; titre et membres pour l'aperçu).
+  final Map<String, String> codes = {};
+  final Map<String, GroupPreview> codePreviews = {};
+
+  /// Demandes reçues (groupe → demandes) et mes demandes envoyées.
+  final Map<String, List<JoinRequest>> joinRequests = {};
+  final List<MyJoinRequest> myJoinRequests = [];
+  final List<(String, bool)> joinResponses = [];
+  final List<String> previewedCodes = [];
+  int _codeSeq = 0;
+
+  String _newCode() {
+    const signs = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    final n = _codeSeq++;
+    return 'PRV-7K3Q${signs[n % 32]}X';
+  }
+
+  @override
+  Future<String> getGroupInviteCode(String conversationId) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    final existing = codes.entries.where((e) => e.value == g.id).firstOrNull?.key;
+    if (existing != null) return existing;
+    final code = _newCode();
+    codes[code] = g.id;
+    return code;
+  }
+
+  @override
+  Future<String> resetGroupInviteCode(String conversationId) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    codes.removeWhere((_, v) => v == g.id);
+    final code = _newCode();
+    codes[code] = g.id;
+    return code;
+  }
+
+  @override
+  Future<GroupJoinSettings> getGroupJoinSettings(String conversationId) async {
+    _net();
+    final g = _adminGroup(conversationId);
+    return GroupJoinSettings(
+      approvalRequired: g.joinApproval,
+      hasCode: codes.containsValue(g.id),
+      pendingRequests: joinRequests[g.id]?.length ?? 0,
+    );
+  }
+
+  @override
+  Future<void> setGroupJoinApproval(String conversationId, {required bool required}) async {
+    _net();
+    _adminGroup(conversationId).joinApproval = required;
+  }
+
+  @override
+  Future<GroupPreview> previewGroupByCode(String code) async {
+    _net();
+    previewedCodes.add(code);
+    return codePreviews[code] ?? const GroupPreview(status: JoinStatus.invalid);
+  }
+
+  @override
+  Future<JoinResult> joinGroupByCode(String code) async {
+    _net();
+    final p = codePreviews[code];
+    if (p == null) return const JoinResult(status: JoinStatus.invalid);
+    switch (p.status) {
+      case JoinStatus.open:
+        final id = p.conversationId ?? 'grp-code';
+        final g = groups[id] ?? seedGroup(id, p.title ?? 'Groupe', owner: bob.id);
+        g.roles[me] = 'member';
+        groupEvent(id, 'joined');
+        codePreviews[code] = GroupPreview(
+          status: JoinStatus.member,
+          conversationId: id,
+          title: p.title,
+          memberCount: g.roles.length,
+        );
+        return JoinResult(status: JoinStatus.joined, conversationId: id);
+      case JoinStatus.approval:
+        codePreviews[code] = GroupPreview(
+          status: JoinStatus.pending,
+          conversationId: p.conversationId,
+          title: p.title,
+          memberCount: p.memberCount,
+        );
+        myJoinRequests.add(
+          MyJoinRequest(
+            conversationId: p.conversationId ?? 'grp-code',
+            title: p.title ?? 'Groupe',
+            createdAt: DateTime.now(),
+          ),
+        );
+        return JoinResult(status: JoinStatus.requested, conversationId: p.conversationId);
+      default:
+        return JoinResult(status: p.status, conversationId: p.conversationId);
+    }
+  }
+
+  @override
+  Future<void> cancelJoinRequest(String conversationId) async {
+    _net();
+    myJoinRequests.removeWhere((r) => r.conversationId == conversationId);
+  }
+
+  @override
+  Future<List<MyJoinRequest>> listMyJoinRequests() async {
+    _net();
+    return List.of(myJoinRequests);
+  }
+
+  @override
+  Future<List<JoinRequest>> listGroupJoinRequests(String conversationId) async {
+    _net();
+    _adminGroup(conversationId);
+    return List.of(joinRequests[conversationId] ?? const []);
+  }
+
+  @override
+  Future<void> respondToJoinRequest(String requestId, {required bool approve}) async {
+    _net();
+    joinResponses.add((requestId, approve));
+    for (final e in joinRequests.entries) {
+      final r = e.value.where((x) => x.id == requestId).firstOrNull;
+      if (r == null) continue;
+      e.value.remove(r);
+      if (approve) {
+        groups[e.key]?.roles[r.userId] = 'member';
+        groupEvent(e.key, 'joined', actor: r.userId);
+      }
+      return;
+    }
+    throw const AppFailure(FailureCode.joinRequestNotFound);
+  }
 }
 
 /// État d'un groupe dans le faux serveur.
@@ -1423,6 +1574,7 @@ class FakeGroup {
   String? avatarPath;
   String posting = 'all';
   String infoEditing = 'admins';
+  bool joinApproval = true;
   final DateTime createdAt = DateTime.now();
 
   /// Membres actifs : identifiant → rôle (owner, admin, member).

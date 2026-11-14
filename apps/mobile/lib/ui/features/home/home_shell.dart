@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../data/services/push_service.dart'
-    show kConsoleTarget, kGroupsTarget, kRequestsTarget, kSupportTarget;
+    show kConsoleTarget, kGroupInfoPrefix, kGroupsTarget, kRequestsTarget, kSupportTarget;
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
@@ -76,6 +76,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       if (id == kGroupsTarget) {
         ref.invalidate(invitationsProvider);
         context.go(Routes.groups);
+        return;
+      }
+      // Demande d'adhésion (lot 7.1b) : le groupe, puis sa fiche (liste des demandes).
+      if (id.startsWith(kGroupInfoPrefix)) {
+        final group = id.substring(kGroupInfoPrefix.length);
+        context.push(Routes.chat(group));
+        context.push(Routes.contact(group));
         return;
       }
       context.push(switch (id) {

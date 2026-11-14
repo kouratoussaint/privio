@@ -9,6 +9,7 @@ import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
+import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/brand_scaffold.dart';
@@ -43,10 +44,24 @@ class GroupsTab extends ConsumerWidget {
     }
   }
 
+  Future<void> _cancelRequest(BuildContext context, WidgetRef ref, MyJoinRequest r) async {
+    try {
+      await ref.read(messagingApiProvider).cancelJoinRequest(r.conversationId);
+    } on Object catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+      }
+    } finally {
+      ref.invalidate(myJoinRequestsProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
+    final myRequests = ref.watch(myJoinRequestsProvider).value ?? const <MyJoinRequest>[];
     final conversations = ref.watch(conversationsProvider);
     final groups = (conversations.value ?? const <ConversationSummary>[])
         .where((c) => c.isGroup && !c.archived)
@@ -55,6 +70,15 @@ class GroupsTab extends ConsumerWidget {
 
     return BrandScaffold(
       title: const Text('Groupes'),
+      // Lot 7.1b : entrer dans un groupe avec un code ou un QR code.
+      actions: [
+        IconButton(
+          key: const Key('groups.join'),
+          tooltip: 'Rejoindre un groupe',
+          onPressed: () => context.push(Routes.joinGroup),
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('groups.new'),
         // Chaque onglet garde son bouton : étiquettes Hero distinctes.
@@ -72,7 +96,7 @@ class GroupsTab extends ConsumerWidget {
                 padding: EdgeInsets.only(top: PrivioSpacing.s),
                 child: OfflineBanner(),
               ),
-            Expanded(child: _body(context, ref, conversations, invitations, groups)),
+            Expanded(child: _body(context, ref, conversations, invitations, groups, myRequests)),
           ],
         ),
       ),
@@ -85,6 +109,7 @@ class GroupsTab extends ConsumerWidget {
     AsyncValue<List<ConversationSummary>> conversations,
     List<GroupInvitation> invitations,
     List<ConversationSummary> groups,
+    List<MyJoinRequest> myRequests,
   ) {
     final theme = Theme.of(context);
     if (!conversations.hasValue && conversations.isLoading) return const LoadingView();
@@ -101,13 +126,14 @@ class GroupsTab extends ConsumerWidget {
       await Future.wait([
         ref.read(conversationsProvider.notifier).refresh(),
         ref.refresh(invitationsProvider.future).then((_) {}, onError: (Object _) {}),
+        ref.refresh(myJoinRequestsProvider.future).then((_) {}, onError: (Object _) {}),
       ]);
     }
 
     return RefreshIndicator(
       key: const Key('groups.refresh'),
       onRefresh: reload,
-      child: invitations.isEmpty && groups.isEmpty
+      child: invitations.isEmpty && groups.isEmpty && myRequests.isEmpty
           ? LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -118,7 +144,8 @@ class GroupsTab extends ConsumerWidget {
                     title: 'Aucun groupe pour l’instant',
                     message:
                         'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre\u202F; '
-                        'les messages s’effacent comme dans vos discussions.',
+                        'les messages s’effacent comme dans vos discussions. Un code reçu\u202F? '
+                        'Touchez l’icône en haut pour rejoindre un groupe.',
                   ),
                 ),
               ),
@@ -133,6 +160,26 @@ class GroupsTab extends ConsumerWidget {
                     child: Text('Invitations', style: theme.textTheme.titleSmall),
                   ),
                   for (final i in invitations) _InvitationCard(invitation: i, onRespond: _respond),
+                  const SizedBox(height: PrivioSpacing.m),
+                ],
+                // Lot 7.1b : mes demandes pour rejoindre un groupe, en attente.
+                if (myRequests.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                    child: Text('Demandes envoyées', style: theme.textTheme.titleSmall),
+                  ),
+                  for (final r in myRequests)
+                    ListTile(
+                      key: Key('my_join.${r.conversationId}'),
+                      leading: const Icon(Icons.hourglass_top_rounded),
+                      title: Text(r.title),
+                      subtitle: const Text('En attente d’un administrateur'),
+                      trailing: TextButton(
+                        key: Key('my_join.cancel.${r.conversationId}'),
+                        onPressed: () => _cancelRequest(context, ref, r),
+                        child: const Text('Annuler'),
+                      ),
+                    ),
                   const SizedBox(height: PrivioSpacing.m),
                 ],
                 for (final g in groups) ConversationTile(summary: g),

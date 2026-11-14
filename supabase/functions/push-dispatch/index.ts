@@ -1,5 +1,6 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
-// invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4).
+// invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4 ;
+// demandes d'adhésion et @mentions : lot 7.1b).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que
@@ -14,6 +15,7 @@ import {
   sendAdminEvent,
   sendGeneric,
   sendInvitation,
+  sendJoinEvent,
   sendRequestEvent,
   sendSupportReply,
 } from "../_shared/fcm.ts";
@@ -22,6 +24,7 @@ interface Target {
   token: string;
   conversation_id: string;
   is_group: boolean;
+  mentioned?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -35,6 +38,7 @@ Deno.serve(async (req) => {
   let adminEvent = "";
   let refId = "";
   let supportReplyId = "";
+  let joinRequestId = "";
   try {
     const body = (await req.json()) as {
       message_id?: string;
@@ -43,6 +47,7 @@ Deno.serve(async (req) => {
       admin_event?: string;
       ref_id?: string;
       support_reply_id?: string;
+      join_request_id?: string;
     };
     messageId = body.message_id ?? "";
     requestId = body.request_id ?? "";
@@ -50,6 +55,7 @@ Deno.serve(async (req) => {
     adminEvent = body.admin_event ?? "";
     refId = body.ref_id ?? "";
     supportReplyId = body.support_reply_id ?? "";
+    joinRequestId = body.join_request_id ?? "";
   } catch {
     return json(400, { error: "BODY_INVALID" });
   }
@@ -70,7 +76,21 @@ Deno.serve(async (req) => {
         { p_token: token, p_report_id: supportReplyId },
         serviceHeaders(),
       ),
-      (sa, t) => sendSupportReply(sa, t),
+      (sa, t) => sendSupportReply(sa, t.token),
+    );
+  }
+  // Lot 7.1b : demande d'adhésion reçue (administrateurs) ou acceptée (la personne).
+  if (joinRequestId) {
+    if (!UUID.test(joinRequestId)) return json(400, { error: "BODY_INVALID" });
+    return await dispatchTargets(
+      token,
+      joinRequestId,
+      () => rpc<{ token: string; event: string; conversation_id: string }[]>(
+        "push_join_request_targets",
+        { p_token: token, p_request_id: joinRequestId },
+        serviceHeaders(),
+      ),
+      (sa, t) => sendJoinEvent(sa, t.token, t.event, t.conversation_id),
     );
   }
   // Lot 5.3 : signalement, demande d'assistance ou contestation, pour l'administration.
@@ -116,7 +136,7 @@ Deno.serve(async (req) => {
     const invalid: string[] = [];
     for (const t of targets) {
       try {
-        const r = await sendGeneric(sa, t.token, t.conversation_id, t.is_group);
+        const r = await sendGeneric(sa, t.token, t.conversation_id, t.is_group, t.mentioned === true);
         if (r === "sent") sent++;
         else {
           failed++;
@@ -286,11 +306,11 @@ async function dispatchAdmin(token: string, event: string, refId: string): Promi
 }
 
 /** Envoi générique : cibles calculées par la base, compte rendu dans push_log (lot 5.4). */
-async function dispatchTargets(
+async function dispatchTargets<T extends { token: string }>(
   token: string,
   refId: string,
-  targetsOf: () => Promise<{ token: string }[]>,
-  send: (sa: NonNullable<ReturnType<typeof loadServiceAccount>>, t: string) => Promise<string>,
+  targetsOf: () => Promise<T[]>,
+  send: (sa: NonNullable<ReturnType<typeof loadServiceAccount>>, t: T) => Promise<string>,
 ): Promise<Response> {
   const report = (recipients: number, sent: number, failed: number, status: string, invalid: string[] = []) =>
     rpc("push_report", {
@@ -318,7 +338,7 @@ async function dispatchTargets(
     const invalid: string[] = [];
     for (const t of targets) {
       try {
-        const r = await send(sa, t.token);
+        const r = await send(sa, t);
         if (r === "sent") sent++;
         else {
           failed++;

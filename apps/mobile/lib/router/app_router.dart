@@ -9,7 +9,9 @@ import '../ui/features/conversations/connection_requests_screen.dart';
 import '../ui/features/conversations/new_conversation_screen.dart';
 import '../ui/features/auth/phone_screen.dart';
 import '../ui/features/auth/welcome_screen.dart';
+import '../ui/features/groups/group_code_screen.dart';
 import '../ui/features/groups/group_screens.dart';
+import '../ui/features/groups/join_group_screen.dart';
 import '../ui/features/home/archived_screen.dart';
 import '../ui/features/lock/app_lock_screens.dart';
 import '../ui/features/settings/privacy_screen.dart';
@@ -60,6 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.requests, builder: (_, _) => const ConnectionRequestsScreen()),
       GoRoute(path: Routes.console, builder: (_, _) => const ConsoleScreen()),
       GoRoute(path: Routes.mySupport, builder: (_, _) => const MySupportScreen()),
+      GoRoute(path: Routes.joinGroup, builder: (_, _) => const JoinGroupScreen()),
       GoRoute(path: Routes.help, builder: (_, _) => const HelpScreen()),
       GoRoute(path: Routes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: Routes.appLock, builder: (_, _) => const AppLockSettingsScreen()),
@@ -89,6 +92,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'invite',
             builder: (_, state) => InviteMembersScreen(conversationId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'code',
+            builder: (_, state) => GroupCodeScreen(conversationId: state.pathParameters['id']!),
           ),
         ],
       ),

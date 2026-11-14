@@ -362,6 +362,7 @@ class ChatMessage {
     this.height,
     this.senderName,
     this.waveform,
+    this.mentions = const [],
   });
 
   final String id;
@@ -393,6 +394,9 @@ class ChatMessage {
 
   /// Vocal : profil sonore (8 à 64 valeurs de 0 à 100) ; null pour un ancien vocal.
   final List<int>? waveform;
+
+  /// Personnes mentionnées (lot 7.1b, groupes seulement).
+  final List<String> mentions;
 
   bool get isDeleted => deletedAt != null;
   bool get isSystem => kind == 'system';
@@ -431,6 +435,7 @@ class ChatMessage {
     'media_height': height,
     'sender_name': senderName,
     'media_waveform': waveform,
+    'mentions': mentions,
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -461,6 +466,7 @@ class ChatMessage {
       height: (j['media_height'] as num?)?.toInt(),
       senderName: j['sender_name'] as String?,
       waveform: (j['media_waveform'] as List<dynamic>?)?.map((v) => (v as num).toInt()).toList(),
+      mentions: [for (final v in (j['mentions'] as List<dynamic>? ?? const [])) v as String],
     );
   }
 }
@@ -798,4 +804,144 @@ class ConnectionRequest {
       retryAt: at('retry_at'),
     );
   }
+}
+
+// ------------------------------------------------------------------------
+// Lot 7.1b : rejoindre un groupe par code, demandes d'adhésion
+// ------------------------------------------------------------------------
+/// Situation face à un groupe désigné par un code.
+enum JoinStatus {
+  /// Code faux, réinitialisé ou groupe indisponible.
+  invalid,
+
+  /// Déjà membre : le groupe s'ouvre.
+  member,
+
+  /// Demande déjà envoyée, en attente.
+  pending,
+
+  /// Demande refusée il y a moins de 24 h.
+  declined,
+
+  /// Groupe complet.
+  full,
+
+  /// Entrée directe.
+  open,
+
+  /// Une demande sera envoyée aux administrateurs.
+  approval,
+
+  /// Entré dans le groupe.
+  joined,
+
+  /// Demande envoyée.
+  requested;
+
+  static JoinStatus parse(String? v) =>
+      JoinStatus.values.where((s) => s.name == v).firstOrNull ?? JoinStatus.invalid;
+}
+
+/// Aperçu d'un groupe à partir de son code (nom et nombre de membres seulement).
+class GroupPreview {
+  const GroupPreview({required this.status, this.conversationId, this.title, this.memberCount});
+
+  final JoinStatus status;
+  final String? conversationId;
+  final String? title;
+  final int? memberCount;
+
+  factory GroupPreview.fromJson(Map<String, dynamic> j) => GroupPreview(
+    status: JoinStatus.parse(j['status'] as String?),
+    conversationId: j['conversation_id'] as String?,
+    title: j['title'] as String?,
+    memberCount: (j['member_count'] as num?)?.toInt(),
+  );
+}
+
+/// Résultat d'une entrée par code : entré (le groupe s'ouvre), demande envoyée, ou refus.
+class JoinResult {
+  const JoinResult({required this.status, this.conversationId});
+
+  final JoinStatus status;
+  final String? conversationId;
+
+  factory JoinResult.fromJson(Map<String, dynamic> j) => JoinResult(
+    status: JoinStatus.parse(j['status'] as String?),
+    conversationId: j['conversation_id'] as String?,
+  );
+}
+
+/// Réglages d'entrée d'un groupe (administrateurs).
+class GroupJoinSettings {
+  const GroupJoinSettings({
+    required this.approvalRequired,
+    required this.hasCode,
+    required this.pendingRequests,
+  });
+
+  final bool approvalRequired;
+  final bool hasCode;
+  final int pendingRequests;
+
+  factory GroupJoinSettings.fromJson(Map<String, dynamic> j) => GroupJoinSettings(
+    approvalRequired: j['join_approval'] as bool? ?? true,
+    hasCode: j['has_code'] as bool? ?? false,
+    pendingRequests: (j['pending_requests'] as num?)?.toInt() ?? 0,
+  );
+}
+
+/// Demande d'adhésion reçue par les administrateurs.
+class JoinRequest {
+  const JoinRequest({
+    required this.id,
+    required this.userId,
+    required this.displayName,
+    required this.createdAt,
+    this.handle,
+    this.wasRemoved = false,
+  });
+
+  final String id;
+  final String userId;
+  final String displayName;
+  final String? handle;
+  final DateTime createdAt;
+
+  /// Personne déjà retirée du groupe par un administrateur.
+  final bool wasRemoved;
+
+  factory JoinRequest.fromJson(Map<String, dynamic> j) => JoinRequest(
+    id: j['request_id'] as String,
+    userId: j['user_id'] as String,
+    displayName: j['display_name'] as String? ?? 'Compte supprimé',
+    handle: j['handle'] as String?,
+    createdAt: DateTime.parse(j['created_at'] as String),
+    wasRemoved: j['was_removed'] as bool? ?? false,
+  );
+}
+
+/// Ma demande en attente pour rejoindre un groupe.
+class MyJoinRequest {
+  const MyJoinRequest({required this.conversationId, required this.title, required this.createdAt});
+
+  final String conversationId;
+  final String title;
+  final DateTime createdAt;
+
+  factory MyJoinRequest.fromJson(Map<String, dynamic> j) => MyJoinRequest(
+    conversationId: j['conversation_id'] as String,
+    title: j['title'] as String? ?? 'Groupe',
+    createdAt: DateTime.parse(j['created_at'] as String),
+  );
+}
+
+/// Code d'invitation lu dans un texte (saisie ou QR code) : « PRV-XXXXXX », ou null.
+String? parseInviteCode(String? raw) {
+  final v = (raw ?? '').toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+  const sign = '[2-9A-HJ-NP-Z]';
+  // « PRV » suivi de 3 signes : code incomplet, pas un code sans préfixe.
+  if (RegExp('^$sign{6}\$').hasMatch(v) && !v.startsWith('PRV')) return 'PRV-$v';
+  if (RegExp('^PRV$sign{6}\$').hasMatch(v)) return 'PRV-${v.substring(3)}';
+  return null;
 }

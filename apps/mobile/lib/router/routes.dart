@@ -26,9 +26,11 @@ abstract final class Routes {
   static const requests = '/requests';
   static const console = '/console';
   static const mySupport = '/support';
+  static const joinGroup = '/join-group';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
   static String groupInvite(String conversationId) => '/chat/$conversationId/invite';
+  static String groupCode(String conversationId) => '/chat/$conversationId/code';
 
   static const signedOutRoutes = {welcome, phone, otp};
   static const homeRoutes = {discussions, groups, settings};
