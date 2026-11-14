@@ -131,3 +131,12 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 | `ADMIN_PROTECTED` | `console_moderate` | le compte de l'administration ne peut pas être sanctionné |
 | `APPEAL_INVALID` / `APPEAL_NOT_ALLOWED` | `submit_appeal` | texte de 3 à 500 caractères ; une seule contestation par sanction |
 | `APPEAL_NOT_FOUND` | `console_answer_appeal` | contestation déjà examinée |
+
+### Comptes et assistance (lot 5.4)
+| Code | Origine | Signification |
+|---|---|---|
+| `SEARCH_PHONE_INCOMPLETE` | `console_search_accounts` | numéro partiel : seul le numéro complet est accepté |
+| `SEARCH_TOO_SHORT` | `console_search_accounts` | moins de 2 caractères |
+| `ACCOUNT_NOT_FOUND` | `console_account`, `console_sanction_user` | compte inexistant ou supprimé |
+| `SUPPORT_REPLY_INVALID` | `console_reply_support` | réponse de 2 à 1 000 caractères |
+

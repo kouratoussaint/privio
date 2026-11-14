@@ -14,6 +14,9 @@ const kGroupsTarget = 'groups';
 /// Cible d'ouverture d'une notification pour l'administration (lot 5.3) : la console.
 const kConsoleTarget = 'console';
 
+/// Cible d'ouverture d'une réponse de l'assistance (lot 5.4) : Aide → Mes demandes.
+const kSupportTarget = 'support';
+
 /// Notifications (lot 4.1). Le contenu affiché est GÉNÉRIQUE et fixé par le serveur :
 /// « Nouveau message » — jamais de texte ni de nom. Le téléphone ne reçoit que
 /// l'identifiant de la discussion, pour l'ouvrir quand on touche la notification.
@@ -72,6 +75,8 @@ class FirebasePushService implements PushService {
     if (m?.data['type'] == 'invitation') return kGroupsTarget;
     // Signalement, assistance ou contestation (lot 5.3) : la console (code demandé).
     if (m?.data['type'] == 'console') return kConsoleTarget;
+    // Réponse de l'assistance (lot 5.4) : Mes demandes.
+    if (m?.data['type'] == 'support') return kSupportTarget;
     final id = m?.data['conversation_id'];
     return id is String && id.length == 36 ? id : null;
   }

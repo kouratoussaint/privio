@@ -51,6 +51,9 @@ class SupabaseRealtimeService implements RealtimeService {
     'request',
     // Lot 5.3 : suspension, avertissement ou réactivation du compte.
     'moderation',
+    // Lot 5.4 : réponse de l'assistance ; téléphone déconnecté par l'assistance.
+    'support',
+    'disconnected',
   ];
   static const _retryDelays = [
     Duration(seconds: 2),

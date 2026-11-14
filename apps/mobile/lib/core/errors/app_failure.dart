@@ -74,6 +74,10 @@ enum FailureCode {
   appealInvalid,
   appealNotAllowed,
   appealNotFound,
+  supportReplyInvalid,
+  searchPhoneIncomplete,
+  searchTooShort,
+  accountNotFound,
   otpInvalidOrExpired,
   smsRateLimited,
   smsSendFailed,
@@ -166,6 +170,11 @@ class AppFailure implements Exception {
     FailureCode.appealInvalid => 'Votre contestation doit contenir entre 3 et 500 caractères.',
     FailureCode.appealNotAllowed => 'Vous avez déjà contesté cette sanction.',
     FailureCode.appealNotFound => 'Cette contestation a déjà été examinée.',
+    FailureCode.supportReplyInvalid => 'La réponse doit contenir entre 2 et 1\u202F000 caractères.',
+    FailureCode.searchPhoneIncomplete =>
+      'Saisissez le numéro complet (8 chiffres, ou avec l’indicatif).',
+    FailureCode.searchTooShort => 'Saisissez au moins 2 caractères.',
+    FailureCode.accountNotFound => 'Ce compte n’existe plus.',
     FailureCode.otpInvalidOrExpired =>
       'Ce code ne fonctionne pas. Vérifiez-le ou demandez-en un nouveau.',
     FailureCode.smsRateLimited =>
@@ -251,6 +260,10 @@ const _serverCodes = <String, FailureCode>{
   'APPEAL_INVALID': FailureCode.appealInvalid,
   'APPEAL_NOT_ALLOWED': FailureCode.appealNotAllowed,
   'APPEAL_NOT_FOUND': FailureCode.appealNotFound,
+  'SUPPORT_REPLY_INVALID': FailureCode.supportReplyInvalid,
+  'SEARCH_PHONE_INCOMPLETE': FailureCode.searchPhoneIncomplete,
+  'SEARCH_TOO_SHORT': FailureCode.searchTooShort,
+  'ACCOUNT_NOT_FOUND': FailureCode.accountNotFound,
 };
 
 /// Convertit toute erreur en [AppFailure]. Ne journalise rien (pas de donnée sensible).

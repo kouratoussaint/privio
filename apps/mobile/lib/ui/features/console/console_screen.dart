@@ -13,6 +13,7 @@ import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
+import 'console_accounts_tab.dart';
 import 'console_journal_tab.dart';
 import 'console_policies_tab.dart';
 import 'console_reports_tab.dart';
@@ -127,7 +128,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
               onPressed: _close,
             ),
         ],
-        // Lots 5.2 et 5.3 : cinq onglets une fois la console ouverte.
+        // Lots 5.2 à 5.4 : six onglets une fois la console ouverte.
         bottom: open
             ? TabBar(
                 key: const Key('console.tabs'),
@@ -141,6 +142,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
                 tabs: const [
                   Tab(key: Key('console.tab.dashboard'), text: 'Tableau de bord'),
                   Tab(key: Key('console.tab.reports'), text: 'Signalements'),
+                  Tab(key: Key('console.tab.accounts'), text: 'Comptes'),
                   Tab(key: Key('console.tab.policies'), text: 'Réglages'),
                   Tab(key: Key('console.tab.stats'), text: 'Statistiques'),
                   Tab(key: Key('console.tab.journal'), text: 'Journal'),
@@ -157,6 +159,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
             children: [
               _Dashboard(),
               ConsoleReportsTab(),
+              ConsoleAccountsTab(),
               ConsolePoliciesTab(),
               ConsoleStatsTab(),
               ConsoleJournalTab(),
@@ -186,7 +189,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
         ),
       },
     );
-    return open ? DefaultTabController(length: 5, child: scaffold) : scaffold;
+    return open ? DefaultTabController(length: 6, child: scaffold) : scaffold;
   }
 }
 

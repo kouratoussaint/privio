@@ -158,3 +158,13 @@ Demandés par le commanditaire après test sur téléphone :
 - Sanctions gardées 1 an (sauf suspension sans limite encore active). Lot 5.4 : comptes et
   réponses aux demandes d'assistance. Détails : ADR-017.
 
+## Amendement 11 — Comptes et assistance (14 novembre 2026, lot 5.4)
+- Recherche de comptes par @identifiant, par nom, ou par numéro COMPLET seulement ; le numéro
+  n'est jamais affiché ni inscrit au journal ; chaque recherche et chaque fiche ouverte sont
+  journalisées.
+- Fiche sans numéro, contact, discussion ni message ; avertir, suspendre ou réactiver sans
+  signalement ; « Déconnecter le téléphone » (perte ou vol) ; compte administrateur protégé.
+- Une réponse par demande d'assistance (modèles modifiables), notifiée sans contenu, lisible
+  dans Aide → Mes demandes ; pour continuer, la personne envoie une nouvelle demande.
+  Détails : ADR-018.
+

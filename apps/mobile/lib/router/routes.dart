@@ -25,6 +25,7 @@ abstract final class Routes {
   static const privacy = '/privacy';
   static const requests = '/requests';
   static const console = '/console';
+  static const mySupport = '/support';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
   static String groupInvite(String conversationId) => '/chat/$conversationId/invite';

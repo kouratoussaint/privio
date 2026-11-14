@@ -65,6 +65,11 @@ String journalText(JournalEntry e, String unit) => switch (e.action) {
   'dashboard' => 'Consultation du tableau de bord',
   'stats' => 'Consultation des statistiques',
   'evidence' => 'Lecture d’une copie signalée (${_who(e)})',
+  'account' => 'Fiche de ${_who(e)} consultée',
+  'account_search' =>
+    e.detail['by'] == 'phone' ? 'Recherche de compte par numéro' : 'Recherche de compte',
+  'disconnect' => 'Téléphone de ${_who(e)} déconnecté',
+  'reply' => 'Réponse à la demande d’assistance de ${_who(e)}',
   'lift' => 'Réactivation de ${_who(e)}',
   'appeal' =>
     'Contestation de ${_who(e)}\u202F: ${e.detail['lift'] == true ? 'suspension levée' : 'suspension maintenue'}',
@@ -107,6 +112,9 @@ class _EntryTile extends StatelessWidget {
         'stats' => Icons.bar_chart,
         'moderation' || 'lift' || 'appeal' => Icons.gavel_outlined,
         'evidence' => Icons.visibility,
+        'account' || 'account_search' => Icons.person_search_outlined,
+        'disconnect' => Icons.phonelink_erase,
+        'reply' => Icons.support_agent,
         _ => Icons.visibility_outlined,
       }),
       title: Text(journalText(e, unit)),

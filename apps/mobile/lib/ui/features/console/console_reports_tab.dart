@@ -52,7 +52,7 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> {
                 ('closed', 'Traités'),
                 ('appeals', 'Contestations'),
               ])
-                _chip(
+                consoleChip(
                   context,
                   key: Key('reports.queue.$q'),
                   label: label,
@@ -79,7 +79,7 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> {
                 ])
                   Padding(
                     padding: const EdgeInsets.only(right: PrivioSpacing.s),
-                    child: _chip(
+                    child: consoleChip(
                       context,
                       key: Key('reports.kind.$k'),
                       label: label,
@@ -126,7 +126,7 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> {
 }
 
 /// Puce aux couleurs de Privio (violet quand elle est choisie), comme le sélecteur de durée.
-Widget _chip(
+Widget consoleChip(
   BuildContext context, {
   required Key key,
   required String label,
@@ -302,9 +302,9 @@ class _DossierViewState extends ConsumerState<DossierView> {
 
   /// Motif obligatoire (et durée pour une suspension), puis confirmation.
   Future<void> _decide(String action) async {
-    final result = await showDialog<(String, int?)>(
+    final result = await showDialog<(String, int?, String?)>(
       context: context,
-      builder: (_) => _DecisionDialog(action: action, target: _target(_first)),
+      builder: (_) => DecisionDialog(action: action, target: _target(_first)),
     );
     if (result == null || !mounted) return;
     setState(() => _busy = true);
@@ -325,10 +325,26 @@ class _DossierViewState extends ConsumerState<DossierView> {
     }
   }
 
+  /// Lot 5.4 : une réponse par demande, notifiée sans contenu à la personne.
+  Future<void> _reply() async {
+    final text = await showDialog<String>(context: context, builder: (_) => const ReplyDialog());
+    if (text == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(adminApiProvider).replySupport(_first.id, text);
+      refreshModeration(ref);
+      _toast('Réponse envoyée.');
+      widget.onBack();
+    } on Object catch (e) {
+      _toast(toAppFailure(e).message);
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _lift() async {
-    final result = await showDialog<(String, int?)>(
+    final result = await showDialog<(String, int?, String?)>(
       context: context,
-      builder: (_) => _DecisionDialog(action: 'lift', target: _target(_first)),
+      builder: (_) => DecisionDialog(action: 'lift', target: _target(_first)),
     );
     if (result == null || !mounted || _first.reportedUserId == null) return;
     setState(() => _busy = true);
@@ -469,12 +485,14 @@ class _DossierViewState extends ConsumerState<DossierView> {
               label: const Text('Réactiver le compte'),
             ),
           ),
-        if (f.kind == 'support')
+        if (f.kind == 'support' && _pending)
           Padding(
             padding: const EdgeInsets.all(PrivioSpacing.l),
-            child: Text(
-              'La réponse aux demandes d’assistance arrive au lot 5.4.',
-              style: theme.textTheme.bodySmall,
+            child: FilledButton.icon(
+              key: const Key('dossier.reply'),
+              onPressed: _busy ? null : _reply,
+              icon: const Icon(Icons.reply),
+              label: const Text('Répondre'),
             ),
           ),
       ],
@@ -550,7 +568,15 @@ class _ReportCardState extends ConsumerState<_ReportCard> {
                 const SizedBox(height: PrivioSpacing.s),
                 Text('« ${r.details} »'),
               ],
-              if (r.decision != null) ...[
+              if (r.reply != null) ...[
+                const SizedBox(height: PrivioSpacing.s),
+                Text(
+                  'Réponse${r.repliedAt == null ? '' : ' du ${_date(r.repliedAt!)}'}\u202F: ${r.reply}',
+                  key: Key('report.reply.${r.id}'),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: p.accentText),
+                ),
+              ],
+              if (r.decision != null && r.decision != 'answered') ...[
                 const SizedBox(height: PrivioSpacing.s),
                 Text(
                   '${kDecisionLabels[r.decision] ?? r.decision}'
@@ -618,19 +644,28 @@ class _ReportCardState extends ConsumerState<_ReportCard> {
 }
 
 /// Motif (obligatoire) et, pour une suspension, la durée.
-class _DecisionDialog extends StatefulWidget {
-  const _DecisionDialog({required this.action, required this.target});
+class DecisionDialog extends StatefulWidget {
+  const DecisionDialog({
+    super.key,
+    required this.action,
+    required this.target,
+    this.askReason = false,
+  });
 
   final String action;
   final String target;
 
+  /// Lot 5.4 : sanction depuis la fiche (sans signalement) : choisir le motif montré.
+  final bool askReason;
+
   @override
-  State<_DecisionDialog> createState() => _DecisionDialogState();
+  State<DecisionDialog> createState() => _DecisionDialogState();
 }
 
-class _DecisionDialogState extends State<_DecisionDialog> {
+class _DecisionDialogState extends State<DecisionDialog> {
   final _note = TextEditingController();
   int? _days = 7;
+  String _reason = 'other';
 
   @override
   void dispose() {
@@ -663,6 +698,11 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         'Fermer le groupe',
         'Plus personne ne pourra y écrire ; les membres voient « Groupe fermé par Privio ».',
       ),
+      'disconnect' => (
+        'Déconnecter le téléphone',
+        'La session est coupée tout de suite. La personne devra se reconnecter avec son '
+            'numéro et le code reçu par SMS.',
+      ),
       'uphold' => (
         'Maintenir la suspension',
         'La personne verra que sa contestation a été examinée et que la suspension est maintenue.',
@@ -691,13 +731,33 @@ class _DecisionDialogState extends State<_DecisionDialog> {
                     (30, '30 jours'),
                     (null, 'Sans limite'),
                   ])
-                    _chip(
+                    consoleChip(
                       context,
                       key: Key('decision.days.${d ?? 0}'),
                       label: label,
                       selected: _days == d,
                       onTap: () => setState(() => _days = d),
                     ),
+                ],
+              ),
+            ],
+            if (widget.askReason) ...[
+              const SizedBox(height: PrivioSpacing.m),
+              Text('Motif montré à la personne', style: theme.textTheme.labelLarge),
+              const SizedBox(height: PrivioSpacing.xs),
+              Wrap(
+                spacing: PrivioSpacing.s,
+                runSpacing: PrivioSpacing.xs,
+                children: [
+                  for (final e in kReportReasons.entries)
+                    if (e.key != 'support')
+                      consoleChip(
+                        context,
+                        key: Key('decision.reason.${e.key}'),
+                        label: e.value,
+                        selected: _reason == e.key,
+                        onTap: () => setState(() => _reason = e.key),
+                      ),
                 ],
               ),
             ],
@@ -721,7 +781,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
           key: const Key('decision.confirm'),
           onPressed: _note.text.trim().length < 3
               ? null
-              : () => Navigator.pop(context, (_note.text.trim(), _days)),
+              : () => Navigator.pop(context, (_note.text.trim(), _days, _reason)),
           child: const Text('Confirmer'),
         ),
       ],
@@ -734,10 +794,10 @@ class _AppealsList extends ConsumerWidget {
   const _AppealsList();
 
   Future<void> _answer(BuildContext context, WidgetRef ref, Sanction s, bool lift) async {
-    final result = await showDialog<(String, int?)>(
+    final result = await showDialog<(String, int?, String?)>(
       context: context,
       builder: (_) =>
-          _DecisionDialog(action: lift ? 'lift' : 'uphold', target: '@${s.handle ?? '—'}'),
+          DecisionDialog(action: lift ? 'lift' : 'uphold', target: '@${s.handle ?? '—'}'),
     );
     if (result == null || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -820,5 +880,85 @@ class _AppealsList extends ConsumerWidget {
       ),
       _ => const LoadingView(),
     };
+  }
+}
+
+/// Modèles de réponse (lot 5.4), modifiables avant l'envoi.
+const kReplyTemplates = <String>[
+  'Merci, le problème est corrigé.',
+  'Mettez à jour l’application puis réessayez.',
+  'Nous avons besoin de plus de détails\u202F: que voyez-vous à l’écran\u202F?',
+];
+
+/// Réponse à une demande d'assistance (1 000 caractères au plus).
+class ReplyDialog extends StatefulWidget {
+  const ReplyDialog({super.key});
+
+  @override
+  State<ReplyDialog> createState() => _ReplyDialogState();
+}
+
+class _ReplyDialogState extends State<ReplyDialog> {
+  final _text = TextEditingController();
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      key: const Key('reply.dialog'),
+      title: const Text('Répondre'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'La personne reçoit une notification sans contenu et lit la réponse dans '
+              'Aide → Mes demandes. Une seule réponse par demande.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: PrivioSpacing.m),
+            Text('Modèles', style: theme.textTheme.labelLarge),
+            for (final (i, t) in kReplyTemplates.indexed)
+              TextButton(
+                key: Key('reply.template.$i'),
+                style: TextButton.styleFrom(alignment: Alignment.centerLeft),
+                onPressed: () => setState(() {
+                  _text.text = t;
+                  _text.selection = TextSelection.collapsed(offset: t.length);
+                }),
+                child: Text(t, textAlign: TextAlign.start),
+              ),
+            const SizedBox(height: PrivioSpacing.s),
+            TextField(
+              key: const Key('reply.text'),
+              controller: _text,
+              maxLength: 1000,
+              minLines: 3,
+              maxLines: 8,
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(labelText: 'Votre réponse'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        FilledButton(
+          key: const Key('reply.send'),
+          onPressed: _text.text.trim().length < 2
+              ? null
+              : () => Navigator.pop(context, _text.text.trim()),
+          child: const Text('Envoyer'),
+        ),
+      ],
+    );
   }
 }

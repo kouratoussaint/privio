@@ -41,6 +41,11 @@ const kAccountDeletedNotice =
     'Votre compte Privio a été supprimé, ainsi que vos messages envoyés. Vous pouvez créer '
     'un nouveau compte à tout moment.';
 
+/// Lot 5.4 : téléphone déconnecté par l'assistance (perte ou vol signalé).
+const kSupportDisconnectNotice =
+    'Ce téléphone a été déconnecté par l’assistance Privio. Reconnectez-vous avec votre '
+    'numéro pour continuer.';
+
 const kOtherDeviceNotice =
     'Privio est maintenant ouvert sur un autre téléphone (un seul à la fois). '
     'Reconnectez-vous pour l’utiliser ici.';
@@ -51,6 +56,9 @@ final sessionControllerProvider = AsyncNotifierProvider<SessionController, Sessi
 
 class SessionController extends AsyncNotifier<SessionState> {
   String? _pendingNotice;
+
+  /// Message à afficher si la session se révèle coupée (lot 5.4 : par l'assistance).
+  String? _forcedNotice;
 
   /// Dernier état connecté/déconnecté connu. Mis à jour AVANT toute déconnexion
   /// déclenchée par le contrôleur lui-même, pour ne pas se recharger en boucle.
@@ -87,6 +95,7 @@ class SessionController extends AsyncNotifier<SessionState> {
 
     try {
       final account = await api.getMyAccount();
+      _forcedNotice = null;
       return SessionState(
         onboardingDone: onboardingDone,
         signedIn: true,
@@ -96,7 +105,8 @@ class SessionController extends AsyncNotifier<SessionState> {
     } on AppFailure catch (f) {
       if (f.code != FailureCode.authRequired) rethrow;
       // Session révoquée côté serveur (autre appareil) : nettoyage local.
-      _pendingNotice = kOtherDeviceNotice;
+      _pendingNotice = _forcedNotice ?? kOtherDeviceNotice;
+      _forcedNotice = null;
       _lastSignedIn = false;
       await auth.signOut();
       await flags.clearAccountScoped();
@@ -110,6 +120,13 @@ class SessionController extends AsyncNotifier<SessionState> {
         notice: _pendingNotice,
       );
     }
+  }
+
+  /// Lot 5.4 : l'assistance a déconnecté ce téléphone (signal reçu juste avant la coupure).
+  Future<void> deviceDisconnected() async {
+    if (_forcedNotice != null || !(state.value?.signedIn ?? false)) return;
+    _forcedNotice = kSupportDisconnectNotice;
+    await _reload();
   }
 
   Future<void> _reload() async {

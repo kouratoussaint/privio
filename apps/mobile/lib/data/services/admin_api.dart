@@ -36,6 +36,22 @@ abstract interface class AdminApi {
   Future<List<Sanction>> sanctions(String userId);
   Future<List<Sanction>> appeals();
   Future<void> answerAppeal(String sanctionId, {required bool lift, required String note});
+
+  // Lot 5.4 : comptes et assistance
+  /// @identifiant, nom, ou numéro COMPLET (jamais renvoyé).
+  Future<List<AccountHit>> searchAccounts(String query);
+  Future<ConsoleAccount> account(String userId);
+
+  /// warn ou suspend (days : 1, 7, 30 ou null = sans limite), sans signalement.
+  Future<void> sanctionUser(
+    String userId,
+    String action, {
+    required String reason,
+    required String note,
+    int? days,
+  });
+  Future<void> disconnectDevice(String userId, String note);
+  Future<void> replySupport(String reportId, String reply);
 }
 
 class SupabaseAdminApi implements AdminApi {
@@ -141,6 +157,54 @@ class SupabaseAdminApi implements AdminApi {
           params: {'p_sanction_id': sanctionId, 'p_lift': lift, 'p_note': note},
         ),
       );
+
+  @override
+  Future<List<AccountHit>> searchAccounts(String query) async => (await _rows(
+    'console_search_accounts',
+    {'p_query': query},
+  )).map(AccountHit.fromJson).toList();
+
+  @override
+  Future<ConsoleAccount> account(String userId) => _guard(() async {
+    final res = await _client.rpc<dynamic>('console_account', params: {'p_user_id': userId});
+    return ConsoleAccount.fromJson(Map<String, dynamic>.from(res as Map));
+  });
+
+  @override
+  Future<void> sanctionUser(
+    String userId,
+    String action, {
+    required String reason,
+    required String note,
+    int? days,
+  }) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_sanction_user',
+      params: {
+        'p_user_id': userId,
+        'p_action': action,
+        'p_reason': reason,
+        'p_note': note,
+        'p_days': days,
+      },
+    ),
+  );
+
+  @override
+  Future<void> disconnectDevice(String userId, String note) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_disconnect_device',
+      params: {'p_user_id': userId, 'p_note': note},
+    ),
+  );
+
+  @override
+  Future<void> replySupport(String reportId, String reply) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_reply_support',
+      params: {'p_report_id': reportId, 'p_reply': reply},
+    ),
+  );
 
   @override
   Future<ConsoleDashboard> dashboard() async {

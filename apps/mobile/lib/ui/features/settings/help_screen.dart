@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../data/services/realtime_service.dart';
+import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/moderation_providers.dart';
 
 /// Aide : questions fréquentes et contact de l'assistance (lot 2.5).
 class HelpScreen extends ConsumerWidget {
@@ -133,6 +136,15 @@ class HelpScreen extends ConsumerWidget {
             subtitle: const Text('Un problème, une question\u202F? Décrivez-le en quelques mots.'),
             onTap: () => _contact(context, ref),
           ),
+          // Lot 5.4 : les demandes envoyées et les réponses de l'équipe Privio.
+          ListTile(
+            key: const Key('help.my_requests'),
+            leading: const Icon(Icons.forum_outlined),
+            title: const Text('Mes demandes'),
+            subtitle: const Text('Vos messages à l’assistance et nos réponses'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.mySupport),
+          ),
         ],
       ),
     );
@@ -148,9 +160,15 @@ class HelpScreen extends ConsumerWidget {
     if (text.isEmpty || !context.mounted) return;
     try {
       await ref.read(messagingApiProvider).report(reason: 'support', details: text);
+      ref.invalidate(mySupportRequestsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Merci, votre message a été transmis à l’assistance.')),
+          const SnackBar(
+            content: Text(
+              'Merci, votre message a été transmis à l’assistance. La réponse arrivera dans '
+              '«\u202FMes demandes\u202F».',
+            ),
+          ),
         );
       }
     } on Object catch (e) {

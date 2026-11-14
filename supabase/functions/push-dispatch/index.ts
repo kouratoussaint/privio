@@ -1,5 +1,5 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
-// invitations de groupe : lot 4.8 ; administration : lot 5.3).
+// invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que
@@ -8,7 +8,15 @@
 // Sans compte de service FCM configuré : compte rendu « not_configured », rien n'est envoyé.
 
 import { ApiError, json, registerEndpoint, rpc, serviceHeaders } from "../_shared/supabase.ts";
-import { ADMIN_BODIES, loadServiceAccount, sendAdminEvent, sendGeneric, sendInvitation, sendRequestEvent } from "../_shared/fcm.ts";
+import {
+  ADMIN_BODIES,
+  loadServiceAccount,
+  sendAdminEvent,
+  sendGeneric,
+  sendInvitation,
+  sendRequestEvent,
+  sendSupportReply,
+} from "../_shared/fcm.ts";
 
 interface Target {
   token: string;
@@ -26,6 +34,7 @@ Deno.serve(async (req) => {
   let invitationId = "";
   let adminEvent = "";
   let refId = "";
+  let supportReplyId = "";
   try {
     const body = (await req.json()) as {
       message_id?: string;
@@ -33,12 +42,14 @@ Deno.serve(async (req) => {
       invitation_id?: string;
       admin_event?: string;
       ref_id?: string;
+      support_reply_id?: string;
     };
     messageId = body.message_id ?? "";
     requestId = body.request_id ?? "";
     invitationId = body.invitation_id ?? "";
     adminEvent = body.admin_event ?? "";
     refId = body.ref_id ?? "";
+    supportReplyId = body.support_reply_id ?? "";
   } catch {
     return json(400, { error: "BODY_INVALID" });
   }
@@ -47,6 +58,20 @@ Deno.serve(async (req) => {
   if (requestId) {
     if (!UUID.test(requestId)) return json(400, { error: "BODY_INVALID" });
     return await dispatchRequest(token, requestId);
+  }
+  // Lot 5.4 : l'équipe Privio a répondu à une demande d'assistance.
+  if (supportReplyId) {
+    if (!UUID.test(supportReplyId)) return json(400, { error: "BODY_INVALID" });
+    return await dispatchTargets(
+      token,
+      supportReplyId,
+      () => rpc<{ token: string }[]>(
+        "push_support_targets",
+        { p_token: token, p_report_id: supportReplyId },
+        serviceHeaders(),
+      ),
+      (sa, t) => sendSupportReply(sa, t),
+    );
   }
   // Lot 5.3 : signalement, demande d'assistance ou contestation, pour l'administration.
   if (adminEvent) {
@@ -243,6 +268,57 @@ async function dispatchAdmin(token: string, event: string, refId: string): Promi
     for (const t of targets) {
       try {
         const r = await sendAdminEvent(sa, t.token, event);
+        if (r === "sent") sent++;
+        else {
+          failed++;
+          if (r === "invalid_token") invalid.push(t.token);
+        }
+      } catch {
+        failed++;
+      }
+    }
+    await report(targets.length, sent, failed, failed === 0 ? "sent" : "partial", invalid);
+    return json(200, { recipients: targets.length, sent, failed });
+  } catch (e) {
+    if (e instanceof ApiError) return json(e.status === 401 ? 401 : 400, { error: e.code });
+    return json(500, { error: "UNKNOWN" });
+  }
+}
+
+/** Envoi générique : cibles calculées par la base, compte rendu dans push_log (lot 5.4). */
+async function dispatchTargets(
+  token: string,
+  refId: string,
+  targetsOf: () => Promise<{ token: string }[]>,
+  send: (sa: NonNullable<ReturnType<typeof loadServiceAccount>>, t: string) => Promise<string>,
+): Promise<Response> {
+  const report = (recipients: number, sent: number, failed: number, status: string, invalid: string[] = []) =>
+    rpc("push_report", {
+      p_token: token,
+      p_message_id: refId,
+      p_recipients: recipients,
+      p_sent: sent,
+      p_failed: failed,
+      p_status: status,
+      p_invalid_tokens: invalid,
+    }, serviceHeaders());
+  try {
+    const targets = await targetsOf();
+    if (targets.length === 0) {
+      await report(0, 0, 0, "no_targets");
+      return json(200, { recipients: 0 });
+    }
+    const sa = loadServiceAccount();
+    if (!sa) {
+      await report(targets.length, 0, 0, "not_configured");
+      return json(200, { recipients: targets.length, status: "not_configured" });
+    }
+    let sent = 0;
+    let failed = 0;
+    const invalid: string[] = [];
+    for (const t of targets) {
+      try {
+        const r = await send(sa, t.token);
         if (r === "sent") sent++;
         else {
           failed++;

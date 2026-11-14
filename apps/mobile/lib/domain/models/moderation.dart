@@ -21,6 +21,7 @@ const kDecisionLabels = <String, String>{
   'suspended': 'Suspension',
   'message_deleted': 'Message supprimé',
   'group_closed': 'Groupe fermé',
+  'answered': 'Répondue',
 };
 
 /// Un signalement tel que la console le voit (jamais de numéro de téléphone).
@@ -52,9 +53,15 @@ class ModerationReport {
     this.suspendedUntil,
     this.sanctionsCount = 0,
     this.protected = false,
+    this.reply,
+    this.repliedAt,
   });
 
   final String id;
+
+  /// Lot 5.4 : réponse de l'équipe à une demande d'assistance.
+  final String? reply;
+  final DateTime? repliedAt;
 
   /// account, message, group, support.
   final String kind;
@@ -127,6 +134,8 @@ class ModerationReport {
     suspendedUntil: _d(j['suspended_until']),
     sanctionsCount: (j['sanctions_count'] as num?)?.toInt() ?? 0,
     protected: j['protected'] as bool? ?? false,
+    reply: j['reply'] as String?,
+    repliedAt: _d(j['replied_at']),
   );
 }
 
@@ -272,4 +281,141 @@ class WarningInfo {
 
   factory WarningInfo.fromJson(Map<String, dynamic> j) =>
       WarningInfo(id: j['id'] as String, reason: j['reason'] as String? ?? 'other');
+}
+
+// ---------------------------------------------------------------------------
+// Lot 5.4 : comptes et assistance
+// ---------------------------------------------------------------------------
+
+/// Résultat de recherche (jamais de numéro).
+class AccountHit {
+  const AccountHit({
+    required this.userId,
+    required this.handle,
+    required this.displayName,
+    required this.createdAt,
+    this.deleted = false,
+    this.suspended = false,
+  });
+
+  final String userId;
+  final String handle;
+  final String displayName;
+  final DateTime createdAt;
+  final bool deleted;
+  final bool suspended;
+
+  factory AccountHit.fromJson(Map<String, dynamic> j) => AccountHit(
+    userId: j['user_id'] as String,
+    handle: j['handle'] as String,
+    displayName: j['display_name'] as String? ?? '',
+    createdAt: DateTime.parse(j['created_at'] as String),
+    deleted: j['deleted'] as bool? ?? false,
+    suspended: j['suspended'] as bool? ?? false,
+  );
+}
+
+/// Une demande d'assistance et la réponse de l'équipe.
+class SupportRequest {
+  const SupportRequest({
+    required this.id,
+    required this.createdAt,
+    this.details,
+    this.reply,
+    this.repliedAt,
+  });
+
+  final String id;
+  final DateTime createdAt;
+  final String? details;
+  final String? reply;
+  final DateTime? repliedAt;
+
+  bool get answered => reply != null;
+
+  factory SupportRequest.fromJson(Map<String, dynamic> j) => SupportRequest(
+    id: j['id'] as String,
+    createdAt: DateTime.parse(j['created_at'] as String),
+    details: j['details'] as String?,
+    reply: j['reply'] as String?,
+    repliedAt: DateTime.tryParse(j['replied_at'] as String? ?? ''),
+  );
+}
+
+/// Fiche d'un compte dans la console : aucun numéro, contact, discussion ni message.
+class ConsoleAccount {
+  const ConsoleAccount({
+    required this.userId,
+    required this.handle,
+    required this.displayName,
+    required this.createdAt,
+    this.avatarPath,
+    this.deleted = false,
+    this.lastSeenDay,
+    this.suspended = false,
+    this.suspendedUntil,
+    this.protected = false,
+    this.platform,
+    this.appVersion,
+    this.deviceSince,
+    this.pushEnabled = false,
+    this.directs = 0,
+    this.groups = 0,
+    this.reportsReceived90d = 0,
+    this.reportsMade90d = 0,
+    this.support = const [],
+  });
+
+  final String userId;
+  final String handle;
+  final String displayName;
+  final DateTime createdAt;
+  final String? avatarPath;
+  final bool deleted;
+  final DateTime? lastSeenDay;
+  final bool suspended;
+  final DateTime? suspendedUntil;
+  final bool protected;
+
+  /// Téléphone actif (null : aucun).
+  final String? platform;
+  final String? appVersion;
+  final DateTime? deviceSince;
+  final bool pushEnabled;
+  final int directs;
+  final int groups;
+  final int reportsReceived90d;
+  final int reportsMade90d;
+  final List<SupportRequest> support;
+
+  bool get hasDevice => platform != null;
+
+  factory ConsoleAccount.fromJson(Map<String, dynamic> j) {
+    final d = j['device'] is Map ? Map<String, dynamic>.from(j['device'] as Map) : null;
+    int n(String k) => (j[k] as num?)?.toInt() ?? 0;
+    return ConsoleAccount(
+      userId: j['user_id'] as String,
+      handle: j['handle'] as String,
+      displayName: j['display_name'] as String? ?? '',
+      createdAt: DateTime.parse(j['created_at'] as String),
+      avatarPath: j['avatar_path'] as String?,
+      deleted: j['deleted'] as bool? ?? false,
+      lastSeenDay: DateTime.tryParse(j['last_seen_day'] as String? ?? ''),
+      suspended: j['suspended'] as bool? ?? false,
+      suspendedUntil: DateTime.tryParse(j['suspended_until'] as String? ?? ''),
+      protected: j['protected'] as bool? ?? false,
+      platform: d?['platform'] as String?,
+      appVersion: d?['app_version'] as String?,
+      deviceSince: DateTime.tryParse(d?['since'] as String? ?? ''),
+      pushEnabled: d?['push'] as bool? ?? false,
+      directs: n('directs'),
+      groups: n('groups'),
+      reportsReceived90d: n('reports_received_90d'),
+      reportsMade90d: n('reports_made_90d'),
+      support: [
+        for (final s in (j['support'] as List? ?? const []))
+          SupportRequest.fromJson(Map<String, dynamic>.from(s as Map)),
+      ],
+    );
+  }
 }

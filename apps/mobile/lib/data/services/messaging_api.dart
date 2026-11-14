@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
 import '../../domain/models/messaging.dart';
+import '../../domain/models/moderation.dart';
 
 /// Messagerie via les RPC sécurisées du lot 2.1. Aucune écriture directe en table,
 /// sauf les blocages (table `blocks`, protégée par RLS : on ne bloque qu'en son nom).
@@ -106,6 +107,9 @@ abstract interface class MessagingApi {
     String? details,
     bool includeMessage = false,
   });
+
+  /// Lot 5.4 : mes demandes d'assistance (90 jours) et les réponses de l'équipe.
+  Future<List<SupportRequest>> mySupportRequests();
 
   /// Suppression définitive du compte (confirmation « SUPPRIMER » exigée par le serveur).
   Future<void> deleteMyAccount();
@@ -538,6 +542,10 @@ class SupabaseMessagingApi implements MessagingApi {
     'p_details': details,
     'p_include_message': includeMessage,
   });
+
+  @override
+  Future<List<SupportRequest>> mySupportRequests() async =>
+      (await _rows('my_support_requests')).map(SupportRequest.fromJson).toList();
 
   @override
   Future<void> deleteMyAccount() => _call('delete_my_account', {'p_confirmation': 'SUPPRIMER'});

@@ -276,6 +276,8 @@ void main() {
     await _start(tester, deps, locked: true);
     await _openConsole(tester);
     await _type(tester, _pin);
+    await tester.ensureVisible(find.byKey(Key('console.tab.$tab')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(Key('console.tab.$tab')));
     await tester.pumpAndSettle();
     return deps;
@@ -344,6 +346,8 @@ void main() {
     expect(find.textContaining('3 · par défaut : 5'), findsOneWidget);
 
     // Journal.
+    await tester.ensureVisible(find.byKey(const Key('console.tab.journal')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('console.tab.journal')));
     await tester.pumpAndSettle();
     expect(find.text('Réglage « Photos par compte et par jour » : défaut → 3'), findsOneWidget);

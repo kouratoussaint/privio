@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/moderation.dart';
+import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
 import '../../../state/providers.dart';
 import '../../../state/session_controller.dart';
@@ -19,6 +20,14 @@ class ModerationGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Lot 5.4 : téléphone déconnecté par l'assistance → retour à la connexion, avec le motif.
+    // Seulement pour un NOUVEAU signal : pendant un rechargement, la valeur précédente reste.
+    ref.listen(realtimeSignalsProvider, (prev, next) {
+      if (next case AsyncData(:final value)
+          when value.event == 'disconnected' && !identical(value, prev?.value)) {
+        unawaited(ref.read(sessionControllerProvider.notifier).deviceDisconnected());
+      }
+    });
     final status = ref.watch(moderationStatusProvider).value ?? ModerationStatus.none;
     final overlay = switch (status) {
       ModerationStatus(:final suspension?) => _SuspendedView(s: suspension),

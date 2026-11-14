@@ -21,6 +21,15 @@ final moderationStatusProvider = FutureProvider<ModerationStatus>((ref) async {
   }
 });
 
+/// Lot 5.4 : mes demandes d'assistance, relues à l'arrivée d'une réponse.
+final mySupportRequestsProvider = FutureProvider.autoDispose<List<SupportRequest>>((ref) {
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    final e = next.value?.event;
+    if (e == 'support' || e == 'resume' || e == 'reconnected') ref.invalidateSelf();
+  });
+  return ref.watch(messagingApiProvider).mySupportRequests();
+});
+
 // ---------------------------------------------------------------------------
 // Console
 // ---------------------------------------------------------------------------
@@ -46,3 +55,12 @@ void refreshModeration(WidgetRef ref) {
     ..invalidate(consoleDashboardProvider)
     ..invalidate(consoleJournalProvider);
 }
+
+/// Lot 5.4 : recherche de comptes (texte saisi → résultats).
+final accountSearchProvider = FutureProvider.autoDispose.family<List<AccountHit>, String>(
+  (ref, query) => ref.watch(adminApiProvider).searchAccounts(query),
+);
+
+final consoleAccountProvider = FutureProvider.autoDispose.family<ConsoleAccount, String>(
+  (ref, userId) => ref.watch(adminApiProvider).account(userId),
+);

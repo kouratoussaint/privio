@@ -384,6 +384,15 @@ class FakeMessagingApi implements MessagingApi {
   final List<Map<String, Object?>> reports = [];
   bool accountDeleted = false;
 
+  /// Lot 5.4 : demandes d'assistance et réponses.
+  final supportRequests = <SupportRequest>[];
+
+  @override
+  Future<List<SupportRequest>> mySupportRequests() async {
+    _net();
+    return List.of(supportRequests);
+  }
+
   @override
   Future<void> report({
     required String reason,
@@ -1830,6 +1839,67 @@ class FakeAdminApi implements AdminApi {
   Future<void> answerAppeal(String sanctionId, {required bool lift, required String note}) async {
     appealAnswers.add((sanctionId, lift));
     appealList.removeWhere((s) => s.id == sanctionId);
+  }
+
+  // --- Lot 5.4 : comptes et assistance ----------------------------------------
+  final accounts = <String, ConsoleAccount>{};
+  final searches = <String>[];
+  final userSanctions = <(String, String, String, String, int?)>[];
+  final disconnected = <String>[];
+  final replies = <(String, String)>[];
+
+  @override
+  Future<List<AccountHit>> searchAccounts(String query) async {
+    searches.add(query);
+    final q = query.trim();
+    if (RegExp(r'^[+0-9 .-]+$').hasMatch(q) && q.replaceAll(RegExp('[^0-9]'), '').length < 8) {
+      throw const AppFailure(FailureCode.searchPhoneIncomplete);
+    }
+    final needle = q.toLowerCase().replaceFirst('@', '');
+    return [
+      for (final a in accounts.values)
+        if (a.handle.startsWith(needle) || a.displayName.toLowerCase().contains(needle))
+          AccountHit(
+            userId: a.userId,
+            handle: a.handle,
+            displayName: a.displayName,
+            createdAt: a.createdAt,
+            suspended: a.suspended,
+          ),
+    ];
+  }
+
+  @override
+  Future<ConsoleAccount> account(String userId) async {
+    final a = accounts[userId];
+    if (a == null) throw const AppFailure(FailureCode.accountNotFound);
+    _audit('account');
+    return a;
+  }
+
+  @override
+  Future<void> sanctionUser(
+    String userId,
+    String action, {
+    required String reason,
+    required String note,
+    int? days,
+  }) async {
+    if (accounts[userId]?.protected ?? false) throw const AppFailure(FailureCode.adminProtected);
+    userSanctions.add((userId, action, reason, note, days));
+  }
+
+  @override
+  Future<void> disconnectDevice(String userId, String note) async => disconnected.add(userId);
+
+  @override
+  Future<void> replySupport(String reportId, String reply) async {
+    replies.add((reportId, reply));
+    for (var i = 0; i < reportList.length; i++) {
+      if (reportList[i].id == reportId) {
+        reportList[i] = _with(reportList[i], status: 'closed', decision: 'answered');
+      }
+    }
   }
 
   @override

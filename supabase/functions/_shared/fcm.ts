@@ -121,6 +121,17 @@ export function sendAdminEvent(sa: ServiceAccount, token: string, event: string)
   });
 }
 
+/** Réponse de l'assistance (lot 5.4) : sans contenu ; l'appui ouvre Aide → Mes demandes. */
+export const SUPPORT_REPLY_BODY = "L’équipe Privio a répondu à votre demande";
+
+export function sendSupportReply(sa: ServiceAccount, token: string): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: SUPPORT_REPLY_BODY,
+    data: { type: "support" },
+    tag: "privio-support",
+  });
+}
+
 async function sendNotification(
   sa: ServiceAccount,
   token: string,
