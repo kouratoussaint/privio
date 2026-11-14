@@ -1818,7 +1818,8 @@ class _MessageList extends StatelessWidget {
         text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
         mentions: {for (final id in m.mentions) ?memberNames[id]: id == me},
         // Lot 7.3a : autocollant, ou grands émojis.
-        bare: !m.isDeleted && (m.isSticker || (m.kind == 'text' && isJumboEmoji(m.body))),
+        bare:
+            !m.isDeleted && (m.isSticker || m.isGif || (m.kind == 'text' && isJumboEmoji(m.body))),
         jumbo: !m.isDeleted && m.kind == 'text' && m.mentions.isEmpty && isJumboEmoji(m.body),
         // Lot 7.3b : aperçu du lien au-dessus du texte.
         attachment: m.linkPreview != null && !m.isDeleted
@@ -1944,7 +1945,7 @@ class _MessageList extends StatelessWidget {
             key: Key('pending.${pm.clientId}'),
             outgoing: true,
             text: pm.body,
-            bare: pm.isSticker,
+            bare: pm.isSticker || pm.isGif,
             content: pm.isSticker
                 ? StickerImage(id: pm.body, size: 140)
                 : pm.viewOnce
