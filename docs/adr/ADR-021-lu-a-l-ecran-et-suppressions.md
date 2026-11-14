@@ -31,3 +31,12 @@ Privio verrouillés : les messages étaient marqués lus sans avoir été vus.
 pgTAP `25_suppression`, `scripts/ci/suppression_e2e.py`, tests Flutter
 `test/ui/suppression_test.dart` (fiche par-dessus, application cachée, suppressions,
 séparation).
+
+## Correction (lot 7.2b1-bis)
+Sur téléphone, les messages restaient marqués lus : `mark_conversation` calculait
+`least(p_read_up_to, now())`, or `least` ignore les NULL en PostgreSQL ; un accusé
+« distribué » seul (sans date de lecture) enregistrait donc « lu jusqu'à maintenant ». Les
+bornes ne sont plus calculées que pour les dates fournies (migration
+`20261114000600_lu_corrige`). Le double du serveur utilisé par les tests de l'application se
+comportait correctement, d'où l'absence d'alerte ; le test pgTAP `26_lu_corrige` échoue sans
+la correction et passe avec.
