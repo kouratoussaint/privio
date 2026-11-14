@@ -23,7 +23,8 @@ class PrivioApp extends ConsumerWidget {
       if (kind == null) return;
       final offline = ref.read(offlineProvider.notifier);
       if (kind == NetKind.none) {
-        offline.report(offline: true);
+        // Le téléphone annonce lui-même qu'il n'a plus de réseau : signalé tout de suite.
+        offline.report(offline: true, certain: true);
       } else if (previous?.value == NetKind.none || ref.read(offlineProvider)) {
         offline.report(offline: false);
         ref.invalidate(conversationsProvider);

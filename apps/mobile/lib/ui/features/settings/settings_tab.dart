@@ -1,5 +1,3 @@
-import '../../../state/data_providers.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +7,6 @@ import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../core/util/reactions.dart';
-import '../../../data/services/photo_picker.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
@@ -20,6 +17,8 @@ import '../../../state/session_controller.dart';
 import '../../core/widgets/avatar.dart';
 import '../lock/app_lock_screens.dart' show delayLabel;
 import '../../core/widgets/brand_scaffold.dart';
+import '../../core/widgets/settings_card.dart';
+import 'my_profile_screen.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
 class SettingsTab extends ConsumerWidget {
@@ -71,25 +70,6 @@ class SettingsTab extends ConsumerWidget {
     if (picked != null) await ref.read(quickReactionProvider.notifier).set(picked);
   }
 
-  /// « À propos » : 140 caractères au plus, vide pour le retirer.
-  Future<void> _editAbout(BuildContext context, WidgetRef ref, String? current) async {
-    final text = await showDialog<String>(
-      context: context,
-      builder: (_) => _AboutDialog(initial: current ?? ''),
-    );
-    if (text == null || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(accountApiProvider).setAbout(text);
-      await ref.read(sessionControllerProvider.notifier).refreshAccount();
-      messenger.showSnackBar(
-        SnackBar(content: Text(text.trim().isEmpty ? 'À propos retiré.' : 'À propos enregistré.')),
-      );
-    } on Object catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
-    }
-  }
-
   Future<void> _toggleDiscoverable(BuildContext context, WidgetRef ref, bool value) async {
     try {
       await ref.read(sessionControllerProvider.notifier).setPhoneDiscoverable(value);
@@ -98,71 +78,6 @@ class SettingsTab extends ConsumerWidget {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
       }
-    }
-  }
-
-  /// Photo de profil : prendre, choisir ou retirer. Préparée sur le téléphone (carrée,
-  /// sans métadonnées), vérifiée et nettoyée encore par le serveur.
-  Future<void> _editAvatar(BuildContext context, WidgetRef ref, {required bool hasAvatar}) async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              key: const Key('avatar.camera'),
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Prendre une photo'),
-              onTap: () => Navigator.pop(ctx, 'camera'),
-            ),
-            ListTile(
-              key: const Key('avatar.gallery'),
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir dans la galerie'),
-              onTap: () => Navigator.pop(ctx, 'gallery'),
-            ),
-            if (hasAvatar)
-              ListTile(
-                key: const Key('avatar.remove'),
-                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
-                title: Text(
-                  'Retirer la photo',
-                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-                ),
-                onTap: () => Navigator.pop(ctx, 'remove'),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final api = ref.read(accountApiProvider);
-      if (choice == 'remove') {
-        await api.removeAvatar();
-      } else {
-        final source = choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery;
-        final raw = await ref
-            .read(appLockProvider.notifier)
-            .runExternal(() => ref.read(photoPickerProvider).pick(source));
-        if (raw == null) return;
-        final photo = await ref.read(photoPreparerProvider)(raw, avatar: true);
-        await api.setAvatar(photo.bytes);
-        countDataW(ref, sent: photo.bytes.length);
-      }
-      await ref.read(sessionControllerProvider.notifier).refreshAccount();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            choice == 'remove' ? 'Photo de profil retirée.' : 'Photo de profil mise à jour.',
-          ),
-        ),
-      );
-    } on Object catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
     }
   }
 
@@ -188,72 +103,51 @@ class SettingsTab extends ConsumerWidget {
           ),
           children: [
             if (profile != null)
-              _Card(
+              SettingsCard(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(PrivioSpacing.l),
-                    child: Row(
-                      children: [
-                        Semantics(
-                          button: true,
-                          label: 'Modifier la photo de profil',
-                          child: InkWell(
-                            key: const Key('settings.avatar'),
-                            customBorder: const CircleBorder(),
-                            onTap: () =>
-                                _editAvatar(context, ref, hasAvatar: profile.avatarPath != null),
-                            child: Stack(
+                  InkWell(
+                    key: const Key('settings.profile'),
+                    // Lot 7.2a : la ligne du profil ouvre « Ma fiche » (nom, photo, À propos).
+                    onTap: () => context.push(Routes.myProfile),
+                    child: Padding(
+                      padding: const EdgeInsets.all(PrivioSpacing.l),
+                      child: Row(
+                        children: [
+                          UserAvatar(
+                            name: profile.displayName,
+                            avatarPath: profile.avatarPath,
+                            seed: account!.userId,
+                            radius: 30,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                UserAvatar(
-                                  name: profile.displayName,
-                                  avatarPath: profile.avatarPath,
-                                  seed: account!.userId,
-                                  radius: 30,
+                                Text(profile.displayName, style: theme.textTheme.titleMedium),
+                                Text(
+                                  '@${profile.handle}',
+                                  style: theme.textTheme.bodyMedium?.copyWith(color: secondary),
                                 ),
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: CircleAvatar(
-                                    radius: 11,
-                                    backgroundColor: p.accentText,
-                                    child: const Icon(
-                                      Icons.photo_camera,
-                                      size: 13,
-                                      color: Colors.white,
-                                    ),
+                                if (account.phoneE164 != null)
+                                  Text(
+                                    PhoneNumber.format(account.phoneE164!),
+                                    style: theme.textTheme.bodyMedium?.copyWith(color: secondary),
                                   ),
-                                ),
                               ],
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(profile.displayName, style: theme.textTheme.titleMedium),
-                              Text(
-                                '@${profile.handle}',
-                                style: theme.textTheme.bodyMedium?.copyWith(color: secondary),
-                              ),
-                              if (account.phoneE164 != null)
-                                Text(
-                                  PhoneNumber.format(account.phoneE164!),
-                                  style: theme.textTheme.bodyMedium?.copyWith(color: secondary),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                          Icon(Icons.chevron_right, color: secondary),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-            const _SectionTitle('Confidentialité'),
+            const SettingsSectionTitle('Confidentialité'),
             // Lot 7.1a : « À propos » (140 caractères), visible selon Confidentialité.
             if (profile != null)
-              _Card(
+              SettingsCard(
                 children: [
                   ListTile(
                     key: const Key('settings.about'),
@@ -265,12 +159,12 @@ class SettingsTab extends ConsumerWidget {
                           : profile.about!,
                     ),
                     trailing: Icon(Icons.edit_outlined, color: secondary),
-                    onTap: () => _editAbout(context, ref, profile.about),
+                    onTap: () => editMyAbout(context, ref, profile.about),
                   ),
                 ],
               ),
             if (profile != null) const SizedBox(height: PrivioSpacing.l),
-            _Card(
+            SettingsCard(
               children: [
                 ListTile(
                   key: const Key('settings.privacy'),
@@ -282,7 +176,7 @@ class SettingsTab extends ConsumerWidget {
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.privacy),
                 ),
-                const _Divider(),
+                const SettingsDivider(),
                 SwitchListTile(
                   key: const Key('settings.discoverable'),
                   value: account?.phoneDiscoverable ?? false,
@@ -297,7 +191,7 @@ class SettingsTab extends ConsumerWidget {
                         : 'Désactivé\u202F: on vous trouve seulement par @${profile.handle}.',
                   ),
                 ),
-                const _Divider(),
+                const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.blocked'),
                   leading: Icon(Icons.block, color: p.accentText),
@@ -316,7 +210,7 @@ class SettingsTab extends ConsumerWidget {
                   ),
                   onTap: () => context.push(Routes.blockedUsers),
                 ),
-                const _Divider(),
+                const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.lock'),
                   leading: Icon(Icons.lock_outline, color: p.accentText),
@@ -331,8 +225,8 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ],
             ),
-            const _SectionTitle('Notifications et gestes'),
-            _Card(
+            const SettingsSectionTitle('Notifications et gestes'),
+            SettingsCard(
               children: [
                 SwitchListTile(
                   key: const Key('settings.push'),
@@ -342,7 +236,7 @@ class SettingsTab extends ConsumerWidget {
                   title: const Text('Notifications'),
                   subtitle: const Text('Sans nom ni contenu.'),
                 ),
-                const _Divider(),
+                const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.quick_reaction'),
                   leading: Icon(Icons.touch_app_outlined, color: p.accentText),
@@ -356,8 +250,8 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ],
             ),
-            const _SectionTitle('Ce téléphone'),
-            _Card(
+            const SettingsSectionTitle('Ce téléphone'),
+            SettingsCard(
               children: [
                 ListTile(
                   key: const Key('settings.storage'),
@@ -367,7 +261,7 @@ class SettingsTab extends ConsumerWidget {
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.storage),
                 ),
-                const _Divider(),
+                const SettingsDivider(),
                 ListTile(
                   leading: Icon(Icons.phone_android, color: p.accentText),
                   title: const Text('Seul appareil connecté'),
@@ -379,7 +273,7 @@ class SettingsTab extends ConsumerWidget {
             // serveur ; pour tout autre compte, la console n'existe pas).
             if (ref.watch(consoleAccessProvider).value ?? false) ...[
               const SizedBox(height: PrivioSpacing.l),
-              _Card(
+              SettingsCard(
                 children: [
                   ListTile(
                     key: const Key('settings.console'),
@@ -393,7 +287,7 @@ class SettingsTab extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: PrivioSpacing.l),
-            _Card(
+            SettingsCard(
               children: [
                 ListTile(
                   key: const Key('settings.help'),
@@ -405,7 +299,7 @@ class SettingsTab extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: PrivioSpacing.l),
-            _Card(
+            SettingsCard(
               children: [
                 ListTile(
                   key: const Key('settings.signout'),
@@ -416,7 +310,7 @@ class SettingsTab extends ConsumerWidget {
                   ),
                   onTap: () => _confirmSignOut(context, ref),
                 ),
-                const _Divider(),
+                const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.delete'),
                   leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
@@ -437,118 +331,6 @@ class SettingsTab extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      PrivioSpacing.xs,
-      PrivioSpacing.xl,
-      PrivioSpacing.xs,
-      PrivioSpacing.s,
-    ),
-    child: Semantics(
-      header: true,
-      child: Text(
-        text.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall
-            ?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.4),
-      ),
-    ),
-  );
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = PrivioPalette.of(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? p.field : p.sheet,
-        borderRadius: BorderRadius.circular(PrivioRadius.large),
-        border: Border.all(color: p.divider),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(children: children),
-      ),
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) => const Divider(indent: 56, height: 1);
-}
-
-class _AboutDialog extends StatefulWidget {
-  const _AboutDialog({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_AboutDialog> createState() => _AboutDialogState();
-}
-
-class _AboutDialogState extends State<_AboutDialog> {
-  late final _text = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      key: const Key('about.dialog'),
-      title: const Text('À propos'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Par exemple\u202F: «\u202FDisponible\u202F», «\u202FAu travail\u202F». Qui le voit se '
-            'règle dans Confidentialité.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: PrivioSpacing.m),
-          TextField(
-            key: const Key('about.text'),
-            controller: _text,
-            maxLength: 140,
-            maxLines: 3,
-            minLines: 1,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Votre court texte'),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        FilledButton(
-          key: const Key('about.save'),
-          onPressed: () => Navigator.pop(context, _text.text),
-          child: const Text('Enregistrer'),
-        ),
-      ],
     );
   }
 }

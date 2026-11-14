@@ -155,3 +155,12 @@ Codes prévus aux étapes suivantes (dossier 07) : `FEATURE_DISABLED`, `POLICY_V
 Un code faux n'est pas une erreur : `preview_group_by_code` et `join_group_by_code`
 renvoient un statut (`invalid`, `member`, `pending`, `declined`, `full`, `open`,
 `approval`, puis `joined` ou `requested`), pour que les essais restent comptés.
+
+### Finitions (lot 7.2a)
+| Code | Origine | Signification |
+|---|---|---|
+| `DISPLAY_NAME_INVALID` | `set_my_display_name` | nom vide ou de plus de 40 caractères |
+| `RATE_LIMITED` | `set_my_display_name` | trop de changements de nom aujourd'hui (`display_name_daily_limit`) |
+| `PRIVACY_SETTING_INVALID` | `set_conversation_privacy` | en ligne, photo ou À propos demandés pour un groupe |
+| `NOT_MEMBER` | `get_conversation_privacy`, `set_conversation_privacy` | discussion dont on ne fait pas partie |
+

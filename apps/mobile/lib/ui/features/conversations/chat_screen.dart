@@ -31,6 +31,7 @@ import '../groups/mentions.dart';
 import 'photo_widgets.dart';
 import 'report_sheet.dart';
 import 'voice_widgets.dart';
+import 'conversation_details.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -444,101 +445,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Vider la discussion (lot 4.3) : chez moi, ou pour tout le monde (1:1 : avec l'accord
   /// de l'autre ; groupe : administrateurs).
+  /// Lot 7.2a : même parcours que depuis la fiche (choix, confirmation, vidage).
   Future<void> _chooseClear(ConversationSummary s) async {
-    final everyoneAllowed = s.isGroup ? s.isAdmin : !(s.blocked || s.peerDeleted);
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                PrivioSpacing.l,
-                0,
-                PrivioSpacing.l,
-                PrivioSpacing.s,
-              ),
-              child: Text('Vider la discussion', style: Theme.of(ctx).textTheme.titleMedium),
-            ),
-            if (everyoneAllowed)
-              ListTile(
-                key: const Key('clear.everyone'),
-                leading: const Icon(Icons.group_remove_outlined),
-                title: Text(s.isGroup ? 'Pour tous les membres' : 'Pour nous deux'),
-                subtitle: Text(
-                  s.isGroup
-                      ? 'Tous les messages, vocaux et photos disparaissent pour tout le monde, '
-                            'sans laisser de trace.'
-                      : '${s.title} doit accepter. Ensuite tout disparaît des deux côtés, '
-                            'sans laisser de trace.',
-                ),
-                onTap: () => Navigator.pop(ctx, 'everyone'),
-              ),
-            ListTile(
-              key: const Key('clear.me'),
-              leading: const Icon(Icons.person_remove_outlined),
-              title: const Text('Seulement chez moi'),
-              subtitle: Text(
-                s.isGroup
-                    ? 'Votre copie est vidée\u202F; les autres membres gardent leurs messages.'
-                    : 'Votre copie est vidée\u202F; ${s.title} garde ses messages.',
-              ),
-              onTap: () => Navigator.pop(ctx, 'me'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null || !mounted) return;
-    final everyone = choice == 'everyone';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          everyone
-              ? (s.isGroup
-                    ? 'Vider le groupe pour tous\u202F?'
-                    : 'Demander à ${s.title} de tout vider\u202F?')
-              : 'Vider la discussion chez vous\u202F?',
-        ),
-        content: Text(
-          everyone && !s.isGroup
-              ? 'Si ${s.title} accepte, tous les messages disparaissent définitivement des deux '
-                    'côtés. La demande expire au bout de 24 heures.'
-              : 'Les messages actuels disparaissent définitivement de votre écran. '
-                    'Cette action ne peut pas être annulée.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-          FilledButton(
-            key: const Key('clear.confirm'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(everyone && !s.isGroup ? 'Envoyer la demande' : 'Vider'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    try {
-      final r = await ref
-          .read(messagingApiProvider)
-          .clearConversation(widget.conversationId, everyone: everyone);
-      await _afterClear();
-      if (r == 'requested') {
-        _toast('Demande envoyée à ${s.title}.');
-      } else {
-        _toast('Discussion vidée.');
-      }
-    } on Object catch (e) {
-      _toast(toAppFailure(e).message);
-    }
+    final r = await chooseClear(context, ref, s);
+    if (r != null && mounted) await _afterClear();
   }
 
   Future<void> _respondClear(bool? accept) async {
@@ -823,11 +733,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 borderRadius: BorderRadius.circular(PrivioRadius.medium),
                 onTap: summary == null || (!isGroup && summary.peerId == null)
                     ? null
-                    : () async {
-                        // Lot 7.1a : « Vider » depuis la fiche revient ici avec son choix.
-                        final r = await context.push<String>(Routes.contact(widget.conversationId));
-                        if (r == 'clear' && mounted) await _chooseClear(summary);
-                      },
+                    // Lot 7.2a : « Vider » se fait sur la fiche ; la discussion se recharge.
+                    : () => context.push(Routes.contact(widget.conversationId)),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xs),
                   child: LayoutBuilder(

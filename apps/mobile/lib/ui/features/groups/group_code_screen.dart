@@ -8,6 +8,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/settings_card.dart';
 
 /// Code d'invitation d'un groupe (administrateurs), créé à la première ouverture.
 final groupInviteCodeProvider = FutureProvider.autoDispose.family<String, String>(
@@ -90,54 +91,63 @@ class _GroupCodeScreenState extends ConsumerState<GroupCodeScreen> {
     );
   }
 
-  Widget _body(BuildContext context, ThemeData theme, String code, bool approval) => ListView(
-    padding: const EdgeInsets.all(PrivioSpacing.xl),
+  Widget _body(
+    BuildContext context,
+    ThemeData theme,
+    String code,
+    bool approval,
+  ) => SettingsListView(
     children: [
-      Center(
-        // Fond blanc dans tous les thèmes : les lecteurs de QR code en ont besoin.
-        child: Container(
-          padding: const EdgeInsets.all(PrivioSpacing.l),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(PrivioRadius.large),
+      SettingsCard(
+        padding: const EdgeInsets.all(PrivioSpacing.l),
+        children: [
+          Center(
+            // Fond blanc dans tous les thèmes : les lecteurs de QR code en ont besoin.
+            child: Container(
+              padding: const EdgeInsets.all(PrivioSpacing.l),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(PrivioRadius.large),
+              ),
+              child: QrImageView(
+                key: const Key('code.qr'),
+                data: code,
+                size: 220,
+                backgroundColor: Colors.white,
+                semanticsLabel: 'QR code du groupe',
+              ),
+            ),
           ),
-          child: QrImageView(
-            key: const Key('code.qr'),
-            data: code,
-            size: 220,
-            backgroundColor: Colors.white,
-            semanticsLabel: 'QR code du groupe',
+          const SizedBox(height: PrivioSpacing.l),
+          Center(
+            child: Text(
+              code,
+              key: const Key('code.value'),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
           ),
-        ),
-      ),
-      const SizedBox(height: PrivioSpacing.l),
-      Center(
-        child: Text(
-          code,
-          key: const Key('code.value'),
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
-            fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(height: PrivioSpacing.l),
+          Text(
+            approval
+                ? 'Une personne qui entre ce code (Groupes → Rejoindre un groupe) ou scanne ce QR '
+                      'code vous envoie une demande ; un administrateur l’accepte ou la refuse.'
+                : 'Une personne qui entre ce code (Groupes → Rejoindre un groupe) ou scanne ce QR '
+                      'code rejoint le groupe directement.',
+            key: const Key('code.help'),
+            textAlign: TextAlign.center,
           ),
-        ),
-      ),
-      const SizedBox(height: PrivioSpacing.l),
-      Text(
-        approval
-            ? 'Une personne qui entre ce code (Groupes → Rejoindre un groupe) ou scanne ce QR '
-                  'code vous envoie une demande ; un administrateur l’accepte ou la refuse.'
-            : 'Une personne qui entre ce code (Groupes → Rejoindre un groupe) ou scanne ce QR '
-                  'code rejoint le groupe directement.',
-        key: const Key('code.help'),
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: PrivioSpacing.s),
-      Text(
-        'Donnez-le seulement aux personnes que vous voulez inviter. Les captures d’écran sont '
-        'bloquées : montrez le QR code ou recopiez le code dans un message.',
-        textAlign: TextAlign.center,
-        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(height: PrivioSpacing.s),
+          Text(
+            'Donnez-le seulement aux personnes que vous voulez inviter. Les captures d’écran sont '
+            'bloquées : montrez le QR code ou recopiez le code dans un message.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
       const SizedBox(height: PrivioSpacing.xl),
       FilledButton.icon(

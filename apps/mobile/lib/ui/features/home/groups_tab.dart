@@ -59,7 +59,6 @@ class GroupsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
     final myRequests = ref.watch(myJoinRequestsProvider).value ?? const <MyJoinRequest>[];
     final conversations = ref.watch(conversationsProvider);
@@ -87,8 +86,9 @@ class GroupsTab extends ConsumerWidget {
         icon: const Icon(Icons.group_add_outlined),
         label: const Text('Nouveau groupe'),
       ),
+      // Lot 7.2a : fond blanc, comme la liste des discussions.
       body: ColoredBox(
-        color: theme.colorScheme.surface,
+        color: PrivioPalette.of(context).sheet,
         child: Column(
           children: [
             if (offline)

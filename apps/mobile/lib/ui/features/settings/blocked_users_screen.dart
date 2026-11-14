@@ -5,6 +5,7 @@ import '../../../core/errors/app_failure.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
+import '../../../core/theme/privio_palette.dart';
 
 /// Paramètres → Personnes bloquées.
 class BlockedUsersScreen extends ConsumerWidget {
@@ -14,6 +15,8 @@ class BlockedUsersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final blocked = ref.watch(blockedUsersProvider);
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Personnes bloquées')),
       body: switch (blocked) {
         AsyncData(:final value) when value.isEmpty => const EmptyView(

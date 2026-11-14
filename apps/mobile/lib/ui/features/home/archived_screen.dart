@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/state_views.dart';
 import 'discussions_tab.dart';
+import '../../../core/theme/privio_palette.dart';
 
 /// Discussions archivées (état personnel). Appui long : désarchiver.
 class ArchivedScreen extends ConsumerWidget {
@@ -15,6 +16,8 @@ class ArchivedScreen extends ConsumerWidget {
         .where((c) => c.archived)
         .toList();
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Archivées')),
       body: archived.isEmpty
           ? const EmptyView(

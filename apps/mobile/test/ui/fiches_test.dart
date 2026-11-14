@@ -65,7 +65,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _scrollTo(tester, 'contact.common_groups');
-    expect(find.text('1 groupe en commun'), findsOneWidget);
+    expect(find.text('1 GROUPE EN COMMUN'), findsOneWidget);
     await _scrollTo(tester, 'contact.group.g-voisins');
     await tester.tap(find.byKey(const Key('contact.group.g-voisins')));
     await tester.pumpAndSettle();
@@ -142,13 +142,22 @@ void main() {
     expect(find.text('24 h'), findsOneWidget);
   });
 
-  testWidgets('fiche contact : « Vider » ouvre le choix de la discussion', (tester) async {
+  testWidgets('fiche contact : « Vider » propose le choix sur la fiche et y reste', (tester) async {
     final deps = _deps();
+    deps.messaging.receive('conv-bob', 'À effacer');
     await _openBobFiche(tester, deps);
     await tester.tap(find.byKey(const Key('contact.clear')));
     await tester.pumpAndSettle();
-    expect(find.text('Vider la discussion'), findsWidgets);
-    expect(find.byKey(const Key('chat.contact')), findsOneWidget, reason: 'retour à la discussion');
+    expect(find.byKey(const Key('clear.everyone')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('clear.me')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('clear.confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('Discussion vidée.'), findsOneWidget);
+    expect(find.byKey(const Key('contact.clear')), findsOneWidget, reason: 'toujours sur la fiche');
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('À effacer'), findsNothing, reason: 'la discussion est vidée');
   });
 
   testWidgets('fiche groupe : photo en grand avec « Changer » pour un administrateur, médias', (

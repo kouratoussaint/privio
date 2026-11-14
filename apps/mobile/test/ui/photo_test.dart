@@ -264,12 +264,16 @@ void main() {
     expect(find.byKey(const Key('avatar.photo.u2/avatar.jpg')), findsNothing);
   });
 
-  testWidgets('photo de profil\u202F: choisir, puis retirer (Paramètres)', (tester) async {
+  testWidgets('photo de profil\u202F: choisir, puis retirer (Paramètres → Ma fiche)', (
+    tester,
+  ) async {
     final deps = _deps();
     await _start(tester, deps);
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settings.avatar')));
+    await tester.tap(find.byKey(const Key('settings.profile')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('my.photo')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('avatar.remove')), findsNothing, reason: 'pas encore de photo');
     await tester.tap(find.byKey(const Key('avatar.gallery')));
@@ -281,7 +285,7 @@ void main() {
     await tester.pump(const Duration(seconds: 5)); // le message de confirmation disparaît
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('settings.avatar')));
+    await tester.tap(find.byKey(const Key('my.photo')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('avatar.remove')));
     await tester.pumpAndSettle();

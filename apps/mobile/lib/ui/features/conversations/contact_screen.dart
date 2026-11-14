@@ -17,6 +17,7 @@ import '../../core/widgets/state_views.dart';
 import '../../core/widgets/ttl_picker.dart';
 import 'conversation_details.dart';
 import 'report_sheet.dart';
+import '../../core/widgets/settings_card.dart';
 
 /// Fiche contact (depuis une discussion) : photo en grand, « À propos », durée, sourdine,
 /// « Vider », médias, groupes en commun, blocage et signalement (lot 7.1a).
@@ -110,152 +111,177 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     final groups = ref.watch(commonGroupsProvider(peerId)).value ?? const <CommonGroup>[];
     final iBlocked = blockedList.value?.any((b) => b.id == peerId) ?? false;
     final about = profile?.about;
+    // Lot 7.2a : une carte blanche par partie, comme Paramètres.
     return Scaffold(
       appBar: AppBar(title: const Text('Infos')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xl),
+      body: SettingsListView(
         children: [
-          FicheAvatar(
-            name: summary.title,
-            path: profile?.avatarPath ?? summary.peerAvatarPath,
-            seed: peerId,
-          ),
-          const SizedBox(height: PrivioSpacing.l),
-          Text(summary.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
-          if (summary.peerHandle != null)
-            Text(
-              '@${summary.peerHandle}',
-              style: theme.textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-          if (!summary.blocked)
-            Builder(
-              builder: (context) {
-                final label = presenceLabel(
-                  ref.watch(presenceProvider(peerId)).value ?? const UserPresence(),
-                  now,
-                );
-                return label.isEmpty
-                    ? const SizedBox.shrink()
-                    : Text(
-                        label,
-                        key: const Key('contact.presence'),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      );
-              },
-            ),
-          if (about != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                PrivioSpacing.xl,
-                PrivioSpacing.l,
-                PrivioSpacing.xl,
-                0,
+          SettingsCard(
+            padding: const EdgeInsets.all(PrivioSpacing.l),
+            children: [
+              FicheAvatar(
+                name: summary.title,
+                path: profile?.avatarPath ?? summary.peerAvatarPath,
+                seed: peerId,
               ),
-              child: Column(
-                key: const Key('contact.about'),
-                children: [
-                  Text(
-                    'À propos',
-                    style: theme.textTheme.labelMedium?.copyWith(color: p.accentText),
-                  ),
-                  const SizedBox(height: PrivioSpacing.xs),
-                  Text(about, textAlign: TextAlign.center),
-                ],
+              const SizedBox(height: PrivioSpacing.l),
+              Text(
+                summary.title,
+                style: theme.textTheme.headlineSmall,
+                textAlign: TextAlign.center,
               ),
-            ),
-          const Divider(height: PrivioSpacing.xxl),
-          ListTile(
-            key: const Key('contact.ttl'),
-            leading: Icon(Icons.timer_outlined, color: p.accentText),
-            title: const Text('Durée des messages'),
-            subtitle: Text(formatTtl(summary.ttlSeconds)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: summary.blocked ? null : () => _ttl(summary),
-          ),
-          ListTile(
-            key: const Key('contact.mute'),
-            leading: Icon(
-              summary.isMuted(now)
-                  ? Icons.notifications_off_outlined
-                  : Icons.notifications_outlined,
-              color: p.accentText,
-            ),
-            title: const Text('Notifications'),
-            subtitle: Text(muteLabel(summary, now)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => chooseMute(context, ref, summary),
-          ),
-          ListTile(
-            key: const Key('contact.clear'),
-            leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
-            title: const Text('Vider la discussion'),
-            trailing: const Icon(Icons.chevron_right),
-            // La discussion ouvre son propre choix (chez moi / pour nous deux).
-            onTap: () => context.pop('clear'),
-          ),
-          const Divider(height: PrivioSpacing.xl),
-          ConversationMediaSection(conversationId: summary.id, title: summary.title),
-          if (groups.isNotEmpty) ...[
-            const Divider(height: PrivioSpacing.xl),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-              child: Text(
-                '${groups.length} groupe${groups.length > 1 ? 's' : ''} en commun',
-                key: const Key('contact.common_groups'),
-                style: theme.textTheme.titleSmall,
-              ),
-            ),
-            for (final g in groups)
-              ListTile(
-                key: Key('contact.group.${g.id}'),
-                leading: UserAvatar(
-                  name: g.title,
-                  avatarPath: g.avatarPath,
-                  seed: g.id,
-                  radius: 20,
-                  icon: Icons.groups_rounded,
+              if (summary.peerHandle != null)
+                Text(
+                  '@${summary.peerHandle}',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
                 ),
-                title: Text(g.title),
-                subtitle: Text('${g.memberCount} membre${g.memberCount > 1 ? 's' : ''}'),
-                onTap: () => context.push(Routes.chat(g.id)),
+              if (!summary.blocked)
+                Builder(
+                  builder: (context) {
+                    final label = presenceLabel(
+                      ref.watch(presenceProvider(peerId)).value ?? const UserPresence(),
+                      now,
+                    );
+                    return label.isEmpty
+                        ? const SizedBox.shrink()
+                        : Text(
+                            label,
+                            key: const Key('contact.presence'),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          );
+                  },
+                ),
+              if (about != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: PrivioSpacing.l),
+                  child: Column(
+                    key: const Key('contact.about'),
+                    children: [
+                      Text(
+                        'À propos',
+                        style: theme.textTheme.labelMedium?.copyWith(color: p.accentText),
+                      ),
+                      const SizedBox(height: PrivioSpacing.xs),
+                      Text(about, textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SettingsSectionTitle('Discussion'),
+          SettingsCard(
+            children: [
+              ListTile(
+                key: const Key('contact.ttl'),
+                leading: Icon(Icons.timer_outlined, color: p.accentText),
+                title: const Text('Durée des messages'),
+                subtitle: Text(formatTtl(summary.ttlSeconds)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: summary.blocked ? null : () => _ttl(summary),
               ),
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('contact.mute'),
+                leading: Icon(
+                  summary.isMuted(now)
+                      ? Icons.notifications_off_outlined
+                      : Icons.notifications_outlined,
+                  color: p.accentText,
+                ),
+                title: const Text('Notifications'),
+                subtitle: Text(muteLabel(summary, now)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => chooseMute(context, ref, summary),
+              ),
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('contact.clear'),
+                leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
+                title: const Text('Vider la discussion'),
+                trailing: const Icon(Icons.chevron_right),
+                // Lot 7.2a : le choix s'ouvre ici, on reste sur la fiche.
+                onTap: () => chooseClear(context, ref, summary),
+              ),
+            ],
+          ),
+          const SettingsSectionTitle('Médias'),
+          SettingsCard(
+            children: [ConversationMediaSection(conversationId: summary.id, title: summary.title)],
+          ),
+          const SettingsSectionTitle('Confidentialité de cette discussion'),
+          SettingsCard(children: [ConversationPrivacySection(summary: summary)]),
+          const SettingsNote(
+            'Ces choix ne valent que pour cette discussion\u202F; ailleurs, vos réglages de '
+            'Confidentialité s’appliquent.',
+          ),
+          if (groups.isNotEmpty) ...[
+            SettingsSectionTitle(
+              '${groups.length} groupe${groups.length > 1 ? 's' : ''} en commun',
+              key: const Key('contact.common_groups'),
+            ),
+            SettingsCard(
+              children: [
+                for (final g in groups)
+                  ListTile(
+                    key: Key('contact.group.${g.id}'),
+                    leading: UserAvatar(
+                      name: g.title,
+                      avatarPath: g.avatarPath,
+                      seed: g.id,
+                      radius: 20,
+                      icon: Icons.groups_rounded,
+                    ),
+                    title: Text(g.title),
+                    subtitle: Text('${g.memberCount} membre${g.memberCount > 1 ? 's' : ''}'),
+                    onTap: () => context.push(Routes.chat(g.id)),
+                  ),
+              ],
+            ),
           ],
-          const Divider(height: PrivioSpacing.xl),
-          if (blockedList.isLoading)
-            const LoadingView()
-          else
-            ListTile(
-              key: const Key('contact.block'),
-              enabled: !_busy,
-              leading: Icon(
-                iBlocked ? Icons.lock_open : Icons.block,
-                color: iBlocked ? null : theme.colorScheme.error,
+          const SizedBox(height: PrivioSpacing.xl),
+          SettingsCard(
+            children: [
+              if (blockedList.isLoading)
+                const Padding(
+                  padding: EdgeInsets.all(PrivioSpacing.l),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                ListTile(
+                  key: const Key('contact.block'),
+                  enabled: !_busy,
+                  leading: Icon(
+                    iBlocked ? Icons.lock_open : Icons.block,
+                    color: iBlocked ? null : theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    iBlocked ? 'Débloquer' : 'Bloquer',
+                    style: iBlocked
+                        ? null
+                        : theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
+                  ),
+                  onTap: () => _toggle(peerId, summary.title, block: !iBlocked),
+                ),
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('contact.report'),
+                leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
+                title: Text(
+                  'Signaler ce contact',
+                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
+                ),
+                onTap: () => showReportSheet(
+                  context,
+                  reportedUserId: peerId,
+                  reportedName: summary.title,
+                  conversationId: widget.conversationId,
+                ),
               ),
-              title: Text(
-                iBlocked ? 'Débloquer' : 'Bloquer',
-                style: iBlocked
-                    ? null
-                    : theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
-              ),
-              onTap: () => _toggle(peerId, summary.title, block: !iBlocked),
-            ),
-          ListTile(
-            key: const Key('contact.report'),
-            leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
-            title: Text(
-              'Signaler ce contact',
-              style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
-            ),
-            onTap: () => showReportSheet(
-              context,
-              reportedUserId: peerId,
-              reportedName: summary.title,
-              conversationId: widget.conversationId,
-            ),
+            ],
           ),
         ],
       ),

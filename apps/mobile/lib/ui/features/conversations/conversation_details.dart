@@ -14,6 +14,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import 'photo_widgets.dart';
 import 'voice_widgets.dart';
+import '../../../state/privacy_providers.dart';
 
 /// Lot 7.1a : éléments communs aux fiches contact et groupe.
 
@@ -155,7 +156,7 @@ class ConversationMediaSection extends ConsumerWidget {
           trailing: media.isEmpty ? null : const Icon(Icons.chevron_right),
           onTap: media.isEmpty ? null : openAll,
         ),
-        if (media.isNotEmpty)
+        if (media.isNotEmpty) ...[
           SizedBox(
             height: 76,
             child: ListView.separated(
@@ -191,6 +192,8 @@ class ConversationMediaSection extends ConsumerWidget {
               },
             ),
           ),
+          const SizedBox(height: PrivioSpacing.m),
+        ],
       ],
     );
   }
@@ -266,6 +269,8 @@ class ConversationMediaScreen extends ConsumerWidget {
     final me = ref.watch(currentUserIdProvider);
     final media = ref.watch(conversationMediaProvider(conversationId));
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Médias')),
       body: switch (media) {
         AsyncData(:final value) when value.isEmpty => const EmptyView(
@@ -410,4 +415,259 @@ String muteLabel(ConversationSummary s, DateTime now) {
   final l = until.toLocal();
   String two(int n) => n.toString().padLeft(2, '0');
   return 'Désactivées jusqu’au ${two(l.day)}/${two(l.month)} à ${two(l.hour)}:${two(l.minute)}';
+}
+
+// ---------------------------------------------------------------------------
+// Lot 7.2a : « Vider la discussion » depuis la fiche (ou la discussion) ; confidentialité
+// propre à la discussion.
+// ---------------------------------------------------------------------------
+
+/// Choix (chez moi / pour nous deux ou pour tous), confirmation, puis vidage. L'écran
+/// appelant reste affiché ; la discussion se recharge si elle est ouverte en dessous.
+/// Renvoie 'cleared', 'requested' ou null (annulé, ou échec signalé).
+Future<String?> chooseClear(BuildContext context, WidgetRef ref, ConversationSummary s) async {
+  final everyoneAllowed = s.isGroup ? s.isAdmin : !(s.blocked || s.peerDeleted);
+  final choice = await showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              PrivioSpacing.l,
+              0,
+              PrivioSpacing.l,
+              PrivioSpacing.s,
+            ),
+            child: Text('Vider la discussion', style: Theme.of(ctx).textTheme.titleMedium),
+          ),
+          if (everyoneAllowed)
+            ListTile(
+              key: const Key('clear.everyone'),
+              leading: const Icon(Icons.group_remove_outlined),
+              title: Text(s.isGroup ? 'Pour tous les membres' : 'Pour nous deux'),
+              subtitle: Text(
+                s.isGroup
+                    ? 'Tous les messages, vocaux et photos disparaissent pour tout le monde, '
+                          'sans laisser de trace.'
+                    : '${s.title} doit accepter. Ensuite tout disparaît des deux côtés, '
+                          'sans laisser de trace.',
+              ),
+              onTap: () => Navigator.pop(ctx, 'everyone'),
+            ),
+          ListTile(
+            key: const Key('clear.me'),
+            leading: const Icon(Icons.person_remove_outlined),
+            title: const Text('Seulement chez moi'),
+            subtitle: Text(
+              s.isGroup
+                  ? 'Votre copie est vidée\u202F; les autres membres gardent leurs messages.'
+                  : 'Votre copie est vidée\u202F; ${s.title} garde ses messages.',
+            ),
+            onTap: () => Navigator.pop(ctx, 'me'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null || !context.mounted) return null;
+  final everyone = choice == 'everyone';
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(
+        everyone
+            ? (s.isGroup
+                  ? 'Vider le groupe pour tous\u202F?'
+                  : 'Demander à ${s.title} de tout vider\u202F?')
+            : 'Vider la discussion chez vous\u202F?',
+      ),
+      content: Text(
+        everyone && !s.isGroup
+            ? 'Si ${s.title} accepte, tous les messages disparaissent définitivement des deux '
+                  'côtés. La demande expire au bout de 24 heures.'
+            : 'Les messages actuels disparaissent définitivement de votre écran. '
+                  'Cette action ne peut pas être annulée.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        FilledButton(
+          key: const Key('clear.confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(ctx).colorScheme.error,
+            foregroundColor: Theme.of(ctx).colorScheme.onError,
+          ),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(everyone && !s.isGroup ? 'Envoyer la demande' : 'Vider'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return null;
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final r = await ref.read(messagingApiProvider).clearConversation(s.id, everyone: everyone);
+    await ref.read(conversationsProvider.notifier).refresh();
+    ref
+      ..invalidate(chatProvider(s.id))
+      ..invalidate(conversationMediaProvider(s.id));
+    messenger.showSnackBar(
+      SnackBar(
+        key: const Key('clear.done'),
+        content: Text(r == 'requested' ? 'Demande envoyée à ${s.title}.' : 'Discussion vidée.'),
+      ),
+    );
+    return r;
+  } on Object catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    return null;
+  }
+}
+
+/// Réglages de confidentialité de cette discussion (null : comme dans mes réglages).
+final conversationPrivacyProvider = FutureProvider.autoDispose.family<ConversationPrivacy, String>(
+  (ref, id) => ref.watch(messagingApiProvider).getConversationPrivacy(id),
+);
+
+/// Section « Confidentialité de cette discussion » d'une fiche. Accusés de lecture et
+/// « en train d'écrire » partout ; en discussion à deux, aussi en ligne, photo, À propos.
+class ConversationPrivacySection extends ConsumerWidget {
+  const ConversationPrivacySection({super.key, required this.summary});
+
+  final ConversationSummary summary;
+
+  String _title(String key) => switch (key) {
+    'receipts' => 'Accusés de lecture',
+    'typing' => '«\u202FEn train d’écrire\u202F»',
+    'presence' => 'En ligne et «\u202Fvu à\u202F»',
+    'avatar' => 'Photo de profil',
+    _ => 'À propos',
+  };
+
+  IconData _icon(String key) => switch (key) {
+    'receipts' => Icons.done_all,
+    'typing' => Icons.keyboard_outlined,
+    'presence' => Icons.circle_outlined,
+    'avatar' => Icons.account_circle_outlined,
+    _ => Icons.info_outline,
+  };
+
+  /// Valeur du compte, en clair (« Activés », « Mes contacts »…).
+  String _accountValue(String key, PrivacySettings g) => switch (key) {
+    'receipts' => g.readReceipts ? 'activés' : 'désactivés',
+    'typing' => g.typing ? 'activé' : 'désactivé',
+    'presence' => visibilityLabel(g.presence).toLowerCase(),
+    'avatar' => visibilityLabel(g.avatar).toLowerCase(),
+    _ => visibilityLabel(g.about).toLowerCase(),
+  };
+
+  (String, String) _choices(String key) => switch (key) {
+    'receipts' => ('Activés', 'Désactivés'),
+    'typing' => ('Activé', 'Désactivé'),
+    _ => ('Montré à ${summary.title}', 'Caché à ${summary.title}'),
+  };
+
+  String _label(String key, bool? v, PrivacySettings? g) {
+    final (on, off) = _choices(key);
+    if (v == true) return on;
+    if (v == false) return off;
+    return g == null
+        ? 'Comme dans mes réglages'
+        : 'Comme dans mes réglages (${_accountValue(key, g)})';
+  }
+
+  Future<void> _pick(
+    BuildContext context,
+    WidgetRef ref,
+    String key,
+    ConversationPrivacy current,
+    PrivacySettings? g,
+  ) async {
+    final (on, off) = _choices(key);
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<String>(
+          groupValue: switch (current.valueOf(key)) {
+            true => 'on',
+            false => 'off',
+            null => 'default',
+          },
+          onChanged: (v) => Navigator.pop(ctx, v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  PrivioSpacing.l,
+                  0,
+                  PrivioSpacing.l,
+                  PrivioSpacing.s,
+                ),
+                child: Text(_title(key), style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              RadioListTile<String>(
+                key: Key('conv_privacy.$key.default'),
+                value: 'default',
+                title: const Text('Comme dans mes réglages'),
+                subtitle: g == null ? null : Text(_accountValue(key, g)),
+              ),
+              RadioListTile<String>(key: Key('conv_privacy.$key.on'), value: 'on', title: Text(on)),
+              RadioListTile<String>(
+                key: Key('conv_privacy.$key.off'),
+                value: 'off',
+                title: Text(off),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    final next = current.withValue(key, switch (picked) {
+      'on' => true,
+      'off' => false,
+      _ => null,
+    });
+    try {
+      await ref
+          .read(messagingApiProvider)
+          .setConversationPrivacy(summary.id, next, group: summary.isGroup);
+      ref.invalidate(conversationPrivacyProvider(summary.id));
+    } on Object catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = PrivioPalette.of(context);
+    final current = ref.watch(conversationPrivacyProvider(summary.id)).value;
+    final account = ref.watch(privacyProvider).value;
+    final keys = summary.isGroup ? const ['receipts', 'typing'] : ConversationPrivacy.keys;
+    return Column(
+      key: const Key('conv_privacy'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final k in keys)
+          ListTile(
+            key: Key('conv_privacy.$k'),
+            enabled: current != null,
+            leading: Icon(_icon(k), color: p.accentText),
+            title: Text(_title(k)),
+            subtitle: Text(_label(k, current?.valueOf(k), account)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: current == null ? null : () => _pick(context, ref, k, current, account),
+          ),
+      ],
+    );
+  }
 }

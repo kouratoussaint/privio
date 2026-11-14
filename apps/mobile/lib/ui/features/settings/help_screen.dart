@@ -9,6 +9,7 @@ import '../../../data/services/realtime_service.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
+import '../../core/widgets/settings_card.dart';
 
 /// Aide : questions fréquentes et contact de l'assistance (lot 2.5).
 class HelpScreen extends ConsumerWidget {
@@ -113,37 +114,49 @@ class HelpScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Aide et assistance')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.s),
+      body: SettingsListView(
         children: [
-          for (final (q, a) in faq)
-            ExpansionTile(
-              title: Text(q, style: theme.textTheme.bodyLarge),
-              childrenPadding: const EdgeInsets.fromLTRB(
-                PrivioSpacing.l,
-                0,
-                PrivioSpacing.l,
-                PrivioSpacing.l,
-              ),
-              children: [Text(a, style: theme.textTheme.bodyMedium)],
-            ),
-          const Divider(),
-          const _ConnectionDiagnostic(),
-          ListTile(
-            key: const Key('help.contact'),
-            leading: const Icon(Icons.support_agent),
-            title: const Text('Contacter l’assistance'),
-            subtitle: const Text('Un problème, une question\u202F? Décrivez-le en quelques mots.'),
-            onTap: () => _contact(context, ref),
+          const SettingsSectionTitle('Questions fréquentes', first: true),
+          SettingsCard(
+            children: [
+              for (final (q, a) in faq)
+                ExpansionTile(
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  title: Text(q, style: theme.textTheme.bodyLarge),
+                  childrenPadding: const EdgeInsets.fromLTRB(
+                    PrivioSpacing.l,
+                    0,
+                    PrivioSpacing.l,
+                    PrivioSpacing.l,
+                  ),
+                  children: [Text(a, style: theme.textTheme.bodyMedium)],
+                ),
+            ],
           ),
-          // Lot 5.4 : les demandes envoyées et les réponses de l'équipe Privio.
-          ListTile(
-            key: const Key('help.my_requests'),
-            leading: const Icon(Icons.forum_outlined),
-            title: const Text('Mes demandes'),
-            subtitle: const Text('Vos messages à l’assistance et nos réponses'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(Routes.mySupport),
+          const SettingsSectionTitle('Assistance'),
+          SettingsCard(
+            children: [
+              const _ConnectionDiagnostic(),
+              ListTile(
+                key: const Key('help.contact'),
+                leading: const Icon(Icons.support_agent),
+                title: const Text('Contacter l’assistance'),
+                subtitle: const Text(
+                  'Un problème, une question\u202F? Décrivez-le en quelques mots.',
+                ),
+                onTap: () => _contact(context, ref),
+              ),
+              // Lot 5.4 : les demandes envoyées et les réponses de l'équipe Privio.
+              ListTile(
+                key: const Key('help.my_requests'),
+                leading: const Icon(Icons.forum_outlined),
+                title: const Text('Mes demandes'),
+                subtitle: const Text('Vos messages à l’assistance et nos réponses'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.mySupport),
+              ),
+            ],
           ),
         ],
       ),

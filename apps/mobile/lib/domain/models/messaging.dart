@@ -945,3 +945,63 @@ String? parseInviteCode(String? raw) {
   if (RegExp('^PRV$sign{6}\$').hasMatch(v)) return 'PRV-${v.substring(3)}';
   return null;
 }
+
+// ------------------------------------------------------------------------
+// Lot 7.2a : confidentialité propre à une discussion ou un groupe
+// ------------------------------------------------------------------------
+/// Réglages d'une discussion ; null : « comme dans mes réglages ».
+class ConversationPrivacy {
+  const ConversationPrivacy({
+    this.readReceipts,
+    this.typing,
+    this.showPresence,
+    this.showAvatar,
+    this.showAbout,
+  });
+
+  final bool? readReceipts;
+  final bool? typing;
+
+  /// Discussions à deux seulement : montré (true) ou caché (false) à ce contact.
+  final bool? showPresence;
+  final bool? showAvatar;
+  final bool? showAbout;
+
+  static const keys = ['receipts', 'typing', 'presence', 'avatar', 'about'];
+
+  bool? valueOf(String key) => switch (key) {
+    'receipts' => readReceipts,
+    'typing' => typing,
+    'presence' => showPresence,
+    'avatar' => showAvatar,
+    _ => showAbout,
+  };
+
+  ConversationPrivacy withValue(String key, bool? v) => ConversationPrivacy(
+    readReceipts: key == 'receipts' ? v : readReceipts,
+    typing: key == 'typing' ? v : typing,
+    showPresence: key == 'presence' ? v : showPresence,
+    showAvatar: key == 'avatar' ? v : showAvatar,
+    showAbout: key == 'about' ? v : showAbout,
+  );
+
+  factory ConversationPrivacy.fromJson(Map<String, dynamic> j) => ConversationPrivacy(
+    readReceipts: j['read_receipts'] as bool?,
+    typing: j['typing_indicator'] as bool?,
+    showPresence: j['show_presence'] as bool?,
+    showAvatar: j['show_avatar'] as bool?,
+    showAbout: j['show_about'] as bool?,
+  );
+
+  /// Paramètres de set_conversation_privacy (groupe : sans les trois derniers).
+  Map<String, dynamic> toRpc(String conversationId, {required bool group}) => {
+    'p_conversation_id': conversationId,
+    'p_read_receipts': readReceipts,
+    'p_typing_indicator': typing,
+    if (!group) ...{
+      'p_show_presence': showPresence,
+      'p_show_avatar': showAvatar,
+      'p_show_about': showAbout,
+    },
+  };
+}

@@ -49,18 +49,63 @@ bool _isNetwork(Object e) => toAppFailure(e).code == FailureCode.network;
 // ------------------------------------------------------------------------
 // Hors connexion
 // ------------------------------------------------------------------------
-/// Vrai quand le dernier échange avec le serveur a échoué faute de réseau.
+/// Vrai quand le serveur est injoignable faute de réseau.
+///
+/// Lot 7.2a : au retour dans l'app (veille, app réduite), Android rend le réseau à l'app
+/// quelques secondes après ; les premiers appels échouent alors que le téléphone est bien
+/// connecté. Un échec isolé n'affiche donc plus « hors connexion » : une nouvelle tentative
+/// silencieuse part après [retryAfter], et le bandeau n'apparaît que si rien n'a réussi au
+/// bout de [confirmAfter]. Le téléphone qui annonce lui-même « aucun réseau » ([certain])
+/// est signalé tout de suite.
 final offlineProvider = NotifierProvider<OfflineController, bool>(OfflineController.new);
 
 class OfflineController extends Notifier<bool> {
-  @override
-  bool build() => false;
+  static const retryAfter = Duration(seconds: 2);
+  static const confirmAfter = Duration(seconds: 5);
 
-  void report({required bool offline}) {
-    if (state == offline) return;
-    state = offline;
-    // Retour du réseau : les messages en attente partent aussitôt.
-    if (!offline) unawaited(ref.read(outboxProvider.notifier).flush());
+  Timer? _retry;
+  Timer? _confirm;
+
+  @override
+  bool build() {
+    ref.onDispose(_cancel);
+    return false;
+  }
+
+  void _cancel() {
+    _retry?.cancel();
+    _confirm?.cancel();
+    _retry = null;
+    _confirm = null;
+  }
+
+  void report({required bool offline, bool certain = false}) {
+    if (!offline) {
+      _cancel();
+      if (!state) return;
+      state = false;
+      // Retour du réseau : les messages en attente partent aussitôt.
+      unawaited(ref.read(outboxProvider.notifier).flush());
+      return;
+    }
+    if (state) return;
+    if (certain) {
+      _cancel();
+      state = true;
+      return;
+    }
+    // Échec isolé : on vérifie avant d'alerter (une seule vérification à la fois).
+    if (_confirm != null) return;
+    _retry = Timer(retryAfter, () {
+      _retry = null;
+      unawaited(ref.read(conversationsProvider.notifier).refresh());
+    });
+    _confirm = Timer(confirmAfter, () {
+      _confirm = null;
+      _retry?.cancel();
+      _retry = null;
+      state = true;
+    });
   }
 }
 

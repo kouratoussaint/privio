@@ -16,6 +16,8 @@ class MySupportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(mySupportRequestsProvider);
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Mes demandes')),
       body: switch (requests) {
         AsyncData(:final value) when value.isEmpty => const EmptyView(

@@ -5,6 +5,7 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/session_controller.dart';
+import '../../core/widgets/settings_card.dart';
 
 /// Suppression définitive du compte (AUTH-006). Confirmation par saisie de « SUPPRIMER ».
 class DeleteAccountScreen extends ConsumerStatefulWidget {
@@ -61,24 +62,28 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('Supprimer mon compte')),
-      body: ListView(
-        padding: const EdgeInsets.all(PrivioSpacing.xl),
+      body: SettingsListView(
         children: [
-          Icon(Icons.warning_amber_rounded, size: 48, color: theme.colorScheme.error),
-          const SizedBox(height: PrivioSpacing.l),
-          Text('Cette action est définitive.', style: theme.textTheme.titleMedium),
-          const SizedBox(height: PrivioSpacing.m),
-          for (final e in effects)
-            Padding(
-              padding: const EdgeInsets.only(bottom: PrivioSpacing.s),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('•  '),
-                  Expanded(child: Text(e, style: theme.textTheme.bodyMedium)),
-                ],
-              ),
-            ),
+          SettingsCard(
+            padding: const EdgeInsets.all(PrivioSpacing.l),
+            children: [
+              Icon(Icons.warning_amber_rounded, size: 48, color: theme.colorScheme.error),
+              const SizedBox(height: PrivioSpacing.l),
+              Text('Cette action est définitive.', style: theme.textTheme.titleMedium),
+              const SizedBox(height: PrivioSpacing.m),
+              for (final e in effects)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: PrivioSpacing.s),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('•  '),
+                      Expanded(child: Text(e, style: theme.textTheme.bodyMedium)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: PrivioSpacing.l),
           TextField(
             key: const Key('delete.confirm'),

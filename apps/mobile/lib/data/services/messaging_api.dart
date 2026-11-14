@@ -166,6 +166,14 @@ abstract interface class MessagingApi {
   Future<List<MyJoinRequest>> listMyJoinRequests();
   Future<List<JoinRequest>> listGroupJoinRequests(String conversationId);
   Future<void> respondToJoinRequest(String requestId, {required bool approve});
+
+  // Lot 7.2a : confidentialité propre à une discussion ou un groupe.
+  Future<ConversationPrivacy> getConversationPrivacy(String conversationId);
+  Future<void> setConversationPrivacy(
+    String conversationId,
+    ConversationPrivacy privacy, {
+    required bool group,
+  });
 }
 
 class SupabaseMessagingApi implements MessagingApi {
@@ -699,4 +707,17 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<void> respondToJoinRequest(String requestId, {required bool approve}) =>
       _call('respond_to_join_request', {'p_request_id': requestId, 'p_approve': approve});
+
+  @override
+  Future<ConversationPrivacy> getConversationPrivacy(String conversationId) async =>
+      ConversationPrivacy.fromJson(
+        (await _rows('get_conversation_privacy', {'p_conversation_id': conversationId})).single,
+      );
+
+  @override
+  Future<void> setConversationPrivacy(
+    String conversationId,
+    ConversationPrivacy privacy, {
+    required bool group,
+  }) => _call('set_conversation_privacy', privacy.toRpc(conversationId, group: group));
 }

@@ -180,3 +180,21 @@ Demandés par le commanditaire après test sur téléphone :
   console) ; une personne retirée par un administrateur repasse toujours par une demande ;
   après un refus, pas de nouvelle demande pendant 24 h.
 
+## Amendement 13 — Finitions, animations et sons (14 novembre 2026, lot 7.2)
+- Lot 7.2 découpé : 7.2a (finitions et corrections), 7.2b (animations, sons, illustrations
+  animées), puis 7.2c (le « confort » prévu : bouton descendre, non lus, sélection, etc.).
+- Fonds : les écrans en liste sont blancs (comme Discussions) ; les écrans de réglages et les
+  fiches ont un fond clair et une carte blanche par section (comme Paramètres).
+- « Vider la discussion » depuis une fiche : le choix et la confirmation s'ouvrent sur la
+  fiche, qui reste affichée.
+- « Ma fiche » (Paramètres → ligne du profil) : photo, **nom modifiable** (quelques fois par
+  jour), À propos ; l'@identifiant ne se change pas (décision : non).
+- Confidentialité propre à une discussion : accusés de lecture et « en train d'écrire »
+  (discussions et groupes) ; en ligne / vu à, photo, À propos (discussions à deux, pour ce
+  contact). Chaque réglage : comme dans mes réglages, activé ou désactivé.
+- « Hors connexion » : un échec isolé (retour de veille) n'est plus annoncé ; vérification
+  silencieuse, puis bandeau au bout de 5 s si le serveur reste injoignable.
+- 7.2b validé en entier (transitions, animations de la discussion, verrouillage, sons courts
+  créés pour Privio, illustrations animées dessinées en code) ; réglage « Sons et vibrations
+  dans l'application » activé par défaut ; « réduire les animations » du téléphone respecté.
+

@@ -27,6 +27,7 @@ abstract final class Routes {
   static const console = '/console';
   static const mySupport = '/support';
   static const joinGroup = '/join-group';
+  static const myProfile = '/me';
   static String chat(String id) => '/chat/$id';
   static String contact(String conversationId) => '/chat/$conversationId/contact';
   static String groupInvite(String conversationId) => '/chat/$conversationId/invite';

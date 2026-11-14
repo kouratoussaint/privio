@@ -13,6 +13,7 @@ import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
+import '../../../core/theme/privio_palette.dart';
 
 /// Écran 09 — trouver une personne par son identifiant Privio (ou son numéro, si elle
 /// l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
@@ -206,6 +207,8 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     final theme = Theme.of(context);
     final found = _found;
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Nouvelle discussion')),
       body: FlowLayout(
         children: [

@@ -167,7 +167,7 @@ void main() {
     expect(find.text('Avec le code, on entre directement'), findsOneWidget);
 
     await _scrollTo(tester, 'group.join_requests');
-    expect(find.text('Demandes pour rejoindre (2)'), findsOneWidget);
+    expect(find.text('DEMANDES POUR REJOINDRE (2)'), findsOneWidget);
     await _scrollTo(tester, 'join_request.r2');
     expect(find.text('déjà retiré du groupe'), findsOneWidget);
     await tester.tap(find.byKey(const Key('join_request.r1.approve')));

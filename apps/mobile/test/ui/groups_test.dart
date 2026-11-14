@@ -253,9 +253,9 @@ void main() {
       expect(g.roles.containsKey('u3'), isFalse);
       expect(find.byKey(const Key('member.u3')), findsNothing);
 
-      // Réglages.
+      // Réglages (lot 7.2a : carte « Réglages du groupe », au-dessus des membres).
       await tester.scrollUntilVisible(
-        find.byKey(const Key('group.edit')),
+        find.byKey(const Key('group.posting')),
         -200,
         scrollable: find.byType(Scrollable).first,
       );
@@ -266,6 +266,12 @@ void main() {
       await tester.tap(find.byKey(const Key('group.info_editing')));
       await tester.pumpAndSettle();
       expect(g.infoEditing, 'all');
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('group.edit')),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
 
       // Nom et description.
       await tester.tap(find.byKey(const Key('group.edit')));

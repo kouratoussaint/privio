@@ -13,6 +13,7 @@ import '../../../state/app_lock_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/privio_brand.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/settings_card.dart';
 
 // ---------------------------------------------------------------------------
 // Pavé numérique (sans champ texte : aucun clavier, aucune suggestion, aucun presse-papiers)
@@ -515,15 +516,14 @@ class AppLockSettingsScreen extends ConsumerWidget {
     if (s == null) return Scaffold(appBar: AppBar(), body: const LoadingView());
     return Scaffold(
       appBar: AppBar(title: const Text('Verrouillage')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.m),
+      body: SettingsListView(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              PrivioSpacing.l,
+              PrivioSpacing.xs,
               0,
+              PrivioSpacing.xs,
               PrivioSpacing.l,
-              PrivioSpacing.m,
             ),
             child: Text(
               'Un code à $kPinLength chiffres, propre à Privio, est demandé à l’ouverture de '
@@ -533,45 +533,45 @@ class AppLockSettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          SwitchListTile(
-            key: const Key('lock.enabled'),
-            value: s.enabled,
-            secondary: Icon(Icons.lock_outline, color: p.accentText),
-            title: const Text('Verrouiller Privio'),
-            onChanged: (v) =>
-                v ? context.push(Routes.appLockNew) : context.push(Routes.appLockDisable),
-          ),
-          if (s.enabled) ...[
-            ListTile(
-              key: const Key('lock.delay'),
-              leading: Icon(Icons.timer_outlined, color: p.accentText),
-              title: const Text('Redemander le code'),
-              subtitle: Text(delayLabel(s.config.delaySeconds)),
-              onTap: () => _chooseDelay(context, ref, s.config.delaySeconds),
-            ),
-            if (s.biometricsAvailable)
+          SettingsCard(
+            children: [
               SwitchListTile(
-                key: const Key('lock.use_biometrics'),
-                value: s.config.biometrics,
-                secondary: Icon(Icons.fingerprint, color: p.accentText),
-                title: const Text('Déverrouiller avec l’empreinte'),
-                subtitle: const Text('Le code reste toujours accepté'),
-                onChanged: (v) => ref.read(appLockProvider.notifier).setBiometrics(v),
+                key: const Key('lock.enabled'),
+                value: s.enabled,
+                secondary: Icon(Icons.lock_outline, color: p.accentText),
+                title: const Text('Verrouiller Privio'),
+                onChanged: (v) =>
+                    v ? context.push(Routes.appLockNew) : context.push(Routes.appLockDisable),
               ),
-            ListTile(
-              key: const Key('lock.change'),
-              leading: Icon(Icons.password, color: p.accentText),
-              title: const Text('Changer le code'),
-              onTap: () => context.push(Routes.appLockChange),
-            ),
-          ],
-          Padding(
-            padding: const EdgeInsets.all(PrivioSpacing.l),
-            child: Text(
-              'Code oublié\u202F: il faudra vous déconnecter, ce qui efface les messages gardés sur '
-              'ce téléphone. Les captures d’écran restent bloquées dans tous les cas.',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
+              if (s.enabled) ...[
+                ListTile(
+                  key: const Key('lock.delay'),
+                  leading: Icon(Icons.timer_outlined, color: p.accentText),
+                  title: const Text('Redemander le code'),
+                  subtitle: Text(delayLabel(s.config.delaySeconds)),
+                  onTap: () => _chooseDelay(context, ref, s.config.delaySeconds),
+                ),
+                if (s.biometricsAvailable)
+                  SwitchListTile(
+                    key: const Key('lock.use_biometrics'),
+                    value: s.config.biometrics,
+                    secondary: Icon(Icons.fingerprint, color: p.accentText),
+                    title: const Text('Déverrouiller avec l’empreinte'),
+                    subtitle: const Text('Le code reste toujours accepté'),
+                    onChanged: (v) => ref.read(appLockProvider.notifier).setBiometrics(v),
+                  ),
+                ListTile(
+                  key: const Key('lock.change'),
+                  leading: Icon(Icons.password, color: p.accentText),
+                  title: const Text('Changer le code'),
+                  onTap: () => context.push(Routes.appLockChange),
+                ),
+              ],
+            ],
+          ),
+          const SettingsNote(
+            'Code oublié\u202F: il faudra vous déconnecter, ce qui efface les messages gardés sur '
+            'ce téléphone. Les captures d’écran restent bloquées dans tous les cas.',
           ),
         ],
       ),

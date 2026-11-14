@@ -22,6 +22,8 @@ class ConnectionRequestsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(connectionRequestsProvider);
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Demandes de connexion')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),

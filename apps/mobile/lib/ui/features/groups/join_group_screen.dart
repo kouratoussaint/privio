@@ -13,6 +13,7 @@ import '../../../router/routes.dart';
 import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
+import '../../core/widgets/settings_card.dart';
 
 /// Lecture d'un QR code : l'écran caméra, remplacé dans les tests (pas de caméra).
 final qrScannerProvider = Provider<Future<String?> Function(BuildContext context)>(
@@ -149,58 +150,62 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Rejoindre un groupe')),
-      body: ListView(
-        padding: const EdgeInsets.all(PrivioSpacing.xl),
+      body: SettingsListView(
         children: [
-          Text(
-            'Entrez le code reçu d’un administrateur du groupe, ou scannez le QR code '
-            'qu’il vous montre sur son téléphone.',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: PrivioSpacing.l),
-          TextField(
-            key: const Key('join.code'),
-            controller: _code,
-            textCapitalization: TextCapitalization.characters,
-            autocorrect: false,
-            enableSuggestions: false,
-            maxLength: 12,
-            textInputAction: TextInputAction.go,
-            onSubmitted: (_) => _lookUp(),
-            onChanged: (_) {
-              if (_preview != null || _error != null) {
-                setState(() {
-                  _preview = null;
-                  _error = null;
-                });
-              }
-            },
-            decoration: InputDecoration(
-              labelText: 'Code d’invitation',
-              hintText: 'PRV-7K3Q9X',
-              counterText: '',
-              errorText: _error,
-              prefixIcon: const Icon(Icons.key_outlined),
-            ),
-          ),
-          const SizedBox(height: PrivioSpacing.m),
-          Row(
+          SettingsCard(
+            padding: const EdgeInsets.all(PrivioSpacing.l),
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const Key('join.scan'),
-                  onPressed: _busy ? null : _scan,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scanner'),
+              Text(
+                'Entrez le code reçu d’un administrateur du groupe, ou scannez le QR code '
+                'qu’il vous montre sur son téléphone.',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: PrivioSpacing.l),
+              TextField(
+                key: const Key('join.code'),
+                controller: _code,
+                textCapitalization: TextCapitalization.characters,
+                autocorrect: false,
+                enableSuggestions: false,
+                maxLength: 12,
+                textInputAction: TextInputAction.go,
+                onSubmitted: (_) => _lookUp(),
+                onChanged: (_) {
+                  if (_preview != null || _error != null) {
+                    setState(() {
+                      _preview = null;
+                      _error = null;
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: 'Code d’invitation',
+                  hintText: 'PRV-7K3Q9X',
+                  counterText: '',
+                  errorText: _error,
+                  prefixIcon: const Icon(Icons.key_outlined),
                 ),
               ),
-              const SizedBox(width: PrivioSpacing.m),
-              Expanded(
-                child: FilledButton(
-                  key: const Key('join.preview'),
-                  onPressed: _busy ? null : _lookUp,
-                  child: const Text('Continuer'),
-                ),
+              const SizedBox(height: PrivioSpacing.m),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('join.scan'),
+                      onPressed: _busy ? null : _scan,
+                      icon: const Icon(Icons.qr_code_scanner),
+                      label: const Text('Scanner'),
+                    ),
+                  ),
+                  const SizedBox(width: PrivioSpacing.m),
+                  Expanded(
+                    child: FilledButton(
+                      key: const Key('join.preview'),
+                      onPressed: _busy ? null : _lookUp,
+                      child: const Text('Continuer'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -286,12 +291,11 @@ class _PreviewCard extends StatelessWidget {
         ),
       ),
     };
-    return Card(
+    return SettingsCard(
       key: const Key('join.card'),
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(PrivioSpacing.l),
-        child: Column(
+      padding: const EdgeInsets.all(PrivioSpacing.l),
+      children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (preview.title != null) ...[
@@ -337,7 +341,7 @@ class _PreviewCard extends StatelessWidget {
             if (action != null) ...[const SizedBox(height: PrivioSpacing.l), action],
           ],
         ),
-      ),
+      ],
     );
   }
 }

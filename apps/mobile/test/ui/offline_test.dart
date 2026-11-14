@@ -50,6 +50,8 @@ void main() {
     // Coupure réseau, puis redémarrage complet de l'application.
     deps.messaging.offline = true;
     await _launch(tester, deps);
+    // Lot 7.2a : annoncé après vérification (quelques secondes), pas au premier échec.
+    await tester.pump(const Duration(seconds: 6));
     expect(find.byKey(const Key('offline.banner')), findsOneWidget);
     expect(find.byKey(const Key('conversation.conv-bob')), findsOneWidget);
     await _openBob(tester);
@@ -69,6 +71,7 @@ void main() {
       await tester.pump(); // le bouton « Envoyer » remplace le micro
       await tester.tap(find.byKey(const Key('chat.send')));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 6)); // vérification avant l'alerte
       expect(find.textContaining('En attente de réseau'), findsOneWidget);
       expect(
         deps.store.data.toString(),

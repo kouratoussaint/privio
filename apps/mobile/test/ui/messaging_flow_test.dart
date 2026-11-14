@@ -78,7 +78,9 @@ void main() {
     await tester.pump(); // le bouton « Envoyer » remplace le micro
     await tester.tap(find.byKey(const Key('chat.send')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('En attente de réseau'), findsOneWidget);
+    // Lot 7.2a : un échec isolé ne suffit plus à annoncer « hors connexion ».
+    expect(find.textContaining('Envoi…'), findsOneWidget);
+    expect(find.byKey(const Key('offline.banner')), findsNothing);
     await tester.tap(find.text('Tu es là\u202F?'));
     await tester.pumpAndSettle();
     final ids = deps.messaging.sentClientIds;

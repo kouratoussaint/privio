@@ -131,6 +131,25 @@ class FakeAccountApi implements AccountApi {
     return t.isEmpty ? null : t;
   }
 
+  /// Noms enregistrés (lot 7.2a).
+  final List<String> displayNames = [];
+
+  @override
+  Future<String> setDisplayName(String name) async {
+    final t = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (t.isEmpty || t.length > 40) throw const AppFailure(FailureCode.displayNameInvalid);
+    displayNames.add(t);
+    final a = account!;
+    final p = a.profile!;
+    account = Account(
+      userId: a.userId,
+      phoneE164: a.phoneE164,
+      phoneDiscoverable: a.phoneDiscoverable,
+      profile: Profile(handle: p.handle, displayName: t, about: p.about, avatarPath: p.avatarPath),
+    );
+    return t;
+  }
+
   @override
   Future<Profile> createProfile({required String handle, required String displayName}) async {
     if (takenHandles.contains(handle)) throw const AppFailure(FailureCode.handleTaken);
@@ -1561,6 +1580,25 @@ class FakeMessagingApi implements MessagingApi {
       return;
     }
     throw const AppFailure(FailureCode.joinRequestNotFound);
+  }
+
+  // Lot 7.2a : confidentialité par discussion.
+  final Map<String, ConversationPrivacy> convPrivacy = {};
+
+  @override
+  Future<ConversationPrivacy> getConversationPrivacy(String conversationId) async {
+    _net();
+    return convPrivacy[conversationId] ?? const ConversationPrivacy();
+  }
+
+  @override
+  Future<void> setConversationPrivacy(
+    String conversationId,
+    ConversationPrivacy privacy, {
+    required bool group,
+  }) async {
+    _net();
+    convPrivacy[conversationId] = privacy;
   }
 }
 

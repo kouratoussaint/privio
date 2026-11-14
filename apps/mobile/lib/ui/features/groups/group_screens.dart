@@ -23,6 +23,7 @@ import '../../core/widgets/ttl_picker.dart';
 import '../conversations/conversation_details.dart';
 import '../conversations/contact_screen.dart';
 import '../conversations/report_sheet.dart';
+import '../../core/widgets/settings_card.dart';
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -246,6 +247,8 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+    backgroundColor: PrivioPalette.of(context).sheet,
     appBar: AppBar(title: const Text('Nouveau groupe')),
     body: ListView(
       padding: const EdgeInsets.all(PrivioSpacing.xl),
@@ -341,6 +344,8 @@ class _InviteMembersScreenState extends ConsumerState<InviteMembersScreen> {
   Widget build(BuildContext context) {
     final members = ref.watch(groupMembersProvider(widget.conversationId)).value ?? const [];
     return Scaffold(
+      // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
+      backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: const Text('Inviter')),
       body: ListView(
         padding: const EdgeInsets.all(PrivioSpacing.xl),
@@ -723,178 +728,208 @@ class GroupInfoScreen extends ConsumerWidget {
     final active = (members.value ?? const <GroupMember>[]).where((m) => !m.invited).toList();
     final invited = (members.value ?? const <GroupMember>[]).where((m) => m.invited).toList();
 
+    // Lot 7.2a : une carte blanche par partie, comme Paramètres.
     return Scaffold(
       appBar: AppBar(title: const Text('Infos')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.xl),
+      body: SettingsListView(
         children: [
-          // Lot 7.1a : toucher la photo l'ouvre en grand ; les administrateurs la changent.
-          FicheAvatar(
-            key: const Key('group.photo'),
-            name: s.title,
-            path: s.groupAvatarPath,
-            seed: s.id,
-            icon: Icons.groups_rounded,
-            onEdit: s.canEditInfo ? () => _editPhoto(context, ref, s) : null,
-          ),
-          const SizedBox(height: PrivioSpacing.l),
-          Text(s.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
-          Text(
-            '${s.memberCount} membre${s.memberCount > 1 ? 's' : ''}',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
-          if ((s.groupDescription ?? '').isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                PrivioSpacing.xl,
-                PrivioSpacing.m,
-                PrivioSpacing.xl,
-                0,
+          SettingsCard(
+            padding: const EdgeInsets.all(PrivioSpacing.l),
+            children: [
+              // Lot 7.1a : toucher la photo l'ouvre en grand ; les administrateurs la changent.
+              FicheAvatar(
+                key: const Key('group.photo'),
+                name: s.title,
+                path: s.groupAvatarPath,
+                seed: s.id,
+                icon: Icons.groups_rounded,
+                onEdit: s.canEditInfo ? () => _editPhoto(context, ref, s) : null,
               ),
-              child: Text(s.groupDescription!, textAlign: TextAlign.center),
-            ),
-          if (s.canEditInfo)
-            Center(
-              child: TextButton.icon(
-                key: const Key('group.edit'),
-                onPressed: () => _editInfo(context, ref, s),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Modifier le nom ou la description'),
-              ),
-            ),
-          const Divider(height: PrivioSpacing.xxl),
-          ListTile(
-            key: const Key('group.ttl'),
-            leading: Icon(Icons.timer_outlined, color: p.accentText),
-            title: const Text('Durée des messages'),
-            subtitle: Text(formatTtl(s.ttlSeconds)),
-            trailing: s.canEditInfo ? const Icon(Icons.chevron_right) : null,
-            onTap: s.canEditInfo ? () => _ttl(context, ref, s) : null,
-          ),
-          ListTile(
-            key: const Key('group.mute'),
-            leading: Icon(
-              s.isMuted(now) ? Icons.notifications_off_outlined : Icons.notifications_outlined,
-              color: p.accentText,
-            ),
-            title: const Text('Sourdine'),
-            subtitle: Text(s.isMuted(now) ? 'Notifications coupées' : 'Notifications actives'),
-            onTap: () => _mute(context, ref, s),
-          ),
-          ListTile(
-            key: const Key('group.clear'),
-            leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
-            title: const Text('Vider la discussion'),
-            trailing: const Icon(Icons.chevron_right),
-            // La discussion ouvre son propre choix (chez moi / pour tous si administrateur).
-            onTap: () => context.pop('clear'),
-          ),
-          const Divider(height: PrivioSpacing.xl),
-          ConversationMediaSection(conversationId: s.id, title: s.title),
-          const Divider(height: PrivioSpacing.xl),
-          // Groupe fermé par Privio (lot 5.3) : plus de réglage d'écriture ni d'invitation.
-          if (s.isAdmin && !s.isClosed) ...[
-            SwitchListTile(
-              key: const Key('group.posting'),
-              value: s.posting == 'admins',
-              secondary: Icon(Icons.campaign_outlined, color: p.accentText),
-              title: const Text('Seuls les administrateurs écrivent'),
-              onChanged: (v) => _run(
-                context,
-                ref,
-                () => groupAction(
-                  ref,
-                  conversationId,
-                  (api) => api.setGroupSettings(conversationId, posting: v ? 'admins' : 'all'),
+              const SizedBox(height: PrivioSpacing.l),
+              Text(s.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+              Text(
+                '${s.memberCount} membre${s.memberCount > 1 ? 's' : ''}',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
-            SwitchListTile(
-              key: const Key('group.info_editing'),
-              value: s.infoEditing == 'admins',
-              secondary: Icon(Icons.edit_note, color: p.accentText),
-              title: const Text('Seuls les administrateurs modifient le groupe'),
-              subtitle: const Text('Nom, description, photo et durée des messages'),
-              onChanged: (v) => _run(
-                context,
-                ref,
-                () => groupAction(
-                  ref,
-                  conversationId,
-                  (api) => api.setGroupSettings(conversationId, infoEditing: v ? 'admins' : 'all'),
+              if ((s.groupDescription ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: PrivioSpacing.m),
+                  child: Text(s.groupDescription!, textAlign: TextAlign.center),
                 ),
-              ),
-            ),
-            // Lot 7.1b : entrée par code — demande à accepter (par défaut) ou entrée directe.
-            SwitchListTile(
-              key: const Key('group.join_approval'),
-              value: joinSettings?.approvalRequired ?? true,
-              secondary: Icon(Icons.how_to_reg_outlined, color: p.accentText),
-              title: const Text('Approuver les nouveaux membres'),
-              subtitle: Text(
-                joinSettings?.approvalRequired ?? true
-                    ? 'Avec le code, on envoie une demande à accepter'
-                    : 'Avec le code, on entre directement',
-              ),
-              onChanged: joinSettings == null
-                  ? null
-                  : (v) => _run(context, ref, () async {
-                      await ref
-                          .read(messagingApiProvider)
-                          .setGroupJoinApproval(conversationId, required: v);
-                      ref.invalidate(groupJoinSettingsProvider(conversationId));
-                    }),
-            ),
-          ],
-          if (s.isAdmin && !s.isClosed && requests.isNotEmpty) ...[
-            const Divider(height: PrivioSpacing.xxl),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-              child: Text(
-                'Demandes pour rejoindre (${requests.length})',
-                key: const Key('group.join_requests'),
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-            for (final r in requests)
+              if (s.canEditInfo)
+                Center(
+                  child: TextButton.icon(
+                    key: const Key('group.edit'),
+                    onPressed: () => _editInfo(context, ref, s),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Modifier le nom ou la description'),
+                  ),
+                ),
+            ],
+          ),
+          const SettingsSectionTitle('Discussion'),
+          SettingsCard(
+            children: [
               ListTile(
-                key: Key('join_request.${r.id}'),
-                leading: UserAvatar(name: r.displayName, seed: r.userId, radius: 20),
-                title: Text(r.displayName),
-                subtitle: Text(
-                  [
-                    if (r.handle != null) '@${r.handle}',
-                    if (r.wasRemoved) 'déjà retiré du groupe',
-                  ].join(' · '),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      key: Key('join_request.${r.id}.decline'),
-                      tooltip: 'Refuser',
-                      onPressed: () => _answerJoin(context, ref, r, approve: false),
-                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.error),
-                    ),
-                    IconButton.filled(
-                      key: Key('join_request.${r.id}.approve'),
-                      tooltip: 'Accepter',
-                      onPressed: () => _answerJoin(context, ref, r, approve: true),
-                      // Couleur explicite : la ligne impose sinon la sienne à l'icône.
-                      icon: Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary),
-                    ),
-                  ],
-                ),
+                key: const Key('group.ttl'),
+                leading: Icon(Icons.timer_outlined, color: p.accentText),
+                title: const Text('Durée des messages'),
+                subtitle: Text(formatTtl(s.ttlSeconds)),
+                trailing: s.canEditInfo ? const Icon(Icons.chevron_right) : null,
+                onTap: s.canEditInfo ? () => _ttl(context, ref, s) : null,
               ),
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('group.mute'),
+                leading: Icon(
+                  s.isMuted(now) ? Icons.notifications_off_outlined : Icons.notifications_outlined,
+                  color: p.accentText,
+                ),
+                title: const Text('Sourdine'),
+                subtitle: Text(s.isMuted(now) ? 'Notifications coupées' : 'Notifications actives'),
+                onTap: () => _mute(context, ref, s),
+              ),
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('group.clear'),
+                leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
+                title: const Text('Vider la discussion'),
+                trailing: const Icon(Icons.chevron_right),
+                // Lot 7.2a : le choix s'ouvre ici, on reste sur la fiche.
+                onTap: () => chooseClear(context, ref, s),
+              ),
+            ],
+          ),
+          const SettingsSectionTitle('Médias'),
+          SettingsCard(
+            children: [ConversationMediaSection(conversationId: s.id, title: s.title)],
+          ),
+          const SettingsSectionTitle('Confidentialité dans ce groupe'),
+          SettingsCard(children: [ConversationPrivacySection(summary: s)]),
+          // Groupe fermé par Privio (lot 5.3) : plus de réglage d'écriture ni d'invitation.
+          if (admin) ...[
+            const SettingsSectionTitle('Réglages du groupe'),
+            SettingsCard(
+              children: [
+                SwitchListTile(
+                  key: const Key('group.posting'),
+                  value: s.posting == 'admins',
+                  secondary: Icon(Icons.campaign_outlined, color: p.accentText),
+                  title: const Text('Seuls les administrateurs écrivent'),
+                  onChanged: (v) => _run(
+                    context,
+                    ref,
+                    () => groupAction(
+                      ref,
+                      conversationId,
+                      (api) => api.setGroupSettings(conversationId, posting: v ? 'admins' : 'all'),
+                    ),
+                  ),
+                ),
+                const SettingsDivider(),
+                SwitchListTile(
+                  key: const Key('group.info_editing'),
+                  value: s.infoEditing == 'admins',
+                  secondary: Icon(Icons.edit_note, color: p.accentText),
+                  title: const Text('Seuls les administrateurs modifient le groupe'),
+                  subtitle: const Text('Nom, description, photo et durée des messages'),
+                  onChanged: (v) => _run(
+                    context,
+                    ref,
+                    () => groupAction(
+                      ref,
+                      conversationId,
+                      (api) =>
+                          api.setGroupSettings(conversationId, infoEditing: v ? 'admins' : 'all'),
+                    ),
+                  ),
+                ),
+                const SettingsDivider(),
+                // Lot 7.1b : entrée par code — demande à accepter (par défaut) ou entrée directe.
+                SwitchListTile(
+                  key: const Key('group.join_approval'),
+                  value: joinSettings?.approvalRequired ?? true,
+                  secondary: Icon(Icons.how_to_reg_outlined, color: p.accentText),
+                  title: const Text('Approuver les nouveaux membres'),
+                  subtitle: Text(
+                    joinSettings?.approvalRequired ?? true
+                        ? 'Avec le code, on envoie une demande à accepter'
+                        : 'Avec le code, on entre directement',
+                  ),
+                  onChanged: joinSettings == null
+                      ? null
+                      : (v) => _run(context, ref, () async {
+                          await ref
+                              .read(messagingApiProvider)
+                              .setGroupJoinApproval(conversationId, required: v);
+                          ref.invalidate(groupJoinSettingsProvider(conversationId));
+                        }),
+                ),
+              ],
+            ),
           ],
-          const Divider(height: PrivioSpacing.xxl),
+          if (admin && requests.isNotEmpty) ...[
+            SettingsSectionTitle(
+              'Demandes pour rejoindre (${requests.length})',
+              key: const Key('group.join_requests'),
+            ),
+            SettingsCard(
+              children: [
+                for (final r in requests)
+                  ListTile(
+                    key: Key('join_request.${r.id}'),
+                    leading: UserAvatar(name: r.displayName, seed: r.userId, radius: 20),
+                    title: Text(r.displayName),
+                    subtitle: Text(
+                      [
+                        if (r.handle != null) '@${r.handle}',
+                        if (r.wasRemoved) 'déjà retiré du groupe',
+                      ].join(' · '),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          key: Key('join_request.${r.id}.decline'),
+                          tooltip: 'Refuser',
+                          onPressed: () => _answerJoin(context, ref, r, approve: false),
+                          icon: Icon(Icons.close_rounded, color: theme.colorScheme.error),
+                        ),
+                        IconButton.filled(
+                          key: Key('join_request.${r.id}.approve'),
+                          tooltip: 'Accepter',
+                          onPressed: () => _answerJoin(context, ref, r, approve: true),
+                          // Couleur explicite : la ligne impose sinon la sienne à l'icône.
+                          icon: Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+            padding: const EdgeInsets.fromLTRB(
+              PrivioSpacing.xs,
+              PrivioSpacing.l,
+              0,
+              PrivioSpacing.xs,
+            ),
             child: Row(
               children: [
-                Expanded(child: Text('Membres', style: theme.textTheme.titleMedium)),
-                if (s.isAdmin && !s.isClosed)
+                Expanded(
+                  child: Text(
+                    'MEMBRES',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+                if (admin)
                   TextButton.icon(
                     key: const Key('group.invite'),
                     onPressed: () => context.push(Routes.groupInvite(conversationId)),
@@ -904,56 +939,70 @@ class GroupInfoScreen extends ConsumerWidget {
               ],
             ),
           ),
-          if (s.isAdmin && !s.isClosed)
-            ListTile(
-              key: const Key('group.code'),
-              leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),
-              title: const Text('Inviter avec un code ou un QR code'),
-              subtitle: const Text('Pour les personnes qui ne sont pas dans vos contacts'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(Routes.groupCode(conversationId)),
-            ),
-          if (members.isLoading && !members.hasValue) const LinearProgressIndicator(),
-          for (final m in [...active, ...invited])
-            ListTile(
-              key: Key('member.${m.userId}'),
-              leading: UserAvatar(
-                name: m.displayName,
-                avatarPath: m.avatarPath,
-                seed: m.userId,
-                radius: 20,
-              ),
-              title: Text(m.userId == me ? '${m.displayName} (vous)' : m.displayName),
-              subtitle: m.handle == null ? null : Text('@${m.handle}'),
-              trailing: m.role == 'member'
-                  ? null
-                  : Text(
-                      m.roleLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: m.invited ? theme.colorScheme.onSurfaceVariant : p.accentText,
-                      ),
-                    ),
-              onTap: s.isAdmin && m.userId != me && !m.invited && m.role != 'owner'
-                  ? () => _memberActions(context, ref, s, m)
-                  : null,
-            ),
-          const Divider(height: PrivioSpacing.xxl),
-          ListTile(
-            key: const Key('group.report'),
-            leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
-            title: const Text('Signaler le groupe'),
-            onTap: () => showReportSheet(
-              context,
-              reportedUserId: null,
-              reportedName: 'le groupe «\u202F${s.title}\u202F»',
-              conversationId: conversationId,
-            ),
+          SettingsCard(
+            children: [
+              if (admin) ...[
+                ListTile(
+                  key: const Key('group.code'),
+                  leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),
+                  title: const Text('Inviter avec un code ou un QR code'),
+                  subtitle: const Text('Pour les personnes qui ne sont pas dans vos contacts'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(Routes.groupCode(conversationId)),
+                ),
+                const SettingsDivider(),
+              ],
+              if (members.isLoading && !members.hasValue) const LinearProgressIndicator(),
+              for (final m in [...active, ...invited])
+                ListTile(
+                  key: Key('member.${m.userId}'),
+                  leading: UserAvatar(
+                    name: m.displayName,
+                    avatarPath: m.avatarPath,
+                    seed: m.userId,
+                    radius: 20,
+                  ),
+                  title: Text(m.userId == me ? '${m.displayName} (vous)' : m.displayName),
+                  subtitle: m.handle == null ? null : Text('@${m.handle}'),
+                  trailing: m.role == 'member'
+                      ? null
+                      : Text(
+                          m.roleLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: m.invited ? theme.colorScheme.onSurfaceVariant : p.accentText,
+                          ),
+                        ),
+                  onTap: s.isAdmin && m.userId != me && !m.invited && m.role != 'owner'
+                      ? () => _memberActions(context, ref, s, m)
+                      : null,
+                ),
+            ],
           ),
-          ListTile(
-            key: const Key('group.leave'),
-            leading: Icon(Icons.logout, color: theme.colorScheme.error),
-            title: Text('Quitter le groupe', style: TextStyle(color: theme.colorScheme.error)),
-            onTap: () => _leave(context, ref, s),
+          const SizedBox(height: PrivioSpacing.xl),
+          SettingsCard(
+            children: [
+              ListTile(
+                key: const Key('group.report'),
+                leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
+                title: Text(
+                  'Signaler le groupe',
+                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
+                ),
+                onTap: () => showReportSheet(
+                  context,
+                  reportedUserId: null,
+                  reportedName: 'le groupe «\u202F${s.title}\u202F»',
+                  conversationId: conversationId,
+                ),
+              ),
+              const SettingsDivider(),
+              ListTile(
+                key: const Key('group.leave'),
+                leading: Icon(Icons.logout, color: theme.colorScheme.error),
+                title: Text('Quitter le groupe', style: TextStyle(color: theme.colorScheme.error)),
+                onTap: () => _leave(context, ref, s),
+              ),
+            ],
           ),
         ],
       ),

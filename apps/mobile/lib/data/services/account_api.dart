@@ -27,6 +27,9 @@ abstract interface class AccountApi {
   /// Lot 7.1a : « À propos » (140 caractères ; vide = retiré). Renvoie le texte enregistré.
   Future<String?> setAbout(String text);
 
+  /// Lot 7.2a : nom affiché (1 à 40 caractères) ; renvoie le nom enregistré.
+  Future<String> setDisplayName(String name);
+
   /// Lot 5.3 : suspension ou avertissement en cours pour ce compte.
   Future<ModerationStatus> moderationStatus();
   Future<void> submitAppeal(String sanctionId, String text);
@@ -115,4 +118,8 @@ class SupabaseAccountApi implements AccountApi {
   @override
   Future<String?> setAbout(String text) async =>
       await _rpc('set_my_about', {'p_about': text}) as String?;
+
+  @override
+  Future<String> setDisplayName(String name) async =>
+      await _rpc('set_my_display_name', {'p_display_name': name}) as String;
 }
