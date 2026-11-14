@@ -5,7 +5,10 @@ import 'package:image/image.dart' as img;
 import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/state/feedback_providers.dart';
+import 'package:flutter/foundation.dart';
+import 'package:privio/core/media/photo_processing.dart';
 import 'package:privio/ui/features/conversations/expression_panel.dart';
+import 'package:privio/ui/features/conversations/photo_editor.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
@@ -144,6 +147,57 @@ void main() {
     await tester.pumpAndSettle();
     final m = deps.messaging.messages['conv-bob']!.firstWhere((m) => m.body == 'Réagis ici');
     expect(m.reactions.single.emoji, '😀');
+  });
+
+  test('retouche dans un isolat (comme sur le téléphone)', () async {
+    final bytes = testJpeg(width: 80, height: 40);
+    final rotated = await compute(applyPhotoEdit, PhotoEdit.rotate(bytes));
+    expect((rotated.width, rotated.height), (40, 80));
+    final cropped = await compute(applyPhotoEdit, PhotoEdit.crop(bytes, const [0, 0, 0.5, 0.5]));
+    expect((cropped.width, cropped.height), (40, 20));
+    final drawn = await compute(
+      applyPhotoEdit,
+      PhotoEdit.draw(bytes, const [
+        (0xFFE63946, 0.05, [(0.2, 0.5), (0.8, 0.5)]),
+      ]),
+    );
+    expect(drawn.bytes, isNot(bytes));
+  });
+
+  testWidgets('écran de retouche avec un vrai isolat : « Terminé » aboutit', (tester) async {
+    PhotoEditorScreen.inline = false;
+    addTearDown(() => PhotoEditorScreen.inline = true);
+    PreparedPhoto? result;
+    final photo = PreparedPhoto(bytes: testJpeg(width: 80, height: 40), width: 80, height: 40);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => result = await Navigator.of(context).push<PreparedPhoto>(
+              MaterialPageRoute(builder: (_) => PhotoEditorScreen(photo: photo)),
+            ),
+            child: const Text('ouvrir'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('ouvrir'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('editor.rotate')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('editor.draw')));
+    await tester.pumpAndSettle();
+    final canvas = tester.getRect(find.byKey(const Key('editor.canvas')));
+    await tester.dragFrom(canvas.center - const Offset(20, 0), const Offset(40, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('editor.done')));
+    for (var i = 0; i < 20 && result == null; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump();
+    }
+    expect(result, isNotNull, reason: '« Terminé » ne tourne plus sans fin');
+    expect((result!.width, result!.height), (40, 80));
   });
 
   group('retouche avant l’envoi', () {

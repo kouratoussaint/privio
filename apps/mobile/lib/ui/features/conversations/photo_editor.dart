@@ -1,6 +1,4 @@
-import 'dart:isolate';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 
@@ -82,6 +80,31 @@ PreparedPhoto drawOnPhoto(Uint8List bytes, List<(int, double, List<(double, doub
   return _encode(image);
 }
 
+/// Une retouche à faire hors du fil de l'interface. Uniquement des données simples : un
+/// isolat ne peut recevoir ni l'écran ni ses objets (cause du blocage de la 1re version,
+/// où l'opération était une fonction anonyme liée à l'écran).
+class PhotoEdit {
+  const PhotoEdit.rotate(this.bytes) : kind = 'rotate', rect = const [], strokes = const [];
+  const PhotoEdit.crop(this.bytes, this.rect) : kind = 'crop', strokes = const [];
+  const PhotoEdit.draw(this.bytes, this.strokes) : kind = 'draw', rect = const [];
+
+  final String kind;
+  final Uint8List bytes;
+
+  /// Recadrage : gauche, haut, droite, bas (0 à 1).
+  final List<double> rect;
+
+  /// Traits : (couleur ARGB, épaisseur relative, points relatifs).
+  final List<(int, double, List<(double, double)>)> strokes;
+}
+
+/// Point d'entrée de l'isolat (fonction de premier niveau).
+PreparedPhoto applyPhotoEdit(PhotoEdit e) => switch (e.kind) {
+  'rotate' => rotatePhotoLeft(e.bytes),
+  'crop' => cropPhoto(e.bytes, e.rect[0], e.rect[1], e.rect[2], e.rect[3]),
+  _ => drawOnPhoto(e.bytes, e.strokes),
+};
+
 enum _Tool { none, crop, draw }
 
 class PhotoEditorScreen extends StatefulWidget {
@@ -107,16 +130,24 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   /// Coin ou bord saisi pendant le recadrage (null : on déplace le cadre).
   Alignment? _handle;
 
-  Future<PreparedPhoto> _run(PreparedPhoto Function() work) =>
-      PhotoEditorScreen.inline ? Future.value(work()) : Isolate.run(work);
+  Future<PreparedPhoto> _run(PhotoEdit edit) =>
+      PhotoEditorScreen.inline ? Future.value(applyPhotoEdit(edit)) : compute(applyPhotoEdit, edit);
 
-  Future<void> _apply(PreparedPhoto Function(Uint8List bytes) op) async {
+  void _failed() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('La retouche n’a pas pu être appliquée. Réessayez.')),
+    );
+  }
+
+  Future<void> _apply(PhotoEdit Function(Uint8List bytes) op) async {
     setState(() => _busy = true);
     try {
       await _burn();
-      final bytes = _photo.bytes;
-      final next = await _run(() => op(bytes));
+      final next = await _run(op(_photo.bytes));
       if (mounted) setState(() => _photo = next);
+    } on Object catch (_) {
+      _failed();
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -130,7 +161,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       for (final s in _strokes)
         (s.color.toARGB32(), s.width, [for (final p in s.points) (p.dx, p.dy)]),
     ];
-    final next = await _run(() => drawOnPhoto(bytes, data));
+    final next = await _run(PhotoEdit.draw(bytes, data));
     if (!mounted) return;
     setState(() {
       _photo = next;
@@ -140,8 +171,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
 
   Future<void> _done() async {
     setState(() => _busy = true);
-    await _burn();
-    if (mounted) Navigator.pop(context, _photo);
+    try {
+      await _burn();
+      if (mounted) Navigator.pop(context, _photo);
+    } on Object catch (_) {
+      // Jamais d'attente sans fin : on reste sur l'écran, la retouche peut être refaite.
+      if (mounted) setState(() => _busy = false);
+      _failed();
+    }
   }
 
   void _panStart(Offset local, Size size) {
@@ -346,7 +383,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                                     final c = _crop;
                                     setState(() => _tool = _Tool.none);
                                     await _apply(
-                                      (b) => cropPhoto(b, c.left, c.top, c.right, c.bottom),
+                                      (b) => PhotoEdit.crop(b, [c.left, c.top, c.right, c.bottom]),
                                     );
                                     if (mounted) {
                                       setState(() => _crop = const Rect.fromLTRB(0, 0, 1, 1));
@@ -364,7 +401,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                           key: const Key('editor.rotate'),
                           icon: Icons.rotate_left_rounded,
                           label: 'Pivoter',
-                          onTap: _busy ? null : () => _apply(rotatePhotoLeft),
+                          onTap: _busy ? null : () => _apply(PhotoEdit.rotate),
                         ),
                         _ToolButton(
                           key: const Key('editor.crop'),
