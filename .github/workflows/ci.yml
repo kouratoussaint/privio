@@ -123,11 +123,11 @@ jobs:
       # Le nom du fichier devient le nom de l'artefact.
       - name: Nommer les APK
         run: |
-          mkdir -p apk
-          cp apps/mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-            "apk/privio-0.1.0+${{ github.run_number }}-arm64.apk"
-          cp apps/mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
-            "apk/privio-0.1.0+${{ github.run_number }}-32bits.apk"
+          mkdir -p "$GITHUB_WORKSPACE/apk"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            "$GITHUB_WORKSPACE/apk/privio-0.1.0+${{ github.run_number }}-arm64.apk"
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+            "$GITHUB_WORKSPACE/apk/privio-0.1.0+${{ github.run_number }}-32bits.apk"
       - uses: actions/upload-artifact@v7
         with:
           path: apk/privio-0.1.0+${{ github.run_number }}-arm64.apk
