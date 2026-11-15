@@ -25,6 +25,7 @@ import '../../core/motion/illustrations.dart';
 import '../groups/group_screens.dart';
 import '../conversations/expression_panel.dart';
 import 'list_menu.dart';
+import '../settings/two_step_screens.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -150,6 +151,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
           AnimatedOfflineBanner(offline: offline),
           // Lot 4.7 : demandes de connexion reçues (ou refus récents) en tête de liste.
           const ConnectionRequestsBanner(),
+          // Lot 8.4a : invitation à activer la vérification en deux étapes.
+          const TwoStepPromptCard(),
           if (archivedCount > 0)
             ListTile(
               key: const Key('discussions.archived'),

@@ -3900,4 +3900,87 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chercherSurPrivioAide => 'Identifiant exact ou numéro complet';
+
+  @override
+  String get twoStepTitle => 'Vérification en deux étapes';
+
+  @override
+  String get twoStepOn => 'Activée';
+
+  @override
+  String get twoStepOff => 'Désactivée';
+
+  @override
+  String get twoStepIntro =>
+      'Ajoutez un code de sécurité à 6 chiffres. Il sera demandé, en plus du code reçu par SMS, si quelqu’un se connecte à votre compte sur un autre téléphone, et pour changer de numéro.';
+
+  @override
+  String get twoStepHint =>
+      'Choisissez un code différent du code de verrouillage de ce téléphone et ne le donnez à personne. Si vous l’oubliez, seule l’assistance Privio pourra désactiver la vérification, après avoir vérifié votre identité.';
+
+  @override
+  String get activer => 'Activer';
+
+  @override
+  String get desactiver => 'Désactiver';
+
+  @override
+  String get twoStepChange => 'Changer le code de sécurité';
+
+  @override
+  String get twoStepEnabledDone => 'Vérification en deux étapes activée.';
+
+  @override
+  String get twoStepDisabledDone => 'Vérification en deux étapes désactivée.';
+
+  @override
+  String get twoStepChangedDone => 'Code de sécurité modifié.';
+
+  @override
+  String get codeSecurite => 'Code de sécurité';
+
+  @override
+  String get codeSecuriteActuel => 'Code de sécurité actuel';
+
+  @override
+  String get twoStepVerifyIntro =>
+      'Ce compte est protégé par un code de sécurité. Saisissez-le pour continuer. Le téléphone déjà connecté le reste tant que le bon code n’est pas saisi.';
+
+  @override
+  String get twoStepForgotTitle => 'Code de sécurité oublié';
+
+  @override
+  String get twoStepForgotBody =>
+      'L’assistance Privio peut désactiver la vérification en deux étapes après avoir vérifié votre identité. Envoyer une demande ?';
+
+  @override
+  String twoStepResetRequested(Object date) {
+    return 'Demande envoyée à l’assistance le $date. Dès que la vérification sera désactivée, Privio s’ouvrira sur ce téléphone.';
+  }
+
+  @override
+  String get verifierMaintenant => 'Vérifier maintenant';
+
+  @override
+  String get twoStepOtherNumber => 'Se connecter avec un autre numéro';
+
+  @override
+  String get twoStepPhoneChangeIntro =>
+      'Votre compte est protégé : saisissez votre code de sécurité pour changer de numéro.';
+
+  @override
+  String get twoStepPromptTitle => 'Protégez votre compte';
+
+  @override
+  String get twoStepPromptBody =>
+      'Ajoutez un code de sécurité en plus du SMS, pour qu’un vol de votre carte SIM ne suffise pas à ouvrir votre compte.';
+
+  @override
+  String get twoStepAlreadyEnabled => 'La vérification en deux étapes est déjà activée.';
+
+  @override
+  String get twoStepNotEnabled => 'La vérification en deux étapes n’est pas activée.';
+
+  @override
+  String get twoStepRequired => 'Saisissez d’abord votre code de sécurité.';
 }

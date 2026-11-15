@@ -703,6 +703,11 @@ class _DecisionDialogState extends State<DecisionDialog> {
         'La session est coupée tout de suite. La personne devra se reconnecter avec son '
             'numéro et le code reçu par SMS.',
       ),
+      'two_step_reset' => (
+        'Réinitialiser la vérification en deux étapes',
+        'À faire seulement après avoir vérifié l’identité de la personne. La vérification est '
+            'désactivée\u202F: le téléphone qui attend le code s’ouvre, sans code de sécurité.',
+      ),
       'uphold' => (
         'Maintenir la suspension',
         'La personne verra que sa contestation a été examinée et que la suspension est maintenue.',

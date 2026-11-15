@@ -34,6 +34,17 @@ abstract interface class AccountApi {
   Future<ModerationStatus> moderationStatus();
   Future<void> submitAppeal(String sanctionId, String text);
   Future<void> acknowledgeWarning(String sanctionId);
+
+  /// Lot 8.4a : vérification en deux étapes (code de vérification à 6 chiffres).
+  Future<TwoStepState> twoStepState();
+  Future<void> enableTwoStep(String pin);
+  Future<TwoStepCheck> verifyTwoStep(String pin);
+  Future<TwoStepCheck> changeTwoStep(String current, String next);
+  Future<TwoStepCheck> disableTwoStep(String pin);
+  Future<TwoStepCheck> authorizePhoneChange(String pin);
+
+  /// Code oublié : demande à l'assistance ; renvoie l'heure de la demande.
+  Future<DateTime> requestTwoStepReset();
 }
 
 class SupabaseAccountApi implements AccountApi {
@@ -122,4 +133,32 @@ class SupabaseAccountApi implements AccountApi {
   @override
   Future<String> setDisplayName(String name) async =>
       await _rpc('set_my_display_name', {'p_display_name': name}) as String;
+
+  Future<TwoStepCheck> _check(String fn, Map<String, dynamic> params) async =>
+      TwoStepCheck.fromJson(Map<String, dynamic>.from(await _rpc(fn, params) as Map));
+
+  @override
+  Future<TwoStepState> twoStepState() async =>
+      TwoStepState.fromJson(Map<String, dynamic>.from(await _rpc('two_step_state') as Map));
+
+  @override
+  Future<void> enableTwoStep(String pin) async => _rpc('enable_two_step', {'p_pin': pin});
+
+  @override
+  Future<TwoStepCheck> verifyTwoStep(String pin) => _check('verify_two_step', {'p_pin': pin});
+
+  @override
+  Future<TwoStepCheck> changeTwoStep(String current, String next) =>
+      _check('change_two_step', {'p_current': current, 'p_new': next});
+
+  @override
+  Future<TwoStepCheck> disableTwoStep(String pin) => _check('disable_two_step', {'p_pin': pin});
+
+  @override
+  Future<TwoStepCheck> authorizePhoneChange(String pin) =>
+      _check('authorize_phone_change', {'p_pin': pin});
+
+  @override
+  Future<DateTime> requestTwoStepReset() async =>
+      DateTime.parse(await _rpc('request_two_step_reset') as String);
 }

@@ -8,6 +8,9 @@ abstract final class Routes {
   static const otp = '/otp';
   static const profileSetup = '/profile-setup';
   static const permissions = '/permissions';
+
+  /// Lot 8.4a : code de vérification après le SMS (compte protégé).
+  static const twoStep = '/two-step';
   static const discussions = '/discussions';
   static const groups = '/groups';
   static const settings = '/settings';
@@ -47,7 +50,16 @@ abstract final class Routes {
   static const homeRoutes = {discussions, groups, settings};
 
   /// Écrans du parcours d'accès : inaccessibles une fois le compte prêt.
-  static const accessRoutes = {splash, onboarding, welcome, phone, otp, profileSetup, permissions};
+  static const accessRoutes = {
+    splash,
+    onboarding,
+    welcome,
+    phone,
+    otp,
+    twoStep,
+    profileSetup,
+    permissions,
+  };
 }
 
 /// Redirection pure, testée unitairement. `stage == null` : chargement ou erreur.
@@ -60,6 +72,8 @@ String? redirectFor(SessionStage? stage, String location) {
       return goTo(Routes.onboarding);
     case SessionStage.signedOut:
       return Routes.signedOutRoutes.contains(location) ? null : Routes.welcome;
+    case SessionStage.needsTwoStep:
+      return goTo(Routes.twoStep);
     case SessionStage.needsProfile:
       return goTo(Routes.profileSetup);
     case SessionStage.needsPermissions:

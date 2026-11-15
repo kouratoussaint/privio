@@ -11,7 +11,7 @@ import 'providers.dart';
 import 'push_providers.dart';
 
 /// Étape du parcours, dont découle la navigation (voir router/stage_redirect.dart).
-enum SessionStage { onboarding, signedOut, needsProfile, needsPermissions, ready }
+enum SessionStage { onboarding, signedOut, needsTwoStep, needsProfile, needsPermissions, ready }
 
 class SessionState {
   const SessionState({
@@ -20,6 +20,7 @@ class SessionState {
     required this.permissionsSeen,
     this.account,
     this.notice,
+    this.twoStep,
   });
 
   final bool onboardingDone;
@@ -30,9 +31,15 @@ class SessionState {
   /// Message à afficher une fois (ex. compte ouvert sur un autre appareil).
   final String? notice;
 
+  /// Lot 8.4a : SMS reçu, mais le compte est protégé et ce téléphone n'a pas encore saisi
+  /// le code de vérification (aucun accès en attendant).
+  final TwoStepState? twoStep;
+
   SessionStage get stage {
     if (!onboardingDone) return SessionStage.onboarding;
-    if (!signedIn || account == null) return SessionStage.signedOut;
+    if (!signedIn) return SessionStage.signedOut;
+    if (twoStep?.pending ?? false) return SessionStage.needsTwoStep;
+    if (account == null) return SessionStage.signedOut;
     if (!account!.hasProfile) return SessionStage.needsProfile;
     if (!permissionsSeen) return SessionStage.needsPermissions;
     return SessionStage.ready;
@@ -100,6 +107,20 @@ class SessionController extends AsyncNotifier<SessionState> {
       );
     } on AppFailure catch (f) {
       if (f.code != FailureCode.authRequired) rethrow;
+      // Lot 8.4a : session valide mais en attente du code de vérification.
+      try {
+        final twoStep = await api.twoStepState();
+        if (twoStep.pending) {
+          return SessionState(
+            onboardingDone: onboardingDone,
+            signedIn: true,
+            permissionsSeen: permissionsSeen,
+            twoStep: twoStep,
+          );
+        }
+      } on Object {
+        // Session vraiment coupée : suite ci-dessous.
+      }
       // Session révoquée côté serveur (autre appareil) : nettoyage local.
       _pendingNotice = _forcedNotice ?? kOtherDeviceNotice;
       _forcedNotice = null;
@@ -139,7 +160,35 @@ class SessionController extends AsyncNotifier<SessionState> {
   Future<void> onOtpVerified() async {
     _pendingNotice = null;
     _lastSignedIn = ref.read(authServiceProvider).hasSession;
-    await ref.read(accountApiProvider).registerDevice(appVersion: ref.read(appVersionProvider));
+    try {
+      await ref.read(accountApiProvider).registerDevice(appVersion: ref.read(appVersionProvider));
+    } on AppFailure catch (f) {
+      // Lot 8.4a : compte protégé, code de vérification attendu (l'autre téléphone reste
+      // connecté jusque-là).
+      if (f.code != FailureCode.authRequired) rethrow;
+    }
+    await _reload();
+  }
+
+  /// Lot 8.4a : saisie du code de vérification après le SMS. Bon code : ce téléphone est
+  /// enregistré (l'ancien est déconnecté), puis le parcours continue.
+  Future<TwoStepCheck> verifyTwoStep(String pin) async {
+    final api = ref.read(accountApiProvider);
+    final r = await api.verifyTwoStep(pin);
+    if (r.ok) {
+      await api.registerDevice(appVersion: ref.read(appVersionProvider));
+      await _reload();
+    }
+    return r;
+  }
+
+  /// Lot 8.4a : relit l'état (ex. code réinitialisé par l'assistance) et continue si possible.
+  Future<void> refreshTwoStep() async {
+    final api = ref.read(accountApiProvider);
+    final s = await api.twoStepState();
+    if (!s.pending) {
+      await api.registerDevice(appVersion: ref.read(appVersionProvider));
+    }
     await _reload();
   }
 

@@ -69,6 +69,7 @@ String journalText(JournalEntry e, String unit) => switch (e.action) {
   'account_search' =>
     e.detail['by'] == 'phone' ? 'Recherche de compte par numéro' : 'Recherche de compte',
   'disconnect' => 'Téléphone de ${_who(e)} déconnecté',
+  'two_step_reset' => 'Vérification en deux étapes de ${_who(e)} réinitialisée',
   'reply' => 'Réponse à la demande d’assistance de ${_who(e)}',
   'lift' => 'Réactivation de ${_who(e)}',
   'appeal' =>
@@ -114,6 +115,7 @@ class _EntryTile extends StatelessWidget {
         'evidence' => Icons.visibility,
         'account' || 'account_search' => Icons.person_search_outlined,
         'disconnect' => Icons.phonelink_erase,
+        'two_step_reset' => Icons.lock_reset,
         'reply' => Icons.support_agent,
         _ => Icons.visibility_outlined,
       }),

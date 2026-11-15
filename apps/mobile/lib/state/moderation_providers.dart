@@ -4,6 +4,7 @@ import '../domain/models/moderation.dart';
 import 'console_providers.dart';
 import 'messaging_providers.dart';
 import 'providers.dart';
+import '../data/services/admin_api.dart';
 
 /// Situation du compte connecté (lot 5.3) : suspension, avertissement non lu. Relue dès
 /// que la console décide (signal « moderation »), au retour dans l'app et après une coupure.
@@ -63,4 +64,9 @@ final accountSearchProvider = FutureProvider.autoDispose.family<List<AccountHit>
 
 final consoleAccountProvider = FutureProvider.autoDispose.family<ConsoleAccount, String>(
   (ref, userId) => ref.watch(adminApiProvider).account(userId),
+);
+
+/// Lot 8.4a : vérification en deux étapes d'un compte (console).
+final consoleTwoStepProvider = FutureProvider.autoDispose.family<ConsoleTwoStep, String>(
+  (ref, userId) => ref.watch(adminApiProvider).twoStep(userId),
 );

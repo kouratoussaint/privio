@@ -52,6 +52,25 @@ abstract interface class AdminApi {
   });
   Future<void> disconnectDevice(String userId, String note);
   Future<void> replySupport(String reportId, String reply);
+
+  /// Lot 8.4a : vérification en deux étapes d'un compte ; réinitialisation (code oublié).
+  Future<ConsoleTwoStep> twoStep(String userId);
+  Future<void> resetTwoStep(String userId, String note);
+}
+
+/// Lot 8.4a : vérification en deux étapes vue par la console.
+class ConsoleTwoStep {
+  const ConsoleTwoStep({required this.enabled, this.resetRequestedAt});
+
+  final bool enabled;
+  final DateTime? resetRequestedAt;
+
+  factory ConsoleTwoStep.fromJson(Map<String, dynamic> j) => ConsoleTwoStep(
+    enabled: j['enabled'] as bool? ?? false,
+    resetRequestedAt: j['reset_requested_at'] == null
+        ? null
+        : DateTime.parse(j['reset_requested_at'] as String),
+  );
 }
 
 class SupabaseAdminApi implements AdminApi {
@@ -187,6 +206,23 @@ class SupabaseAdminApi implements AdminApi {
         'p_note': note,
         'p_days': days,
       },
+    ),
+  );
+
+  @override
+  Future<ConsoleTwoStep> twoStep(String userId) => _guard(
+    () async => ConsoleTwoStep.fromJson(
+      Map<String, dynamic>.from(
+        await _client.rpc<dynamic>('console_two_step', params: {'p_user_id': userId}) as Map,
+      ),
+    ),
+  );
+
+  @override
+  Future<void> resetTwoStep(String userId, String note) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_reset_two_step',
+      params: {'p_user_id': userId, 'p_note': note},
     ),
   );
 

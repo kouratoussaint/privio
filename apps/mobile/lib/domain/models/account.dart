@@ -49,3 +49,50 @@ class Account {
     profile: profile,
   );
 }
+
+/// Lot 8.4a : vérification en deux étapes de ce compte, vue par CETTE session.
+class TwoStepState {
+  const TwoStepState({
+    required this.enabled,
+    required this.verified,
+    this.retryAt,
+    this.resetRequestedAt,
+  });
+
+  final bool enabled;
+
+  /// Ce téléphone a saisi le code (ou l'a activé) ; toujours vrai si désactivée.
+  final bool verified;
+  final DateTime? retryAt;
+
+  /// Code oublié : demande envoyée à l'assistance.
+  final DateTime? resetRequestedAt;
+
+  bool get pending => enabled && !verified;
+
+  factory TwoStepState.fromJson(Map<String, dynamic> j) => TwoStepState(
+    enabled: j['enabled'] as bool? ?? false,
+    verified: j['verified'] as bool? ?? true,
+    retryAt: j['retry_at'] == null ? null : DateTime.parse(j['retry_at'] as String),
+    resetRequestedAt: j['reset_requested_at'] == null
+        ? null
+        : DateTime.parse(j['reset_requested_at'] as String),
+  );
+}
+
+/// Résultat d'une saisie du code de vérification.
+class TwoStepCheck {
+  const TwoStepCheck({required this.ok, this.retryAt, this.failures = 0});
+
+  final bool ok;
+
+  /// Trop d'erreurs : nouvel essai possible à partir de cette heure.
+  final DateTime? retryAt;
+  final int failures;
+
+  factory TwoStepCheck.fromJson(Map<String, dynamic> j) => TwoStepCheck(
+    ok: j['ok'] as bool? ?? false,
+    retryAt: j['retry_at'] == null ? null : DateTime.parse(j['retry_at'] as String),
+    failures: (j['failures'] as num?)?.toInt() ?? 0,
+  );
+}

@@ -18,6 +18,7 @@ import '../../../state/session_controller.dart';
 import '../../core/widgets/settings_card.dart';
 import '../lock/app_lock_screens.dart' show delayLabel;
 import 'change_phone_screen.dart';
+import 'two_step_screens.dart';
 import 'wallpaper.dart';
 
 /// Lot 8.3a : sous-écrans des Paramètres (page d'accueil courte, une ligne par écran).
@@ -50,6 +51,23 @@ class SecurityScreen extends ConsumerWidget {
                 ),
                 trailing: Icon(Icons.chevron_right, color: secondary),
                 onTap: () => context.push(Routes.appLock),
+              ),
+              const SettingsDivider(),
+              // Lot 8.4a : vérification en deux étapes.
+              ListTile(
+                key: const Key('security.two_step'),
+                leading: Icon(Icons.verified_user_outlined, color: p.accentText),
+                title: Text(L.t.twoStepTitle),
+                subtitle: switch (ref.watch(twoStepStateProvider)) {
+                  AsyncData(:final value) => Text(value.enabled ? L.t.twoStepOn : L.t.twoStepOff),
+                  _ => null,
+                },
+                trailing: Icon(Icons.chevron_right, color: secondary),
+                onTap: () async {
+                  await Navigator.of(context)
+                      .push(MaterialPageRoute<void>(builder: (_) => const TwoStepSettingsScreen()));
+                  ref.invalidate(twoStepStateProvider);
+                },
               ),
               if (phone != null) ...[
                 const SettingsDivider(),

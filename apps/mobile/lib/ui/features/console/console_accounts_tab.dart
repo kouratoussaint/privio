@@ -183,6 +183,9 @@ class _AccountViewState extends ConsumerState<AccountView> {
           );
         case 'lift':
           await admin.liftSuspension(a.userId, r.$1);
+        case 'two_step_reset':
+          await admin.resetTwoStep(a.userId, r.$1);
+          ref.invalidate(consoleTwoStepProvider(a.userId));
         default:
           await admin.disconnectDevice(a.userId, r.$1);
       }
@@ -192,6 +195,7 @@ class _AccountViewState extends ConsumerState<AccountView> {
         'warn' => 'Avertissement envoyé.',
         'suspend' => 'Compte suspendu.',
         'lift' => 'Compte réactivé.',
+        'two_step_reset' => 'Vérification en deux étapes réinitialisée.',
         _ => 'Téléphone déconnecté.',
       });
     } on Object catch (e) {
@@ -281,6 +285,17 @@ class _AccountViewState extends ConsumerState<AccountView> {
               ),
               if (a.hasDevice) line('Notifications', a.pushEnabled ? 'Activées' : 'Désactivées'),
               line('Discussions', '${a.directs} · groupes : ${a.groups}'),
+              // Lot 8.4a : vérification en deux étapes (et demande « code oublié »).
+              if (ref.watch(consoleTwoStepProvider(a.userId)).value case final ts?)
+                line(
+                  'Deux étapes',
+                  !ts.enabled
+                      ? 'Désactivée'
+                      : ts.resetRequestedAt == null
+                      ? 'Activée'
+                      : 'Activée · code oublié, demande du ${_time(ts.resetRequestedAt!)}',
+                  key: const Key('account.two_step'),
+                ),
               line(
                 'Signalements (90 j)',
                 'reçus : ${a.reportsReceived90d} · faits : ${a.reportsMade90d}',
@@ -322,6 +337,13 @@ class _AccountViewState extends ConsumerState<AccountView> {
                     style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
                     onPressed: _busy ? null : () => _act(a, 'suspend'),
                     child: const Text('Suspendre…'),
+                  ),
+                if (ref.watch(consoleTwoStepProvider(a.userId)).value?.enabled ?? false)
+                  OutlinedButton.icon(
+                    key: const Key('account.two_step_reset'),
+                    onPressed: _busy ? null : () => _act(a, 'two_step_reset'),
+                    icon: const Icon(Icons.lock_reset),
+                    label: const Text('Réinitialiser les deux étapes'),
                   ),
                 if (a.hasDevice)
                   OutlinedButton.icon(

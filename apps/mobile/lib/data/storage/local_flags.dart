@@ -51,6 +51,10 @@ abstract interface class LocalFlags {
   Future<bool> groupsInDiscussions();
   Future<void> setGroupsInDiscussions(bool value);
 
+  /// Lot 8.4a : invitation « Protégez votre compte » fermée (« Plus tard »).
+  Future<bool> twoStepPromptDismissed();
+  Future<void> setTwoStepPromptDismissed();
+
   // Économie de données (lot 4.2).
   /// 'always', 'wifi' ou 'never' (téléchargement automatique des photos).
   Future<String> photoAutoDownload();
@@ -79,6 +83,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _textSize = 'privio.text_size';
   static const _language = 'privio.language';
   static const _linkPreviews = 'privio.link_previews';
+  static const _twoStepPrompt = 'privio.two_step_prompt_dismissed';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -171,6 +176,12 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setGroupsInDiscussions(bool value) => _prefs.setBool(_groupsInDiscussions, value);
+
+  @override
+  Future<bool> twoStepPromptDismissed() async => (await _prefs.getBool(_twoStepPrompt)) ?? false;
+
+  @override
+  Future<void> setTwoStepPromptDismissed() => _prefs.setBool(_twoStepPrompt, true);
 
   @override
   Future<String> photoAutoDownload() async => (await _prefs.getString(_autoPhoto)) ?? 'always';

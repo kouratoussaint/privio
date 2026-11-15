@@ -16,6 +16,7 @@ import '../ui/features/home/archived_screen.dart';
 import '../ui/features/lock/app_lock_screens.dart';
 import '../ui/features/settings/privacy_screen.dart';
 import '../ui/features/settings/settings_sections.dart';
+import '../ui/features/settings/two_step_screens.dart' show TwoStepVerifyScreen;
 import '../ui/features/conversations/message_extras.dart' show FavoritesScreen;
 import '../ui/features/settings/storage_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
@@ -58,6 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.profileSetup, builder: (_, _) => const ProfileSetupScreen()),
       GoRoute(path: Routes.permissions, builder: (_, _) => const PermissionsScreen()),
+      GoRoute(path: Routes.twoStep, builder: (_, _) => const TwoStepVerifyScreen()),
       GoRoute(path: Routes.newConversation, builder: (_, _) => const NewConversationScreen()),
       GoRoute(path: Routes.newGroup, builder: (_, _) => const NewGroupScreen()),
       GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),

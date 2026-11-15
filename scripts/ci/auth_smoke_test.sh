@@ -102,6 +102,7 @@ python3 "$(dirname "$0")/console_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/moderation_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Lot 8.1c : changement de numéro (numéros de test 004 et 005, comptes indépendants).
 python3 "$(dirname "$0")/numero_e2e.py" "$API" "$KEY" "$DB_URL"
+python3 "$(dirname "$0")/deux_etapes_e2e.py" "$API" "$KEY" "$DB_URL"
 # Dernier : déconnecte le téléphone de B.
 python3 "$(dirname "$0")/support_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/codes et mentions/finitions/suppression/console/modération/assistance : OK"

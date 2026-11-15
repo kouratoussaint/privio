@@ -275,6 +275,9 @@ max_frequency = "60s"
 # Lot 8.1c : changement de numéro (scripts/ci/numero_e2e.py).
 22670000004 = "123456"
 22670000005 = "123456"
+# Lot 8.4a : vérification en deux étapes (scripts/ci/deux_etapes_e2e.py).
+22670000006 = "123456"
+22670000007 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]

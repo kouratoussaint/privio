@@ -6549,6 +6549,156 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Identifiant exact ou numéro complet'**
   String get chercherSurPrivioAide;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification en deux étapes'**
+  String get twoStepTitle;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Activée'**
+  String get twoStepOn;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactivée'**
+  String get twoStepOff;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez un code de sécurité à 6 chiffres. Il sera demandé, en plus du code reçu par SMS, si quelqu’un se connecte à votre compte sur un autre téléphone, et pour changer de numéro.'**
+  String get twoStepIntro;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un code différent du code de verrouillage de ce téléphone et ne le donnez à personne. Si vous l’oubliez, seule l’assistance Privio pourra désactiver la vérification, après avoir vérifié votre identité.'**
+  String get twoStepHint;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer'**
+  String get activer;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver'**
+  String get desactiver;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer le code de sécurité'**
+  String get twoStepChange;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification en deux étapes activée.'**
+  String get twoStepEnabledDone;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification en deux étapes désactivée.'**
+  String get twoStepDisabledDone;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de sécurité modifié.'**
+  String get twoStepChangedDone;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de sécurité'**
+  String get codeSecurite;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de sécurité actuel'**
+  String get codeSecuriteActuel;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte est protégé par un code de sécurité. Saisissez-le pour continuer. Le téléphone déjà connecté le reste tant que le bon code n’est pas saisi.'**
+  String get twoStepVerifyIntro;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de sécurité oublié'**
+  String get twoStepForgotTitle;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'L’assistance Privio peut désactiver la vérification en deux étapes après avoir vérifié votre identité. Envoyer une demande ?'**
+  String get twoStepForgotBody;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée à l’assistance le {date}. Dès que la vérification sera désactivée, Privio s’ouvrira sur ce téléphone.'**
+  String twoStepResetRequested(Object date);
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier maintenant'**
+  String get verifierMaintenant;
+
+  /// Écran : Vérification en deux étapes
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter avec un autre numéro'**
+  String get twoStepOtherNumber;
+
+  /// Écran : Changer de numéro
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre compte est protégé : saisissez votre code de sécurité pour changer de numéro.'**
+  String get twoStepPhoneChangeIntro;
+
+  /// Écran : Liste des discussions
+  ///
+  /// In fr, this message translates to:
+  /// **'Protégez votre compte'**
+  String get twoStepPromptTitle;
+
+  /// Écran : Liste des discussions
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez un code de sécurité en plus du SMS, pour qu’un vol de votre carte SIM ne suffise pas à ouvrir votre compte.'**
+  String get twoStepPromptBody;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'La vérification en deux étapes est déjà activée.'**
+  String get twoStepAlreadyEnabled;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'La vérification en deux étapes n’est pas activée.'**
+  String get twoStepNotEnabled;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez d’abord votre code de sécurité.'**
+  String get twoStepRequired;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

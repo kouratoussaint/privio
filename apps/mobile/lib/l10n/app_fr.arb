@@ -5426,5 +5426,110 @@
   "chercherSurPrivioAide": "Identifiant exact ou numéro complet",
   "@chercherSurPrivioAide": {
     "description": "Écran : Nouvelle discussion"
+  },
+  "twoStepTitle": "Vérification en deux étapes",
+  "@twoStepTitle": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepOn": "Activée",
+  "@twoStepOn": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepOff": "Désactivée",
+  "@twoStepOff": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepIntro": "Ajoutez un code de sécurité à 6 chiffres. Il sera demandé, en plus du code reçu par SMS, si quelqu’un se connecte à votre compte sur un autre téléphone, et pour changer de numéro.",
+  "@twoStepIntro": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepHint": "Choisissez un code différent du code de verrouillage de ce téléphone et ne le donnez à personne. Si vous l’oubliez, seule l’assistance Privio pourra désactiver la vérification, après avoir vérifié votre identité.",
+  "@twoStepHint": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "activer": "Activer",
+  "@activer": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "desactiver": "Désactiver",
+  "@desactiver": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepChange": "Changer le code de sécurité",
+  "@twoStepChange": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepEnabledDone": "Vérification en deux étapes activée.",
+  "@twoStepEnabledDone": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepDisabledDone": "Vérification en deux étapes désactivée.",
+  "@twoStepDisabledDone": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepChangedDone": "Code de sécurité modifié.",
+  "@twoStepChangedDone": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "codeSecurite": "Code de sécurité",
+  "@codeSecurite": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "codeSecuriteActuel": "Code de sécurité actuel",
+  "@codeSecuriteActuel": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepVerifyIntro": "Ce compte est protégé par un code de sécurité. Saisissez-le pour continuer. Le téléphone déjà connecté le reste tant que le bon code n’est pas saisi.",
+  "@twoStepVerifyIntro": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepForgotTitle": "Code de sécurité oublié",
+  "@twoStepForgotTitle": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepForgotBody": "L’assistance Privio peut désactiver la vérification en deux étapes après avoir vérifié votre identité. Envoyer une demande ?",
+  "@twoStepForgotBody": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepResetRequested": "Demande envoyée à l’assistance le {date}. Dès que la vérification sera désactivée, Privio s’ouvrira sur ce téléphone.",
+  "@twoStepResetRequested": {
+    "description": "Écran : Vérification en deux étapes",
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "verifierMaintenant": "Vérifier maintenant",
+  "@verifierMaintenant": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepOtherNumber": "Se connecter avec un autre numéro",
+  "@twoStepOtherNumber": {
+    "description": "Écran : Vérification en deux étapes"
+  },
+  "twoStepPhoneChangeIntro": "Votre compte est protégé : saisissez votre code de sécurité pour changer de numéro.",
+  "@twoStepPhoneChangeIntro": {
+    "description": "Écran : Changer de numéro"
+  },
+  "twoStepPromptTitle": "Protégez votre compte",
+  "@twoStepPromptTitle": {
+    "description": "Écran : Liste des discussions"
+  },
+  "twoStepPromptBody": "Ajoutez un code de sécurité en plus du SMS, pour qu’un vol de votre carte SIM ne suffise pas à ouvrir votre compte.",
+  "@twoStepPromptBody": {
+    "description": "Écran : Liste des discussions"
+  },
+  "twoStepAlreadyEnabled": "La vérification en deux étapes est déjà activée.",
+  "@twoStepAlreadyEnabled": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "twoStepNotEnabled": "La vérification en deux étapes n’est pas activée.",
+  "@twoStepNotEnabled": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "twoStepRequired": "Saisissez d’abord votre code de sécurité.",
+  "@twoStepRequired": {
+    "description": "Écran : Messages d’erreur"
   }
 }

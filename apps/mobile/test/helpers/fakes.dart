@@ -123,8 +123,94 @@ class FakeAccountApi implements AccountApi {
   int registeredDevices = 0;
   int unregisteredDevices = 0;
 
+  // --- Lot 8.4a : vérification en deux étapes ---------------------------------
+  String? twoStepPin;
+  bool twoStepVerified = true;
+  int twoStepFailures = 0;
+  DateTime? twoStepRetryAt;
+  DateTime? twoStepResetAt;
+  bool phoneChangeAuthorized = false;
+
+  bool get _pending => twoStepPin != null && !twoStepVerified;
+
+  /// Simule une connexion par SMS sur un nouveau téléphone (compte protégé).
+  void newSessionPending(String pin) {
+    twoStepPin = pin;
+    twoStepVerified = false;
+  }
+
+  TwoStepCheck _check(String pin) {
+    final now = DateTime.now();
+    if (twoStepRetryAt != null && twoStepRetryAt!.isAfter(now)) {
+      return TwoStepCheck(ok: false, retryAt: twoStepRetryAt, failures: twoStepFailures);
+    }
+    if (pin == twoStepPin) {
+      twoStepFailures = 0;
+      twoStepRetryAt = null;
+      return const TwoStepCheck(ok: true);
+    }
+    twoStepFailures++;
+    twoStepRetryAt = twoStepFailures >= 5 ? now.add(const Duration(minutes: 1)) : null;
+    return TwoStepCheck(ok: false, retryAt: twoStepRetryAt, failures: twoStepFailures);
+  }
+
+  @override
+  Future<TwoStepState> twoStepState() async => TwoStepState(
+    enabled: twoStepPin != null,
+    verified: twoStepPin == null || twoStepVerified,
+    retryAt: twoStepRetryAt,
+    resetRequestedAt: twoStepResetAt,
+  );
+
+  @override
+  Future<void> enableTwoStep(String pin) async {
+    if (_pending) throw const AppFailure(FailureCode.authRequired);
+    if (twoStepPin != null) throw const AppFailure(FailureCode.twoStepAlreadyEnabled);
+    twoStepPin = pin;
+    twoStepVerified = true;
+  }
+
+  @override
+  Future<TwoStepCheck> verifyTwoStep(String pin) async {
+    if (twoStepPin == null) return const TwoStepCheck(ok: true);
+    final r = _check(pin);
+    if (r.ok) {
+      twoStepVerified = true;
+      twoStepResetAt = null;
+    }
+    return r;
+  }
+
+  @override
+  Future<TwoStepCheck> changeTwoStep(String current, String next) async {
+    if (_pending) throw const AppFailure(FailureCode.authRequired);
+    final r = _check(current);
+    if (r.ok) twoStepPin = next;
+    return r;
+  }
+
+  @override
+  Future<TwoStepCheck> disableTwoStep(String pin) async {
+    if (_pending) throw const AppFailure(FailureCode.authRequired);
+    final r = _check(pin);
+    if (r.ok) twoStepPin = null;
+    return r;
+  }
+
+  @override
+  Future<TwoStepCheck> authorizePhoneChange(String pin) async {
+    if (twoStepPin == null) return const TwoStepCheck(ok: true);
+    final r = _check(pin);
+    if (r.ok) phoneChangeAuthorized = true;
+    return r;
+  }
+
+  @override
+  Future<DateTime> requestTwoStepReset() async => twoStepResetAt ??= DateTime.now();
+
   @override
   Future<Account> getMyAccount() async {
+    if (_pending) throw const AppFailure(FailureCode.authRequired);
     if (accountFailure != null) throw accountFailure!;
     return account ??
         const Account(userId: 'u1', phoneE164: '+22670000001', phoneDiscoverable: false);
@@ -191,6 +277,7 @@ class FakeAccountApi implements AccountApi {
 
   @override
   Future<String> registerDevice({required String appVersion}) async {
+    if (_pending) throw const AppFailure(FailureCode.authRequired);
     registeredDevices++;
     return 'device-1';
   }
@@ -305,6 +392,13 @@ class FakeLocalFlags implements LocalFlags {
   Future<bool> groupsInDiscussions() async => groupsTogether;
   @override
   Future<void> setGroupsInDiscussions(bool value) async => groupsTogether = value;
+
+  /// Lot 8.4a : fermée par défaut dans les tests (listes inchangées) ; voir deux_etapes_test.
+  bool twoStepPromptClosed = true;
+  @override
+  Future<bool> twoStepPromptDismissed() async => twoStepPromptClosed;
+  @override
+  Future<void> setTwoStepPromptDismissed() async => twoStepPromptClosed = true;
 
   FakeLocalFlags({this.onboarding = false, this.permissions = false});
 
@@ -2707,6 +2801,25 @@ class FakeAdminApi implements AdminApi {
 
   @override
   Future<void> disconnectDevice(String userId, String note) async => disconnected.add(userId);
+
+  /// Lot 8.4a : comptes protégés (id → demande de réinitialisation) ; réinitialisations.
+  final Map<String, DateTime?> twoStepAccounts = {};
+  final List<(String, String)> twoStepResets = [];
+
+  @override
+  Future<ConsoleTwoStep> twoStep(String userId) async => ConsoleTwoStep(
+    enabled: twoStepAccounts.containsKey(userId),
+    resetRequestedAt: twoStepAccounts[userId],
+  );
+
+  @override
+  Future<void> resetTwoStep(String userId, String note) async {
+    if (!twoStepAccounts.containsKey(userId)) {
+      throw const AppFailure(FailureCode.twoStepNotEnabled);
+    }
+    twoStepAccounts.remove(userId);
+    twoStepResets.add((userId, note));
+  }
 
   @override
   Future<void> replySupport(String reportId, String reply) async {

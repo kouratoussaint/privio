@@ -16,6 +16,7 @@ import '../../../state/providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/success_snack.dart';
 import '../lock/app_lock_screens.dart';
+import 'two_step_screens.dart';
 
 /// Lot 8.1c — changer de numéro. Le code part vers le NOUVEAU numéro ; tant qu'il n'est
 /// pas saisi, rien ne change. Compte, identifiant, discussions et groupes sont conservés ;
@@ -78,6 +79,13 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
       return;
     }
     if (!await _confirmPin() || !mounted) return;
+    // Lot 8.4a : compte protégé : code de sécurité (le serveur refuse sinon le changement).
+    try {
+      if (!await confirmTwoStepForPhoneChange(context, ref) || !mounted) return;
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = toAppFailure(e).message);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;

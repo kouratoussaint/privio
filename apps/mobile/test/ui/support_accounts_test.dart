@@ -147,6 +147,30 @@ void main() {
     expect(find.text('Téléphone déconnecté.'), findsOneWidget);
   });
 
+  testWidgets('deux étapes : code oublié, réinitialisation avec motif (lot 8.4a)', (tester) async {
+    final deps = _deps(admin: true)
+      ..admin.accounts['u2'] = _bob
+      ..admin.twoStepAccounts['u2'] = DateTime(2026, 11, 15, 10, 30);
+    await _openConsoleTab(tester, deps, 'accounts');
+    await tester.enterText(find.byKey(const Key('accounts.query')), '@bob');
+    await tester.tap(find.byKey(const Key('accounts.search')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('account.u2')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('code oublié, demande du'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('account.two_step_reset')));
+    await tester.tap(find.byKey(const Key('account.two_step_reset')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('vérifié l’identité'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('decision.note')), 'Identité vérifiée par appel');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('decision.confirm')));
+    await tester.pumpAndSettle();
+    expect(deps.admin.twoStepResets, [('u2', 'Identité vérifiée par appel')]);
+    expect(find.text('Vérification en deux étapes réinitialisée.'), findsOneWidget);
+    expect(find.byKey(const Key('account.two_step_reset')), findsNothing);
+  });
+
   testWidgets('compte de l’administration : aucune action', (tester) async {
     final deps = _deps(admin: true)
       ..admin.accounts['u1'] = ConsoleAccount(
