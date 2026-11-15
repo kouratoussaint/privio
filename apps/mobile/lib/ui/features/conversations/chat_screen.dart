@@ -41,6 +41,12 @@ import '../settings/wallpaper.dart';
 import 'rich_messages.dart';
 import 'gif_picker.dart';
 import 'person_card.dart';
+import 'bubble_shape.dart';
+
+import 'package:flutter/semantics.dart';
+
+import '../../../state/session_controller.dart';
+import '../groups/group_screens.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -425,6 +431,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
     final m = members.where((x) => x.userId == senderId).firstOrNull;
     return (name: m?.displayName ?? '?', path: m?.avatarPath, seed: senderId);
+  }
+
+  /// Lot 8.1b : nom et photo d'une personne qui a réagi.
+  ({String name, String? path, String seed}) _reactorOf(
+    String userId,
+    ConversationSummary? summary,
+    List<GroupMember> members,
+  ) {
+    if (userId == ref.read(currentUserIdProvider)) {
+      final profile = ref.read(sessionControllerProvider).value?.account?.profile;
+      return (name: profile?.displayName ?? 'Vous', path: profile?.avatarPath, seed: userId);
+    }
+    final w = _avatarOf(userId, summary, members);
+    if (w == null || w.name == '?') return (name: 'Ancien membre', path: null, seed: userId);
+    return w;
   }
 
   /// Lot 7.1b : personnes choisies dans la liste « @ » (identifiant → nom inséré).
@@ -890,6 +911,140 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Vider la discussion (lot 4.3) : chez moi, ou pour tout le monde (1:1 : avec l'accord
   /// de l'autre ; groupe : administrateurs).
   /// Lot 7.2a : même parcours que depuis la fiche (choix, confirmation, vidage).
+  /// Lot 8.1b : menu ⋮ d'une discussion ou d'un groupe.
+  List<PopupMenuEntry<String>> _menuItems(ConversationSummary s, bool canSetTtl) {
+    final now = DateTime.now();
+    final error = Theme.of(context).colorScheme.error;
+    PopupMenuItem<String> item(String v, IconData icon, String label, {bool danger = false}) =>
+        PopupMenuItem<String>(
+          key: Key(v == 'clear' ? 'chat.clear' : 'chat.menu.$v'),
+          value: v,
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(icon, color: danger ? error : null),
+            title: Text(label, style: danger ? TextStyle(color: error) : null),
+          ),
+        );
+    return [
+      item('info', Icons.info_outline, s.isGroup ? 'Infos du groupe' : 'Voir la fiche'),
+      item('search', Icons.search, 'Rechercher'),
+      item('media', Icons.perm_media_outlined, 'Médias'),
+      item('favorites', Icons.star_outline_rounded, 'Messages favoris'),
+      if (!s.isGroup && canSetTtl) item('ttl', Icons.timer_outlined, 'Durée des messages'),
+      if (s.isGroup)
+        item('notifications', Icons.notifications_outlined, 'Notifications')
+      else
+        item(
+          'mute',
+          s.isMuted(now) ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+          s.isMuted(now) ? 'Réactiver les notifications' : 'Sourdine',
+        ),
+      item('wallpaper', Icons.wallpaper_outlined, 'Fond d’écran'),
+      if (s.isGroup && s.isAdmin) item('invite', Icons.person_add_alt_1_outlined, 'Inviter'),
+      const PopupMenuDivider(),
+      item('clear', Icons.cleaning_services_outlined, 'Vider la discussion'),
+      if (s.isGroup)
+        item('leave', Icons.logout_rounded, 'Quitter le groupe', danger: true)
+      else if (!s.blocked && s.peerId != null)
+        item('block', Icons.block, 'Bloquer', danger: true),
+      item('report', Icons.flag_outlined, 'Signaler', danger: true),
+    ];
+  }
+
+  Future<void> _menu(String v, ConversationSummary s, bool canSetTtl) async {
+    final nav = Navigator.of(context);
+    switch (v) {
+      case 'info':
+        await context.push(Routes.contact(s.id));
+      case 'search':
+        setState(() {
+          _searching = true;
+          _searchCtrl.clear();
+        });
+      case 'media':
+        await nav.push(
+          MaterialPageRoute<void>(
+            builder: (_) => ConversationMediaScreen(conversationId: s.id, title: s.title),
+          ),
+        );
+      case 'favorites':
+        await nav.push(
+          MaterialPageRoute<void>(
+            builder: (_) => FavoritesScreen(conversationId: s.id, title: s.title),
+          ),
+        );
+      case 'ttl':
+        await _chooseConversationTtl(s);
+      case 'mute':
+        await chooseMute(context, ref, s);
+      case 'notifications':
+        await showModalBottomSheet<void>(
+          context: context,
+          showDragHandle: true,
+          builder: (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  key: const Key('chat.menu.mute'),
+                  leading: const Icon(Icons.notifications_off_outlined),
+                  title: Text(
+                    s.isMuted(DateTime.now()) ? 'Sourdine activée' : 'Mettre en sourdine',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    unawaited(chooseMute(context, ref, s));
+                  },
+                ),
+                MentionsOnlyTile(conversationId: s.id),
+              ],
+            ),
+          ),
+        );
+      case 'wallpaper':
+        await nav.push(
+          MaterialPageRoute<void>(
+            builder: (_) => WallpaperScreen(conversationId: s.id, title: s.title),
+          ),
+        );
+      case 'invite':
+        await context.push(Routes.groupInvite(s.id));
+      case 'clear':
+        await _chooseClear(s);
+      case 'leave':
+        if (await confirmLeaveGroup(context, ref, s) && mounted) context.go(Routes.groups);
+      case 'block':
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Bloquer ${s.title} ?'),
+            content: const Text(
+              'Vous ne pourrez plus vous écrire, dans un sens comme dans l’autre, et cette '
+              'personne ne pourra plus vous trouver. Vous pourrez la débloquer à tout moment.',
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+              FilledButton(
+                key: const Key('chat.block.confirm'),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Bloquer'),
+              ),
+            ],
+          ),
+        );
+        if (ok != true || !mounted) return;
+        await _guard(() => setBlocked(ref, s.peerId!, blocked: true));
+        if (mounted) _toast('${s.title} est bloqué.');
+      case 'report':
+        await showReportSheet(
+          context,
+          reportedUserId: s.isGroup ? null : s.peerId,
+          reportedName: s.title,
+          conversationId: s.id,
+        );
+    }
+  }
+
   Future<void> _chooseClear(ConversationSummary s) async {
     final r = await chooseClear(context, ref, s, sweep: false);
     if (r != null && mounted) await _afterClear();
@@ -1285,20 +1440,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     PopupMenuButton<String>(
                       key: const Key('chat.menu'),
                       tooltip: 'Plus d’options',
-                      onSelected: (v) {
-                        if (v == 'clear') unawaited(_chooseClear(summary));
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
-                          key: Key('chat.clear'),
-                          value: 'clear',
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(Icons.cleaning_services_outlined),
-                            title: Text('Vider la discussion'),
-                          ),
-                        ),
-                      ],
+                      onSelected: (v) => unawaited(_menu(v, summary, canSetTtl)),
+                      itemBuilder: (_) => _menuItems(summary, canSetTtl),
                     ),
                 ],
                 title: _searching
@@ -1457,6 +1600,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           onVoiceError: (f) => _toast(f.message),
                           onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
                           onOpenViewOnce: (m) => unawaited(_openViewOnce(m, summary?.title)),
+                          onShowReactions: (m) => unawaited(
+                            showReactionsSheet(
+                              context,
+                              reactions: m.reactions,
+                              me: me,
+                              who: (id) => _reactorOf(id, summary, mentionMembers),
+                              onRemoveMine: (emoji) =>
+                                  unawaited(_guard(() => _chat.toggleReaction(m.id, emoji))),
+                            ),
+                          ),
                           openingViewOnce: _openingViewOnce,
                           onOpenPerson: (m) => unawaited(
                             openPerson(
@@ -1691,7 +1844,11 @@ class _MessageList extends StatelessWidget {
     this.onOpenViewOnce,
     this.openingViewOnce,
     this.onOpenPerson,
+    this.onShowReactions,
   });
+
+  /// Lot 8.1b : liste des réactions d'un message.
+  final void Function(ChatMessage m)? onShowReactions;
 
   /// Lot 8.1a : toucher le nom ou la photo de l'auteur ouvre sa carte.
   final void Function(ChatMessage m)? onOpenPerson;
@@ -1804,8 +1961,7 @@ class _MessageList extends StatelessWidget {
         continue;
       }
       final outgoing = m.senderId == me;
-      // Photo de l'auteur : à côté du dernier message d'une suite du même auteur.
-      final next = index + 1 < entries.length ? entries[index + 1] : null;
+      // Lot 8.1b : photo de l’auteur à côté du premier message de sa suite.
       final prev = index > 0 ? entries[index - 1] : null;
       // Dans un groupe, le nom de l'auteur en tête de sa suite seulement.
       final firstOfRun =
@@ -1813,11 +1969,6 @@ class _MessageList extends StatelessWidget {
           prev.isSystem ||
           prev.senderId != m.senderId ||
           dayLabel(prev.sentAt, now) != day;
-      final lastOfRun =
-          next == null ||
-          next.isSystem ||
-          next.senderId != m.senderId ||
-          dayLabel(next.sentAt, now) != day;
       final who = outgoing || avatarOf == null ? null : avatarOf!(m.senderId ?? '');
       final bubble = _Bubble(
         key: ghost == null ? Key('message.${m.id}') : null,
@@ -1878,9 +2029,13 @@ class _MessageList extends StatelessWidget {
         pinned: pinnedIds.contains(m.id),
         favorite: favoriteIds.contains(m.id),
         onReactionTap: ghost == null ? (emoji) => onReactionTap(m, emoji) : null,
+        onShowReactions: ghost == null && onShowReactions != null
+            ? () => onShowReactions!(m)
+            : null,
+        tail: firstOfRun,
         avatar: who == null
             ? null
-            : (lastOfRun
+            : (firstOfRun
                   ? GestureDetector(
                       onTap: ghost == null && m.senderId != null && onOpenPerson != null
                           ? () => onOpenPerson!(m)
@@ -1961,7 +2116,11 @@ class _MessageList extends StatelessWidget {
         ),
       );
     }
-    for (final pm in pending) {
+    // Lot 8.1b : le premier envoi en attente porte la queue si le dernier message
+    // affiché n'est pas de moi.
+    final lastShown = entries.where((e) => !e.isSystem).lastOrNull;
+    for (final (pi, pm) in pending.indexed) {
+      final pendingTail = pi == 0 && (lastShown == null || lastShown.senderId != me);
       items.add(
         // Lot 7.2b2 : la bulle monte depuis la zone de saisie.
         AppearIn(
@@ -1970,6 +2129,7 @@ class _MessageList extends StatelessWidget {
           child: _Bubble(
             key: Key('pending.${pm.clientId}'),
             outgoing: true,
+            tail: pendingTail,
             text: pm.body,
             bare: pm.isSticker || pm.isGif,
             content: pm.isSticker
@@ -2216,7 +2376,15 @@ class _Bubble extends StatelessWidget {
     this.jumbo = false,
     this.attachment,
     this.onSenderTap,
+    this.tail = false,
+    this.onShowReactions,
   });
+
+  /// Lot 8.1b : premier message d'une suite (queue en haut, du côté de l'auteur).
+  final bool tail;
+
+  /// Lot 8.1b : appui simple sur une réaction : la liste des réactions.
+  final VoidCallback? onShowReactions;
 
   /// Lot 8.1a : toucher le nom de l'auteur (groupe) ouvre sa carte.
   final VoidCallback? onSenderTap;
@@ -2283,30 +2451,27 @@ class _Bubble extends StatelessWidget {
       counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
     }
     final mine = reactions.where((r) => r.userId == me).firstOrNull?.emoji;
-    const big = Radius.circular(18);
-    const small = Radius.circular(6);
-    final radius = BorderRadius.only(
-      topLeft: big,
-      topRight: big,
-      bottomLeft: outgoing ? big : small,
-      bottomRight: outgoing ? small : big,
+    // Lot 8.1b : arrondis de 10, queue en haut du premier message d'une suite.
+    final shape = BubbleShape(
+      outgoing: outgoing,
+      tail: tail && !bare,
+      side: failed ? BorderSide(color: theme.colorScheme.error, width: 1.5) : BorderSide.none,
     );
+    const tw = BubbleShape.tailWidth;
 
     final bubble = Material(
+      key: tail && !bare ? const Key('bubble.tail') : null,
       color: bare ? Colors.transparent : bg,
       elevation: bare || outgoing || theme.brightness == Brightness.dark ? 0 : 0.5,
       shadowColor: PrivioColors.navy.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: failed ? BorderSide(color: theme.colorScheme.error, width: 1.5) : BorderSide.none,
-      ),
+      shape: shape,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
         onDoubleTap: onDoubleTap,
-        borderRadius: radius,
+        customBorder: shape,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 7, 10, 5),
+          padding: EdgeInsets.fromLTRB(12 + (outgoing ? 0 : tw), 7, 10 + (outgoing ? tw : 0), 5),
           // Une bulle = une annonce TalkBack complète (texte, heure, état).
           child: MergeSemantics(
             // Groupe : le nom de l'auteur reste à gauche sans élargir la bulle.
@@ -2440,7 +2605,8 @@ class _Bubble extends StatelessWidget {
                             _DeliveryIcon(
                               delivery: delivery!,
                               color: meta,
-                              readColor: outgoing && !bare ? p.onBubbleOut : p.accentText,
+                              // Lot 8.1b : « lu » en jaune doux sur le violet.
+                              readColor: outgoing && !bare ? PrivioColors.readTick : p.accentText,
                             ),
                           ],
                         ],
@@ -2471,8 +2637,13 @@ class _Bubble extends StatelessWidget {
                   Positioned(
                     bottom: 0,
                     left: outgoing ? 10 : null,
-                    right: outgoing ? null : 10,
-                    child: _ReactionPill(counts: counts, mine: mine, onTap: onReactionTap),
+                    right: outgoing ? null : 10 + BubbleShape.tailWidth,
+                    child: _ReactionPill(
+                      counts: counts,
+                      mine: mine,
+                      onDoubleTap: onReactionTap,
+                      onTap: onShowReactions,
+                    ),
                   ),
                 ],
               ),
@@ -2482,15 +2653,16 @@ class _Bubble extends StatelessWidget {
       alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
       child: avatar == null
           ? body
+          // Lot 8.1b : photo en haut à gauche, à côté de la queue de la bulle.
           : Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(bottom: counts.isEmpty ? 4 : 18),
+                  padding: const EdgeInsets.only(top: 3),
                   child: SizedBox(width: 28, child: avatar),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 2),
                 Flexible(child: body),
               ],
             ),
@@ -2501,11 +2673,19 @@ class _Bubble extends StatelessWidget {
 /// Réactions : petite pastille sans contour, accrochée au coin inférieur de la bulle.
 /// La réaction de l'utilisateur est signalée par un fond teinté (pas par un contour).
 class _ReactionPill extends StatelessWidget {
-  const _ReactionPill({required this.counts, required this.mine, required this.onTap});
+  const _ReactionPill({
+    required this.counts,
+    required this.mine,
+    required this.onTap,
+    required this.onDoubleTap,
+  });
 
   final Map<String, int> counts;
   final String? mine;
-  final void Function(String emoji)? onTap;
+
+  /// Lot 8.1b : appui simple : qui a réagi ; double appui : ajouter / retirer la mienne.
+  final VoidCallback? onTap;
+  final void Function(String emoji)? onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2522,11 +2702,21 @@ class _ReactionPill extends StatelessWidget {
               value: '${e.key}${e.value}',
               child: Semantics(
                 button: true,
-                label: e.key == mine ? 'Retirer ma réaction ${e.key}' : 'Réagir ${e.key}',
+                label: 'Réaction ${e.key}, voir qui a réagi',
+                onTapHint: 'voir qui a réagi',
+                customSemanticsActions: onDoubleTap == null
+                    ? null
+                    : {
+                        CustomSemanticsAction(
+                          label: e.key == mine ? 'Retirer ma réaction' : 'Réagir ${e.key}',
+                        ): () =>
+                            onDoubleTap!(e.key),
+                      },
                 child: GestureDetector(
                   key: Key('reaction.${e.key}'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: onTap == null ? null : () => onTap!(e.key),
+                  onTap: onTap,
+                  onDoubleTap: onDoubleTap == null ? null : () => onDoubleTap!(e.key),
                   child: Container(
                     height: 22,
                     padding: const EdgeInsets.symmetric(horizontal: 6),

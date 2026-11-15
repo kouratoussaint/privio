@@ -32,6 +32,9 @@ abstract final class PrivioColors {
   // Lot 2.D (décisions du 12/11/2026) : en-tête violet profond, bulles envoyées pleines.
   static const purpleDeep = Color(0xFF5B1FB8);
   static const purpleText = Color(0xFF7A2FD9);
+
+  /// Lot 8.1b : coches « lu » sur la bulle violette (6,5:1 en clair, 4,7:1 en sombre).
+  static const readTick = Color(0xFFFFD84D);
   static const headerDark = Color(0xFF0C1438);
   static const chatLight = Color(0xFFF3EEFC);
   static const chatDark = Color(0xFF0E1430);

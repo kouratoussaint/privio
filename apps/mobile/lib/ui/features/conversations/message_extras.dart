@@ -10,6 +10,7 @@ import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/widgets/avatar.dart';
 
 /// Lot 7.2c2 : messages épinglés, favoris, infos d'un message, « Mentions seulement ».
 
@@ -356,4 +357,86 @@ class MentionsOnlyTile extends ConsumerWidget {
             },
     );
   }
+}
+
+/// Lot 8.1b : qui a réagi à un message (appui simple sur une réaction). Un onglet
+/// « Toutes » puis un onglet par émoji ; toucher ma ligne retire ma réaction.
+Future<void> showReactionsSheet(
+  BuildContext context, {
+  required List<Reaction> reactions,
+  required String? me,
+  required ({String name, String? path, String seed}) Function(String userId) who,
+  required void Function(String emoji) onRemoveMine,
+}) {
+  final byEmoji = <String, List<Reaction>>{};
+  for (final r in reactions) {
+    (byEmoji[r.emoji] ??= []).add(r);
+  }
+  // Ma réaction en tête, puis les autres.
+  List<Reaction> ordered(List<Reaction> list) => [
+    ...list.where((r) => r.userId == me),
+    ...list.where((r) => r.userId != me),
+  ];
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      Widget list(List<Reaction> items) => ListView(
+        shrinkWrap: true,
+        children: [
+          for (final r in ordered(items))
+            Builder(
+              builder: (_) {
+                final w = who(r.userId);
+                final mine = r.userId == me;
+                return ListTile(
+                  key: Key('reactions.row.${r.userId}.${r.emoji}'),
+                  leading: UserAvatar(name: w.name, avatarPath: w.path, seed: w.seed, radius: 20),
+                  title: Text(mine ? 'Vous' : w.name),
+                  subtitle: mine ? const Text('Toucher pour retirer') : null,
+                  trailing: Text(r.emoji, style: theme.textTheme.titleLarge),
+                  onTap: mine
+                      ? () {
+                          Navigator.pop(ctx);
+                          onRemoveMine(r.emoji);
+                        }
+                      : null,
+                );
+              },
+            ),
+        ],
+      );
+      return SafeArea(
+        child: SizedBox(
+          key: const Key('reactions.sheet'),
+          height: MediaQuery.sizeOf(ctx).height * 0.5,
+          child: DefaultTabController(
+            length: byEmoji.length + 1,
+            child: Column(
+              children: [
+                TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  labelColor: theme.colorScheme.primary,
+                  indicatorColor: theme.colorScheme.primary,
+                  tabs: [
+                    Tab(key: const Key('reactions.tab.all'), text: 'Toutes ${reactions.length}'),
+                    for (final e in byEmoji.entries)
+                      Tab(key: Key('reactions.tab.${e.key}'), text: '${e.key} ${e.value.length}'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [list(reactions), for (final e in byEmoji.values) list(e)],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }

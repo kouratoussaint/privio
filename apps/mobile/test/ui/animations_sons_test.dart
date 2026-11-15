@@ -93,19 +93,24 @@ void main() {
     expect(deps.flags.sounds, isFalse);
   });
 
-  testWidgets('photo du correspondant à côté du dernier message d’une suite', (tester) async {
+  // Lot 8.1b : la photo passe sur le PREMIER message d'une suite, en haut à gauche.
+  testWidgets('photo du correspondant à côté du premier message d’une suite', (tester) async {
     final deps = _deps();
     await _openBob(tester, deps);
+    await _send(tester, 'Moi');
     final a = deps.messaging.receive('conv-bob', 'Un');
     final b = deps.messaging.receive('conv-bob', 'Deux');
     deps.realtime.emit('conv-bob');
     await tester.pumpAndSettle();
-    expect(find.byKey(Key('message.avatar.${b.id}')), findsOneWidget, reason: 'dernier');
-    expect(find.byKey(Key('message.avatar.${a.id}')), findsNothing, reason: 'pas au milieu');
+    expect(find.byKey(Key('message.avatar.${a.id}')), findsOneWidget, reason: 'premier');
+    expect(find.byKey(Key('message.avatar.${b.id}')), findsNothing, reason: 'pas les suivants');
+    final avatar = tester.getRect(find.byKey(Key('message.avatar.${a.id}')));
+    final bubble = tester.getRect(find.byKey(Key('message.${a.id}')));
+    expect((avatar.top - bubble.top).abs(), lessThan(8), reason: 'en haut de la bulle');
 
-    await _send(tester, 'Moi');
+    await _send(tester, 'Encore moi');
     // Mes messages n'ont jamais de photo.
-    expect(find.byKey(Key('message.avatar.${b.id}')), findsOneWidget);
+    expect(find.byKey(Key('message.avatar.${a.id}')), findsOneWidget);
   });
 
   testWidgets('discussion vidée chez moi : son de balayage, les bulles se dissolvent', (

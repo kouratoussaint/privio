@@ -61,9 +61,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('reaction.👍')), findsOneWidget);
 
+    // Lot 8.1b : un appui simple montre qui a réagi, sans rien changer.
     await tester.tap(find.byKey(const Key('reaction.👍')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('reactions.sheet')), findsOneWidget);
+    expect(find.text('Vous'), findsOneWidget);
+    expect(deps.messaging.messages['conv-bob']!.last.reactions, hasLength(1));
+    // Toucher ma ligne retire ma réaction.
+    await tester.tap(find.text('Vous'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('reaction.👍')), findsNothing);
+
+    // Double appui sur la réaction : ajouter, puis retirer.
+    await _openActions(tester, 'Salut');
+    await tester.tap(find.byKey(const Key('react.❤️')));
+    await tester.pumpAndSettle();
+    final pill = find.byKey(const Key('reaction.❤️'));
+    await tester.tap(pill);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(pill);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('reaction.❤️')), findsNothing);
+    expect(find.byKey(const Key('reactions.sheet')), findsNothing);
   });
 
   testWidgets('répondre en citant un message', (tester) async {
