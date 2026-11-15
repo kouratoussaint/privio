@@ -172,6 +172,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('request.send')));
     await tester.pumpAndSettle();
+    // Lot 8.3b : les raccourcis réapparaissent quand le champ est vide.
+    await tester.enterText(find.byKey(const Key('search.input')), '');
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('search.requests')));
     await tester.pumpAndSettle();
     final id = deps.messaging.requests.single.id;

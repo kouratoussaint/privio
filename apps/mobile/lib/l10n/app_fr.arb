@@ -5384,5 +5384,47 @@
         "type": "Object"
       }
     }
+  },
+  "searchContactsLabel": "Nom, @identifiant ou numéro",
+  "@searchContactsLabel": {
+    "description": "Écran : Nouvelle discussion"
+  },
+  "searchContactsHelper": "Nouvelles personnes : identifiant exact ou numéro complet",
+  "@searchContactsHelper": {
+    "description": "Écran : Nouvelle discussion"
+  },
+  "mesContactsCount": "Mes contacts ({n})",
+  "@mesContactsCount": {
+    "description": "Écran : Nouvelle discussion",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "contactsTitle": "Contacts",
+  "@contactsTitle": {
+    "description": "Écran : Nouvelle discussion"
+  },
+  "aucunContactCorrespond": "Aucun contact ne correspond.",
+  "@aucunContactCorrespond": {
+    "description": "Écran : Nouvelle discussion"
+  },
+  "aucunContactPourInstant": "Vos contacts apparaîtront ici dès qu’une demande de connexion sera acceptée.",
+  "@aucunContactPourInstant": {
+    "description": "Écran : Nouvelle discussion"
+  },
+  "chercherSurPrivio": "Chercher « {query} » sur Privio",
+  "@chercherSurPrivio": {
+    "description": "Écran : Nouvelle discussion",
+    "placeholders": {
+      "query": {
+        "type": "Object"
+      }
+    }
+  },
+  "chercherSurPrivioAide": "Identifiant exact ou numéro complet",
+  "@chercherSurPrivioAide": {
+    "description": "Écran : Nouvelle discussion"
   }
 }

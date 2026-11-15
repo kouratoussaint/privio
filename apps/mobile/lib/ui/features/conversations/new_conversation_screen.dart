@@ -14,7 +14,6 @@ import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
-import '../../core/widgets/state_views.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
@@ -22,9 +21,10 @@ import 'person_card.dart';
 import '../groups/join_group_screen.dart';
 import '../../../data/services/share_service.dart';
 import '../../../state/session_controller.dart';
+import '../../../core/util/search_text.dart';
 
-/// Écran 09 — trouver une personne par son identifiant Privio (ou son numéro, si elle
-/// l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
+/// Écran 09 — mes contacts (lot 8.3b : liste filtrée en tapant) et trouver une nouvelle
+/// personne par son identifiant Privio (ou son numéro, si elle l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
 /// contact est une demande de connexion ; on écrit directement seulement si on est déjà
 /// connectés.
 class NewConversationScreen extends ConsumerStatefulWidget {
@@ -251,96 +251,245 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     }
   }
 
+  /// Lot 8.3b : mes contacts (discussion à deux, demande acceptée), sans les personnes
+  /// bloquées ni les comptes supprimés, par ordre alphabétique.
+  List<ConversationSummary> _contacts() {
+    final blockedIds = {
+      for (final b in ref.watch(blockedUsersProvider).value ?? const <BlockedUser>[]) b.id,
+    };
+    final seen = <String>{};
+    final list = [
+      for (final c in ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+        if (!c.isGroup &&
+            c.peerId != null &&
+            !c.peerDeleted &&
+            !c.blocked &&
+            !blockedIds.contains(c.peerId) &&
+            seen.add(c.peerId!))
+          c,
+    ];
+    list.sort((x, y) => foldForSearch(x.title).compareTo(foldForSearch(y.title)));
+    return list;
+  }
+
+  bool _matches(ConversationSummary c, String q) =>
+      foldForSearch(c.title).contains(q) || foldForSearch(c.peerHandle ?? '').contains(q);
+
+  void _onChanged(String _) => setState(() {
+    _found = null;
+    _status = null;
+    _message = null;
+    _notFound = false;
+  });
+
+  Widget _shortcut(String key, IconData icon, String label, VoidCallback? onTap) => ListTile(
+    key: Key(key),
+    leading: CircleAvatar(
+      backgroundColor: PrivioPalette.of(context).field,
+      child: Icon(icon, color: PrivioPalette.of(context).accentText),
+    ),
+    title: Text(label),
+    onTap: onTap,
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final found = _found;
+    final query = _controller.text.trim();
+    final q = foldForSearch(query.startsWith('@') ? query.substring(1) : query);
+    final contacts = _contacts();
+    final shown = q.isEmpty ? contacts : contacts.where((c) => _matches(c, q)).toList();
+    final requests = ref.watch(incomingRequestCountProvider);
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(
-        title: Text(L.t.nouvelleDiscussion),
-        actions: [
-          // Lot 8.1a : QR code d'un identifiant Privio → carte de la personne.
-          IconButton(
-            key: const Key('search.scan'),
-            tooltip: L.t.scannerQrCode,
-            onPressed: _busy ? null : _scan,
-            icon: const Icon(Icons.qr_code_scanner_rounded),
-          ),
-        ],
-      ),
-      body: FlowLayout(
+      appBar: AppBar(title: Text(L.t.nouvelleDiscussion)),
+      body: Column(
         children: [
-          TextField(
-            key: const Key('search.input'),
-            controller: _controller,
-            autofocus: true,
-            autocorrect: false,
-            enableSuggestions: false,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _busy ? null : _search(),
-            decoration: InputDecoration(
-              labelText: L.t.identifiantOuNumero,
-              hintText: L.t.identifiantOu700000,
-              helperText: L.t.identifiantExactExAwaOu,
-              suffixIcon: IconButton(
-                key: const Key('search.submit'),
-                tooltip: L.t.rechercher,
-                onPressed: _busy ? null : _search,
-                icon: const Icon(Icons.search),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              PrivioSpacing.l,
+              PrivioSpacing.l,
+              PrivioSpacing.l,
+              PrivioSpacing.s,
+            ),
+            child: TextField(
+              key: const Key('search.input'),
+              controller: _controller,
+              autocorrect: false,
+              enableSuggestions: false,
+              textInputAction: TextInputAction.search,
+              onChanged: _onChanged,
+              onSubmitted: (_) => _busy ? null : _search(),
+              decoration: InputDecoration(
+                labelText: L.t.searchContactsLabel,
+                hintText: L.t.identifiantOu700000,
+                helperText: L.t.searchContactsHelper,
+                suffixIcon: IconButton(
+                  key: const Key('search.submit'),
+                  tooltip: L.t.rechercher,
+                  onPressed: _busy ? null : _search,
+                  icon: const Icon(Icons.search),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: PrivioSpacing.l),
           if (_busy) const LinearProgressIndicator(),
-          if (_message != null)
-            Text(_message!, key: const Key('search.message'), style: theme.textTheme.bodyMedium),
-          // Lot 8.1c : personne introuvable : l'inviter (partage de mon identifiant).
-          if (_message != null && _notFound)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                key: const Key('search.invite'),
-                onPressed: () => ref.read(shareTextProvider)(
-                  inviteText(ref.read(sessionControllerProvider).value?.account?.profile?.handle),
-                ),
-                icon: const Icon(Icons.share_outlined),
-                label: Text(L.t.inviterCettePersonneSurPrivio),
-              ),
-            ),
-          if (found != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: PrivioSpacing.m),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ListTile(
-                      key: const Key('search.result'),
-                      leading: UserAvatar(
-                        name: found.displayName,
-                        avatarPath: found.avatarPath,
-                        seed: found.id,
+          Expanded(
+            child: ListView(
+              key: const Key('search.list'),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              children: [
+                // Lot 8.3b : raccourcis, quand on ne cherche rien.
+                if (query.isEmpty) ...[
+                  _shortcut(
+                    'search.new_group',
+                    Icons.group_add_outlined,
+                    L.t.nouveauGroupe,
+                    () => context.pushReplacement(Routes.newGroup),
+                  ),
+                  // Lot 8.1a : QR code d'un identifiant Privio → carte de la personne.
+                  _shortcut(
+                    'search.scan',
+                    Icons.qr_code_scanner_rounded,
+                    L.t.scannerQrCode,
+                    _busy ? null : _scan,
+                  ),
+                  _shortcut(
+                    'search.invite_friend',
+                    Icons.favorite_border_rounded,
+                    L.t.inviterAmi,
+                    () => ref.read(shareTextProvider)(
+                      inviteText(
+                        ref.read(sessionControllerProvider).value?.account?.profile?.handle,
                       ),
-                      title: Text(found.displayName),
-                      subtitle: Text('@${found.handle}'),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                      child: _action(found, theme),
+                  ),
+                  _shortcut(
+                    'search.requests',
+                    Icons.person_add_alt_1_outlined,
+                    requests > 0 ? L.t.demandesConnexionCount(requests) : L.t.demandesConnexion,
+                    () => context.push(Routes.requests),
+                  ),
+                ],
+                if (_message != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      PrivioSpacing.l,
+                      PrivioSpacing.m,
+                      PrivioSpacing.l,
+                      0,
                     ),
-                  ],
+                    child: Text(
+                      _message!,
+                      key: const Key('search.message'),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                // Lot 8.1c : personne introuvable : l'inviter (partage de mon identifiant).
+                if (_message != null && _notFound)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.s),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const Key('search.invite'),
+                        onPressed: () => ref.read(shareTextProvider)(
+                          inviteText(
+                            ref.read(sessionControllerProvider).value?.account?.profile?.handle,
+                          ),
+                        ),
+                        icon: const Icon(Icons.share_outlined),
+                        label: Text(L.t.inviterCettePersonneSurPrivio),
+                      ),
+                    ),
+                  ),
+                if (found != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: PrivioSpacing.m),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ListTile(
+                              key: const Key('search.result'),
+                              leading: UserAvatar(
+                                name: found.displayName,
+                                avatarPath: found.avatarPath,
+                                seed: found.id,
+                              ),
+                              title: Text(found.displayName),
+                              subtitle: Text('@${found.handle}'),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                              child: _action(found, theme),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                // Lot 8.3b : recherche exacte sur le serveur (nouvelles personnes).
+                if (query.isNotEmpty && found == null && _message == null)
+                  ListTile(
+                    key: const Key('search.remote'),
+                    leading: CircleAvatar(
+                      backgroundColor: PrivioPalette.of(context).field,
+                      child: Icon(
+                        Icons.travel_explore,
+                        color: PrivioPalette.of(context).accentText,
+                      ),
+                    ),
+                    title: Text(L.t.chercherSurPrivio(query)),
+                    subtitle: Text(L.t.chercherSurPrivioAide),
+                    onTap: _busy ? null : _search,
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    PrivioSpacing.l,
+                    PrivioSpacing.l,
+                    PrivioSpacing.l,
+                    PrivioSpacing.xs,
+                  ),
+                  child: Text(
+                    q.isEmpty ? L.t.mesContactsCount(contacts.length) : L.t.contactsTitle,
+                    key: const Key('search.contacts_title'),
+                    style: theme.textTheme.titleSmall,
+                  ),
                 ),
-              ),
-            ),
-          const SizedBox(height: PrivioSpacing.l),
-          Center(
-            child: TextButton.icon(
-              key: const Key('search.requests'),
-              onPressed: () => context.push(Routes.requests),
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              label: Text(L.t.mesDemandesConnexion),
+                if (shown.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: PrivioSpacing.l,
+                      vertical: PrivioSpacing.s,
+                    ),
+                    child: Text(
+                      q.isEmpty ? L.t.aucunContactPourInstant : L.t.aucunContactCorrespond,
+                      key: const Key('search.no_contact'),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                for (final c in shown)
+                  ListTile(
+                    key: Key('search.contact.${c.peerId}'),
+                    leading: UserAvatar(
+                      name: c.title,
+                      avatarPath: c.peerAvatarPath,
+                      seed: c.peerId!,
+                    ),
+                    title: Text(c.title),
+                    subtitle: c.peerHandle == null ? null : Text('@${c.peerHandle}'),
+                    // La discussion s'ouvre même archivée ou vide.
+                    onTap: () => context.pushReplacement(Routes.chat(c.id)),
+                  ),
+                const SizedBox(height: PrivioSpacing.xl),
+              ],
             ),
           ),
         ],

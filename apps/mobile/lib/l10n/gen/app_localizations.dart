@@ -6501,6 +6501,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{conversation} · {sender} · {time}'**
   String favoriteLine(Object conversation, Object sender, Object time);
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom, @identifiant ou numéro'**
+  String get searchContactsLabel;
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelles personnes : identifiant exact ou numéro complet'**
+  String get searchContactsHelper;
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes contacts ({n})'**
+  String mesContactsCount(int n);
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Contacts'**
+  String get contactsTitle;
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun contact ne correspond.'**
+  String get aucunContactCorrespond;
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos contacts apparaîtront ici dès qu’une demande de connexion sera acceptée.'**
+  String get aucunContactPourInstant;
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Chercher « {query} » sur Privio'**
+  String chercherSurPrivio(Object query);
+
+  /// Écran : Nouvelle discussion
+  ///
+  /// In fr, this message translates to:
+  /// **'Identifiant exact ou numéro complet'**
+  String get chercherSurPrivioAide;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

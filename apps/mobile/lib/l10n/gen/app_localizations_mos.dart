@@ -3871,4 +3871,33 @@ class AppLocalizationsMos extends AppLocalizations {
   String favoriteLine(Object conversation, Object sender, Object time) {
     return '$conversation · $sender · $time';
   }
+
+  @override
+  String get searchContactsLabel => 'Nom, @identifiant ou numéro';
+
+  @override
+  String get searchContactsHelper => 'Nouvelles personnes : identifiant exact ou numéro complet';
+
+  @override
+  String mesContactsCount(int n) {
+    return 'Mes contacts ($n)';
+  }
+
+  @override
+  String get contactsTitle => 'Contacts';
+
+  @override
+  String get aucunContactCorrespond => 'Aucun contact ne correspond.';
+
+  @override
+  String get aucunContactPourInstant =>
+      'Vos contacts apparaîtront ici dès qu’une demande de connexion sera acceptée.';
+
+  @override
+  String chercherSurPrivio(Object query) {
+    return 'Chercher « $query » sur Privio';
+  }
+
+  @override
+  String get chercherSurPrivioAide => 'Identifiant exact ou numéro complet';
 }

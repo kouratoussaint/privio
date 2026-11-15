@@ -992,9 +992,13 @@ class FakeMessagingApi implements MessagingApi {
     return _listRaw();
   }
 
+  /// Lot 8.3b : autres discussions à deux, toutes faites (liste des contacts).
+  final Map<String, ConversationSummary> extraDirect = {};
+
   Future<List<ConversationSummary>> _listRaw() async => [
     for (final id in conversations.keys)
       if (!groups.containsKey(id) && !_hiddenNow(id)) _summary(id),
+    ...extraDirect.values,
     for (final g in groups.values)
       if (g.roles.containsKey(me)) _groupSummary(g),
   ];
