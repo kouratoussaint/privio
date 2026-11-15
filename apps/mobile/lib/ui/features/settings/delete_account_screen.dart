@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,15 +55,15 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ready = _confirm.text.trim().toUpperCase() == DeleteAccountScreen.confirmationWord;
-    const effects = [
-      'Votre profil, votre identifiant et votre numéro sont supprimés.',
-      'Vos messages envoyés sont supprimés, y compris chez les personnes qui les ont reçus.',
-      'Vos blocages et vos discussions disparaissent.',
-      'Les messages enregistrés sur ce téléphone sont détruits.',
-      'Un signalement vous concernant peut être conservé jusqu’à 90 jours pour la modération.',
+    final effects = [
+      L.t.votreProfilVotreIdentifiantVotre,
+      L.t.vosMessagesEnvoyesSontSupprimes,
+      L.t.vosBlocagesVosDiscussionsDisparaissent,
+      L.t.messagesEnregistresSurCeTelephone,
+      L.t.signalementVousConcernantPeutEtre,
     ];
     return Scaffold(
-      appBar: AppBar(title: const Text('Supprimer mon compte')),
+      appBar: AppBar(title: Text(L.t.supprimerMonCompte)),
       body: SettingsListView(
         children: [
           SettingsCard(
@@ -69,7 +71,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             children: [
               Icon(Icons.warning_amber_rounded, size: 48, color: theme.colorScheme.error),
               const SizedBox(height: PrivioSpacing.l),
-              Text('Cette action est définitive.', style: theme.textTheme.titleMedium),
+              Text(L.t.cetteActionEstDefinitive, style: theme.textTheme.titleMedium),
               const SizedBox(height: PrivioSpacing.m),
               for (final e in effects)
                 Padding(
@@ -90,7 +92,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             controller: _confirm,
             textCapitalization: TextCapitalization.characters,
             autocorrect: false,
-            decoration: const InputDecoration(labelText: 'Pour confirmer, écrivez SUPPRIMER'),
+            decoration: InputDecoration(labelText: L.t.pourConfirmerEcrivezSupprimer),
           ),
           if (_error != null) ...[
             const SizedBox(height: PrivioSpacing.s),
@@ -104,7 +106,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               foregroundColor: theme.colorScheme.onError,
             ),
             onPressed: ready && !_busy ? _delete : null,
-            child: Text(_busy ? 'Suppression…' : 'Supprimer définitivement mon compte'),
+            child: Text(_busy ? L.t.suppression : L.t.supprimerDefinitivementMonCompte),
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,12 +20,12 @@ class MySupportScreen extends ConsumerWidget {
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Mes demandes')),
+      appBar: AppBar(title: Text(L.t.mesDemandes)),
       body: switch (requests) {
-        AsyncData(:final value) when value.isEmpty => const EmptyView(
+        AsyncData(:final value) when value.isEmpty => EmptyView(
           icon: Icons.forum_outlined,
-          title: 'Aucune demande',
-          message: 'Vos messages à l’assistance et nos réponses apparaîtront ici.',
+          title: L.t.aucuneDemande,
+          message: L.t.vosMessagesAssistanceNosReponses2,
         ),
         AsyncData(:final value) => RefreshIndicator(
           onRefresh: () => ref.refresh(mySupportRequestsProvider.future),
@@ -33,10 +35,7 @@ class MySupportScreen extends ConsumerWidget {
             children: [
               for (final r in value) _RequestCard(r: r),
               const SizedBox(height: PrivioSpacing.l),
-              Text(
-                'Les demandes et les réponses sont gardées 90 jours.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(L.t.demandesReponsesSontGardees90, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -53,7 +52,7 @@ class MySupportScreen extends ConsumerWidget {
 String _when(DateTime t) {
   final l = t.toLocal();
   String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(l.day)}/${two(l.month)}/${l.year} à ${two(l.hour)}:${two(l.minute)}';
+  return L.t.dayMonthYearHourMinute(two(l.day), two(l.month), l.year, two(l.hour), two(l.minute));
 }
 
 class _RequestCard extends StatelessWidget {
@@ -76,11 +75,14 @@ class _RequestCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text('Envoyée le ${_when(r.createdAt)}', style: theme.textTheme.bodySmall),
+                  child: Text(
+                    L.t.envoyeeCreatedat(_when(r.createdAt)),
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ),
                 Chip(
                   key: Key('support.state.${r.id}'),
-                  label: Text(r.answered ? 'Répondue' : 'Envoyée'),
+                  label: Text(r.answered ? L.t.repondue : L.t.envoyee),
                   visualDensity: VisualDensity.compact,
                 ),
               ],
@@ -99,23 +101,20 @@ class _RequestCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Réponse de l’équipe Privio',
+                      L.t.reponseEquipePrivio,
                       style: theme.textTheme.labelLarge?.copyWith(color: p.accentText),
                     ),
                     const SizedBox(height: PrivioSpacing.xs),
                     Text(r.reply!, key: Key('support.reply.${r.id}')),
                     if (r.repliedAt != null)
-                      Text('Le ${_when(r.repliedAt!)}', style: theme.textTheme.bodySmall),
+                      Text(L.t.repliedat(_when(r.repliedAt!)), style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
             ] else
               Padding(
                 padding: const EdgeInsets.only(top: PrivioSpacing.s),
-                child: Text(
-                  'L’équipe Privio vous répondra ici ; vous recevrez une notification.',
-                  style: theme.textTheme.bodySmall,
-                ),
+                child: Text(L.t.equipePrivioVousRepondraIci, style: theme.textTheme.bodySmall),
               ),
           ],
         ),

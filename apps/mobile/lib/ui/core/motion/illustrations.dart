@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -183,9 +185,10 @@ class _FloatingIconState extends State<FloatingIcon>
 
 /// Trois points qui rebondissent (chargement).
 class LoadingDots extends StatefulWidget {
-  const LoadingDots({super.key, this.label = 'Chargement…', this.color});
+  const LoadingDots({super.key, this._label, this.color});
 
-  final String label;
+  final String? _label;
+  String get label => _label ?? L.t.chargement;
   final Color? color;
 
   @override
@@ -375,7 +378,7 @@ class _SkeletonListState extends State<SkeletonList>
           ),
     ];
     return Semantics(
-      label: 'Chargement…',
+      label: L.t.chargement,
       liveRegion: true,
       child: ExcludeSemantics(
         child: AnimatedBuilder(

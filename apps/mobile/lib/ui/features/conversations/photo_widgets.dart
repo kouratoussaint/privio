@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -25,9 +27,9 @@ double photoBubbleHeight(int? width, int? height) {
 
 /// « Il vous reste 3 photos aujourd'hui. »
 String photoQuotaText(PhotoQuota q) => switch (q.remaining) {
-  0 => 'Vous avez envoyé vos ${q.limit} photos du jour. Prochaines photos demain, dès minuit.',
-  1 => 'Il vous reste 1 photo aujourd’hui (${q.limit} par jour).',
-  final n => 'Il vous reste $n photos aujourd’hui (${q.limit} par jour).',
+  0 => L.t.vousAvezEnvoyeVosLimit(q.limit),
+  1 => L.t.ilVousReste1Photo(q.limit),
+  final n => L.t.ilVousResteNPhotos(n, q.limit),
 };
 
 /// Photo dans une bulle (message envoyé, reçu ou en attente). Toucher : plein écran.
@@ -74,7 +76,7 @@ class PhotoMessageContent extends ConsumerWidget {
           height: h,
           color: meta,
           icon: Icons.download_for_offline_outlined,
-          label: 'Photo · toucher pour télécharger',
+          label: L.t.photoToucherPourTelecharger,
         ),
       ),
       AsyncData(value: final Uint8List value) => GestureDetector(
@@ -98,19 +100,19 @@ class PhotoMessageContent extends ConsumerWidget {
           color: meta,
           icon: Icons.image_not_supported_outlined,
           label: toAppFailure(error).code == FailureCode.network
-              ? 'Hors connexion · toucher pour réessayer'
-              : 'Photo indisponible',
+              ? L.t.horsConnexionToucherPourReessayer
+              : L.t.photoIndisponible2,
         ),
       ),
       _ => _Placeholder(height: h, color: meta, loading: true),
     };
 
     final notDownloaded = bytes is AsyncData<Uint8List?> && bytes.value == null;
-    final what = notDownloaded ? 'Photo non téléchargée' : 'Photo';
+    final what = notDownloaded ? L.t.photoNonTelechargee : L.t.photo;
     return Semantics(
       label: caption == null || caption!.isEmpty ? what : '$what\u202F: $caption',
       button: onOpen != null || notDownloaded,
-      onTapHint: notDownloaded ? 'télécharger' : 'agrandir',
+      onTapHint: notDownloaded ? L.t.telecharger : L.t.hintEnlarge,
       onTap: notDownloaded
           ? () => ref.read(photoRequestsProvider.notifier).request(photo.key)
           : null,
@@ -207,7 +209,7 @@ class PhotoViewerScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         leading: IconButton(
           key: const Key('photo.viewer.close'),
-          tooltip: 'Fermer',
+          tooltip: L.t.fermer,
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.close),
         ),
@@ -233,7 +235,7 @@ class PhotoViewerScreen extends StatelessWidget {
                   child: Image.memory(
                     bytes,
                     fit: BoxFit.contain,
-                    semanticLabel: caption == null || caption!.isEmpty ? 'Photo' : caption,
+                    semanticLabel: caption == null || caption!.isEmpty ? L.t.photo : caption,
                   ),
                 ),
               ),
@@ -280,12 +282,10 @@ Future<PhotoSource?> showPhotoSourceSheet(BuildContext context, {PhotoQuota? quo
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Envoyer une photo', style: theme.textTheme.titleMedium),
+                  Text(L.t.envoyerPhoto, style: theme.textTheme.titleMedium),
                   const SizedBox(height: PrivioSpacing.xs),
                   Text(
-                    quota == null
-                        ? 'Photos limitées chaque jour. Elles s’effacent comme les messages.'
-                        : photoQuotaText(quota),
+                    quota == null ? L.t.photosLimiteesChaqueJourElles : photoQuotaText(quota),
                     key: const Key('photo.quota'),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: none ? theme.colorScheme.error : null,
@@ -298,14 +298,14 @@ Future<PhotoSource?> showPhotoSourceSheet(BuildContext context, {PhotoQuota? quo
               key: const Key('photo.camera'),
               enabled: !none,
               leading: Icon(Icons.photo_camera_outlined, color: p.accentText),
-              title: const Text('Prendre une photo'),
+              title: Text(L.t.prendrePhoto),
               onTap: () => Navigator.pop(ctx, PhotoSource.camera),
             ),
             ListTile(
               key: const Key('photo.gallery'),
               enabled: !none,
               leading: Icon(Icons.photo_library_outlined, color: p.accentText),
-              title: const Text('Choisir dans la galerie'),
+              title: Text(L.t.choisirDansGalerie),
               onTap: () => Navigator.pop(ctx, PhotoSource.gallery),
             ),
             const SizedBox(height: PrivioSpacing.s),
@@ -394,10 +394,10 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
     final after = q.remaining - _photos.length;
     if (after <= 0) {
       return _photos.length == 1
-          ? 'C’est votre dernière photo du jour (${q.limit} par jour).'
-          : 'Ce sont vos dernières photos du jour (${q.limit} par jour).';
+          ? L.t.cEstVotreDernierePhoto(q.limit)
+          : L.t.ceSontVosDernieresPhotos(q.limit);
     }
-    return 'Après l’envoi : $after photo${after > 1 ? 's' : ''} aujourd’hui (${q.limit} par jour).';
+    return L.t.photoQuotaAfterSend(after, q.limit);
   }
 
   @override
@@ -414,16 +414,16 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           key: const Key('photo.compose.cancel'),
-          tooltip: 'Annuler',
+          tooltip: L.t.annuler,
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.close),
         ),
-        title: Text(many ? '${_index + 1} sur ${_photos.length}' : 'Envoyer une photo'),
+        title: Text(many ? L.t.photoIndexOf(_index + 1, _photos.length) : L.t.envoyerPhoto),
         actions: [
           // Lot 7.3a : pivoter, recadrer, dessiner.
           IconButton(
             key: const Key('photo.compose.edit'),
-            tooltip: 'Retoucher cette photo',
+            tooltip: L.t.retoucherCettePhoto,
             onPressed: () async {
               final edited = await Navigator.of(context).push<PreparedPhoto>(
                 MaterialPageRoute(builder: (_) => PhotoEditorScreen(photo: _photos[_index])),
@@ -435,7 +435,7 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
           if (many)
             IconButton(
               key: const Key('photo.compose.remove'),
-              tooltip: 'Retirer cette photo',
+              tooltip: L.t.retirerCettePhoto,
               onPressed: () => _remove(_index),
               icon: const Icon(Icons.delete_outline),
             ),
@@ -454,7 +454,7 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                   child: Image.memory(
                     _photos[i].bytes,
                     fit: BoxFit.contain,
-                    semanticLabel: 'Photo ${i + 1} à envoyer',
+                    semanticLabel: L.t.photoIEnvoyer(i + 1),
                   ),
                 ),
               ),
@@ -529,8 +529,8 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                       cursorColor: Colors.white,
                       decoration: InputDecoration(
                         hintText: _once[_index]
-                            ? 'Vue unique\u202F: sans légende'
-                            : (many ? 'Légende de cette photo' : 'Ajouter une légende'),
+                            ? L.t.vueUniqueSansLegende
+                            : (many ? L.t.legendeCettePhoto : L.t.ajouterLegende),
                         hintStyle: const TextStyle(color: Colors.white60),
                         counterText: '',
                         filled: true,
@@ -561,7 +561,9 @@ class _PhotoComposeScreenState extends State<PhotoComposeScreen> {
                       height: 50,
                       child: IconButton.filled(
                         key: const Key('photo.send'),
-                        tooltip: many ? 'Envoyer les ${_photos.length} photos' : 'Envoyer la photo',
+                        tooltip: many
+                            ? L.t.envoyerPhotoscountPhotos(_photos.length)
+                            : L.t.envoyerPhoto2,
                         style: IconButton.styleFrom(
                           backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
                           foregroundColor: dark ? PrivioColors.navy : Colors.white,

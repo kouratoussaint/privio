@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,11 +35,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
   Future<void> _submit() async {
     final e164 = PhoneNumber.normalize(_controller.text);
     if (e164 == null) {
-      setState(
-        () => _error =
-            'Numéro incomplet\u202F: 8 chiffres pour le Burkina Faso (ex. 70 12 34 56). '
-            'Autre pays\u202F: commencez par +.',
-      );
+      setState(() => _error = L.t.numeroIncomplet8ChiffresPour);
       return;
     }
     setState(() {
@@ -59,12 +57,12 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Votre numéro')),
+      appBar: AppBar(title: Text(L.t.votreNumero)),
       body: FlowLayout(
         bottom: FilledButton(
           key: const Key('phone.submit'),
           onPressed: _busy ? null : _submit,
-          child: _busy ? const Text('Envoi du code…') : const Text('Recevoir le code'),
+          child: _busy ? Text(L.t.envoiCode) : Text(L.t.recevoirCode),
         ),
         children: [
           // Lot 7.2b2 : le SMS arrive.
@@ -72,10 +70,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
             child: FloatingIcon(icon: Icons.sms_outlined, size: 36, motion: IconMotion.pulse),
           ),
           const SizedBox(height: PrivioSpacing.l),
-          Text(
-            'Quel est votre numéro\u202F? Vous recevrez un code par SMS.',
-            style: theme.textTheme.bodyLarge,
-          ),
+          Text(L.t.quelEstVotreNumeroVous, style: theme.textTheme.bodyLarge),
           const SizedBox(height: PrivioSpacing.xl),
           TextField(
             key: const Key('phone.input'),
@@ -87,9 +82,9 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _busy ? null : _submit(),
             decoration: InputDecoration(
-              labelText: 'Numéro de téléphone',
+              labelText: L.t.numeroTelephone,
               hintText: '70 00 00 00',
-              helperText: 'Burkina Faso (+226) par défaut.',
+              helperText: L.t.burkinaFaso226ParDefaut,
               errorText: _error,
             ),
           ),

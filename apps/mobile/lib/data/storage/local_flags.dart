@@ -27,6 +27,10 @@ abstract interface class LocalFlags {
   Future<String> themeChoice();
   Future<void> setThemeChoice(String value);
   Future<String> textSize();
+
+  /// Lot 8.2a : langue de l'application (« fr » par défaut, « mos », « dyu »).
+  Future<String> language();
+  Future<void> setLanguage(String value);
   Future<void> setTextSize(String value);
 
   /// Lot 7.3b : contenu des GIF : « g » (tout public, par défaut) ou « pg13 » (modéré).
@@ -73,6 +77,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _gifFilter = 'privio.gif_filter';
   static const _theme = 'privio.theme';
   static const _textSize = 'privio.text_size';
+  static const _language = 'privio.language';
   static const _linkPreviews = 'privio.link_previews';
   final SharedPreferencesAsync _prefs;
 
@@ -122,6 +127,15 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setTextSize(String value) => _prefs.setString(_textSize, value);
+
+  @override
+  Future<String> language() async {
+    final v = await _prefs.getString(_language);
+    return v == 'mos' || v == 'dyu' ? v! : 'fr';
+  }
+
+  @override
+  Future<void> setLanguage(String value) => _prefs.setString(_language, value);
 
   @override
   Future<String> gifFilter() async => (await _prefs.getString(_gifFilter)) == 'pg13' ? 'pg13' : 'g';

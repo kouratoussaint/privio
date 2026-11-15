@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,31 +25,31 @@ class StickerInfo {
   String get asset => 'assets/stickers/privio/$name.webp';
 }
 
-const kPrivioStickers = <StickerInfo>[
-  StickerInfo('merci', 'Merci\u202F!'),
-  StickerInfo('bravo', 'Bravo\u202F!'),
-  StickerInfo('courage', 'Courage\u202F!'),
-  StickerInfo('desole', 'Désolé'),
-  StickerInfo('bonne_arrivee', 'Bonne arrivée'),
-  StickerInfo('on_dit_quoi', 'On dit quoi\u202F?'),
-  StickerInfo('ca_va_aller', 'Ça va aller'),
-  StickerInfo('bonne_fete', 'Bonne fête\u202F!'),
-  StickerInfo('je_t_appelle', 'Je t’appelle'),
-  StickerInfo('a_tout', 'À tout’\u202F!'),
-  StickerInfo('bonjour', 'Bonjour\u202F!'),
-  StickerInfo('bonne_nuit', 'Bonne nuit'),
-  StickerInfo('mdr', 'Mdr'),
-  StickerInfo('je_t_aime', 'Je t’aime'),
-  StickerInfo('d_accord', 'D’accord'),
-  StickerInfo('non', 'Non\u202F!'),
-  StickerInfo('oups', 'Oups'),
-  StickerInfo('waouh', 'Waouh\u202F!'),
-  StickerInfo('j_arrive', 'J’arrive\u202F!'),
-  StickerInfo('attends', 'Attends…'),
-  StickerInfo('felicitations', 'Félicitations\u202F!'),
-  StickerInfo('bon_appetit', 'Bon appétit\u202F!'),
-  StickerInfo('fatigue', 'Fatigué'),
-  StickerInfo('fache', 'Fâché\u202F!'),
+List<StickerInfo> get kPrivioStickers => <StickerInfo>[
+  StickerInfo('merci', L.t.merci),
+  StickerInfo('bravo', L.t.bravo),
+  StickerInfo('courage', L.t.courage),
+  StickerInfo('desole', L.t.desole),
+  StickerInfo('bonne_arrivee', L.t.bonneArrivee),
+  StickerInfo('on_dit_quoi', L.t.onDitQuoi),
+  StickerInfo('ca_va_aller', L.t.caVaAller),
+  StickerInfo('bonne_fete', L.t.bonneFete),
+  StickerInfo('je_t_appelle', L.t.jeTAppelle),
+  StickerInfo('a_tout', L.t.tout),
+  StickerInfo('bonjour', L.t.bonjour),
+  StickerInfo('bonne_nuit', L.t.bonneNuit),
+  StickerInfo('mdr', L.t.mdr),
+  StickerInfo('je_t_aime', L.t.jeTAime),
+  StickerInfo('d_accord', L.t.accord),
+  StickerInfo('non', L.t.non),
+  StickerInfo('oups', L.t.oups),
+  StickerInfo('waouh', L.t.waouh),
+  StickerInfo('j_arrive', L.t.jArrive),
+  StickerInfo('attends', L.t.attends),
+  StickerInfo('felicitations', L.t.felicitations),
+  StickerInfo('bon_appetit', L.t.bonAppetit),
+  StickerInfo('fatigue', L.t.fatigue),
+  StickerInfo('fache', L.t.fache),
 ];
 
 /// Autocollant connu de cette version de l'application (null : inconnu, p. ex. une série
@@ -70,7 +72,7 @@ class StickerImage extends StatelessWidget {
         height: size * 0.6,
         child: Center(
           child: Text(
-            'Autocollant indisponible\nMettez Privio à jour',
+            L.t.autocollantIndisponibleMettezPrivioJour,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -82,7 +84,7 @@ class StickerImage extends StatelessWidget {
       key: Key('sticker.image.${s.name}'),
       width: size,
       height: size,
-      semanticLabel: 'Autocollant « ${s.label} »',
+      semanticLabel: L.t.autocollantLabel(s.label),
       filterQuality: FilterQuality.medium,
     );
   }
@@ -120,7 +122,7 @@ Config privioEmojiConfig(BuildContext context, {required double height, bool bot
       emojiSizeMax: 28 * (defaultTargetPlatform == TargetPlatform.iOS ? 1.2 : 1.0),
       backgroundColor: p.sheet,
       noRecents: Text(
-        'Vos émojis récents s’afficheront ici',
+        L.t.vosEmojisRecentsAfficherontIci,
         style: theme.textTheme.bodySmall,
         textAlign: TextAlign.center,
       ),
@@ -138,7 +140,7 @@ Config privioEmojiConfig(BuildContext context, {required double height, bool bot
       buttonColor: p.sheet,
       buttonIconColor: theme.colorScheme.onSurfaceVariant,
     ),
-    searchViewConfig: SearchViewConfig(backgroundColor: p.sheet, hintText: 'Rechercher un émoji'),
+    searchViewConfig: SearchViewConfig(backgroundColor: p.sheet, hintText: L.t.rechercherEmoji),
   );
 }
 
@@ -181,8 +183,12 @@ class ExpressionPanel extends StatelessWidget {
                 indicatorColor: theme.colorScheme.primary,
                 unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                 tabs: [
-                  const Tab(key: Key('expression.tab.emoji'), text: 'Émojis', height: 40),
-                  const Tab(key: Key('expression.tab.stickers'), text: 'Autocollants', height: 40),
+                  Tab(key: const Key('expression.tab.emoji'), text: L.t.emojis, height: 40),
+                  Tab(
+                    key: const Key('expression.tab.stickers'),
+                    text: L.t.autocollants,
+                    height: 40,
+                  ),
                   if (onGif != null)
                     const Tab(key: Key('expression.tab.gifs'), text: 'GIF', height: 40),
                 ],

@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/privio_palette.dart';
@@ -74,8 +76,8 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
   int get _total => _hours * 3600 + _minutes * 60;
 
   String? get _error {
-    if (_total < widget.min) return 'Au moins ${formatTtl(widget.min)}.';
-    if (_total > widget.max) return 'Au plus ${formatTtl(widget.max)}.';
+    if (_total < widget.min) return L.t.moinsMin(formatTtl(widget.min));
+    if (_total > widget.max) return L.t.plusMax(formatTtl(widget.max));
     return null;
   }
 
@@ -111,7 +113,7 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _custom ? 'Durée personnalisée' : widget.title,
+              _custom ? L.t.dureePersonnalisee : widget.title,
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: PrivioSpacing.xs),
@@ -172,7 +174,9 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
             _chip(
               key: Key(_k('custom')),
               avatar: const Icon(Icons.tune, size: 18),
-              label: isPreset ? 'Personnalisé' : 'Personnalisé · ${formatTtl(widget.current)}',
+              label: isPreset
+                  ? L.t.personnalise
+                  : L.t.personnaliseCurrent(formatTtl(widget.current)),
               selected: !isPreset,
               onTap: () => setState(() => _custom = true),
             ),
@@ -180,7 +184,7 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
         ),
         const SizedBox(height: PrivioSpacing.m),
         Text(
-          'Actuellement : ${formatTtl(widget.current)}',
+          L.t.actuellementCurrent(formatTtl(widget.current)),
           key: Key(_k('current')),
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -203,7 +207,7 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
                   controller: _hourCtrl,
                   count: _maxHours + 1,
                   label: (i) => '$i h',
-                  semantics: 'Heures',
+                  semantics: L.t.heures,
                   onChanged: (i) => setState(() => _hours = i),
                 ),
               ),
@@ -213,8 +217,8 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
                   key: Key(_k('custom.minutes')),
                   controller: _minuteCtrl,
                   count: 60 ~/ TtlPickerSheet.minuteStep,
-                  label: (i) => '${i * TtlPickerSheet.minuteStep} min',
-                  semantics: 'Minutes',
+                  label: (i) => L.t.unitMinutes(i * TtlPickerSheet.minuteStep),
+                  semantics: L.t.minutes,
                   onChanged: (i) => setState(() => _minutes = i * TtlPickerSheet.minuteStep),
                 ),
               ),
@@ -223,7 +227,7 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
         ),
         const SizedBox(height: PrivioSpacing.s),
         Text(
-          error ?? 'Entre ${formatTtl(widget.min)} et ${formatTtl(widget.max)}.',
+          error ?? L.t.entreMinMax(formatTtl(widget.min), formatTtl(widget.max)),
           key: Key(_k(error == null ? 'custom.range' : 'custom.error')),
           style: theme.textTheme.bodySmall?.copyWith(
             color: error == null ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.error,
@@ -240,12 +244,12 @@ class _TtlPickerSheetState extends State<TtlPickerSheet> {
             TextButton(
               key: Key(_k('custom.cancel')),
               onPressed: () => setState(() => _custom = false),
-              child: const Text('Retour'),
+              child: Text(L.t.retour),
             ),
             FilledButton(
               key: Key(_k('custom.ok')),
               onPressed: error == null ? () => Navigator.pop(context, _total) : null,
-              child: Text('Valider ${error == null ? formatTtl(_total) : ''}'.trim()),
+              child: Text(error == null ? L.t.validateTtl(formatTtl(_total)) : L.t.validate),
             ),
           ],
         ),

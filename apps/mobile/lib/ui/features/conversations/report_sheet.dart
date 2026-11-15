@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,13 +8,13 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/messaging_providers.dart';
 
 /// Motifs de signalement (dossier : modération).
-const kReportReasons = [
-  ('harassment', 'Harcèlement ou insultes'),
-  ('threat', 'Menaces ou violence'),
-  ('spam', 'Spam ou arnaque'),
-  ('inappropriate', 'Contenu choquant'),
-  ('impersonation', 'Usurpation d’identité'),
-  ('other', 'Autre raison'),
+List<(String, String)> get kReportReasons => [
+  ('harassment', L.t.harcelementOuInsultes),
+  ('threat', L.t.menacesOuViolence),
+  ('spam', L.t.spamOuArnaque),
+  ('inappropriate', L.t.contenuChoquant),
+  ('impersonation', L.t.usurpationIdentite),
+  ('other', L.t.autreRaison),
 ];
 
 /// Signaler un message (si [messageId]) ou un contact. La copie du message n'est jointe
@@ -93,8 +95,8 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
         SnackBar(
           content: Text(
             _block
-                ? 'Merci. Votre signalement est transmis et ${widget.reportedName} est bloqué.'
-                : 'Merci. Votre signalement est transmis à l’équipe de modération.',
+                ? L.t.merciVotreSignalementEstTransmis(widget.reportedName)
+                : L.t.merciVotreSignalementEstTransmis2,
           ),
         ),
       );
@@ -123,14 +125,11 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                isMessage ? 'Signaler ce message' : 'Signaler ${widget.reportedName}',
+                isMessage ? L.t.signalerCeMessage : L.t.signalerReportedname(widget.reportedName),
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: PrivioSpacing.xs),
-              Text(
-                'Votre signalement est confidentiel\u202F: la personne n’est pas prévenue.',
-                style: theme.textTheme.bodySmall,
-              ),
+              Text(L.t.votreSignalementEstConfidentielPersonne, style: theme.textTheme.bodySmall),
               const SizedBox(height: PrivioSpacing.s),
               RadioGroup<String>(
                 groupValue: _reason,
@@ -153,7 +152,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                 maxLength: 1000,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Précisions (facultatif)'),
+                decoration: InputDecoration(labelText: L.t.precisionsFacultatif),
               ),
               if (isMessage)
                 CheckboxListTile(
@@ -162,10 +161,8 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                   onChanged: (v) => setState(() => _includeMessage = v ?? false),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  title: const Text('Joindre une copie de ce message'),
-                  subtitle: const Text(
-                    'Lue uniquement par l’équipe de modération, effacée après 90 jours.',
-                  ),
+                  title: Text(L.t.joindreCopieCeMessage),
+                  subtitle: Text(L.t.lueUniquementParEquipeModeration),
                 ),
               if (widget.reportedUserId != null)
                 CheckboxListTile(
@@ -174,7 +171,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                   onChanged: (v) => setState(() => _block = v ?? false),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  title: Text('Bloquer aussi ${widget.reportedName}'),
+                  title: Text(L.t.bloquerAussiReportedname(widget.reportedName)),
                 ),
               if (_error != null)
                 Padding(
@@ -184,7 +181,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
               FilledButton(
                 key: const Key('report.submit'),
                 onPressed: _reason == null || _busy ? null : _submit,
-                child: Text(_busy ? 'Envoi…' : 'Envoyer le signalement'),
+                child: Text(_busy ? L.t.envoi : L.t.envoyerSignalement),
               ),
             ],
           ),

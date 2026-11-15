@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,33 +8,26 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/motion/illustrations.dart';
+import '../settings/language_screen.dart';
 
 /// Écran 02 — engagements affichés (formulation validée A2, voir docs/adr/ADR-002) :
 /// aucune promesse de chiffrement côté serveur ni de protection absolue contre les captures.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
-  static const commitments = [
+  static List<(IconData, String, String)> get commitments => [
     (
       Icons.timer_outlined,
-      'Des messages qui disparaissent',
+      L.t.messagesQuiDisparaissent,
       // typo-fr: ignore-next (engagements validés A2, inchangés)
-      'Chaque message est effacé automatiquement 72 heures après son envoi, '
-          'qu\'il ait été lu ou non.',
+      L.t.chaqueMessageEstEffaceAutomatiquement,
     ),
-    (
-      Icons.lock_outline,
-      'Protégés pendant leur transport',
-      'Vos messages circulent par une connexion chiffrée entre votre téléphone '
-          'et les serveurs de Privio.',
-    ),
+    (Icons.lock_outline, L.t.protegesPendantLeurTransport, L.t.vosMessagesCirculentParConnexion),
     (
       Icons.block,
-      'Pas de transfert ni de copie',
+      L.t.pasTransfertNiCopie,
       // typo-fr: ignore-next (engagements validés A2, inchangés)
-      'Les messages ne peuvent être ni transférés, ni copiés, ni enregistrés dans la '
-          'galerie. Les captures d\'écran sont bloquées sur Android ; une photo prise '
-          'avec un autre appareil reste toutefois possible.',
+      L.t.messagesNePeuventEtreNi,
     ),
   ];
 
@@ -65,19 +60,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               bottom: FilledButton(
                 key: const Key('onboarding.continue'),
                 onPressed: _accepted && !_busy ? _continue : null,
-                child: const Text('Continuer'),
+                child: Text(L.t.continuer),
               ),
               children: [
+                // Lot 8.2a : choix de la langue dès le premier écran.
+                const LanguageChip(),
                 const SizedBox(height: PrivioSpacing.xl),
                 const Center(child: AnimatedLogo(size: 80)),
                 Text(
-                  'Bienvenue sur Privio',
+                  L.t.bienvenueSurPrivio,
                   style: theme.textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: PrivioSpacing.s),
                 Text(
-                  'Une messagerie privée où les messages s’effacent tout seuls. Ce qu’il faut savoir\u202F:',
+                  L.t.messageriePriveeOuMessagesEffacent,
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -123,7 +120,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   // typo-fr: ignore-next (engagements validés A2, inchangés)
-                  title: const Text('J\'ai lu et compris ces engagements.'),
+                  title: Text(L.t.jAiLuComprisCes),
                 ),
               ],
             ),

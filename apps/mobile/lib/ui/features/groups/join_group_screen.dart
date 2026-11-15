@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -58,7 +60,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
     if (code == null) {
       setState(() {
         _preview = null;
-        _error = 'Code incomplet : « PRV- » suivi de 6 lettres ou chiffres.';
+        _error = L.t.codeIncompletPrvSuivi6;
       });
       return;
     }
@@ -109,9 +111,8 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
         case JoinStatus.requested:
           ref.invalidate(myJoinRequestsProvider);
           ref.read(feedbackProvider).sound(PrivioSound.success);
-          ScaffoldMessenger.of(context).showSnackBar(
-            successSnack('Demande envoyée. Vous serez prévenu quand elle sera acceptée.'),
-          );
+          ScaffoldMessenger.of(context)
+              .showSnackBar(successSnack(L.t.demandeEnvoyeeVousSerezPrevenu));
           setState(() => _preview = _with(JoinStatus.pending, r.conversationId));
         default:
           setState(() => _preview = _with(r.status));
@@ -138,7 +139,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       await ref.read(messagingApiProvider).cancelJoinRequest(id);
       ref.invalidate(myJoinRequestsProvider);
       if (mounted) {
-        _toast('Demande annulée.');
+        _toast(L.t.demandeAnnulee);
         setState(
           () => _preview = GroupPreview(
             status: JoinStatus.approval,
@@ -158,17 +159,13 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Rejoindre un groupe')),
+      appBar: AppBar(title: Text(L.t.rejoindreGroupe)),
       body: SettingsListView(
         children: [
           SettingsCard(
             padding: const EdgeInsets.all(PrivioSpacing.l),
             children: [
-              Text(
-                'Entrez le code reçu d’un administrateur du groupe, ou scannez le QR code '
-                'qu’il vous montre sur son téléphone.',
-                style: theme.textTheme.bodyMedium,
-              ),
+              Text(L.t.entrezCodeRecuAdministrateurGroupe, style: theme.textTheme.bodyMedium),
               const SizedBox(height: PrivioSpacing.l),
               TextField(
                 key: const Key('join.code'),
@@ -188,7 +185,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: 'Code d’invitation',
+                  labelText: L.t.codeInvitation,
                   hintText: 'PRV-7K3Q9X',
                   counterText: '',
                   errorText: _error,
@@ -203,7 +200,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                       key: const Key('join.scan'),
                       onPressed: _busy ? null : _scan,
                       icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('Scanner'),
+                      label: Text(L.t.scanner),
                     ),
                   ),
                   const SizedBox(width: PrivioSpacing.m),
@@ -211,7 +208,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                     child: FilledButton(
                       key: const Key('join.preview'),
                       onPressed: _busy ? null : _lookUp,
-                      child: const Text('Continuer'),
+                      child: Text(L.t.continuer),
                     ),
                   ),
                 ],
@@ -256,47 +253,35 @@ class _PreviewCard extends StatelessWidget {
     final p = PrivioPalette.of(context);
     final s = preview.status;
     final (String message, Widget? action) = switch (s) {
-      JoinStatus.invalid => (
-        'Ce code ne correspond à aucun groupe. Vérifiez-le auprès de la personne qui vous '
-            'l’a donné : il a peut-être été changé.',
-        null,
-      ),
+      JoinStatus.invalid => (L.t.ceCodeNeCorrespondAucun, null),
       JoinStatus.member || JoinStatus.joined => (
-        'Vous faites déjà partie de ce groupe.',
-        FilledButton(
-          key: const Key('join.open'),
-          onPressed: onOpen,
-          child: const Text('Ouvrir le groupe'),
-        ),
+        L.t.vousFaitesDejaPartieCe,
+        FilledButton(key: const Key('join.open'), onPressed: onOpen, child: Text(L.t.ouvrirGroupe)),
       ),
       JoinStatus.pending || JoinStatus.requested => (
-        'Votre demande est envoyée. Un administrateur du groupe doit l’accepter ; '
-            'vous serez prévenu.',
+        L.t.votreDemandeEstEnvoyeeAdministrateur,
         OutlinedButton(
           key: const Key('join.cancel'),
           onPressed: busy ? null : onCancel,
-          child: const Text('Annuler la demande'),
+          child: Text(L.t.annulerDemande),
         ),
       ),
-      JoinStatus.declined => (
-        'Votre demande a été refusée. Vous pourrez en faire une nouvelle dans 24 h.',
-        null,
-      ),
-      JoinStatus.full => ('Ce groupe est complet.', null),
+      JoinStatus.declined => (L.t.votreDemandeEteRefuseeVous2, null),
+      JoinStatus.full => (L.t.ceGroupeEstComplet, null),
       JoinStatus.open => (
-        'Vous pouvez rejoindre ce groupe directement.',
+        L.t.vousPouvezRejoindreCeGroupe,
         FilledButton(
           key: const Key('join.submit'),
           onPressed: busy ? null : onJoin,
-          child: const Text('Rejoindre le groupe'),
+          child: Text(L.t.rejoindreGroupe2),
         ),
       ),
       JoinStatus.approval => (
-        'Un administrateur du groupe doit accepter votre demande.',
+        L.t.administrateurGroupeDoitAccepterVotre,
         FilledButton(
           key: const Key('join.submit'),
           onPressed: busy ? null : onJoin,
-          child: const Text('Demander à rejoindre'),
+          child: Text(L.t.demanderRejoindre),
         ),
       ),
     };
@@ -323,7 +308,7 @@ class _PreviewCard extends StatelessWidget {
                         ),
                         if (preview.memberCount case final n?)
                           Text(
-                            '$n membre${n > 1 ? 's' : ''}',
+                            L.t.membersCount(n),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -360,10 +345,10 @@ final profileQrScannerProvider = Provider<Future<String?> Function(BuildContext 
   (ref) =>
       (context) => Navigator.of(context).push<String>(
         MaterialPageRoute(
-          builder: (_) => const QrScanScreen(
+          builder: (_) => QrScanScreen(
             parse: parseProfileCode,
-            hint: 'Placez le QR code de la personne dans le cadre.',
-            invalid: 'Ce QR code n’est pas un identifiant Privio.',
+            hint: L.t.placezQrCodePersonneDans,
+            invalid: L.t.ceQrCodeNEst,
           ),
           fullscreenDialog: true,
         ),
@@ -373,16 +358,13 @@ final profileQrScannerProvider = Provider<Future<String?> Function(BuildContext 
 /// Caméra pour lire un QR code Privio (groupe par défaut). Le texte lu ne quitte pas le
 /// téléphone : seul le code reconnu est renvoyé à l'écran qui l'a demandé.
 class QrScanScreen extends StatefulWidget {
-  const QrScanScreen({
-    super.key,
-    this.parse = parseInviteCode,
-    this.hint = 'Placez le QR code du groupe dans le cadre.',
-    this.invalid = 'Ce QR code n’est pas un code de groupe Privio.',
-  });
+  const QrScanScreen({super.key, this.parse = parseInviteCode, this._hint, this._invalid});
 
   final String? Function(String? raw) parse;
-  final String hint;
-  final String invalid;
+  final String? _hint;
+  final String? _invalid;
+  String get hint => _hint ?? L.t.placezQrCodeGroupeDans;
+  String get invalid => _invalid ?? L.t.ceQrCodeNEst2;
 
   @override
   State<QrScanScreen> createState() => _QrScanScreenState();
@@ -421,7 +403,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Scanner le QR code'),
+        title: Text(L.t.scannerQrCode2),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
@@ -431,14 +413,13 @@ class _QrScanScreenState extends State<QrScanScreen> {
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
-            errorBuilder: (context, error) => const Center(
+            errorBuilder: (context, error) => Center(
               child: Padding(
-                padding: EdgeInsets.all(PrivioSpacing.xl),
+                padding: const EdgeInsets.all(PrivioSpacing.xl),
                 child: Text(
-                  'Caméra indisponible. Autorisez l’appareil photo pour Privio dans les '
-                  'réglages du téléphone, ou revenez en arrière et tapez le code.',
+                  L.t.cameraIndisponibleAutorisezAppareilPhoto,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
             ),

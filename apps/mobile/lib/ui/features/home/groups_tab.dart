@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -119,12 +121,12 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     final offline = ref.watch(offlineProvider);
 
     return BrandScaffold(
-      title: const Text('Groupes'),
+      title: Text(L.t.groupes),
       // Lot 7.1b : entrer dans un groupe avec un code ou un QR code.
       actions: [
         IconButton(
           key: const Key('groups.join'),
-          tooltip: 'Rejoindre un groupe',
+          tooltip: L.t.rejoindreGroupe,
           onPressed: () => context.push(Routes.joinGroup),
           icon: const Icon(Icons.qr_code_scanner_rounded),
         ),
@@ -135,7 +137,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
         heroTag: 'fab.groups',
         onPressed: () => context.push(Routes.newGroup),
         icon: const Icon(Icons.group_add_outlined),
-        label: const Text('Nouveau groupe'),
+        label: Text(L.t.nouveauGroupe),
       ),
       // Lot 7.2a : fond blanc, comme la liste des discussions.
       // (Material : les lignes touchables y dessinent leur effet d'appui.)
@@ -159,20 +161,20 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                 chips: [
                   FilterPill(
                     key: const Key('groups.filter.all'),
-                    label: 'Tous',
+                    label: L.t.tous,
                     selected: _filter == GroupFilter.all,
                     onTap: () => setState(() => _filter = GroupFilter.all),
                   ),
                   FilterPill(
                     key: const Key('groups.filter.unread'),
-                    label: 'Non lus',
+                    label: L.t.nonLus,
                     count: unreadCount,
                     selected: _filter == GroupFilter.unread,
                     onTap: () => setState(() => _filter = GroupFilter.unread),
                   ),
                   FilterPill(
                     key: const Key('groups.filter.pinned'),
-                    label: 'Épinglés',
+                    label: L.t.epingles,
                     selected: _filter == GroupFilter.pinned,
                     onTap: () => setState(() => _filter = GroupFilter.pinned),
                   ),
@@ -185,7 +187,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
               ListTile(
                 key: const Key('groups.archived'),
                 leading: const Icon(Icons.archive_outlined),
-                title: Text('Archivés ($archivedCount)'),
+                title: Text(L.t.archivesArchivedcount(archivedCount)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(Routes.archivedOf('groupes')),
               ),
@@ -249,10 +251,10 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                   child: EmptyView(
                     key: const Key('groups.no_match'),
                     icon: Icons.search_off_rounded,
-                    title: 'Aucun groupe trouvé',
+                    title: L.t.aucunGroupeTrouve,
                     message: _query.isNotEmpty
-                        ? 'Aucun groupe ne correspond à «\u202F${_search.text.trim()}\u202F».'
-                        : 'Aucun groupe dans ce filtre.',
+                        ? L.t.aucunGroupeNeCorrespondText(_search.text.trim())
+                        : L.t.aucunGroupeDansCeFiltre,
                   ),
                 ),
               ),
@@ -267,13 +269,10 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: const EmptyView(
+                  child: EmptyView(
                     icon: Icons.groups_outlined,
-                    title: 'Aucun groupe pour l’instant',
-                    message:
-                        'Créez un groupe et invitez vos contacts. Chacun choisit de le rejoindre\u202F; '
-                        'les messages s’effacent comme dans vos discussions. Un code reçu\u202F? '
-                        'Touchez l’icône en haut pour rejoindre un groupe.',
+                    title: L.t.aucunGroupePourInstant,
+                    message: L.t.creezGroupeInvitezVosContacts,
                   ),
                 ),
               ),
@@ -287,11 +286,11 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                   ListTile(
                     key: Key('notice.${n.id}'),
                     leading: Icon(Icons.delete_outline, color: theme.colorScheme.onSurfaceVariant),
-                    title: Text('Le groupe «\u202F${n.title}\u202F» a été supprimé'),
-                    subtitle: const Text('Par un administrateur du groupe'),
+                    title: Text(L.t.groupeTitleEteSupprime(n.title)),
+                    subtitle: Text(L.t.parAdministrateurGroupe),
                     trailing: IconButton(
                       key: Key('notice.dismiss.${n.id}'),
-                      tooltip: 'Fermer',
+                      tooltip: L.t.fermer,
                       icon: const Icon(Icons.close),
                       onPressed: () async {
                         try {
@@ -306,7 +305,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                 if (invitations.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                    child: Text('Invitations', style: theme.textTheme.titleSmall),
+                    child: Text(L.t.invitations, style: theme.textTheme.titleSmall),
                   ),
                   for (final i in invitations) _InvitationCard(invitation: i, onRespond: _respond),
                   const SizedBox(height: PrivioSpacing.m),
@@ -315,18 +314,18 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                 if (myRequests.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                    child: Text('Demandes envoyées', style: theme.textTheme.titleSmall),
+                    child: Text(L.t.demandesEnvoyees, style: theme.textTheme.titleSmall),
                   ),
                   for (final r in myRequests)
                     ListTile(
                       key: Key('my_join.${r.conversationId}'),
                       leading: const Icon(Icons.hourglass_top_rounded),
                       title: Text(r.title),
-                      subtitle: const Text('En attente d’un administrateur'),
+                      subtitle: Text(L.t.attenteAdministrateur),
                       trailing: TextButton(
                         key: Key('my_join.cancel.${r.conversationId}'),
                         onPressed: () => _cancelRequest(context, ref, r),
-                        child: const Text('Annuler'),
+                        child: Text(L.t.annuler),
                       ),
                     ),
                   const SizedBox(height: PrivioSpacing.m),
@@ -380,8 +379,7 @@ class _InvitationCard extends ConsumerWidget {
                     children: [
                       Text(i.title, style: theme.textTheme.titleSmall),
                       Text(
-                        '${i.inviterName ?? 'Quelqu’un'} vous invite · '
-                        '${i.memberCount} membre${i.memberCount > 1 ? 's' : ''}',
+                        L.t.groupInviteLine(i.inviterName ?? L.t.someone, i.memberCount),
                         style: theme.textTheme.bodySmall?.copyWith(color: p.accentText),
                       ),
                     ],
@@ -401,13 +399,13 @@ class _InvitationCard extends ConsumerWidget {
                 TextButton(
                   key: Key('invitation.decline.${i.id}'),
                   onPressed: () => onRespond(context, ref, i, accept: false),
-                  child: const Text('Refuser'),
+                  child: Text(L.t.refuser),
                 ),
                 const SizedBox(width: PrivioSpacing.s),
                 FilledButton(
                   key: Key('invitation.accept.${i.id}'),
                   onPressed: () => onRespond(context, ref, i, accept: true),
-                  child: const Text('Rejoindre'),
+                  child: Text(L.t.rejoindre),
                 ),
               ],
             ),

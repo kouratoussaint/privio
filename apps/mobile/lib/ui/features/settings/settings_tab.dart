@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +25,8 @@ import '../../../state/feedback_providers.dart';
 import 'wallpaper.dart';
 import 'appearance_screen.dart';
 import '../../../data/services/share_service.dart';
+import 'language_screen.dart';
+import '../../../state/appearance_providers.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
 class SettingsTab extends ConsumerWidget {
@@ -32,14 +36,14 @@ class SettingsTab extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Se déconnecter\u202F?'),
-        content: const Text('Vous devrez recevoir un nouveau code SMS pour vous reconnecter.'),
+        title: Text(L.t.seDeconnecter2),
+        content: Text(L.t.vousDevrezRecevoirNouveauCode),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
           FilledButton(
             key: const Key('settings.signout.confirm'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Se déconnecter'),
+            child: Text(L.t.seDeconnecter),
           ),
         ],
       ),
@@ -95,7 +99,7 @@ class SettingsTab extends ConsumerWidget {
     final secondary = theme.colorScheme.onSurfaceVariant;
 
     return BrandScaffold(
-      title: const Text('Paramètres'),
+      title: Text(L.t.parametres),
       body: ColoredBox(
         color: theme.colorScheme.surface,
         child: ListView(
@@ -148,7 +152,7 @@ class SettingsTab extends ConsumerWidget {
                   ),
                 ],
               ),
-            const SettingsSectionTitle('Confidentialité'),
+            SettingsSectionTitle(L.t.confidentialite),
             // Lot 7.1a : « À propos » (140 caractères), visible selon Confidentialité.
             if (profile != null)
               SettingsCard(
@@ -156,10 +160,10 @@ class SettingsTab extends ConsumerWidget {
                   ListTile(
                     key: const Key('settings.about'),
                     leading: Icon(Icons.info_outline, color: p.accentText),
-                    title: const Text('À propos'),
+                    title: Text(L.t.propos),
                     subtitle: Text(
                       (profile.about ?? '').isEmpty
-                          ? 'Ajouter un court texte de présentation'
+                          ? L.t.ajouterCourtTextePresentation
                           : profile.about!,
                     ),
                     trailing: Icon(Icons.edit_outlined, color: secondary),
@@ -173,10 +177,8 @@ class SettingsTab extends ConsumerWidget {
                 ListTile(
                   key: const Key('settings.privacy'),
                   leading: Icon(Icons.shield_outlined, color: p.accentText),
-                  title: const Text('Confidentialité'),
-                  subtitle: const Text(
-                    'En ligne, photo, accusés de lecture, invitations, durée par défaut',
-                  ),
+                  title: Text(L.t.confidentialite),
+                  subtitle: Text(L.t.lignePhotoAccusesLectureInvitations),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.privacy),
                 ),
@@ -186,20 +188,20 @@ class SettingsTab extends ConsumerWidget {
                   value: account?.phoneDiscoverable ?? false,
                   onChanged: account == null ? null : (v) => _toggleDiscoverable(context, ref, v),
                   secondary: Icon(Icons.phone_outlined, color: p.accentText),
-                  title: const Text('Me trouver par mon numéro'),
+                  title: Text(L.t.meTrouverParMonNumero),
                   subtitle: Text(
                     (account?.phoneDiscoverable ?? false)
-                        ? 'Activé\u202F: on peut aussi vous trouver par votre numéro.'
+                        ? L.t.activeOnPeutAussiVous
                         : profile == null
-                        ? 'Désactivé\u202F: on vous trouve seulement par votre identifiant.'
-                        : 'Désactivé\u202F: on vous trouve seulement par @${profile.handle}.',
+                        ? L.t.desactiveOnVousTrouveSeulement
+                        : L.t.desactiveOnVousTrouveSeulement2(profile.handle),
                   ),
                 ),
                 const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.blocked'),
                   leading: Icon(Icons.block, color: p.accentText),
-                  title: const Text('Personnes bloquées'),
+                  title: Text(L.t.personnesBloquees),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -218,18 +220,21 @@ class SettingsTab extends ConsumerWidget {
                 ListTile(
                   key: const Key('settings.lock'),
                   leading: Icon(Icons.lock_outline, color: p.accentText),
-                  title: const Text('Verrouillage de l’application'),
+                  title: Text(L.t.verrouillageApplication),
                   subtitle: Text(
                     (ref.watch(appLockProvider).value?.enabled ?? false)
-                        ? 'Activé · ${delayLabel(ref.watch(appLockProvider).value!.config.delaySeconds).toLowerCase()}'
-                        : 'Désactivé',
+                        ? L.t.activeTolowercase(
+                            delayLabel(ref.watch(appLockProvider).value!.config.delaySeconds)
+                                .toLowerCase(),
+                          )
+                        : L.t.desactive2,
                   ),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.appLock),
                 ),
               ],
             ),
-            const SettingsSectionTitle('Notifications et gestes'),
+            SettingsSectionTitle(L.t.notificationsGestes),
             SettingsCard(
               children: [
                 SwitchListTile(
@@ -237,8 +242,8 @@ class SettingsTab extends ConsumerWidget {
                   value: ref.watch(pushProvider).value ?? false,
                   onChanged: (v) => ref.read(pushProvider.notifier).setEnabled(v),
                   secondary: Icon(Icons.notifications_outlined, color: p.accentText),
-                  title: const Text('Notifications'),
-                  subtitle: const Text('Sans nom ni contenu.'),
+                  title: Text(L.t.notifications),
+                  subtitle: Text(L.t.sansNomNiContenu),
                 ),
                 const SettingsDivider(),
                 // Lot 7.2b2 : sons courts et vibrations (activés par défaut).
@@ -246,19 +251,35 @@ class SettingsTab extends ConsumerWidget {
                   key: const Key('settings.sounds'),
                   value: ref.watch(soundsEnabledProvider).value ?? true,
                   secondary: Icon(Icons.volume_up_outlined, color: p.accentText),
-                  title: const Text('Sons et vibrations'),
-                  subtitle: const Text(
-                    'Envoi, réception, effacement… Rien en mode silencieux du téléphone.',
-                  ),
+                  title: Text(L.t.sonsVibrations),
+                  subtitle: Text(L.t.envoiReceptionEffacementRienMode),
                   onChanged: (v) => ref.read(soundsEnabledProvider.notifier).set(v),
+                ),
+                const SettingsDivider(),
+                // Lot 8.2a : langue de l'application.
+                ListTile(
+                  key: const Key('settings.language'),
+                  leading: Icon(Icons.translate_rounded, color: p.accentText),
+                  title: Text(L.t.languageTitle),
+                  subtitle: Text(
+                    ref.watch(releasedLanguagesProvider).length < 2
+                        ? '${kLanguages[ref.watch(appearanceProvider).value?.language ?? 'fr']} · '
+                              '${L.t.languageSubtitleSoon}'
+                        : kLanguages[ref.watch(appearanceProvider).value?.language ?? 'fr'] ?? '',
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  onTap: () => Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).push(MaterialPageRoute<void>(builder: (_) => const LanguageScreen())),
                 ),
                 const SettingsDivider(),
                 // Lot 8.1a : thème et taille du texte.
                 ListTile(
                   key: const Key('settings.appearance'),
                   leading: Icon(Icons.palette_outlined, color: p.accentText),
-                  title: const Text('Apparence'),
-                  subtitle: const Text('Thème clair ou sombre, taille du texte'),
+                  title: Text(L.t.apparence),
+                  subtitle: Text(L.t.themeClairOuSombreTaille),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => Navigator.of(
                     context,
@@ -270,8 +291,8 @@ class SettingsTab extends ConsumerWidget {
                 ListTile(
                   key: const Key('settings.wallpaper'),
                   leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
-                  title: const Text('Fond d’écran des discussions'),
-                  subtitle: const Text('Motifs, couleurs ou une de vos photos'),
+                  title: Text(L.t.fondEcranDiscussions),
+                  subtitle: Text(L.t.motifsCouleursOuVosPhotos),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   // Au-dessus des onglets, comme les autres écrans des Paramètres.
                   onTap: () => Navigator.of(
@@ -285,11 +306,11 @@ class SettingsTab extends ConsumerWidget {
                   key: const Key('settings.groups_together'),
                   value: ref.watch(groupsInDiscussionsProvider).value ?? false,
                   secondary: Icon(Icons.forum_outlined, color: p.accentText),
-                  title: const Text('Groupes dans Discussions'),
+                  title: Text(L.t.groupesDansDiscussions),
                   subtitle: Text(
                     ref.watch(groupsInDiscussionsProvider).value ?? false
-                        ? 'Les groupes apparaissent aussi dans Discussions.'
-                        : 'Séparés\u202F: les groupes sont seulement dans l’onglet Groupes.',
+                        ? L.t.groupesApparaissentAussiDansDiscussions
+                        : L.t.separesGroupesSontSeulementDans,
                   ),
                   onChanged: (v) => ref.read(groupsInDiscussionsProvider.notifier).set(v),
                 ),
@@ -297,8 +318,8 @@ class SettingsTab extends ConsumerWidget {
                 ListTile(
                   key: const Key('settings.quick_reaction'),
                   leading: Icon(Icons.touch_app_outlined, color: p.accentText),
-                  title: const Text('Réaction du double appui'),
-                  subtitle: const Text('Toucher deux fois un message pour réagir.'),
+                  title: Text(L.t.reactionDoubleAppui),
+                  subtitle: Text(L.t.toucherDeuxFoisMessagePour),
                   trailing: Text(
                     ref.watch(quickReactionProvider).value ?? '❤️',
                     style: theme.textTheme.titleLarge,
@@ -307,22 +328,22 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ],
             ),
-            const SettingsSectionTitle('Ce téléphone'),
+            SettingsSectionTitle(L.t.ceTelephone),
             SettingsCard(
               children: [
                 ListTile(
                   key: const Key('settings.storage'),
                   leading: Icon(Icons.data_saver_on_outlined, color: p.accentText),
-                  title: const Text('Stockage et données'),
-                  subtitle: const Text('Téléchargement des photos, données utilisées, espace'),
+                  title: Text(L.t.stockageDonnees),
+                  subtitle: Text(L.t.telechargementPhotosDonneesUtiliseesEspace),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.storage),
                 ),
                 const SettingsDivider(),
                 ListTile(
                   leading: Icon(Icons.phone_android, color: p.accentText),
-                  title: const Text('Seul appareil connecté'),
-                  subtitle: const Text('Une connexion sur un autre téléphone déconnecte celui-ci.'),
+                  title: Text(L.t.seulAppareilConnecte),
+                  subtitle: Text(L.t.connexionSurAutreTelephoneDeconnecte),
                 ),
               ],
             ),
@@ -335,8 +356,8 @@ class SettingsTab extends ConsumerWidget {
                   ListTile(
                     key: const Key('settings.console'),
                     leading: Icon(Icons.admin_panel_settings_outlined, color: p.accentText),
-                    title: const Text('Administration'),
-                    subtitle: const Text('Tableau de bord de Privio (chiffres seulement)'),
+                    title: Text(L.t.administration),
+                    subtitle: Text(L.t.tableauBordPrivioChiffresSeulement),
                     trailing: Icon(Icons.chevron_right, color: secondary),
                     onTap: () => context.push(Routes.console),
                   ),
@@ -350,15 +371,15 @@ class SettingsTab extends ConsumerWidget {
                 ListTile(
                   key: const Key('settings.invite'),
                   leading: Icon(Icons.favorite_border_rounded, color: p.accentText),
-                  title: const Text('Inviter un ami'),
-                  subtitle: const Text('Partager votre identifiant'),
+                  title: Text(L.t.inviterAmi),
+                  subtitle: Text(L.t.partagerVotreIdentifiant),
                   onTap: () => ref.read(shareTextProvider)(inviteText(profile?.handle)),
                 ),
                 const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.help'),
                   leading: Icon(Icons.help_outline, color: p.accentText),
-                  title: const Text('Aide et assistance'),
+                  title: Text(L.t.aideAssistance),
                   trailing: Icon(Icons.chevron_right, color: secondary),
                   onTap: () => context.push(Routes.help),
                 ),
@@ -371,7 +392,7 @@ class SettingsTab extends ConsumerWidget {
                   key: const Key('settings.signout'),
                   leading: Icon(Icons.logout, color: theme.colorScheme.error),
                   title: Text(
-                    'Se déconnecter',
+                    L.t.seDeconnecter,
                     style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
                   ),
                   onTap: () => _confirmSignOut(context, ref),
@@ -381,7 +402,7 @@ class SettingsTab extends ConsumerWidget {
                   key: const Key('settings.delete'),
                   leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
                   title: Text(
-                    'Supprimer mon compte',
+                    L.t.supprimerMonCompte,
                     style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
                   ),
                   onTap: () => context.push(Routes.deleteAccount),
@@ -390,7 +411,7 @@ class SettingsTab extends ConsumerWidget {
             ),
             const SizedBox(height: PrivioSpacing.xl),
             Text(
-              'Privio ${ref.watch(appVersionProvider)} · Messagerie privée et éphémère',
+              L.t.privioAppversionproviderMessageriePriveeEphemere(ref.watch(appVersionProvider)),
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),

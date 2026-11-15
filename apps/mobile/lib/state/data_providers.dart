@@ -1,3 +1,5 @@
+import '../l10n/l10n.dart';
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -23,14 +25,18 @@ final netKindProvider = StreamProvider<NetKind>((ref) async* {
 // Téléchargement des photos (DATA-001, DATA-003)
 // ------------------------------------------------------------------------
 enum PhotoAutoDownload {
-  always('always', 'Toujours'),
-  wifi('wifi', 'En Wi-Fi seulement'),
-  never('never', 'Jamais (toucher pour télécharger)');
+  always('always'),
+  wifi('wifi'),
+  never('never');
 
-  const PhotoAutoDownload(this.id, this.label);
+  const PhotoAutoDownload(this.id);
 
   final String id;
-  final String label;
+  String get label => switch (this) {
+    always => L.t.toujours,
+    wifi => L.t.wiFiSeulement,
+    never => L.t.jamaisToucherPourTelecharger,
+  };
 
   static PhotoAutoDownload parse(String? v) =>
       values.firstWhere((x) => x.id == v, orElse: () => PhotoAutoDownload.always);
@@ -161,8 +167,8 @@ void countDataW(WidgetRef ref, {int received = 0, int sent = 0}) {
 /// « 1,2 Mo », « 350 Ko ».
 String formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes o';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} Ko';
+  if (bytes < 1024 * 1024) return L.t.bytesKo((bytes / 1024).round());
   final mb = bytes / (1024 * 1024);
   final text = mb < 10 ? mb.toStringAsFixed(1) : mb.round().toString();
-  return '${text.replaceAll('.', ',')} Mo';
+  return L.t.sizeMo(text.replaceAll('.', ','));
 }

@@ -268,6 +268,13 @@ class FakeLocalFlags implements LocalFlags {
   @override
   Future<void> setTextSize(String value) async => size = value;
 
+  /// Lot 8.2a : langue.
+  String lang = 'fr';
+  @override
+  Future<String> language() async => lang;
+  @override
+  Future<void> setLanguage(String value) async => lang = value;
+
   /// Lot 7.3b : contenu des GIF, aperçus des liens.
   String gif = 'g';
   bool previews = true;

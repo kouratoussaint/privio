@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,17 +42,14 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Bloquer $name\u202F?'),
-          content: const Text(
-            'Vous ne pourrez plus vous écrire, dans un sens comme dans l’autre, et cette '
-            'personne ne pourra plus vous trouver. Vous pourrez la débloquer à tout moment.',
-          ),
+          title: Text(L.t.bloquerName(name)),
+          content: Text(L.t.vousNePourrezPlusVous),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
             FilledButton(
               key: const Key('contact.block.confirm'),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Bloquer'),
+              child: Text(L.t.bloquer),
             ),
           ],
         ),
@@ -62,7 +61,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
       await setBlocked(ref, userId, blocked: block);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(block ? '$name est bloqué.' : '$name est débloqué.')),
+          SnackBar(content: Text(block ? L.t.nameEstBloque(name) : L.t.nameEstDebloque(name))),
         );
       }
     } on Object catch (e) {
@@ -79,8 +78,8 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
     final picked = await showTtlPicker(
       context,
-      title: 'Durée des messages',
-      help: 'Pour les prochains messages, chez vous deux.',
+      title: L.t.dureeMessages,
+      help: L.t.pourProchainsMessagesChezVous,
       current: s.ttlSeconds,
       min: rules.minTtlSeconds,
       max: rules.maxTtlSeconds,
@@ -115,7 +114,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     final about = profile?.about;
     // Lot 7.2a : une carte blanche par partie, comme Paramètres.
     return Scaffold(
-      appBar: AppBar(title: const Text('Infos')),
+      appBar: AppBar(title: Text(L.t.infos)),
       body: SettingsListView(
         children: [
           SettingsCard(
@@ -164,7 +163,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                     key: const Key('contact.about'),
                     children: [
                       Text(
-                        'À propos',
+                        L.t.propos,
                         style: theme.textTheme.labelMedium?.copyWith(color: p.accentText),
                       ),
                       const SizedBox(height: PrivioSpacing.xs),
@@ -174,13 +173,13 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 ),
             ],
           ),
-          const SettingsSectionTitle('Discussion'),
+          SettingsSectionTitle(L.t.discussion),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('contact.ttl'),
                 leading: Icon(Icons.timer_outlined, color: p.accentText),
-                title: const Text('Durée des messages'),
+                title: Text(L.t.dureeMessages),
                 subtitle: Text(formatTtl(summary.ttlSeconds)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: summary.blocked ? null : () => _ttl(summary),
@@ -194,7 +193,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                       : Icons.notifications_outlined,
                   color: p.accentText,
                 ),
-                title: const Text('Notifications'),
+                title: Text(L.t.notifications),
                 subtitle: Text(muteLabel(summary, now)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => chooseMute(context, ref, summary),
@@ -203,7 +202,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               ListTile(
                 key: const Key('contact.clear'),
                 leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
-                title: const Text('Vider la discussion'),
+                title: Text(L.t.viderDiscussion),
                 trailing: const Icon(Icons.chevron_right),
                 // Lot 7.2a : le choix s'ouvre ici, on reste sur la fiche.
                 onTap: () => chooseClear(context, ref, summary),
@@ -213,7 +212,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               ListTile(
                 key: const Key('fiche.wallpaper'),
                 leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
-                title: const Text('Fond d’écran'),
+                title: Text(L.t.fondEcran),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -224,7 +223,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               ),
             ],
           ),
-          const SettingsSectionTitle('Médias'),
+          SettingsSectionTitle(L.t.medias),
           SettingsCard(
             children: [
               ConversationMediaSection(conversationId: summary.id, title: summary.title),
@@ -233,15 +232,12 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               FavoritesRow(conversationId: summary.id, title: summary.title),
             ],
           ),
-          const SettingsSectionTitle('Confidentialité de cette discussion'),
+          SettingsSectionTitle(L.t.confidentialiteCetteDiscussion),
           SettingsCard(children: [ConversationPrivacySection(summary: summary)]),
-          const SettingsNote(
-            'Ces choix ne valent que pour cette discussion\u202F; ailleurs, vos réglages de '
-            'Confidentialité s’appliquent.',
-          ),
+          SettingsNote(L.t.cesChoixNeValentQue),
           if (groups.isNotEmpty) ...[
             SettingsSectionTitle(
-              '${groups.length} groupe${groups.length > 1 ? 's' : ''} en commun',
+              L.t.groupsInCommon(groups.length),
               key: const Key('contact.common_groups'),
             ),
             SettingsCard(
@@ -257,7 +253,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                       icon: Icons.groups_rounded,
                     ),
                     title: Text(g.title),
-                    subtitle: Text('${g.memberCount} membre${g.memberCount > 1 ? 's' : ''}'),
+                    subtitle: Text(L.t.membersCount(g.memberCount)),
                     onTap: () => context.push(Routes.chat(g.id)),
                   ),
               ],
@@ -280,7 +276,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                     color: iBlocked ? null : theme.colorScheme.error,
                   ),
                   title: Text(
-                    iBlocked ? 'Débloquer' : 'Bloquer',
+                    iBlocked ? L.t.debloquer : L.t.bloquer,
                     style: iBlocked
                         ? null
                         : theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
@@ -293,7 +289,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 key: const Key('contact.delete'),
                 leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
                 title: Text(
-                  'Supprimer la discussion',
+                  L.t.supprimerDiscussion,
                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
                 ),
                 onTap: () => chooseDelete(context, ref, summary),
@@ -303,7 +299,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 key: const Key('contact.report'),
                 leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
                 title: Text(
-                  'Signaler ce contact',
+                  L.t.signalerCeContact,
                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
                 ),
                 onTap: () => showReportSheet(

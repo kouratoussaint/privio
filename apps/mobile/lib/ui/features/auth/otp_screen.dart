@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -85,7 +87,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       _startCountdown();
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Un nouveau code vous a été envoyé.')));
+            .showSnackBar(SnackBar(content: Text(L.t.nouveauCodeVousEteEnvoye)));
       }
     } on Object catch (e) {
       if (mounted) setState(() => _error = toAppFailure(e).message);
@@ -97,19 +99,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final theme = Theme.of(context);
     final canResend = _secondsLeft == 0 && !_busy;
     return Scaffold(
-      appBar: AppBar(title: const Text('Code de vérification')),
+      appBar: AppBar(title: Text(L.t.codeVerification)),
       body: FlowLayout(
         bottom: FilledButton(
           key: const Key('otp.submit'),
           onPressed: _busy ? null : _verify,
-          child: _busy ? const Text('Vérification…') : const Text('Valider'),
+          child: _busy ? Text(L.t.verification) : Text(L.t.valider),
         ),
         children: [
           const Center(child: FloatingIcon(icon: Icons.mark_chat_unread_outlined, size: 36)),
           const SizedBox(height: PrivioSpacing.l),
           Text(
-            'Saisissez le code à 6 chiffres envoyé par SMS au '
-            '${PhoneNumber.format(widget.phoneE164)}.',
+            L.t.saisissezCode6ChiffresEnvoye(PhoneNumber.format(widget.phoneE164)),
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: PrivioSpacing.xl),
@@ -127,7 +128,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               if (v.length == OtpScreen.codeLength) _verify();
             },
             decoration: InputDecoration(
-              labelText: 'Code reçu par SMS',
+              labelText: L.t.codeRecuParSms,
               counterText: '',
               errorText: _error,
             ),
@@ -136,16 +137,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           TextButton(
             key: const Key('otp.resend'),
             onPressed: canResend ? _resend : null,
-            child: Text(canResend ? 'Renvoyer le code' : 'Renvoyer le code dans $_secondsLeft s'),
+            child: Text(
+              canResend ? L.t.renvoyerCode : L.t.renvoyerCodeDansSecondsleft(_secondsLeft),
+            ),
           ),
           TextButton(
             onPressed: _busy ? null : () => Navigator.of(context).maybePop(),
-            child: const Text('Modifier le numéro'),
+            child: Text(L.t.modifierNumero),
           ),
           if (canResend) ...[
             const SizedBox(height: PrivioSpacing.s),
             Text(
-              'Toujours rien\u202F? Vérifiez le numéro ou votre réseau, puis renvoyez le code.',
+              L.t.toujoursRienVerifiezNumeroOu,
               key: const Key('otp.help'),
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,

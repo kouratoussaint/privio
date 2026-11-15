@@ -1,3 +1,5 @@
+import 'l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -30,23 +32,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!Env.isConfigured) {
-    runApp(
-      const ConfigErrorApp(
-        reason:
-            'Configuration absente : compilez avec --dart-define=SUPABASE_URL=… '
-            'et --dart-define=SUPABASE_PUBLISHABLE_KEY=… (voir README).',
-      ),
-    );
+    runApp(ConfigErrorApp(reason: L.t.configurationAbsenteCompilezAvecDart));
     return;
   }
   if (Env.publishableKeyLooksSecret) {
-    runApp(
-      const ConfigErrorApp(
-        reason:
-            'Clé refusée : une clé SECRÈTE Supabase ne doit jamais être intégrée à '
-            'l\'application. Utilisez la clé publique (publishable).',
-      ),
-    );
+    runApp(ConfigErrorApp(reason: L.t.cleRefuseeCleSecreteSupabase));
     return;
   }
 

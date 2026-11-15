@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -43,13 +45,13 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
             FilledButton(
               key: const Key('permissions.allow'),
               onPressed: _busy ? null : () => _finish(askNotifications: true),
-              child: const Text('Autoriser les notifications'),
+              child: Text(L.t.autoriserNotifications),
             ),
             const SizedBox(height: PrivioSpacing.s),
             TextButton(
               key: const Key('permissions.later'),
               onPressed: _busy ? null : () => _finish(askNotifications: false),
-              child: const Text('Plus tard'),
+              child: Text(L.t.plusTard),
             ),
           ],
         ),
@@ -64,16 +66,20 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
             ),
           ),
           const SizedBox(height: PrivioSpacing.xl),
-          Text('Restez informé', style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+          Text(
+            L.t.restezInforme,
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: PrivioSpacing.m),
           Text(
-            'Soyez prévenu d’un nouveau message. La notification n’affiche jamais son contenu.',
+            L.t.soyezPrevenuNouveauMessageNotification,
             style: theme.textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: PrivioSpacing.l),
           Text(
-            'Le micro et l’appareil photo ne seront demandés que lorsque vous en aurez besoin.',
+            L.t.microAppareilPhotoNeSeront,
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

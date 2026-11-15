@@ -1,0 +1,11 @@
+# Lot 8.2a : textes de l'application (gabarit français, mooré et dioula à traduire).
+# Le code généré est versionné (lib/l10n/gen) : `flutter gen-l10n` après toute
+# modification d'un fichier .arb.
+arb-dir: lib/l10n
+template-arb-file: app_fr.arb
+output-dir: lib/l10n/gen
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+untranslated-messages-file: build/l10n_non_traduits.json
+format: true

@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,7 +42,7 @@ class MyProfileScreen extends ConsumerWidget {
     }
     final secondary = theme.colorScheme.onSurfaceVariant;
     return Scaffold(
-      appBar: AppBar(title: const Text('Ma fiche')),
+      appBar: AppBar(title: Text(L.t.maFiche)),
       body: SettingsListView(
         children: [
           SettingsCard(
@@ -59,9 +61,7 @@ class MyProfileScreen extends ConsumerWidget {
                   onPressed: () =>
                       editMyAvatar(context, ref, hasAvatar: profile.avatarPath != null),
                   icon: const Icon(Icons.photo_camera_outlined),
-                  label: Text(
-                    profile.avatarPath == null ? 'Ajouter une photo' : 'Changer la photo',
-                  ),
+                  label: Text(profile.avatarPath == null ? L.t.ajouterPhoto : L.t.changerPhoto),
                 ),
               ),
               Text(
@@ -77,13 +77,13 @@ class MyProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SettingsSectionTitle('Profil'),
+          SettingsSectionTitle(L.t.profil),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('my.name'),
                 leading: Icon(Icons.badge_outlined, color: p.accentText),
-                title: const Text('Nom'),
+                title: Text(L.t.nom),
                 subtitle: Text(profile.displayName),
                 trailing: Icon(Icons.edit_outlined, color: secondary),
                 onTap: () => editMyName(context, ref, profile.displayName),
@@ -92,10 +92,10 @@ class MyProfileScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('my.about'),
                 leading: Icon(Icons.info_outline, color: p.accentText),
-                title: const Text('À propos'),
+                title: Text(L.t.propos),
                 subtitle: Text(
                   (profile.about ?? '').isEmpty
-                      ? 'Ajouter un court texte de présentation'
+                      ? L.t.ajouterCourtTextePresentation
                       : profile.about!,
                 ),
                 trailing: Icon(Icons.edit_outlined, color: secondary),
@@ -105,16 +105,16 @@ class MyProfileScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('my.handle'),
                 leading: Icon(Icons.alternate_email, color: p.accentText),
-                title: const Text('Identifiant'),
-                subtitle: Text('@${profile.handle} · ne peut pas être changé'),
+                title: Text(L.t.identifiant),
+                subtitle: Text(L.t.handleNePeutPasEtre(profile.handle)),
               ),
               const SettingsDivider(),
               // Lot 8.1a : QR code de l'identifiant, à faire scanner dans Privio.
               ListTile(
                 key: const Key('my.qr'),
                 leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),
-                title: const Text('Mon QR code'),
-                subtitle: const Text('À faire scanner dans Privio pour vous trouver'),
+                title: Text(L.t.monQrCode),
+                subtitle: Text(L.t.faireScannerDansPrivioPour),
                 trailing: Icon(Icons.chevron_right, color: secondary),
                 onTap: () =>
                     showMyQrCode(context, handle: profile.handle, name: profile.displayName),
@@ -125,10 +125,10 @@ class MyProfileScreen extends ConsumerWidget {
                 ListTile(
                   key: const Key('my.phone'),
                   leading: Icon(Icons.phone_outlined, color: p.accentText),
-                  title: const Text('Numéro'),
+                  title: Text(L.t.numero),
                   subtitle: Text(PhoneNumber.format(account.phoneE164!)),
                   trailing: Text(
-                    'Changer',
+                    L.t.changer,
                     style: theme.textTheme.labelLarge?.copyWith(color: p.accentText),
                   ),
                   onTap: () => Navigator.of(context).push(
@@ -140,14 +140,14 @@ class MyProfileScreen extends ConsumerWidget {
               ],
             ],
           ),
-          const SettingsSectionTitle('Qui voit quoi'),
+          SettingsSectionTitle(L.t.quiVoitQuoi),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('my.privacy'),
                 leading: Icon(Icons.shield_outlined, color: p.accentText),
-                title: const Text('Confidentialité'),
-                subtitle: const Text('Photo, À propos, en ligne… pour tous ou par discussion'),
+                title: Text(L.t.confidentialite),
+                subtitle: Text(L.t.photoProposLignePourTous),
                 trailing: Icon(Icons.chevron_right, color: secondary),
                 onTap: () => context.push(Routes.privacy),
               ),
@@ -171,7 +171,7 @@ Future<void> editMyName(BuildContext context, WidgetRef ref, String current) asy
     await ref.read(accountApiProvider).setDisplayName(text);
     await ref.read(sessionControllerProvider.notifier).refreshAccount();
     ref.read(feedbackProvider).sound(PrivioSound.success);
-    messenger.showSnackBar(successSnack('Nom enregistré.'));
+    messenger.showSnackBar(successSnack(L.t.nomEnregistre));
   } on Object catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
   }
@@ -198,16 +198,12 @@ class _NameDialogState extends State<_NameDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     key: const Key('name.dialog'),
-    title: const Text('Votre nom'),
+    title: Text(L.t.votreNom),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Vos contacts et les membres de vos groupes le voient. Les anciens messages '
-          'd’événements de groupe gardent l’ancien nom.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text(L.t.vosContactsMembresVosGroupes, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: PrivioSpacing.m),
         TextField(
           key: const Key('name.text'),
@@ -215,18 +211,18 @@ class _NameDialogState extends State<_NameDialog> {
           maxLength: 40,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Votre nom'),
+          decoration: InputDecoration(hintText: L.t.votreNom),
         ),
       ],
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(L.t.annuler)),
       ValueListenableBuilder<TextEditingValue>(
         valueListenable: _text,
         builder: (context, v, _) => FilledButton(
           key: const Key('name.save'),
           onPressed: v.text.trim().isEmpty ? null : () => Navigator.pop(context, v.text),
-          child: const Text('Enregistrer'),
+          child: Text(L.t.enregistrer),
         ),
       ),
     ],
@@ -245,7 +241,7 @@ Future<void> editMyAbout(BuildContext context, WidgetRef ref, String? current) a
     await ref.read(accountApiProvider).setAbout(text);
     await ref.read(sessionControllerProvider.notifier).refreshAccount();
     messenger.showSnackBar(
-      successSnack(text.trim().isEmpty ? 'À propos retiré.' : 'À propos enregistré.'),
+      successSnack(text.trim().isEmpty ? L.t.proposRetire : L.t.proposEnregistre),
     );
   } on Object catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
@@ -265,13 +261,13 @@ Future<void> editMyAvatar(BuildContext context, WidgetRef ref, {required bool ha
           ListTile(
             key: const Key('avatar.camera'),
             leading: const Icon(Icons.photo_camera_outlined),
-            title: const Text('Prendre une photo'),
+            title: Text(L.t.prendrePhoto),
             onTap: () => Navigator.pop(ctx, 'camera'),
           ),
           ListTile(
             key: const Key('avatar.gallery'),
             leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Choisir dans la galerie'),
+            title: Text(L.t.choisirDansGalerie),
             onTap: () => Navigator.pop(ctx, 'gallery'),
           ),
           if (hasAvatar)
@@ -279,7 +275,7 @@ Future<void> editMyAvatar(BuildContext context, WidgetRef ref, {required bool ha
               key: const Key('avatar.remove'),
               leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
               title: Text(
-                'Retirer la photo',
+                L.t.retirerPhoto,
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
               onTap: () => Navigator.pop(ctx, 'remove'),
@@ -307,9 +303,7 @@ Future<void> editMyAvatar(BuildContext context, WidgetRef ref, {required bool ha
     await ref.read(sessionControllerProvider.notifier).refreshAccount();
     ref.read(feedbackProvider).sound(PrivioSound.success);
     messenger.showSnackBar(
-      successSnack(
-        choice == 'remove' ? 'Photo de profil retirée.' : 'Photo de profil mise à jour.',
-      ),
+      successSnack(choice == 'remove' ? L.t.photoProfilRetiree : L.t.photoProfilMiseJour),
     );
   } on Object catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
@@ -338,16 +332,12 @@ class AboutDialogBoxState extends State<AboutDialogBox> {
   Widget build(BuildContext context) {
     return AlertDialog(
       key: const Key('about.dialog'),
-      title: const Text('À propos'),
+      title: Text(L.t.propos),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Par exemple\u202F: «\u202FDisponible\u202F», «\u202FAu travail\u202F». Qui le voit se '
-            'règle dans Confidentialité.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(L.t.parExempleDisponibleTravailQui, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: PrivioSpacing.m),
           TextField(
             key: const Key('about.text'),
@@ -357,16 +347,16 @@ class AboutDialogBoxState extends State<AboutDialogBox> {
             minLines: 1,
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Votre court texte'),
+            decoration: InputDecoration(hintText: L.t.votreCourtTexte),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(L.t.annuler)),
         FilledButton(
           key: const Key('about.save'),
           onPressed: () => Navigator.pop(context, _text.text),
-          child: const Text('Enregistrer'),
+          child: Text(L.t.enregistrer),
         ),
       ],
     );
@@ -409,13 +399,12 @@ Future<void> showMyQrCode(
                 data: profileQrData(handle),
                 size: 220,
                 backgroundColor: Colors.white,
-                semanticsLabel: 'Mon QR code Privio',
+                semanticsLabel: L.t.monQrCodePrivio,
               ),
             ),
             const SizedBox(height: PrivioSpacing.l),
             Text(
-              'Pour vous trouver, la personne ouvre Privio\u202F: Nouvelle discussion → '
-              'Scanner un QR code.',
+              L.t.pourVousTrouverPersonneOuvre,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall,
             ),

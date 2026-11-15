@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -94,7 +96,7 @@ class _GifPickerState extends ConsumerState<GifPicker> {
             onSubmitted: (_) => unawaited(_search()),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Rechercher un GIF',
+              hintText: L.t.rechercherGif,
               prefixIcon: const Icon(Icons.search_rounded),
               filled: true,
               fillColor: p.field,
@@ -109,7 +111,7 @@ class _GifPickerState extends ConsumerState<GifPicker> {
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(
-            'GIF fournis par KLIPY',
+            L.t.gifFournisParKlipy,
             key: const Key('gif.attribution'),
             style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
@@ -133,7 +135,7 @@ class _GifPickerState extends ConsumerState<GifPicker> {
               TextButton(
                 key: const Key('gif.retry'),
                 onPressed: () => unawaited(_search()),
-                child: const Text('Réessayer'),
+                child: Text(L.t.reessayer),
               ),
             ],
           ),
@@ -143,7 +145,7 @@ class _GifPickerState extends ConsumerState<GifPicker> {
     if (_items.isEmpty) {
       return Center(
         child: Text(
-          'Aucun GIF trouvé.',
+          L.t.aucunGifTrouve,
           key: const Key('gif.empty'),
           style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),

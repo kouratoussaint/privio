@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoLocalizations;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'ui/features/moderation/moderation_gate.dart';
 import 'ui/features/lock/app_lock_screens.dart';
 import 'state/feedback_providers.dart';
 import 'state/appearance_providers.dart';
+import 'l10n/l10n.dart';
 
 class PrivioApp extends ConsumerWidget {
   const PrivioApp({super.key});
@@ -36,21 +38,35 @@ class PrivioApp extends ConsumerWidget {
     });
     // Lot 8.1a : thème et taille du texte choisis dans Paramètres → Apparence.
     final look = ref.watch(appearanceProvider).value ?? const Appearance();
+    // Lot 8.2a : langue choisie (français par défaut) ; textes accessibles via L.t.
+    final locale = Locale(look.language);
+    L.use(locale);
     return MaterialApp.router(
       title: 'Privio',
       debugShowCheckedModeBanner: false,
       theme: PrivioTheme.light,
       darkTheme: PrivioTheme.dark,
       themeMode: look.themeMode,
-      locale: const Locale('fr'),
-      supportedLocales: const [Locale('fr')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      locale: locale,
+      supportedLocales: [for (final code in kLanguages.keys) Locale(code)],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        FallbackLocalizationsDelegate<MaterialLocalizations>(GlobalMaterialLocalizations.delegate),
+        FallbackLocalizationsDelegate<CupertinoLocalizations>(
+          GlobalCupertinoLocalizations.delegate,
+        ),
+        FallbackLocalizationsDelegate<WidgetsLocalizations>(GlobalWidgetsLocalizations.delegate),
+      ],
       routerConfig: ref.watch(routerProvider),
       // Verrouillage (SEC-004) : recouvre tout, navigateur compris.
       // Modération (lot 5.3) : compte suspendu ou avertissement, sous le verrouillage.
       builder: (context, child) {
-        final app = AppLockGate(
-          child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+        // Lot 8.2a : changer de langue reconstruit tous les écrans (textes lus via L.t).
+        final app = KeyedSubtree(
+          key: ValueKey(look.language),
+          child: AppLockGate(
+            child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+          ),
         );
         if (look.textFactor == 1.0) return app;
         final media = MediaQuery.of(context);

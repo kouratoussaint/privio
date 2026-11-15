@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -45,7 +47,7 @@ class AvatarViewerScreen extends ConsumerWidget {
           if (onEdit != null)
             IconButton(
               key: const Key('avatar.viewer.edit'),
-              tooltip: 'Changer la photo',
+              tooltip: L.t.changerPhoto,
               icon: const Icon(Icons.edit_outlined),
               onPressed: onEdit,
             ),
@@ -57,9 +59,9 @@ class AvatarViewerScreen extends ConsumerWidget {
             maxScale: 4,
             child: Image.memory(value, fit: BoxFit.contain, gaplessPlayback: true),
           ),
-          AsyncError() => const Text(
-            'Photo indisponible.',
-            style: TextStyle(color: Colors.white70),
+          AsyncError() => Text(
+            L.t.photoIndisponible,
+            style: const TextStyle(color: Colors.white70),
           ),
           _ => const CircularProgressIndicator(color: Colors.white),
         },
@@ -110,7 +112,7 @@ class FicheAvatar extends StatelessWidget {
     return Center(
       child: Semantics(
         button: onTap != null,
-        label: p != null ? 'Voir la photo en grand' : 'Photo',
+        label: p != null ? L.t.voirPhotoGrand : L.t.photo,
         child: InkWell(
           key: const Key('fiche.avatar'),
           customBorder: const CircleBorder(),
@@ -180,11 +182,9 @@ class ConversationMediaSection extends ConsumerWidget {
         ListTile(
           key: const Key('fiche.media.all'),
           leading: Icon(Icons.perm_media_outlined, color: p.accentText),
-          title: const Text('Médias'),
+          title: Text(L.t.medias),
           subtitle: Text(
-            media.isEmpty
-                ? 'Aucune photo ni vocal pour l’instant'
-                : '${media.length} élément${media.length > 1 ? 's' : ''} · effacés avec les messages',
+            media.isEmpty ? L.t.aucunePhotoNiVocalPour : L.t.mediaCountErased(media.length),
           ),
           trailing: media.isEmpty ? null : const Icon(Icons.chevron_right),
           onTap: media.isEmpty ? null : openAll,
@@ -304,12 +304,12 @@ class ConversationMediaScreen extends ConsumerWidget {
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Médias')),
+      appBar: AppBar(title: Text(L.t.medias)),
       body: switch (media) {
-        AsyncData(:final value) when value.isEmpty => const EmptyView(
+        AsyncData(:final value) when value.isEmpty => EmptyView(
           icon: Icons.perm_media_outlined,
-          title: 'Aucun média',
-          message: 'Les photos et vocaux s’effacent avec leurs messages.',
+          title: L.t.aucunMedia,
+          message: L.t.photosVocauxEffacentAvecLeurs,
         ),
         AsyncData(:final value) => CustomScrollView(
           key: const Key('media.screen'),
@@ -317,14 +317,11 @@ class ConversationMediaScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(PrivioSpacing.l),
-                child: Text(
-                  'Ils s’effacent avec leurs messages et ne peuvent pas être enregistrés.',
-                  style: theme.textTheme.bodySmall,
-                ),
+                child: Text(L.t.ilsEffacentAvecLeursMessages, style: theme.textTheme.bodySmall),
               ),
             ),
             if (value.any((m) => m.kind == 'photo')) ...[
-              _header(theme, 'Photos'),
+              _header(theme, L.t.photos),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
                 sliver: SliverGrid.count(
@@ -339,7 +336,7 @@ class ConversationMediaScreen extends ConsumerWidget {
               ),
             ],
             if (value.any((m) => m.kind == 'voice')) ...[
-              _header(theme, 'Vocaux'),
+              _header(theme, L.t.vocaux),
               SliverList.list(
                 children: [
                   for (final m in value)
@@ -408,9 +405,9 @@ Future<void> chooseMute(BuildContext context, WidgetRef ref, ConversationSummary
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (label, d) in [
-            ('8 heures', const Duration(hours: 8)),
-            ('1 semaine', const Duration(days: 7)),
-            ('Toujours', const Duration(days: 3650)),
+            (L.t.n8Heures, const Duration(hours: 8)),
+            (L.t.n1Semaine, const Duration(days: 7)),
+            (L.t.toujours, const Duration(days: 3650)),
           ])
             ListTile(
               key: Key('mute.${d.inHours}'),
@@ -420,7 +417,7 @@ Future<void> chooseMute(BuildContext context, WidgetRef ref, ConversationSummary
           if (s.isMuted(now))
             ListTile(
               key: const Key('mute.off'),
-              title: const Text('Réactiver les notifications'),
+              title: Text(L.t.reactiverNotifications),
               onTap: () => Navigator.pop(ctx, Duration.zero),
             ),
         ],
@@ -443,11 +440,11 @@ Future<void> chooseMute(BuildContext context, WidgetRef ref, ConversationSummary
 /// Libellé de l'état des notifications d'une discussion.
 String muteLabel(ConversationSummary s, DateTime now) {
   final until = s.mutedUntil;
-  if (until == null || !until.isAfter(now)) return 'Activées';
-  if (until.difference(now).inDays > 365) return 'Désactivées';
+  if (until == null || !until.isAfter(now)) return L.t.activees;
+  if (until.difference(now).inDays > 365) return L.t.desactivees;
   final l = until.toLocal();
   String two(int n) => n.toString().padLeft(2, '0');
-  return 'Désactivées jusqu’au ${two(l.day)}/${two(l.month)} à ${two(l.hour)}:${two(l.minute)}';
+  return L.t.desactiveesJusquDayMonthHour(two(l.day), two(l.month), two(l.hour), two(l.minute));
 }
 
 // ---------------------------------------------------------------------------
@@ -480,30 +477,26 @@ Future<String?> chooseClear(
               PrivioSpacing.l,
               PrivioSpacing.s,
             ),
-            child: Text('Vider la discussion', style: Theme.of(ctx).textTheme.titleMedium),
+            child: Text(L.t.viderDiscussion, style: Theme.of(ctx).textTheme.titleMedium),
           ),
           if (everyoneAllowed)
             ListTile(
               key: const Key('clear.everyone'),
               leading: const Icon(Icons.group_remove_outlined),
-              title: Text(s.isGroup ? 'Pour tous les membres' : 'Pour nous deux'),
+              title: Text(s.isGroup ? L.t.pourTousMembres : L.t.pourNousDeux),
               subtitle: Text(
                 s.isGroup
-                    ? 'Tous les messages, vocaux et photos disparaissent pour tout le monde, '
-                          'sans laisser de trace.'
-                    : '${s.title} doit accepter. Ensuite tout disparaît des deux côtés, '
-                          'sans laisser de trace.',
+                    ? L.t.tousMessagesVocauxPhotosDisparaissent
+                    : L.t.titleDoitAccepterEnsuiteTout(s.title),
               ),
               onTap: () => Navigator.pop(ctx, 'everyone'),
             ),
           ListTile(
             key: const Key('clear.me'),
             leading: const Icon(Icons.person_remove_outlined),
-            title: const Text('Seulement chez moi'),
+            title: Text(L.t.seulementChezMoi),
             subtitle: Text(
-              s.isGroup
-                  ? 'Votre copie est vidée\u202F; les autres membres gardent leurs messages.'
-                  : 'Votre copie est vidée\u202F; ${s.title} garde ses messages.',
+              s.isGroup ? L.t.votreCopieEstVideeAutres : L.t.votreCopieEstVideeTitle(s.title),
             ),
             onTap: () => Navigator.pop(ctx, 'me'),
           ),
@@ -518,20 +511,16 @@ Future<String?> chooseClear(
     builder: (ctx) => AlertDialog(
       title: Text(
         everyone
-            ? (s.isGroup
-                  ? 'Vider le groupe pour tous\u202F?'
-                  : 'Demander à ${s.title} de tout vider\u202F?')
-            : 'Vider la discussion chez vous\u202F?',
+            ? (s.isGroup ? L.t.viderGroupePourTous : L.t.demanderTitleToutVider(s.title))
+            : L.t.viderDiscussionChezVous,
       ),
       content: Text(
         everyone && !s.isGroup
-            ? 'Si ${s.title} accepte, tous les messages disparaissent définitivement des deux '
-                  'côtés. La demande expire au bout de 24 heures.'
-            : 'Les messages actuels disparaissent définitivement de votre écran. '
-                  'Cette action ne peut pas être annulée.',
+            ? L.t.siTitleAccepteTousMessages(s.title)
+            : L.t.messagesActuelsDisparaissentDefinitivementVotre,
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
         FilledButton(
           key: const Key('clear.confirm'),
           style: FilledButton.styleFrom(
@@ -539,7 +528,7 @@ Future<String?> chooseClear(
             foregroundColor: Theme.of(ctx).colorScheme.onError,
           ),
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(everyone && !s.isGroup ? 'Envoyer la demande' : 'Vider'),
+          child: Text(everyone && !s.isGroup ? L.t.envoyerDemande : L.t.vider),
         ),
       ],
     ),
@@ -561,7 +550,7 @@ Future<String?> chooseClear(
     messenger.showSnackBar(
       SnackBar(
         key: const Key('clear.done'),
-        content: Text(r == 'requested' ? 'Demande envoyée à ${s.title}.' : 'Discussion vidée.'),
+        content: Text(r == 'requested' ? L.t.demandeEnvoyeeTitle(s.title) : L.t.discussionVidee),
       ),
     );
     return r;
@@ -584,11 +573,11 @@ class ConversationPrivacySection extends ConsumerWidget {
   final ConversationSummary summary;
 
   String _title(String key) => switch (key) {
-    'receipts' => 'Accusés de lecture',
-    'typing' => '«\u202FEn train d’écrire\u202F»',
-    'presence' => 'En ligne et «\u202Fvu à\u202F»',
-    'avatar' => 'Photo de profil',
-    _ => 'À propos',
+    'receipts' => L.t.accusesLecture,
+    'typing' => L.t.trainEcrire2,
+    'presence' => L.t.ligneVu,
+    'avatar' => L.t.photoProfil,
+    _ => L.t.propos,
   };
 
   IconData _icon(String key) => switch (key) {
@@ -601,26 +590,24 @@ class ConversationPrivacySection extends ConsumerWidget {
 
   /// Valeur du compte, en clair (« Activés », « Mes contacts »…).
   String _accountValue(String key, PrivacySettings g) => switch (key) {
-    'receipts' => g.readReceipts ? 'activés' : 'désactivés',
-    'typing' => g.typing ? 'activé' : 'désactivé',
+    'receipts' => g.readReceipts ? L.t.actives : L.t.desactives,
+    'typing' => g.typing ? L.t.active : L.t.desactive,
     'presence' => visibilityLabel(g.presence).toLowerCase(),
     'avatar' => visibilityLabel(g.avatar).toLowerCase(),
     _ => visibilityLabel(g.about).toLowerCase(),
   };
 
   (String, String) _choices(String key) => switch (key) {
-    'receipts' => ('Activés', 'Désactivés'),
-    'typing' => ('Activé', 'Désactivé'),
-    _ => ('Montré à ${summary.title}', 'Caché à ${summary.title}'),
+    'receipts' => (L.t.actives2, L.t.desactives2),
+    'typing' => (L.t.active2, L.t.desactive2),
+    _ => (L.t.montreTitle(summary.title), L.t.cacheTitle(summary.title)),
   };
 
   String _label(String key, bool? v, PrivacySettings? g) {
     final (on, off) = _choices(key);
     if (v == true) return on;
     if (v == false) return off;
-    return g == null
-        ? 'Comme dans mes réglages'
-        : 'Comme dans mes réglages (${_accountValue(key, g)})';
+    return g == null ? L.t.commeDansMesReglages : L.t.commeDansMesReglagesG(_accountValue(key, g));
   }
 
   Future<void> _pick(
@@ -658,7 +645,7 @@ class ConversationPrivacySection extends ConsumerWidget {
               RadioListTile<String>(
                 key: Key('conv_privacy.$key.default'),
                 value: 'default',
-                title: const Text('Comme dans mes réglages'),
+                title: Text(L.t.commeDansMesReglages),
                 subtitle: g == null ? null : Text(_accountValue(key, g)),
               ),
               RadioListTile<String>(key: Key('conv_privacy.$key.on'), value: 'on', title: Text(on)),
@@ -745,27 +732,21 @@ Future<String?> chooseDelete(BuildContext context, WidgetRef ref, ConversationSu
                 PrivioSpacing.l,
                 PrivioSpacing.s,
               ),
-              child: Text('Supprimer la discussion', style: Theme.of(ctx).textTheme.titleMedium),
+              child: Text(L.t.supprimerDiscussion, style: Theme.of(ctx).textTheme.titleMedium),
             ),
             if (peerOk)
               ListTile(
                 key: const Key('delete.everyone'),
                 leading: const Icon(Icons.group_remove_outlined),
-                title: const Text('Pour nous deux'),
-                subtitle: Text(
-                  '${s.title} doit accepter. Ensuite la discussion disparaît des deux côtés, '
-                  'sans laisser de trace.',
-                ),
+                title: Text(L.t.pourNousDeux),
+                subtitle: Text(L.t.titleDoitAccepterEnsuiteDiscussion(s.title)),
                 onTap: () => Navigator.pop(ctx, 'everyone'),
               ),
             ListTile(
               key: const Key('delete.me'),
               leading: const Icon(Icons.person_remove_outlined),
-              title: const Text('Seulement chez moi'),
-              subtitle: Text(
-                'Elle disparaît de votre liste et votre copie est effacée. Si ${s.title} vous '
-                'écrit à nouveau, elle revient, vide.',
-              ),
+              title: Text(L.t.seulementChezMoi),
+              subtitle: Text(L.t.elleDisparaitVotreListeVotre(s.title)),
               onTap: () => Navigator.pop(ctx, 'me'),
             ),
           ],
@@ -780,24 +761,20 @@ Future<String?> chooseDelete(BuildContext context, WidgetRef ref, ConversationSu
     builder: (ctx) => AlertDialog(
       title: Text(
         s.isGroup
-            ? 'Supprimer « ${s.title} » pour tous ?'
+            ? L.t.supprimerTitlePourTous(s.title)
             : everyone
-            ? 'Demander à ${s.title} de supprimer la discussion ?'
-            : 'Supprimer la discussion chez vous ?',
+            ? L.t.demanderTitleSupprimerDiscussion(s.title)
+            : L.t.supprimerDiscussionChezVous,
       ),
       content: Text(
         s.isGroup
-            ? 'Tous les messages, photos et vocaux sont effacés et tous les membres sont '
-                  'retirés. Chacun verra « Le groupe a été supprimé ». Cette action ne '
-                  'peut pas être annulée.'
+            ? L.t.tousMessagesPhotosVocauxSont
             : everyone
-            ? 'Si ${s.title} accepte, tous les messages disparaissent définitivement et la '
-                  'discussion est retirée des deux côtés. La demande expire au bout de 24 heures.'
-            : 'Les messages disparaissent définitivement de votre téléphone. Cette action ne '
-                  'peut pas être annulée.',
+            ? L.t.siTitleAccepteTousMessages2(s.title)
+            : L.t.messagesDisparaissentDefinitivementVotreTelephone,
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
         FilledButton(
           key: const Key('delete.confirm'),
           style: FilledButton.styleFrom(
@@ -805,7 +782,7 @@ Future<String?> chooseDelete(BuildContext context, WidgetRef ref, ConversationSu
             foregroundColor: Theme.of(ctx).colorScheme.onError,
           ),
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(everyone && !s.isGroup ? 'Envoyer la demande' : 'Supprimer'),
+          child: Text(everyone && !s.isGroup ? L.t.envoyerDemande : L.t.supprimer),
         ),
       ],
     ),
@@ -821,11 +798,11 @@ Future<String?> chooseDelete(BuildContext context, WidgetRef ref, ConversationSu
       messenger.showSnackBar(
         SnackBar(
           key: const Key('delete.done'),
-          content: Text(s.isGroup ? 'Groupe supprimé.' : 'Discussion supprimée.'),
+          content: Text(s.isGroup ? L.t.groupeSupprime : L.t.discussionSupprimee),
         ),
       );
     } else {
-      messenger.showSnackBar(SnackBar(content: Text('Demande envoyée à ${s.title}.')));
+      messenger.showSnackBar(SnackBar(content: Text(L.t.demandeEnvoyeeTitle(s.title))));
     }
     return r;
   } on Object catch (e) {

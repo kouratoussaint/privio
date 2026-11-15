@@ -1,3 +1,5 @@
+import '../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,18 +39,12 @@ class SessionState {
   }
 }
 
-const kAccountDeletedNotice =
-    'Votre compte Privio a été supprimé, ainsi que vos messages envoyés. Vous pouvez créer '
-    'un nouveau compte à tout moment.';
+String get kAccountDeletedNotice => L.t.votreComptePrivioEteSupprime;
 
 /// Lot 5.4 : téléphone déconnecté par l'assistance (perte ou vol signalé).
-const kSupportDisconnectNotice =
-    'Ce téléphone a été déconnecté par l’assistance Privio. Reconnectez-vous avec votre '
-    'numéro pour continuer.';
+String get kSupportDisconnectNotice => L.t.ceTelephoneEteDeconnectePar;
 
-const kOtherDeviceNotice =
-    'Privio est maintenant ouvert sur un autre téléphone (un seul à la fois). '
-    'Reconnectez-vous pour l’utiliser ici.';
+String get kOtherDeviceNotice => L.t.privioEstMaintenantOuvertSur;
 
 final sessionControllerProvider = AsyncNotifierProvider<SessionController, SessionState>(
   SessionController.new,

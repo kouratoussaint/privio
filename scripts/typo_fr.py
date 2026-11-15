@@ -139,6 +139,33 @@ def process(path, fix):
     return issues
 
 
+def process_arb(path, fix):
+    """Lot 8.2a : textes français sortis du code (app_fr.arb). Mêmes règles, avec le
+    caractère U+202F lui-même. Une clé dont la description contient « typo-fr: ignore »
+    est laissée telle quelle (engagements validés A2)."""
+    import json
+    from collections import OrderedDict
+
+    data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=OrderedDict)
+    issues = []
+    for key, value in list(data.items()):
+        if key.startswith("@") or not isinstance(value, str):
+            continue
+        meta = data.get("@" + key) or {}
+        if IGNORE.split(":")[0] in str(meta.get("description", "")):
+            continue
+        new = value
+        for rx, rep in RULES:
+            new = rx.sub(lambda m, rep=rep: rep(m).replace(NNBSP, "\u202f"), new)
+        new = re.sub(rf"(?<=[{LETTER}])'(?=[{LETTER}])", "’", new)
+        if new != value:
+            issues.append(f"{path}: {key}: {value[:80]}")
+            data[key] = new
+    if fix and issues:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return issues
+
+
 def main():
     if len(sys.argv) < 3 or sys.argv[1] not in ("--check", "--fix"):
         print(__doc__)
@@ -146,7 +173,12 @@ def main():
     fix = sys.argv[1] == "--fix"
     issues = []
     for d in sys.argv[2:]:
+        if d.endswith(".arb"):
+            issues += process_arb(pathlib.Path(d), fix)
+            continue
         for f in sorted(pathlib.Path(d).rglob("*.dart")):
+            if "/l10n/gen/" in str(f):
+                continue
             issues += process(f, fix)
     for line in issues:
         print(line)

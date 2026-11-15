@@ -49,6 +49,6 @@ check "Clé de service uniquement dans les fonctions serveur (jamais dans l'app 
   bash -c "grep -rln 'SUPABASE_SERVICE_ROLE_KEY\|SUPABASE_SECRET_KEYS' apps packages 2>/dev/null || true"
 
 check "Typographie française des textes de l'application (espaces fines, apostrophes ’)" \
-  python3 scripts/typo_fr.py --check apps/mobile/lib/ui apps/mobile/lib/state apps/mobile/lib/core/errors apps/mobile/lib/domain
+  python3 scripts/typo_fr.py --check apps/mobile/lib/ui apps/mobile/lib/state apps/mobile/lib/core/errors apps/mobile/lib/domain apps/mobile/lib/l10n/app_fr.arb
 
 exit $FAIL

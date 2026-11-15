@@ -1,3 +1,5 @@
+import '../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -126,7 +128,7 @@ class _PresenceBeaconState extends ConsumerState<PresenceBeacon> {
 /// « en ligne », « vu aujourd'hui à 14:05 », « vu hier à 09:12 », « vu le 12/11 à 18:40 ».
 String presenceLabel(UserPresence p, DateTime now) {
   if (!p.visible) return '';
-  if (p.online) return 'en ligne';
+  if (p.online) return L.t.ligne;
   final seen = p.lastSeenAt?.toLocal();
   if (seen == null) return '';
   String two(int n) => n.toString().padLeft(2, '0');
@@ -134,7 +136,7 @@ String presenceLabel(UserPresence p, DateTime now) {
   final today = DateTime(now.year, now.month, now.day);
   final day = DateTime(seen.year, seen.month, seen.day);
   final diff = today.difference(day).inDays;
-  if (diff <= 0) return 'vu aujourd’hui à $time';
-  if (diff == 1) return 'vu hier à $time';
-  return 'vu le ${two(seen.day)}/${two(seen.month)} à $time';
+  if (diff <= 0) return L.t.vuAujourdHuiTime(time);
+  if (diff == 1) return L.t.vuHierTime(time);
+  return L.t.vuDayMonthTime(two(seen.day), two(seen.month), time);
 }

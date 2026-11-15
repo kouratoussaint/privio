@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -116,8 +118,9 @@ class _PersonCardState extends ConsumerState<PersonCard> {
   bool _busy = false;
   String? _message;
 
-  String get _name =>
-      _profile?.displayName.isNotEmpty == true ? _profile!.displayName : (widget.name ?? 'Membre');
+  String get _name => _profile?.displayName.isNotEmpty == true
+      ? _profile!.displayName
+      : (widget.name ?? L.t.membre);
   String? get _handle => _profile?.handle ?? widget.handle;
 
   FoundUser get _user => FoundUser(
@@ -216,7 +219,7 @@ class _PersonCardState extends ConsumerState<PersonCard> {
       await _refreshStatus();
       if (!mounted) return;
       ref.read(feedbackProvider).sound(PrivioSound.success);
-      ScaffoldMessenger.of(context).showSnackBar(successSnack('Demande envoyée à $_name.'));
+      ScaffoldMessenger.of(context).showSnackBar(successSnack(L.t.demandeEnvoyeeName(_name)));
     });
   }
 
@@ -239,17 +242,14 @@ class _PersonCardState extends ConsumerState<PersonCard> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Bloquer $_name ?'),
-        content: const Text(
-          'Vous ne pourrez plus vous écrire, dans un sens comme dans l’autre, et cette '
-          'personne ne pourra plus vous trouver. Vous pourrez la débloquer à tout moment.',
-        ),
+        title: Text(L.t.bloquerName(_name)),
+        content: Text(L.t.vousNePourrezPlusVous),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
           FilledButton(
             key: const Key('card.block.confirm'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Bloquer'),
+            child: Text(L.t.bloquer),
           ),
         ],
       ),
@@ -260,7 +260,7 @@ class _PersonCardState extends ConsumerState<PersonCard> {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      messenger.showSnackBar(SnackBar(content: Text('$_name est bloqué.')));
+      messenger.showSnackBar(SnackBar(content: Text(L.t.nameEstBloque(_name))));
     });
   }
 
@@ -274,27 +274,27 @@ class _PersonCardState extends ConsumerState<PersonCard> {
           key: const Key('card.write'),
           onPressed: _busy ? null : _write,
           icon: const Icon(Icons.chat_bubble_outline_rounded),
-          label: const Text('Envoyer un message'),
+          label: Text(L.t.envoyerMessage),
         );
       case LinkState.none:
         return FilledButton.icon(
           key: const Key('card.request'),
           onPressed: _busy || (_handle ?? '').isEmpty ? null : _request,
           icon: const Icon(Icons.person_add_alt_1_outlined),
-          label: const Text('Envoyer une demande'),
+          label: Text(L.t.envoyerDemande2),
         );
       case LinkState.incoming:
         return FilledButton(
           key: const Key('card.accept'),
           onPressed: _busy ? null : _accept,
-          child: const Text('Accepter sa demande'),
+          child: Text(L.t.accepterSaDemande),
         );
       case LinkState.outgoing:
         return Row(
           children: [
             Expanded(
               child: Text(
-                'Demande envoyée, en attente de réponse.',
+                L.t.demandeEnvoyeeAttenteReponse,
                 key: const Key('card.pending'),
                 style: theme.textTheme.bodyMedium,
               ),
@@ -302,7 +302,7 @@ class _PersonCardState extends ConsumerState<PersonCard> {
             TextButton(
               key: const Key('card.cancel'),
               onPressed: _busy ? null : _cancel,
-              child: const Text('Annuler'),
+              child: Text(L.t.annuler),
             ),
           ],
         );
@@ -310,9 +310,11 @@ class _PersonCardState extends ConsumerState<PersonCard> {
         final at = _status?.retryAt?.toLocal();
         final clock = at == null
             ? ''
-            : ' à ${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+            : L.t.atTime(
+                '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}',
+              );
         return Text(
-          '$_name a refusé votre demande. Nouvel essai possible$clock.',
+          L.t.nameRefuseVotreDemandeNouvel(_name, clock),
           key: const Key('card.refused'),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
@@ -379,7 +381,7 @@ class _PersonCardState extends ConsumerState<PersonCard> {
             if (_groups.isNotEmpty) ...[
               const SizedBox(height: PrivioSpacing.l),
               Text(
-                '${_groups.length} groupe${_groups.length > 1 ? 's' : ''} en commun',
+                L.t.groupsInCommon(_groups.length),
                 style: theme.textTheme.labelLarge?.copyWith(color: p.accentText),
               ),
               for (final g in _groups.take(5))
@@ -394,7 +396,7 @@ class _PersonCardState extends ConsumerState<PersonCard> {
                     radius: 18,
                   ),
                   title: Text(g.title),
-                  subtitle: Text('${g.memberCount} membre${g.memberCount > 1 ? 's' : ''}'),
+                  subtitle: Text(L.t.membersCount(g.memberCount)),
                   onTap: () => Navigator.pop(context, PersonOpenChat(g.id)),
                 ),
             ],
@@ -405,8 +407,8 @@ class _PersonCardState extends ConsumerState<PersonCard> {
                 key: const Key('card.manage'),
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.admin_panel_settings_outlined, color: p.accentText),
-                title: const Text('Gérer ce membre'),
-                subtitle: const Text('Administrateur, retrait du groupe'),
+                title: Text(L.t.gererCeMembre),
+                subtitle: Text(L.t.administrateurRetraitGroupe),
                 onTap: () => Navigator.pop(context, const PersonManage()),
               ),
             ListTile(
@@ -414,14 +416,14 @@ class _PersonCardState extends ConsumerState<PersonCard> {
               contentPadding: EdgeInsets.zero,
               enabled: !_busy,
               leading: Icon(Icons.block, color: error),
-              title: Text('Bloquer', style: TextStyle(color: error)),
+              title: Text(L.t.bloquer, style: TextStyle(color: error)),
               onTap: _block,
             ),
             ListTile(
               key: const Key('card.report'),
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.flag_outlined, color: error),
-              title: Text('Signaler', style: TextStyle(color: error)),
+              title: Text(L.t.signaler, style: TextStyle(color: error)),
               onTap: () => showReportSheet(
                 context,
                 reportedUserId: widget.userId,

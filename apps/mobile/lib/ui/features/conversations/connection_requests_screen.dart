@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -26,7 +28,7 @@ class ConnectionRequestsScreen extends ConsumerWidget {
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Demandes de connexion')),
+      appBar: AppBar(title: Text(L.t.demandesConnexion)),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
@@ -43,23 +45,21 @@ class ConnectionRequestsScreen extends ConsumerWidget {
               if (!r.incoming) r,
           ];
           if (incoming.isEmpty && outgoing.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.person_add_alt_1_outlined,
-              title: 'Aucune demande',
-              message:
-                  'Pour écrire à quelqu’un pour la première fois, envoyez-lui une demande '
-                  'depuis «\u202FNouvelle discussion\u202F».',
+              title: L.t.aucuneDemande,
+              message: L.t.pourEcrireQuelquPourPremiere,
             );
           }
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.s),
             children: [
               if (incoming.isNotEmpty) ...[
-                const _Header('Reçues'),
+                _Header(L.t.recues),
                 for (final r in incoming) _IncomingTile(request: r),
               ],
               if (outgoing.isNotEmpty) ...[
-                const _Header('Envoyées'),
+                _Header(L.t.envoyees),
                 for (final r in outgoing) _OutgoingTile(request: r),
               ],
             ],
@@ -99,9 +99,9 @@ class _Header extends StatelessWidget {
 /// Temps restant : « expire dans 23 h », « expire dans 12 min ».
 String _expiresIn(DateTime at) {
   final left = at.difference(DateTime.now());
-  if (left.inMinutes < 1) return 'expire bientôt';
-  if (left.inHours < 1) return 'expire dans ${left.inMinutes} min';
-  return 'expire dans ${left.inHours} h';
+  if (left.inMinutes < 1) return L.t.expireBientot;
+  if (left.inHours < 1) return L.t.expireDansInminutesMin(left.inMinutes);
+  return L.t.expireDansInhoursH(left.inHours);
 }
 
 String _clock(DateTime at) {
@@ -127,17 +127,14 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Bloquer ${r.displayName} ?'),
-          content: const Text(
-            'La demande est refusée et cette personne ne pourra plus vous en envoyer, ni vous '
-            'écrire. Vous pourrez la débloquer dans Paramètres.',
-          ),
+          title: Text(L.t.bloquerDisplayname(r.displayName)),
+          content: Text(L.t.demandeEstRefuseeCettePersonne),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
             FilledButton(
               key: const Key('request.block.confirm'),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Bloquer'),
+              child: Text(L.t.bloquer),
             ),
           ],
         ),
@@ -150,9 +147,9 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
     try {
       final conv = await respondToConnection(ref, r.id, action);
       final done = switch (action) {
-        ConnectionAction.accept => 'Vous êtes connecté avec ${r.displayName}.',
-        ConnectionAction.refuse => 'Demande refusée.',
-        ConnectionAction.block => '${r.displayName} est bloqué.',
+        ConnectionAction.accept => L.t.vousEtesConnecteAvecDisplayname(r.displayName),
+        ConnectionAction.refuse => L.t.demandeRefusee,
+        ConnectionAction.block => L.t.displaynameEstBloque(r.displayName),
       };
       if (action == ConnectionAction.accept) {
         ref.read(feedbackProvider).sound(PrivioSound.success);
@@ -201,14 +198,14 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
                 ),
                 PopupMenuButton<String>(
                   key: Key('request.${r.id}.menu'),
-                  tooltip: 'Plus d’options',
+                  tooltip: L.t.plusOptions,
                   enabled: !_busy,
                   onSelected: (_) => _act(ConnectionAction.block),
-                  itemBuilder: (_) => const [
+                  itemBuilder: (_) => [
                     PopupMenuItem(
-                      key: Key('request.block'),
+                      key: const Key('request.block'),
                       value: 'block',
-                      child: Text('Bloquer'),
+                      child: Text(L.t.bloquer),
                     ),
                   ],
                 ),
@@ -233,7 +230,7 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
                   child: OutlinedButton(
                     key: Key('request.${r.id}.refuse'),
                     onPressed: _busy ? null : () => _act(ConnectionAction.refuse),
-                    child: const Text('Refuser'),
+                    child: Text(L.t.refuser),
                   ),
                 ),
                 const SizedBox(width: PrivioSpacing.m),
@@ -241,7 +238,7 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
                   child: FilledButton(
                     key: Key('request.${r.id}.accept'),
                     onPressed: _busy ? null : () => _act(ConnectionAction.accept),
-                    child: const Text('Accepter'),
+                    child: Text(L.t.accepter),
                   ),
                 ),
               ],
@@ -265,12 +262,12 @@ class _OutgoingTile extends ConsumerWidget {
     final (status, color) = switch (r.status) {
       'refused' => (
         r.retryAt != null && r.retryAt!.isAfter(DateTime.now())
-            ? 'A refusé votre demande · nouvel essai à ${_clock(r.retryAt!)}'
-            : 'A refusé votre demande',
+            ? L.t.refuseVotreDemandeNouvelEssai(_clock(r.retryAt!))
+            : L.t.refuseVotreDemande,
         theme.colorScheme.error,
       ),
-      'expired' => ('Demande expirée, sans réponse', theme.colorScheme.onSurfaceVariant),
-      _ => ('En attente · ${_expiresIn(r.expiresAt)}', theme.colorScheme.onSurfaceVariant),
+      'expired' => (L.t.demandeExpireeSansReponse, theme.colorScheme.onSurfaceVariant),
+      _ => (L.t.attenteExpiresat(_expiresIn(r.expiresAt)), theme.colorScheme.onSurfaceVariant),
     };
     return ListTile(
       key: Key('request.${r.id}'),
@@ -288,14 +285,14 @@ class _OutgoingTile extends ConsumerWidget {
                 final messenger = ScaffoldMessenger.of(context);
                 try {
                   await ref.read(messagingApiProvider).cancelConnectionRequest(r.id);
-                  messenger.showSnackBar(const SnackBar(content: Text('Demande annulée.')));
+                  messenger.showSnackBar(SnackBar(content: Text(L.t.demandeAnnulee)));
                 } on Object catch (e) {
                   messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
                 } finally {
                   ref.invalidate(connectionRequestsProvider);
                 }
               },
-              child: const Text('Annuler'),
+              child: Text(L.t.annuler),
             )
           : null,
     );
@@ -315,8 +312,8 @@ class ConnectionRequestsBanner extends ConsumerWidget {
     final theme = Theme.of(context);
     final p = PrivioPalette.of(context);
     final label = incoming > 0
-        ? (incoming == 1 ? '1 demande de connexion' : '$incoming demandes de connexion')
-        : (refused == 1 ? '1 demande refusée' : '$refused demandes refusées');
+        ? (incoming == 1 ? L.t.n1DemandeConnexion : L.t.incomingDemandesConnexion(incoming))
+        : (refused == 1 ? L.t.n1DemandeRefusee : L.t.refusedDemandesRefusees(refused));
     return Padding(
       padding: const EdgeInsets.fromLTRB(PrivioSpacing.l, PrivioSpacing.xs, PrivioSpacing.l, 0),
       child: Material(

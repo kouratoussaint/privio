@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -69,7 +71,7 @@ class PinPad extends StatelessWidget {
             key('0'),
             _PadButton(
               key: const Key('pin.delete'),
-              label: 'Effacer',
+              label: L.t.effacer,
               onTap: enabled && length > 0 ? onDelete : null,
               child: const Icon(Icons.backspace_outlined),
             ),
@@ -115,7 +117,7 @@ class PinDots extends StatelessWidget {
     final p = PrivioPalette.of(context);
     final c = error ? Theme.of(context).colorScheme.error : p.accentText;
     return Semantics(
-      label: '$filled chiffre${filled > 1 ? 's' : ''} sur $kPinLength',
+      label: L.t.pinProgress(filled, kPinLength),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -346,7 +348,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final ok = await ref.read(appLockProvider.notifier).unlockWithBiometrics();
     if (!ok && !auto && mounted) {
       setState(() {
-        _message = 'Empreinte non reconnue. Saisissez votre code.';
+        _message = L.t.empreinteNonReconnueSaisissezVotre;
         _error = true;
       });
     }
@@ -370,8 +372,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
             ..sound(PrivioSound.pinError)
             ..haptic(Haptic.heavy);
           _message = remainingBeforeWait <= 2
-              ? 'Code incorrect. Encore $remainingBeforeWait essai${remainingBeforeWait > 1 ? 's' : ''} avant une attente.'
-              : 'Code incorrect.';
+              ? L.t.pinWrongAttemptsLeft(remainingBeforeWait)
+              : L.t.codeIncorrect;
         case MustWait():
           _error = true;
           _message = null;
@@ -403,18 +405,18 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                       const AnimatedLogo(size: 64),
                       const SizedBox(height: PrivioSpacing.s),
                       PinEntry(
-                        title: 'Saisissez votre code Privio',
+                        title: L.t.saisissezVotreCodePrivio,
                         error: _error,
                         shake: _misses,
                         enabled: wait == null,
                         message: wait != null
-                            ? 'Trop d’essais. Réessayez dans ${formatWait(remaining!)}.'
+                            ? L.t.tropEssaisReessayezDansRemaining(formatWait(remaining!))
                             : _message,
                         onComplete: _submit,
                         extra: bio
                             ? IconButton(
                                 key: const Key('lock.biometrics'),
-                                tooltip: 'Utiliser l’empreinte',
+                                tooltip: L.t.utiliserEmpreinte,
                                 iconSize: 32,
                                 onPressed: wait == null ? _biometrics : null,
                                 icon: const Icon(Icons.fingerprint),
@@ -425,10 +427,10 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                       TextButton(
                         key: const Key('lock.forgot'),
                         onPressed: () => setState(() => _forgot = true),
-                        child: const Text('Code oublié\u202F?'),
+                        child: Text(L.t.codeOublie),
                       ),
                       Text(
-                        'Le contenu de Privio reste masqué tant que l’application est verrouillée.',
+                        L.t.contenuPrivioResteMasqueTant,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -474,23 +476,17 @@ class _ForgotPanelState extends ConsumerState<_ForgotPanel> {
       children: [
         Icon(Icons.lock_reset, size: 48, color: PrivioPalette.of(context).accentText),
         const SizedBox(height: PrivioSpacing.l),
-        Text('Code oublié', style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
+        Text(L.t.codeOublie2, style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
         const SizedBox(height: PrivioSpacing.m),
-        const Text(
-          'Pour des raisons de sécurité, le code ne peut pas être retrouvé. '
-          'Vous pouvez vous déconnecter\u202F: les messages gardés sur ce téléphone seront effacés, '
-          'puis vous vous reconnecterez avec votre numéro et le code reçu par SMS. '
-          'Vos discussions encore actives réapparaîtront.',
-          textAlign: TextAlign.center,
-        ),
+        Text(L.t.pourRaisonsSecuriteCodeNe, textAlign: TextAlign.center),
         const SizedBox(height: PrivioSpacing.xl),
         FilledButton(
           key: const Key('lock.forgot.signout'),
           style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
           onPressed: _busy ? null : _signOut,
-          child: const Text('Se déconnecter et effacer ce téléphone'),
+          child: Text(L.t.seDeconnecterEffacerCeTelephone),
         ),
-        TextButton(onPressed: _busy ? null : widget.onCancel, child: const Text('Annuler')),
+        TextButton(onPressed: _busy ? null : widget.onCancel, child: Text(L.t.annuler)),
       ],
     );
   }
@@ -500,11 +496,11 @@ class _ForgotPanelState extends ConsumerState<_ForgotPanel> {
 // Écran 23 (partie) — réglages du verrouillage
 // ---------------------------------------------------------------------------
 String delayLabel(int seconds) => switch (seconds) {
-  0 => 'Immédiatement',
-  60 => 'Après 1 minute',
-  300 => 'Après 5 minutes',
-  1800 => 'Après 30 minutes',
-  _ => 'Après ${seconds ~/ 60} min',
+  0 => L.t.immediatement,
+  60 => L.t.apres1Minute,
+  300 => L.t.apres5Minutes,
+  1800 => L.t.apres30Minutes,
+  _ => L.t.apresSecondsMin(seconds ~/ 60),
 };
 
 class AppLockSettingsScreen extends ConsumerWidget {
@@ -539,7 +535,7 @@ class AppLockSettingsScreen extends ConsumerWidget {
     final s = lock.value;
     if (s == null) return Scaffold(appBar: AppBar(), body: const LoadingView());
     return Scaffold(
-      appBar: AppBar(title: const Text('Verrouillage')),
+      appBar: AppBar(title: Text(L.t.verrouillage)),
       body: SettingsListView(
         children: [
           Padding(
@@ -550,8 +546,7 @@ class AppLockSettingsScreen extends ConsumerWidget {
               PrivioSpacing.l,
             ),
             child: Text(
-              'Un code à $kPinLength chiffres, propre à Privio, est demandé à l’ouverture de '
-              'l’application. Il protège vos messages si quelqu’un utilise votre téléphone.',
+              L.t.codeKpinlengthChiffresProprePrivio(kPinLength),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -563,7 +558,7 @@ class AppLockSettingsScreen extends ConsumerWidget {
                 key: const Key('lock.enabled'),
                 value: s.enabled,
                 secondary: Icon(Icons.lock_outline, color: p.accentText),
-                title: const Text('Verrouiller Privio'),
+                title: Text(L.t.verrouillerPrivio),
                 onChanged: (v) =>
                     v ? context.push(Routes.appLockNew) : context.push(Routes.appLockDisable),
               ),
@@ -571,7 +566,7 @@ class AppLockSettingsScreen extends ConsumerWidget {
                 ListTile(
                   key: const Key('lock.delay'),
                   leading: Icon(Icons.timer_outlined, color: p.accentText),
-                  title: const Text('Redemander le code'),
+                  title: Text(L.t.redemanderCode),
                   subtitle: Text(delayLabel(s.config.delaySeconds)),
                   onTap: () => _chooseDelay(context, ref, s.config.delaySeconds),
                 ),
@@ -580,23 +575,20 @@ class AppLockSettingsScreen extends ConsumerWidget {
                     key: const Key('lock.use_biometrics'),
                     value: s.config.biometrics,
                     secondary: Icon(Icons.fingerprint, color: p.accentText),
-                    title: const Text('Déverrouiller avec l’empreinte'),
-                    subtitle: const Text('Le code reste toujours accepté'),
+                    title: Text(L.t.deverrouillerAvecEmpreinte),
+                    subtitle: Text(L.t.codeResteToujoursAccepte),
                     onChanged: (v) => ref.read(appLockProvider.notifier).setBiometrics(v),
                   ),
                 ListTile(
                   key: const Key('lock.change'),
                   leading: Icon(Icons.password, color: p.accentText),
-                  title: const Text('Changer le code'),
+                  title: Text(L.t.changerCode2),
                   onTap: () => context.push(Routes.appLockChange),
                 ),
               ],
             ],
           ),
-          const SettingsNote(
-            'Code oublié\u202F: il faudra vous déconnecter, ce qui efface les messages gardés sur '
-            'ce téléphone. Les captures d’écran restent bloquées dans tous les cas.',
-          ),
+          SettingsNote(L.t.codeOublieIlFaudraVous),
         ],
       ),
     );
@@ -624,10 +616,12 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   bool _error = false;
 
   String get _title => switch (_step) {
-    'current' => 'Code actuel',
+    'current' => L.t.codeActuel,
     'new' =>
-      widget.flow == PinFlow.change ? 'Nouveau code' : 'Choisissez un code à $kPinLength chiffres',
-    _ => 'Confirmez le code',
+      widget.flow == PinFlow.change
+          ? L.t.nouveauCode
+          : L.t.choisissezCodeKpinlengthChiffres(kPinLength),
+    _ => L.t.confirmezCode,
   };
 
   bool _weak(String pin) {
@@ -661,20 +655,21 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
             });
           case WrongPin():
             setState(() {
-              _message = 'Code incorrect.';
+              _message = L.t.codeIncorrect;
               _error = true;
             });
           case MustWait(:final until):
             setState(() {
-              _message =
-                  'Trop d’essais. Réessayez dans ${formatWait(until.difference(DateTime.now()))}.';
+              _message = L.t.tropEssaisReessayezDansNow(
+                formatWait(until.difference(DateTime.now())),
+              );
               _error = true;
             });
         }
       case 'new':
         if (_weak(pin)) {
           setState(() {
-            _message = 'Code trop simple (suite ou chiffres identiques). Choisissez-en un autre.';
+            _message = L.t.codeTropSimpleSuiteOu;
             _error = true;
           });
           return;
@@ -690,7 +685,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
           setState(() {
             _step = 'new';
             _first = null;
-            _message = 'Les deux codes ne correspondent pas. Recommencez.';
+            _message = L.t.deuxCodesNeCorrespondentPas;
             _error = true;
           });
           return;
@@ -703,7 +698,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
         if (!mounted) return;
         ref.read(feedbackProvider).sound(PrivioSound.success);
         ScaffoldMessenger.of(context).showSnackBar(
-          successSnack(widget.flow == PinFlow.create ? 'Verrouillage activé.' : 'Code modifié.'),
+          successSnack(widget.flow == PinFlow.create ? L.t.verrouillageActive : L.t.codeModifie),
         );
         context.pop();
     }
@@ -713,10 +708,10 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(switch (widget.flow) {
-        PinFlow.create => 'Créer un code',
-        PinFlow.change => 'Changer le code',
-        PinFlow.disable => 'Désactiver le verrouillage',
-        PinFlow.confirm => 'Code Privio',
+        PinFlow.create => L.t.creerCode,
+        PinFlow.change => L.t.changerCode2,
+        PinFlow.disable => L.t.desactiverVerrouillage,
+        PinFlow.confirm => L.t.codePrivio,
       }),
     ),
     body: Center(
@@ -725,9 +720,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
         child: PinEntry(
           key: ValueKey(_step),
           title: _title,
-          message:
-              _message ??
-              (_step == 'new' ? 'Évitez votre date de naissance ou une suite simple.' : null),
+          message: _message ?? (_step == 'new' ? L.t.evitezVotreDateNaissanceOu : null),
           error: _error,
           onComplete: _done,
         ),

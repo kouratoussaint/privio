@@ -1,12 +1,15 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/privio_tokens.dart';
 import '../motion/illustrations.dart';
 
 class LoadingView extends StatelessWidget {
-  const LoadingView({super.key, this.label = 'Chargement…'});
+  const LoadingView({super.key, this._label});
 
-  final String label;
+  final String? _label;
+  String get label => _label ?? L.t.chargement;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -34,7 +37,7 @@ class ErrorView extends StatelessWidget {
             Text(message, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: PrivioSpacing.l),
-              FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
+              FilledButton(onPressed: onRetry, child: Text(L.t.reessayer)),
             ],
           ],
         ),
@@ -118,7 +121,7 @@ class NoticeBanner extends StatelessWidget {
                   child: Text(actionLabel!),
                 ),
               if (onClose != null)
-                IconButton(onPressed: onClose, tooltip: 'Fermer', icon: const Icon(Icons.close)),
+                IconButton(onPressed: onClose, tooltip: L.t.fermer, icon: const Icon(Icons.close)),
             ],
           ),
         ),

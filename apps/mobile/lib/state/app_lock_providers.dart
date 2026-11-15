@@ -1,3 +1,5 @@
+import '../l10n/l10n.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -161,7 +163,7 @@ class AppLockController extends AsyncNotifier<AppLockState> {
     if (s == null || !s.locked || !s.config.biometrics || !s.biometricsAvailable) return false;
     _authenticating = true;
     try {
-      final ok = await ref.read(biometricGateProvider).authenticate('Déverrouiller Privio');
+      final ok = await ref.read(biometricGateProvider).authenticate(L.t.deverrouillerPrivio);
       if (ok) {
         await _save(_s.config.copyWith(failures: 0, clearRetry: true), locked: false);
       }
@@ -235,7 +237,7 @@ class AppLockController extends AsyncNotifier<AppLockState> {
 /// Texte d'attente : « 30 s », « 2 min ».
 String formatWait(Duration d) {
   final s = d.inSeconds.clamp(1, 1 << 30);
-  if (s < 60) return '$s s';
+  if (s < 60) return L.t.unitSeconds(s);
   final m = (s / 60).ceil();
-  return '$m min';
+  return L.t.unitMinutes(m);
 }

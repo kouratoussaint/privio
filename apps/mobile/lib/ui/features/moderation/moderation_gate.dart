@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -58,7 +60,7 @@ class ModerationGate extends ConsumerWidget {
 String _when(DateTime t) {
   final l = t.toLocal();
   String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(l.day)}/${two(l.month)}/${l.year} à ${two(l.hour)}:${two(l.minute)}';
+  return L.t.dayMonthYearHourMinute(two(l.day), two(l.month), l.year, two(l.hour), two(l.minute));
 }
 
 class _SuspendedView extends ConsumerStatefulWidget {
@@ -113,34 +115,27 @@ class _SuspendedViewState extends ConsumerState<_SuspendedView> {
                 Icon(Icons.block, size: 56, color: theme.colorScheme.error),
                 const SizedBox(height: PrivioSpacing.l),
                 Text(
-                  'Compte suspendu',
+                  L.t.compteSuspendu,
                   style: theme.textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: PrivioSpacing.s),
                 Text(
-                  s.until == null ? 'Sans limite de durée' : 'Jusqu’au ${_when(s.until!)}',
+                  s.until == null ? L.t.sansLimiteDuree : L.t.jusquUntil(_when(s.until!)),
                   key: const Key('moderation.until'),
                   style: theme.textTheme.titleMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: PrivioSpacing.l),
                 Text(
-                  'L’équipe Privio a suspendu votre compte à la suite de signalements '
-                  '(motif : ${reasonLabel(s.reason).toLowerCase()}). Pendant la suspension, '
-                  'vous ne pouvez ni lire ni envoyer de messages. Vos messages déjà envoyés '
-                  's’effacent normalement.',
+                  L.t.equipePrivioSuspenduVotreCompte(reasonLabel(s.reason).toLowerCase()),
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: PrivioSpacing.xl),
                 if (!s.appealed) ...[
-                  Text('Contester', style: theme.textTheme.titleSmall),
+                  Text(L.t.contester, style: theme.textTheme.titleSmall),
                   const SizedBox(height: PrivioSpacing.xs),
-                  Text(
-                    'Expliquez pourquoi la sanction vous semble injustifiée. Une seule '
-                    'contestation est possible.',
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  Text(L.t.expliquezPourquoiSanctionVousSemble, style: theme.textTheme.bodySmall),
                   const SizedBox(height: PrivioSpacing.s),
                   TextField(
                     key: const Key('moderation.appeal'),
@@ -150,12 +145,12 @@ class _SuspendedViewState extends ConsumerState<_SuspendedView> {
                     maxLines: 6,
                     textCapitalization: TextCapitalization.sentences,
                     onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(hintText: 'Votre explication', errorText: _error),
+                    decoration: InputDecoration(hintText: L.t.votreExplication, errorText: _error),
                   ),
                   FilledButton(
                     key: const Key('moderation.appeal.send'),
                     onPressed: _sending || _text.text.trim().length < 3 ? null : _appeal,
-                    child: const Text('Envoyer ma contestation'),
+                    child: Text(L.t.envoyerMaContestation),
                   ),
                 ] else
                   Card(
@@ -163,8 +158,8 @@ class _SuspendedViewState extends ConsumerState<_SuspendedView> {
                       padding: const EdgeInsets.all(PrivioSpacing.l),
                       child: Text(
                         s.appealDecision == 'upheld'
-                            ? 'Contestation examinée : la suspension est maintenue.'
-                            : 'Contestation envoyée : l’équipe Privio l’examine.',
+                            ? L.t.contestationExamineeSuspensionEstMaintenue
+                            : L.t.contestationEnvoyeeEquipePrivioExamine,
                         key: const Key('moderation.appeal.state'),
                       ),
                     ),
@@ -174,7 +169,7 @@ class _SuspendedViewState extends ConsumerState<_SuspendedView> {
                   key: const Key('moderation.signout'),
                   onPressed: () =>
                       unawaited(ref.read(sessionControllerProvider.notifier).signOut()),
-                  child: const Text('Se déconnecter'),
+                  child: Text(L.t.seDeconnecter),
                 ),
               ],
             ),
@@ -225,21 +220,19 @@ class _WarningViewState extends ConsumerState<_WarningView> {
                 children: [
                   Icon(Icons.report_outlined, size: 40, color: theme.colorScheme.primary),
                   const SizedBox(height: PrivioSpacing.m),
-                  Text('Message de l’équipe Privio', style: theme.textTheme.titleLarge),
+                  Text(L.t.messageEquipePrivio, style: theme.textTheme.titleLarge),
                   const SizedBox(height: PrivioSpacing.m),
                   Text(
-                    'Votre compte a fait l’objet de signalements '
-                    '(motif : ${reasonLabel(widget.w.reason).toLowerCase()}). Merci de '
-                    'respecter les règles de Privio : pas de spam, de harcèlement, de menaces '
-                    'ni de contenu inapproprié. En cas de récidive, votre compte pourra être '
-                    'suspendu.',
+                    L.t.votreCompteFaitObjetSignalements(
+                      reasonLabel(widget.w.reason).toLowerCase(),
+                    ),
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: PrivioSpacing.xl),
                   FilledButton(
                     key: const Key('moderation.warning.ack'),
                     onPressed: _busy ? null : _ack,
-                    child: const Text('J’ai compris'),
+                    child: Text(L.t.jAiCompris),
                   ),
                 ],
               ),

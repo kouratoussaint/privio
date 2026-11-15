@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -135,9 +137,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
 
   void _failed() {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('La retouche n’a pas pu être appliquée. Réessayez.')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(L.t.retoucheNPasPuEtre)));
   }
 
   Future<void> _apply(PhotoEdit Function(Uint8List bytes) op) async {
@@ -257,23 +257,23 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           key: const Key('editor.cancel'),
-          tooltip: 'Annuler la retouche',
+          tooltip: L.t.annulerRetouche,
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.close),
         ),
-        title: const Text('Retoucher'),
+        title: Text(L.t.retoucher),
         actions: [
           if (_strokes.isNotEmpty)
             IconButton(
               key: const Key('editor.undo'),
-              tooltip: 'Annuler le dernier trait',
+              tooltip: L.t.annulerDernierTrait,
               onPressed: () => setState(_strokes.removeLast),
               icon: const Icon(Icons.undo),
             ),
           TextButton(
             key: const Key('editor.done'),
             onPressed: _busy || _tool == _Tool.crop ? null : _done,
-            child: const Text('Terminé', style: TextStyle(color: Colors.white)),
+            child: Text(L.t.termine, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -307,7 +307,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                                 _photo.bytes,
                                 fit: BoxFit.fill,
                                 gaplessPlayback: true,
-                                semanticLabel: 'Photo à retoucher',
+                                semanticLabel: L.t.photoRetoucher,
                               ),
                               CustomPaint(painter: _StrokesPainter(_strokes)),
                               if (_tool == _Tool.crop) CustomPaint(painter: _CropPainter(_crop)),
@@ -370,7 +370,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                               _tool = _Tool.none;
                               _crop = const Rect.fromLTRB(0, 0, 1, 1);
                             }),
-                            child: const Text('Annuler'),
+                            child: Text(L.t.annuler),
                           ),
                         ),
                         const SizedBox(width: PrivioSpacing.m),
@@ -389,7 +389,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                                       setState(() => _crop = const Rect.fromLTRB(0, 0, 1, 1));
                                     }
                                   },
-                            child: const Text('Recadrer'),
+                            child: Text(L.t.recadrer),
                           ),
                         ),
                       ],
@@ -400,19 +400,19 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                         _ToolButton(
                           key: const Key('editor.rotate'),
                           icon: Icons.rotate_left_rounded,
-                          label: 'Pivoter',
+                          label: L.t.pivoter,
                           onTap: _busy ? null : () => _apply(PhotoEdit.rotate),
                         ),
                         _ToolButton(
                           key: const Key('editor.crop'),
                           icon: Icons.crop_rounded,
-                          label: 'Recadrer',
+                          label: L.t.recadrer,
                           onTap: _busy ? null : () => setState(() => _tool = _Tool.crop),
                         ),
                         _ToolButton(
                           key: const Key('editor.draw'),
                           icon: Icons.brush_rounded,
-                          label: 'Dessiner',
+                          label: L.t.dessiner,
                           selected: _tool == _Tool.draw,
                           onTap: _busy
                               ? null
@@ -427,7 +427,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: PrivioSpacing.s),
                 child: Text(
-                  'Dessinez sur la photo avec le doigt.',
+                  L.t.dessinezSurPhotoAvecDoigt,
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                 ),
               ),

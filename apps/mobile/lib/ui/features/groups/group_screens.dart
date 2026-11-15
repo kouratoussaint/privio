@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -96,9 +98,9 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
         user = await api.findByHandle(handle);
       }
       if (user == null) {
-        setState(() => _message = 'Aucun compte ne correspond.');
+        setState(() => _message = L.t.aucunCompteNeCorrespond);
       } else if (widget.exclude.contains(user.id)) {
-        setState(() => _message = '${user!.displayName} fait déjà partie du groupe.');
+        setState(() => _message = L.t.displaynameFaitDejaPartieGroupe(user!.displayName));
       } else {
         _search.clear();
         if (!widget.selected.containsKey(user.id)) _toggle(user);
@@ -137,11 +139,11 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _find(),
           decoration: InputDecoration(
-            hintText: 'Identifiant Privio (ex. awa_s) ou numéro',
+            hintText: L.t.identifiantPrivioExAwaOu,
             prefixIcon: const Icon(Icons.person_search_outlined),
             suffixIcon: IconButton(
               key: const Key('picker.submit'),
-              tooltip: 'Ajouter',
+              tooltip: L.t.ajouter,
               onPressed: _busy ? null : _find,
               icon: const Icon(Icons.add_circle_outline),
             ),
@@ -159,7 +161,7 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
           ),
         const SizedBox(height: PrivioSpacing.m),
         if (contacts.isNotEmpty || extra.isNotEmpty)
-          Text('Vos contacts', style: theme.textTheme.labelLarge),
+          Text(L.t.vosContacts, style: theme.textTheme.labelLarge),
         for (final u in [...extra, ...contacts])
           CheckboxListTile(
             key: Key('picker.user.${u.id}'),
@@ -178,7 +180,7 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
         Padding(
           padding: const EdgeInsets.only(top: PrivioSpacing.s),
           child: Text(
-            'Chaque personne reçoit une invitation et choisit de rejoindre le groupe ou non.',
+            L.t.chaquePersonneRecoitInvitationChoisit,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ),
@@ -189,9 +191,9 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
 
 /// Confirmation après création (lot 4.8).
 String createdGroupMessage(int invited) => switch (invited) {
-  0 => 'Groupe créé',
-  1 => 'Groupe créé · 1 invitation envoyée',
-  _ => 'Groupe créé · $invited invitations envoyées',
+  0 => L.t.groupeCree,
+  1 => L.t.groupeCree1InvitationEnvoyee,
+  _ => L.t.groupeCreeInvitedInvitationsEnvoyees(invited),
 };
 
 // ---------------------------------------------------------------------------
@@ -231,20 +233,20 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
             ListTile(
               key: const Key('new_group.photo.camera'),
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Prendre une photo'),
+              title: Text(L.t.prendrePhoto),
               onTap: () => Navigator.pop(ctx, 'camera'),
             ),
             ListTile(
               key: const Key('new_group.photo.gallery'),
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir dans la galerie'),
+              title: Text(L.t.choisirDansGalerie),
               onTap: () => Navigator.pop(ctx, 'gallery'),
             ),
             if (_photo != null)
               ListTile(
                 key: const Key('new_group.photo.remove'),
                 leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
-                title: const Text('Retirer la photo'),
+                title: Text(L.t.retirerPhoto),
                 onTap: () => Navigator.pop(ctx, 'remove'),
               ),
           ],
@@ -310,12 +312,7 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
       context.pushReplacement(Routes.chat(id));
       messenger.showSnackBar(
         photoFailed
-            ? const SnackBar(
-                key: Key('group.created'),
-                content: Text(
-                  'Groupe créé. La photo n’a pas pu être ajoutée\u202F: réessayez depuis la fiche.',
-                ),
-              )
+            ? SnackBar(key: const Key('group.created'), content: Text(L.t.groupeCreePhotoNPas))
             : successSnack(createdGroupMessage(invited), key: const Key('group.created')),
       );
     } on Object catch (e) {
@@ -329,7 +326,7 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
   Widget build(BuildContext context) => Scaffold(
     // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
     backgroundColor: PrivioPalette.of(context).sheet,
-    appBar: AppBar(title: const Text('Nouveau groupe')),
+    appBar: AppBar(title: Text(L.t.nouveauGroupe)),
     body: ListView(
       padding: const EdgeInsets.all(PrivioSpacing.xl),
       children: [
@@ -341,9 +338,7 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
               padding: const EdgeInsets.only(top: 4, right: PrivioSpacing.m),
               child: Semantics(
                 button: true,
-                label: _photo == null
-                    ? 'Ajouter une photo du groupe'
-                    : 'Changer la photo du groupe',
+                label: _photo == null ? L.t.ajouterPhotoGroupe : L.t.changerPhotoGroupe,
                 child: InkWell(
                   key: const Key('new_group.photo'),
                   customBorder: const CircleBorder(),
@@ -390,7 +385,7 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
                 controller: _title,
                 maxLength: 60,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(labelText: 'Nom du groupe'),
+                decoration: InputDecoration(labelText: L.t.nomGroupe),
               ),
             ),
           ],
@@ -402,10 +397,10 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
           maxLines: 3,
           minLines: 1,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Description (facultative)'),
+          decoration: InputDecoration(labelText: L.t.descriptionFacultative),
         ),
         const SizedBox(height: PrivioSpacing.l),
-        Text('Inviter', style: Theme.of(context).textTheme.titleMedium),
+        Text(L.t.inviter, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: PrivioSpacing.s),
         MemberPicker(selected: _selected, onChanged: (s) => setState(() => _selected = s)),
         const SizedBox(height: PrivioSpacing.xl),
@@ -413,23 +408,19 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
           key: const Key('group.create'),
           onPressed: _busy ? null : _create,
           child: _busy
-              ? const Row(
-                  key: Key('group.creating'),
+              ? Row(
+                  key: const Key('group.creating'),
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox.square(
+                    const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    SizedBox(width: PrivioSpacing.m),
-                    Flexible(child: Text('Création du groupe…')),
+                    const SizedBox(width: PrivioSpacing.m),
+                    Flexible(child: Text(L.t.creationGroupe)),
                   ],
                 )
-              : Text(
-                  _selected.isEmpty
-                      ? 'Créer le groupe'
-                      : 'Créer et inviter ${_selected.length} personne${_selected.length > 1 ? 's' : ''}',
-                ),
+              : Text(_selected.isEmpty ? L.t.creerGroupe : L.t.createAndInvite(_selected.length)),
         ),
       ],
     ),
@@ -461,12 +452,7 @@ class _InviteMembersScreenState extends ConsumerState<InviteMembersScreen> {
         (api) => api.inviteToGroup(widget.conversationId, _selected.keys.toList()),
       );
       if (!mounted) return;
-      _toast(
-        context,
-        n == 0
-            ? 'Aucune invitation envoyée (déjà membres ou invités).'
-            : '$n invitation${n > 1 ? 's' : ''} envoyée${n > 1 ? 's' : ''}.',
-      );
+      _toast(context, n == 0 ? L.t.aucuneInvitationEnvoyeeDejaMembres : L.t.invitationsSent(n));
       context.pop();
     } on Object catch (e) {
       if (mounted) _toast(context, toAppFailure(e).message);
@@ -481,7 +467,7 @@ class _InviteMembersScreenState extends ConsumerState<InviteMembersScreen> {
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Inviter')),
+      appBar: AppBar(title: Text(L.t.inviter)),
       body: ListView(
         padding: const EdgeInsets.all(PrivioSpacing.xl),
         children: [
@@ -494,7 +480,7 @@ class _InviteMembersScreenState extends ConsumerState<InviteMembersScreen> {
           FilledButton(
             key: const Key('invite.send'),
             onPressed: _busy || _selected.isEmpty ? null : _invite,
-            child: Text('Inviter ${_selected.length} personne${_selected.length > 1 ? 's' : ''}'),
+            child: Text(L.t.invitePeople(_selected.length)),
           ),
         ],
       ),
@@ -545,7 +531,7 @@ class GroupInfoScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Modifier le groupe'),
+        title: Text(L.t.modifierGroupe),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -553,7 +539,7 @@ class GroupInfoScreen extends ConsumerWidget {
               key: const Key('group.edit.title'),
               controller: title,
               maxLength: 60,
-              decoration: const InputDecoration(labelText: 'Nom du groupe'),
+              decoration: InputDecoration(labelText: L.t.nomGroupe),
             ),
             TextField(
               key: const Key('group.edit.description'),
@@ -561,16 +547,16 @@ class GroupInfoScreen extends ConsumerWidget {
               maxLength: 300,
               maxLines: 3,
               minLines: 1,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(labelText: L.t.description),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
           FilledButton(
             key: const Key('group.edit.save'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Enregistrer'),
+            child: Text(L.t.enregistrer),
           ),
         ],
       ),
@@ -599,20 +585,20 @@ class GroupInfoScreen extends ConsumerWidget {
             ListTile(
               key: const Key('group.photo.camera'),
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Prendre une photo'),
+              title: Text(L.t.prendrePhoto),
               onTap: () => Navigator.pop(ctx, 'camera'),
             ),
             ListTile(
               key: const Key('group.photo.gallery'),
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir dans la galerie'),
+              title: Text(L.t.choisirDansGalerie),
               onTap: () => Navigator.pop(ctx, 'gallery'),
             ),
             if (s.groupAvatarPath != null)
               ListTile(
                 key: const Key('group.photo.remove'),
                 leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
-                title: const Text('Retirer la photo'),
+                title: Text(L.t.retirerPhoto),
                 onTap: () => Navigator.pop(ctx, 'remove'),
               ),
           ],
@@ -658,21 +644,21 @@ class GroupInfoScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('member.make_admin'),
                 leading: const Icon(Icons.shield_outlined),
-                title: const Text('Nommer administrateur'),
+                title: Text(L.t.nommerAdministrateur),
                 onTap: () => Navigator.pop(ctx, 'admin'),
               ),
             if (m.role == 'admin' && s.isOwner)
               ListTile(
                 key: const Key('member.remove_admin'),
                 leading: const Icon(Icons.remove_moderator_outlined),
-                title: const Text('Retirer le rôle d’administrateur'),
+                title: Text(L.t.retirerRoleAdministrateur),
                 onTap: () => Navigator.pop(ctx, 'member'),
               ),
             if (s.isOwner)
               ListTile(
                 key: const Key('member.transfer'),
                 leading: const Icon(Icons.workspace_premium_outlined),
-                title: const Text('Nommer propriétaire'),
+                title: Text(L.t.nommerProprietaire),
                 onTap: () => Navigator.pop(ctx, 'transfer'),
               ),
             if (m.role == 'member' || (m.role == 'admin' && s.isOwner))
@@ -680,7 +666,7 @@ class GroupInfoScreen extends ConsumerWidget {
                 key: const Key('member.remove'),
                 leading: Icon(Icons.person_remove_outlined, color: Theme.of(ctx).colorScheme.error),
                 title: Text(
-                  'Retirer du groupe',
+                  L.t.retirerGroupe,
                   style: TextStyle(color: Theme.of(ctx).colorScheme.error),
                 ),
                 onTap: () => Navigator.pop(ctx, 'remove'),
@@ -696,20 +682,20 @@ class GroupInfoScreen extends ConsumerWidget {
         builder: (ctx) => AlertDialog(
           title: Text(
             action == 'remove'
-                ? 'Retirer ${m.displayName}\u202F?'
-                : 'Confier le groupe à ${m.displayName}\u202F?',
+                ? L.t.retirerDisplayname(m.displayName)
+                : L.t.confierGroupeDisplayname(m.displayName),
           ),
           content: Text(
             action == 'remove'
-                ? '${m.displayName} ne verra plus les messages du groupe.'
-                : 'Vous resterez administrateur.',
+                ? L.t.displaynameNeVerraPlusMessages(m.displayName)
+                : L.t.vousResterezAdministrateur,
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
             FilledButton(
               key: const Key('member.confirm'),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Confirmer'),
+              child: Text(L.t.confirmer),
             ),
           ],
         ),
@@ -739,8 +725,8 @@ class GroupInfoScreen extends ConsumerWidget {
     final rules = ref.read(messagingRulesProvider).value ?? const MessagingRules();
     final picked = await showTtlPicker(
       context,
-      title: 'Durée des messages',
-      help: 'Pour les prochains messages du groupe.',
+      title: L.t.dureeMessages,
+      help: L.t.pourProchainsMessagesGroupe,
       current: s.ttlSeconds,
       min: rules.minTtlSeconds,
       max: rules.maxTtlSeconds,
@@ -764,9 +750,9 @@ class GroupInfoScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             for (final (label, d) in [
-              ('8 heures', const Duration(hours: 8)),
-              ('1 semaine', const Duration(days: 7)),
-              ('Toujours', const Duration(days: 3650)),
+              (L.t.n8Heures, const Duration(hours: 8)),
+              (L.t.n1Semaine, const Duration(days: 7)),
+              (L.t.toujours, const Duration(days: 3650)),
             ])
               ListTile(
                 key: Key('mute.${d.inHours}'),
@@ -776,7 +762,7 @@ class GroupInfoScreen extends ConsumerWidget {
             if (s.isMuted(now))
               ListTile(
                 key: const Key('mute.off'),
-                title: const Text('Réactiver les notifications'),
+                title: Text(L.t.reactiverNotifications),
                 onTap: () => Navigator.pop(ctx, Duration.zero),
               ),
           ],
@@ -817,7 +803,7 @@ class GroupInfoScreen extends ConsumerWidget {
         ..invalidate(groupJoinRequestsProvider(conversationId))
         ..invalidate(groupJoinSettingsProvider(conversationId));
     }
-  }, done: approve ? '${r.displayName} a rejoint le groupe.' : 'Demande refusée.');
+  }, done: approve ? L.t.displaynameRejointGroupe(r.displayName) : L.t.demandeRefusee);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -838,7 +824,7 @@ class GroupInfoScreen extends ConsumerWidget {
 
     // Lot 7.2a : une carte blanche par partie, comme Paramètres.
     return Scaffold(
-      appBar: AppBar(title: const Text('Infos')),
+      appBar: AppBar(title: Text(L.t.infos)),
       body: SettingsListView(
         children: [
           SettingsCard(
@@ -860,15 +846,13 @@ class GroupInfoScreen extends ConsumerWidget {
                     key: const Key('group.photo.edit'),
                     onPressed: () => _editPhoto(context, ref, s),
                     icon: const Icon(Icons.photo_camera_outlined),
-                    label: Text(
-                      s.groupAvatarPath == null ? 'Ajouter une photo' : 'Changer la photo',
-                    ),
+                    label: Text(s.groupAvatarPath == null ? L.t.ajouterPhoto : L.t.changerPhoto),
                   ),
                 ),
               const SizedBox(height: PrivioSpacing.l),
               Text(s.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
               Text(
-                '${s.memberCount} membre${s.memberCount > 1 ? 's' : ''}',
+                L.t.membersCount(s.memberCount),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -885,18 +869,18 @@ class GroupInfoScreen extends ConsumerWidget {
                     key: const Key('group.edit'),
                     onPressed: () => _editInfo(context, ref, s),
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Modifier le nom ou la description'),
+                    label: Text(L.t.modifierNomOuDescription),
                   ),
                 ),
             ],
           ),
-          const SettingsSectionTitle('Discussion'),
+          SettingsSectionTitle(L.t.discussion),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('group.ttl'),
                 leading: Icon(Icons.timer_outlined, color: p.accentText),
-                title: const Text('Durée des messages'),
+                title: Text(L.t.dureeMessages),
                 subtitle: Text(formatTtl(s.ttlSeconds)),
                 trailing: s.canEditInfo ? const Icon(Icons.chevron_right) : null,
                 onTap: s.canEditInfo ? () => _ttl(context, ref, s) : null,
@@ -908,8 +892,10 @@ class GroupInfoScreen extends ConsumerWidget {
                   s.isMuted(now) ? Icons.notifications_off_outlined : Icons.notifications_outlined,
                   color: p.accentText,
                 ),
-                title: const Text('Sourdine'),
-                subtitle: Text(s.isMuted(now) ? 'Notifications coupées' : 'Notifications actives'),
+                title: Text(L.t.sourdine),
+                subtitle: Text(
+                  s.isMuted(now) ? L.t.notificationsCoupees : L.t.notificationsActives,
+                ),
                 onTap: () => _mute(context, ref, s),
               ),
               // Lot 7.2c2 : notifié seulement quand on vous @mentionne.
@@ -919,7 +905,7 @@ class GroupInfoScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('group.clear'),
                 leading: Icon(Icons.cleaning_services_outlined, color: p.accentText),
-                title: const Text('Vider la discussion'),
+                title: Text(L.t.viderDiscussion),
                 trailing: const Icon(Icons.chevron_right),
                 // Lot 7.2a : le choix s'ouvre ici, on reste sur la fiche.
                 onTap: () => chooseClear(context, ref, s),
@@ -929,7 +915,7 @@ class GroupInfoScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('fiche.wallpaper'),
                 leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
-                title: const Text('Fond d’écran'),
+                title: Text(L.t.fondEcran),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -939,7 +925,7 @@ class GroupInfoScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SettingsSectionTitle('Médias'),
+          SettingsSectionTitle(L.t.medias),
           SettingsCard(
             children: [
               ConversationMediaSection(conversationId: s.id, title: s.title),
@@ -947,18 +933,18 @@ class GroupInfoScreen extends ConsumerWidget {
               FavoritesRow(conversationId: s.id, title: s.title),
             ],
           ),
-          const SettingsSectionTitle('Confidentialité dans ce groupe'),
+          SettingsSectionTitle(L.t.confidentialiteDansCeGroupe),
           SettingsCard(children: [ConversationPrivacySection(summary: s)]),
           // Groupe fermé par Privio (lot 5.3) : plus de réglage d'écriture ni d'invitation.
           if (admin) ...[
-            const SettingsSectionTitle('Réglages du groupe'),
+            SettingsSectionTitle(L.t.reglagesGroupe),
             SettingsCard(
               children: [
                 SwitchListTile(
                   key: const Key('group.posting'),
                   value: s.posting == 'admins',
                   secondary: Icon(Icons.campaign_outlined, color: p.accentText),
-                  title: const Text('Seuls les administrateurs écrivent'),
+                  title: Text(L.t.seulsAdministrateursEcrivent),
                   onChanged: (v) => _run(
                     context,
                     ref,
@@ -974,8 +960,8 @@ class GroupInfoScreen extends ConsumerWidget {
                   key: const Key('group.info_editing'),
                   value: s.infoEditing == 'admins',
                   secondary: Icon(Icons.edit_note, color: p.accentText),
-                  title: const Text('Seuls les administrateurs modifient le groupe'),
-                  subtitle: const Text('Nom, description, photo et durée des messages'),
+                  title: Text(L.t.seulsAdministrateursModifientGroupe),
+                  subtitle: Text(L.t.nomDescriptionPhotoDureeMessages),
                   onChanged: (v) => _run(
                     context,
                     ref,
@@ -993,11 +979,11 @@ class GroupInfoScreen extends ConsumerWidget {
                   key: const Key('group.join_approval'),
                   value: joinSettings?.approvalRequired ?? true,
                   secondary: Icon(Icons.how_to_reg_outlined, color: p.accentText),
-                  title: const Text('Approuver les nouveaux membres'),
+                  title: Text(L.t.approuverNouveauxMembres),
                   subtitle: Text(
                     joinSettings?.approvalRequired ?? true
-                        ? 'Avec le code, on envoie une demande à accepter'
-                        : 'Avec le code, on entre directement',
+                        ? L.t.avecCodeOnEnvoieDemande
+                        : L.t.avecCodeOnEntreDirectement,
                   ),
                   onChanged: joinSettings == null
                       ? null
@@ -1013,7 +999,7 @@ class GroupInfoScreen extends ConsumerWidget {
           ],
           if (admin && requests.isNotEmpty) ...[
             SettingsSectionTitle(
-              'Demandes pour rejoindre (${requests.length})',
+              L.t.demandesPourRejoindreRequestscount(requests.length),
               key: const Key('group.join_requests'),
             ),
             SettingsCard(
@@ -1026,7 +1012,7 @@ class GroupInfoScreen extends ConsumerWidget {
                     subtitle: Text(
                       [
                         if (r.handle != null) '@${r.handle}',
-                        if (r.wasRemoved) 'déjà retiré du groupe',
+                        if (r.wasRemoved) L.t.dejaRetireGroupe,
                       ].join(' · '),
                     ),
                     trailing: Row(
@@ -1034,13 +1020,13 @@ class GroupInfoScreen extends ConsumerWidget {
                       children: [
                         IconButton(
                           key: Key('join_request.${r.id}.decline'),
-                          tooltip: 'Refuser',
+                          tooltip: L.t.refuser,
                           onPressed: () => _answerJoin(context, ref, r, approve: false),
                           icon: Icon(Icons.close_rounded, color: theme.colorScheme.error),
                         ),
                         IconButton.filled(
                           key: Key('join_request.${r.id}.approve'),
-                          tooltip: 'Accepter',
+                          tooltip: L.t.accepter,
                           onPressed: () => _answerJoin(context, ref, r, approve: true),
                           // Couleur explicite : la ligne impose sinon la sienne à l'icône.
                           icon: Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary),
@@ -1062,7 +1048,7 @@ class GroupInfoScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'MEMBRES',
+                    L.t.membres,
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
@@ -1074,7 +1060,7 @@ class GroupInfoScreen extends ConsumerWidget {
                     key: const Key('group.invite'),
                     onPressed: () => context.push(Routes.groupInvite(conversationId)),
                     icon: const Icon(Icons.person_add_alt_1_outlined),
-                    label: const Text('Inviter'),
+                    label: Text(L.t.inviter),
                   ),
               ],
             ),
@@ -1085,8 +1071,8 @@ class GroupInfoScreen extends ConsumerWidget {
                 ListTile(
                   key: const Key('group.code'),
                   leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),
-                  title: const Text('Inviter avec un code ou un QR code'),
-                  subtitle: const Text('Pour les personnes qui ne sont pas dans vos contacts'),
+                  title: Text(L.t.inviterAvecCodeOuQr),
+                  subtitle: Text(L.t.pourPersonnesQuiNeSont),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(Routes.groupCode(conversationId)),
                 ),
@@ -1102,7 +1088,7 @@ class GroupInfoScreen extends ConsumerWidget {
                     seed: m.userId,
                     radius: 20,
                   ),
-                  title: Text(m.userId == me ? '${m.displayName} (vous)' : m.displayName),
+                  title: Text(m.userId == me ? L.t.nameYou(m.displayName) : m.displayName),
                   subtitle: m.handle == null ? null : Text('@${m.handle}'),
                   trailing: m.role == 'member'
                       ? null
@@ -1138,13 +1124,13 @@ class GroupInfoScreen extends ConsumerWidget {
                 key: const Key('group.report'),
                 leading: Icon(Icons.flag_outlined, color: theme.colorScheme.error),
                 title: Text(
-                  'Signaler le groupe',
+                  L.t.signalerGroupe,
                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error),
                 ),
                 onTap: () => showReportSheet(
                   context,
                   reportedUserId: null,
-                  reportedName: 'le groupe «\u202F${s.title}\u202F»',
+                  reportedName: L.t.groupeTitle(s.title),
                   conversationId: conversationId,
                 ),
               ),
@@ -1153,11 +1139,8 @@ class GroupInfoScreen extends ConsumerWidget {
                 key: const Key('group.leave'),
                 leading: Icon(Icons.logout, color: theme.colorScheme.error),
                 // Lot 7.2b1 : quitter retire aussi le groupe de votre liste.
-                title: Text(
-                  'Quitter et supprimer',
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
-                subtitle: const Text('Le groupe disparaît de votre liste'),
+                title: Text(L.t.quitterSupprimer, style: TextStyle(color: theme.colorScheme.error)),
+                subtitle: Text(L.t.groupeDisparaitVotreListe),
                 onTap: () => _leave(context, ref, s),
               ),
               // Lot 7.2b1 : le créateur et les administrateurs le suppriment pour tous.
@@ -1167,7 +1150,7 @@ class GroupInfoScreen extends ConsumerWidget {
                   key: const Key('group.delete'),
                   leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
                   title: Text(
-                    'Supprimer le groupe pour tous',
+                    L.t.supprimerGroupePourTous,
                     style: TextStyle(color: theme.colorScheme.error),
                   ),
                   onTap: () => chooseDelete(context, ref, s),
@@ -1187,20 +1170,17 @@ Future<bool> confirmLeaveGroup(BuildContext context, WidgetRef ref, Conversation
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text('Quitter «\u202F${s.title}\u202F»\u202F?'),
+      title: Text(L.t.quitterTitle(s.title)),
       content: Text(
-        s.isOwner
-            ? 'Le groupe sera confié à l’administrateur (ou au membre) le plus ancien. '
-                  'Vous ne verrez plus ses messages.'
-            : 'Vous ne verrez plus les messages de ce groupe.',
+        s.isOwner ? L.t.groupeSeraConfieAdministrateurOu : L.t.vousNeVerrezPlusMessages,
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
         FilledButton(
           key: const Key('group.leave.confirm'),
           style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Quitter'),
+          child: Text(L.t.quitter),
         ),
       ],
     ),

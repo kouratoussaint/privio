@@ -1,0 +1,7 @@
+name: privio_l10n_tools
+description: Outils internes d'extraction des textes (lot 8.2a). Non embarqué dans l'application.
+publish_to: none
+environment:
+  sdk: ^3.9.0
+dependencies:
+  analyzer: ">=7.0.0 <9.0.0"

@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,110 +18,35 @@ import '../../core/motion/illustrations.dart';
 class HelpScreen extends ConsumerWidget {
   const HelpScreen({super.key});
 
-  static const faq = [
-    (
-      'Quand mes messages sont-ils effacés\u202F?',
-      'Chaque message s’efface automatiquement après la durée de la discussion (72 h par '
-          'défaut, ou moins si vous l’avez réglée), qu’il ait été lu ou non. Il disparaît du '
-          'serveur et de votre téléphone, même sans connexion.',
-    ),
-    (
-      'Comment changer la durée des messages\u202F?',
-      'Dans une discussion, touchez la minuterie en haut, ou la carte «\u202FLes messages de cette '
-          'discussion s’effacent…\u202F». Pour un seul message, touchez la minuterie dans la zone de '
-          'saisie. Une durée ne dépasse jamais 72 h.',
-    ),
-    (
-      'Mes messages sont-ils chiffrés\u202F?',
-      'Ils sont protégés pendant leur transport (connexion chiffrée) et enregistrés chiffrés '
-          'sur votre téléphone. Sur les serveurs de Privio, ils restent techniquement '
-          'accessibles à Privio jusqu’à leur expiration, puis sont définitivement effacés.',
-    ),
-    (
-      'Peut-on faire une capture d’écran\u202F?',
-      'Non, les captures d’écran sont bloquées dans Privio sur Android. Une photo prise avec '
-          'un autre appareil reste toutefois possible.',
-    ),
-    (
-      'Pourquoi ai-je été déconnecté\u202F?',
-      'Privio ne s’ouvre que sur un seul téléphone à la fois. Une connexion sur un autre '
-          'appareil déconnecte le précédent et efface les messages qui y étaient enregistrés.',
-    ),
-    (
-      'Que se passe-t-il sans réseau\u202F?',
-      'Les messages déjà reçus restent lisibles. Ceux que vous écrivez attendent et partent '
-          'seuls dès le retour du réseau.',
-    ),
-    (
-      'Comment bloquer ou signaler quelqu’un\u202F?',
-      'Touchez le nom du contact en haut de la discussion, puis «\u202FBloquer\u202F» ou «\u202FSignaler\u202F». '
-          'Pour signaler un message précis, faites un appui long sur ce message.',
-    ),
-    (
-      'Comment écrire à quelqu’un pour la première fois\u202F?',
-      'Touchez le crayon, cherchez son identifiant (ou son numéro), puis «\u202FEnvoyer une demande\u202F», '
-          'avec un petit mot si vous voulez. Dès qu’elle accepte, la discussion s’ouvre chez vous '
-          'deux. Sans réponse, la demande expire après 24 h\u202F; après un refus, attendez quelques '
-          'minutes avant de redemander (3 fois par jour au plus). Paramètres, Confidentialité\u202F: '
-          'vous pouvez refuser toute demande.',
-    ),
-    (
-      'Pourquoi ne puis-je pas trouver quelqu’un\u202F?',
-      'La recherche demande l’identifiant exact (ex. @awa_s). Par numéro, on ne trouve que '
-          'les personnes qui ont activé «\u202FMe trouver par mon numéro\u202F».',
-    ),
-    (
-      'Combien de photos puis-je envoyer\u202F?',
-      'Jusqu’à 5 photos par jour, groupes compris\u202F; le compteur repart à minuit. Une photo '
-          's’efface comme les messages et ne peut pas être enregistrée dans la galerie. Dans la '
-          'galerie, vous pouvez en choisir plusieurs à la fois.',
-    ),
-    (
-      'Combien de temps dure un message vocal\u202F?',
-      '30 secondes au plus. Touchez le micro pour enregistrer sans le tenir, ou maintenez-le\u202F: '
-          'glissez vers la gauche pour annuler, vers le haut pour lâcher le doigt. Sans le '
-          'doigt, le bouton pause permet de reprendre plus tard\u202F; les pauses ne comptent pas.',
-    ),
-    (
-      'Comment créer un groupe\u202F?',
-      'Dans l’onglet Groupes, touchez «\u202FNouveau groupe\u202F», donnez-lui un nom et choisissez les '
-          'personnes à inviter (25 membres au plus). Chacune doit accepter l’invitation.',
-    ),
-    (
-      'Comment vider une discussion\u202F?',
-      'Ouvrez le menu en haut à droite de la discussion, puis «\u202FVider la discussion\u202F». '
-          '«\u202FSeulement chez moi\u202F» vide votre copie. «\u202FPour nous deux\u202F» envoie une demande\u202F: si '
-          'la personne accepte dans les 24 h, tout disparaît des deux côtés, sans trace. Dans un '
-          'groupe, les administrateurs peuvent vider pour tous.',
-    ),
-    (
-      'Que se passe-t-il si j’oublie mon code\u202F?',
-      'Touchez «\u202FCode oublié\u202F?\u202F» sur l’écran de verrouillage. Il faudra vous déconnecter, ce '
-          'qui efface les messages gardés sur ce téléphone, puis vous reconnecter par SMS.',
-    ),
-    (
-      'Qui voit que je suis en ligne\u202F?',
-      'Par défaut, vos contacts. Changez-le dans Paramètres, Confidentialité, «\u202FEn ligne et vu '
-          'à\u202F». Ce choix ne vous empêche pas de voir celui des autres.',
-    ),
-    (
-      'Comment économiser mes données\u202F?',
-      'Dans Paramètres, Stockage et données, choisissez quand les photos se téléchargent\u202F: '
-          'toujours, en Wi-Fi seulement ou jamais (vous touchez alors la photo pour la '
-          'télécharger). Le même écran indique les données utilisées.',
-    ),
+  static List<(String, String)> get faq => [
+    (L.t.quandMesMessagesSontIls, L.t.chaqueMessageEffaceAutomatiquementApres),
+    (L.t.commentChangerDureeMessages, L.t.dansDiscussionTouchezMinuterieHaut),
+    (L.t.mesMessagesSontIlsChiffres, L.t.ilsSontProtegesPendantLeur),
+    (L.t.peutOnFaireCaptureEcran, L.t.nonCapturesEcranSontBloquees),
+    (L.t.pourquoiAiJeEteDeconnecte, L.t.privioNeOuvreQueSur),
+    (L.t.queSePasseTIl, L.t.messagesDejaRecusRestentLisibles),
+    (L.t.commentBloquerOuSignalerQuelqu, L.t.touchezNomContactHautDiscussion),
+    (L.t.commentEcrireQuelquPourPremiere, L.t.touchezCrayonCherchezSonIdentifiant),
+    (L.t.pourquoiNePuisJePas, L.t.rechercheDemandeIdentifiantExactEx),
+    (L.t.combienPhotosPuisJeEnvoyer, L.t.jusqu5PhotosParJour),
+    (L.t.combienTempsDureMessageVocal, L.t.n30SecondesPlusTouchezMicro),
+    (L.t.commentCreerGroupe, L.t.dansOngletGroupesTouchezNouveau),
+    (L.t.commentViderDiscussion, L.t.ouvrezMenuHautDroiteDiscussion),
+    (L.t.queSePasseTIl2, L.t.touchezCodeOublieSurEcran),
+    (L.t.quiVoitQueJeSuis, L.t.parDefautVosContactsChangez),
+    (L.t.commentEconomiserMesDonnees, L.t.dansParametresStockageDonneesChoisissez),
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Aide et assistance')),
+      appBar: AppBar(title: Text(L.t.aideAssistance)),
       body: SettingsListView(
         children: [
           // Lot 7.2b2 : en-tête illustré.
           const Center(child: FloatingIcon(icon: Icons.support_agent, size: 40)),
-          const SettingsSectionTitle('Questions fréquentes'),
+          SettingsSectionTitle(L.t.questionsFrequentes),
           SettingsCard(
             children: [
               for (final (q, a) in faq)
@@ -137,25 +64,23 @@ class HelpScreen extends ConsumerWidget {
                 ),
             ],
           ),
-          const SettingsSectionTitle('Assistance'),
+          SettingsSectionTitle(L.t.assistance),
           SettingsCard(
             children: [
               const _ConnectionDiagnostic(),
               ListTile(
                 key: const Key('help.contact'),
                 leading: const Icon(Icons.support_agent),
-                title: const Text('Contacter l’assistance'),
-                subtitle: const Text(
-                  'Un problème, une question\u202F? Décrivez-le en quelques mots.',
-                ),
+                title: Text(L.t.contacterAssistance),
+                subtitle: Text(L.t.problemeQuestionDecrivezQuelquesMots),
                 onTap: () => _contact(context, ref),
               ),
               // Lot 5.4 : les demandes envoyées et les réponses de l'équipe Privio.
               ListTile(
                 key: const Key('help.my_requests'),
                 leading: const Icon(Icons.forum_outlined),
-                title: const Text('Mes demandes'),
-                subtitle: const Text('Vos messages à l’assistance et nos réponses'),
+                title: Text(L.t.mesDemandes),
+                subtitle: Text(L.t.vosMessagesAssistanceNosReponses),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(Routes.mySupport),
               ),
@@ -178,14 +103,8 @@ class HelpScreen extends ConsumerWidget {
       await ref.read(messagingApiProvider).report(reason: 'support', details: text);
       ref.invalidate(mySupportRequestsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Merci, votre message a été transmis à l’assistance. La réponse arrivera dans '
-              '«\u202FMes demandes\u202F».',
-            ),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(L.t.merciVotreMessageEteTransmis)));
       }
     } on Object catch (e) {
       if (context.mounted) {
@@ -216,7 +135,7 @@ class _SupportDialogState extends State<_SupportDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Contacter l’assistance'),
+    title: Text(L.t.contacterAssistance),
     content: TextField(
       key: const Key('help.message'),
       controller: _controller,
@@ -224,16 +143,14 @@ class _SupportDialogState extends State<_SupportDialog> {
       maxLength: 1000,
       minLines: 3,
       maxLines: 6,
-      decoration: const InputDecoration(
-        hintText: 'Décrivez votre problème (sans données sensibles)',
-      ),
+      decoration: InputDecoration(hintText: L.t.decrivezVotreProblemeSansDonnees),
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(L.t.annuler)),
       FilledButton(
         key: const Key('help.send'),
         onPressed: () => Navigator.pop(context, _controller.text),
-        child: const Text('Envoyer'),
+        child: Text(L.t.envoyer),
       ),
     ],
   );
@@ -257,8 +174,8 @@ class _ConnectionDiagnostic extends ConsumerWidget {
         return ListTile(
           key: const Key('settings.realtime'),
           leading: const Icon(Icons.sync),
-          title: const Text('Diagnostic de connexion'),
-          subtitle: const Text('Réception des messages en direct'),
+          title: Text(L.t.diagnosticConnexion),
+          subtitle: Text(L.t.receptionMessagesDirect),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

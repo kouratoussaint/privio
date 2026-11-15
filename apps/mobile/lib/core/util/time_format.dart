@@ -1,3 +1,5 @@
+import '../../l10n/l10n.dart';
+
 import 'package:intl/intl.dart';
 
 /// Heure d'un message ou d'une discussion, à la française.
@@ -16,9 +18,9 @@ String formatMessageTime(DateTime at, {DateTime? now}) {
 /// Temps restant avant expiration : « 71 h », « 45 min », « < 1 min ».
 String formatRemaining(DateTime expiresAt, {DateTime? now}) {
   final left = expiresAt.difference(now ?? DateTime.now());
-  if (left.inMinutes < 1) return '< 1 min';
-  if (left.inHours < 1) return '${left.inMinutes} min';
-  return '${left.inHours} h';
+  if (left.inMinutes < 1) return L.t.n1Min;
+  if (left.inHours < 1) return L.t.unitMinutes(left.inMinutes);
+  return L.t.unitHours(left.inHours);
 }
 
 /// Durées proposées en puces pour une discussion ou un message (lot 4.6), bornées par
@@ -29,8 +31,8 @@ const kTtlChoices = [5 * 60, 15 * 60, 30 * 60, 3600, 6 * 3600, 12 * 3600, 24 * 3
 /// de ligne (« 4 / h 30 »).
 String formatTtl(int seconds) {
   final minutes = (seconds / 60).round();
-  if (minutes < 60) return '$minutes\u00A0min';
+  if (minutes < 60) return L.t.ttlMinutes(minutes);
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  return m == 0 ? '$h\u00A0h' : '$h\u00A0h\u00A0${m.toString().padLeft(2, '0')}';
+  return m == 0 ? L.t.ttlHours(h) : L.t.ttlHoursMinutes(h, m.toString().padLeft(2, '0'));
 }

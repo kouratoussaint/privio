@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -21,7 +23,7 @@ String formatVoiceDuration(Duration d) {
 /// Libellé lisible par TalkBack : « 12 secondes ».
 String spokenVoiceDuration(Duration d) {
   final s = d.inMilliseconds <= 0 ? 0 : (d.inMilliseconds / 1000).round();
-  return s <= 1 ? '$s seconde' : '$s secondes';
+  return L.t.secondsSpoken(s);
 }
 
 String _speedLabel(double speed) => '${speed == speed.roundToDouble() ? speed.toInt() : '1,5'}×';
@@ -193,7 +195,7 @@ class VoiceMessageContent extends ConsumerWidget {
     }
 
     return Semantics(
-      label: 'Message vocal, ${spokenVoiceDuration(total)}',
+      label: L.t.messageVocalTotal(spokenVoiceDuration(total)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -208,7 +210,7 @@ class VoiceMessageContent extends ConsumerWidget {
                 : IconButton(
                     key: Key('voice.play.${message.id}'),
                     padding: EdgeInsets.zero,
-                    tooltip: current && playback.playing ? 'Pause' : 'Écouter le message vocal',
+                    tooltip: current && playback.playing ? L.t.pause : L.t.ecouterMessageVocal,
                     onPressed: () => run(() => player.toggle(message)),
                     icon: Icon(
                       current && playback.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
@@ -253,7 +255,7 @@ class VoiceMessageContent extends ConsumerWidget {
                         onTap: () => run(player.cycleSpeed),
                         child: Semantics(
                           button: true,
-                          label: 'Vitesse de lecture ${_speedLabel(playback.speed)}',
+                          label: L.t.vitesseLectureSpeed(_speedLabel(playback.speed)),
                           child: ExcludeSemantics(
                             child: Container(
                               constraints: const BoxConstraints(minWidth: 36, minHeight: 24),
@@ -297,7 +299,7 @@ class PendingVoiceContent extends StatelessWidget {
         Icon(Icons.mic_rounded, size: 20, color: p.onBubbleOut),
         const SizedBox(width: 6),
         Text(
-          'Message vocal · ${formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))}',
+          L.t.messageVocalDurationms2(formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))),
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: p.onBubbleOut),
         ),
       ],
@@ -351,15 +353,16 @@ class VoiceRecordingStrip extends ConsumerWidget {
     final ctrl = ref.read(voiceRecorderControllerProvider.notifier);
     return Semantics(
       liveRegion: true,
-      label:
-          '${recording.paused ? 'Enregistrement en pause' : 'Enregistrement en cours'}, '
-          '${spokenVoiceDuration(recording.elapsed)} sur ${spokenVoiceDuration(recording.max)}',
+      label: (recording.paused ? L.t.recordingPaused : L.t.recordingRunning)(
+        spokenVoiceDuration(recording.elapsed),
+        spokenVoiceDuration(recording.max),
+      ),
       child: Row(
         children: [
           if (recording.locked)
             IconButton(
               key: const Key('voice.cancel'),
-              tooltip: 'Annuler l’enregistrement',
+              tooltip: L.t.annulerEnregistrement,
               onPressed: () => ref.read(voiceRecorderControllerProvider.notifier).cancel(),
               icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
             )
@@ -390,10 +393,10 @@ class VoiceRecordingStrip extends ConsumerWidget {
                       children: [
                         Text(
                           recording.paused
-                              ? 'En pause'
+                              ? L.t.pause2
                               : ending
-                              ? 'Arrêt dans ${recording.remaining.inSeconds + 1} s'
-                              : '${recording.max.inSeconds} s max.',
+                              ? L.t.arretDansInseconds(recording.remaining.inSeconds + 1)
+                              : L.t.insecondsMax(recording.max.inSeconds),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: ending && !recording.paused
                                 ? theme.colorScheme.error
@@ -414,7 +417,7 @@ class VoiceRecordingStrip extends ConsumerWidget {
                         Icon(Icons.chevron_left, size: 18, color: secondary),
                         Flexible(
                           child: Text(
-                            'Glisser pour annuler',
+                            L.t.glisserPourAnnuler,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(color: secondary),
                           ),
@@ -429,7 +432,7 @@ class VoiceRecordingStrip extends ConsumerWidget {
           if (recording.locked)
             IconButton(
               key: const Key('voice.pause'),
-              tooltip: recording.paused ? 'Reprendre l’enregistrement' : 'Mettre en pause',
+              tooltip: recording.paused ? L.t.reprendreEnregistrement : L.t.mettrePause,
               onPressed: () => unawaited(ctrl.togglePause()),
               icon: Icon(
                 recording.paused ? Icons.fiber_manual_record : Icons.pause_rounded,
@@ -507,14 +510,14 @@ class VoicePreviewBar extends ConsumerWidget {
                   children: [
                     IconButton(
                       key: const Key('voice.discard'),
-                      tooltip: 'Supprimer l’enregistrement',
+                      tooltip: L.t.supprimerEnregistrement,
                       onPressed: () =>
                           run(ref.read(voiceRecorderControllerProvider.notifier).discard),
                       icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
                     ),
                     IconButton(
                       key: const Key('voice.preview_play'),
-                      tooltip: current && playback.playing ? 'Pause' : 'Écouter avant d’envoyer',
+                      tooltip: current && playback.playing ? L.t.pause : L.t.ecouterAvantEnvoyer,
                       onPressed: () => run(() => player.togglePreview(preview.audio)),
                       icon: Icon(
                         current && playback.playing
@@ -563,7 +566,7 @@ class VoicePreviewBar extends ConsumerWidget {
               height: 50,
               child: IconButton.filled(
                 key: const Key('voice.send'),
-                tooltip: 'Envoyer le message vocal',
+                tooltip: L.t.envoyerMessageVocal,
                 style: IconButton.styleFrom(
                   backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
                   foregroundColor: dark ? PrivioColors.navy : Colors.white,
@@ -602,8 +605,8 @@ class MicButton extends ConsumerWidget {
     final fg = recording ? Colors.white : (dark ? PrivioColors.navy : Colors.white);
     return Semantics(
       button: true,
-      label: 'Enregistrer un message vocal',
-      onTapHint: 'enregistrer',
+      label: L.t.enregistrerMessageVocal,
+      onTapHint: L.t.hintRecord,
       child: GestureDetector(
         key: const Key('chat.mic'),
         onTap: () => onStart(locked: true),

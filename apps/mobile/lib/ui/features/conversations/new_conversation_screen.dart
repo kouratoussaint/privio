@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -39,6 +41,9 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
   String? _message;
   bool _busy = false;
 
+  /// Lot 8.1c : personne introuvable (proposer de l'inviter).
+  bool _notFound = false;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -53,6 +58,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       _found = null;
       _status = null;
       _message = null;
+      _notFound = false;
     });
     final api = ref.read(messagingApiProvider);
     try {
@@ -72,9 +78,8 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       setState(() {
         _found = user;
         _status = status;
-        _message = user == null
-            ? 'Aucun compte trouvé. Vérifiez l’orthographe, ou invitez cette personne sur Privio.'
-            : null;
+        _message = user == null ? L.t.aucunCompteTrouveVerifiezOrthographe : null;
+        _notFound = user == null;
       });
     } on Object catch (e) {
       setState(() => _message = toAppFailure(e).message);
@@ -89,13 +94,17 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     setState(() {
       _busy = true;
       _message = null;
+      _notFound = false;
       _found = null;
     });
     try {
       final user = await ref.read(messagingApiProvider).findByHandle(handle);
       if (!mounted) return;
       if (user == null) {
-        setState(() => _message = 'Aucun compte trouvé pour @$handle.');
+        setState(() {
+          _message = L.t.aucunCompteTrouvePourHandle(handle);
+          _notFound = true;
+        });
         return;
       }
       setState(() => _busy = false);
@@ -137,7 +146,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       setState(() => _status = status);
       ref.read(feedbackProvider).sound(PrivioSound.success);
       ScaffoldMessenger.of(context)
-          .showSnackBar(successSnack('Demande envoyée à ${user.displayName}.'));
+          .showSnackBar(successSnack(L.t.demandeEnvoyeeDisplayname(user.displayName)));
     } on Object catch (e) {
       if (mounted) setState(() => _message = toAppFailure(e).message);
     } finally {
@@ -195,27 +204,27 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
         return FilledButton(
           key: const Key('search.write'),
           onPressed: _busy ? null : () => _send(user),
-          child: const Text('Écrire'),
+          child: Text(L.t.ecrire),
         );
       case LinkState.none:
         return FilledButton.icon(
           key: const Key('search.request'),
           onPressed: _busy ? null : () => _request(user),
           icon: const Icon(Icons.person_add_alt_1_outlined),
-          label: const Text('Envoyer une demande'),
+          label: Text(L.t.envoyerDemande2),
         );
       case LinkState.incoming:
         return FilledButton(
           key: const Key('search.accept'),
           onPressed: _busy ? null : () => _accept(user),
-          child: const Text('Accepter sa demande'),
+          child: Text(L.t.accepterSaDemande),
         );
       case LinkState.outgoing:
         return Row(
           children: [
             Expanded(
               child: Text(
-                'Demande envoyée, en attente de réponse.',
+                L.t.demandeEnvoyeeAttenteReponse,
                 key: const Key('search.pending'),
                 style: theme.textTheme.bodyMedium,
               ),
@@ -223,7 +232,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
             TextButton(
               key: const Key('search.cancel'),
               onPressed: _busy ? null : () => _cancel(user),
-              child: const Text('Annuler'),
+              child: Text(L.t.annuler),
             ),
           ],
         );
@@ -231,9 +240,11 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
         final at = _status?.retryAt?.toLocal();
         final clock = at == null
             ? ''
-            : ' à ${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+            : L.t.atTime(
+                '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}',
+              );
         return Text(
-          '${user.displayName} a refusé votre demande. Nouvel essai possible$clock.',
+          L.t.displaynameRefuseVotreDemandeNouvel(user.displayName, clock),
           key: const Key('search.refused'),
           style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
         );
@@ -248,12 +259,12 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(
-        title: const Text('Nouvelle discussion'),
+        title: Text(L.t.nouvelleDiscussion),
         actions: [
           // Lot 8.1a : QR code d'un identifiant Privio → carte de la personne.
           IconButton(
             key: const Key('search.scan'),
-            tooltip: 'Scanner un QR code',
+            tooltip: L.t.scannerQrCode,
             onPressed: _busy ? null : _scan,
             icon: const Icon(Icons.qr_code_scanner_rounded),
           ),
@@ -270,12 +281,12 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _busy ? null : _search(),
             decoration: InputDecoration(
-              labelText: 'Identifiant ou numéro',
-              hintText: '@identifiant ou 70 00 00 00',
-              helperText: 'Identifiant exact (ex. @awa_s) ou numéro',
+              labelText: L.t.identifiantOuNumero,
+              hintText: L.t.identifiantOu700000,
+              helperText: L.t.identifiantExactExAwaOu,
               suffixIcon: IconButton(
                 key: const Key('search.submit'),
-                tooltip: 'Rechercher',
+                tooltip: L.t.rechercher,
                 onPressed: _busy ? null : _search,
                 icon: const Icon(Icons.search),
               ),
@@ -286,7 +297,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
           if (_message != null)
             Text(_message!, key: const Key('search.message'), style: theme.textTheme.bodyMedium),
           // Lot 8.1c : personne introuvable : l'inviter (partage de mon identifiant).
-          if (_message != null && _message!.startsWith('Aucun compte'))
+          if (_message != null && _notFound)
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
@@ -295,7 +306,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
                   inviteText(ref.read(sessionControllerProvider).value?.account?.profile?.handle),
                 ),
                 icon: const Icon(Icons.share_outlined),
-                label: const Text('Inviter cette personne sur Privio'),
+                label: Text(L.t.inviterCettePersonneSurPrivio),
               ),
             ),
           if (found != null)
@@ -329,7 +340,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
               key: const Key('search.requests'),
               onPressed: () => context.push(Routes.requests),
               icon: const Icon(Icons.person_add_alt_1_outlined),
-              label: const Text('Mes demandes de connexion'),
+              label: Text(L.t.mesDemandesConnexion),
             ),
           ),
         ],
@@ -376,11 +387,13 @@ class _ConnectionRequestSheetState extends State<ConnectionRequestSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Demande à ${widget.user.displayName}', style: theme.textTheme.titleMedium),
+              Text(
+                L.t.demandeDisplayname(widget.user.displayName),
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: PrivioSpacing.xs),
               Text(
-                'Vous pourrez vous écrire quand ${widget.user.displayName} aura accepté. '
-                'Sans réponse, la demande expire après 24 h.',
+                L.t.vousPourrezVousEcrireQuand(widget.user.displayName),
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: PrivioSpacing.m),
@@ -391,17 +404,17 @@ class _ConnectionRequestSheetState extends State<ConnectionRequestSheet> {
                 minLines: 1,
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Petit mot (facultatif)',
-                  hintText: 'Bonjour, c’est…',
-                  helperText: 'Effacé 5 min après l’acceptation.',
+                decoration: InputDecoration(
+                  labelText: L.t.petitMotFacultatif,
+                  hintText: L.t.bonjourCEst,
+                  helperText: L.t.efface5MinApresAcceptation,
                 ),
               ),
               const SizedBox(height: PrivioSpacing.m),
               FilledButton(
                 key: const Key('request.send'),
                 onPressed: () => Navigator.pop(context, _note.text.trim()),
-                child: const Text('Envoyer la demande'),
+                child: Text(L.t.envoyerDemande),
               ),
             ],
           ),

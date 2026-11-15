@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -72,7 +74,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
       return;
     }
     if (e164 == widget.currentPhone) {
-      setState(() => _error = 'C’est déjà votre numéro.');
+      setState(() => _error = L.t.cEstDejaVotreNumero);
       return;
     }
     if (!await _confirmPin() || !mounted) return;
@@ -105,7 +107,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
       _countdown();
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Un nouveau code vous a été envoyé.')));
+            .showSnackBar(SnackBar(content: Text(L.t.nouveauCodeVousEteEnvoye)));
       }
     } on Object catch (e) {
       if (mounted) setState(() => _error = toAppFailure(e).message);
@@ -140,7 +142,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
     ref.read(feedbackProvider).sound(PrivioSound.success);
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop(true);
-    messenger.showSnackBar(successSnack('Numéro changé.'));
+    messenger.showSnackBar(successSnack(L.t.numeroChange));
   }
 
   @override
@@ -151,7 +153,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
     final canResend = _secondsLeft == 0 && !_busy;
     return Scaffold(
       key: const Key('phone_change.screen'),
-      appBar: AppBar(title: const Text('Changer de numéro')),
+      appBar: AppBar(title: Text(L.t.changerNumero)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(PrivioSpacing.xl),
@@ -159,16 +161,11 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
             Icon(Icons.phonelink_setup_outlined, size: 48, color: p.accentText),
             const SizedBox(height: PrivioSpacing.l),
             if (!step2) ...[
-              Text(
-                'Votre compte, votre identifiant, vos discussions et vos groupes sont conservés. '
-                'Vos contacts ne sont pas prévenus : votre numéro n’est jamais affiché '
-                'dans Privio.',
-                style: theme.textTheme.bodyLarge,
-              ),
+              Text(L.t.votreCompteVotreIdentifiantVos, style: theme.textTheme.bodyLarge),
               if (widget.currentPhone != null) ...[
                 const SizedBox(height: PrivioSpacing.m),
                 Text(
-                  'Numéro actuel : ${PhoneNumber.format(widget.currentPhone!)}',
+                  L.t.numeroActuelCurrentphone(PhoneNumber.format(widget.currentPhone!)),
                   key: const Key('phone_change.current'),
                   style: theme.textTheme.bodyMedium?.copyWith(color: p.accentText),
                 ),
@@ -182,9 +179,9 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s]'))],
                 onSubmitted: (_) => _busy ? null : _send(),
                 decoration: InputDecoration(
-                  labelText: 'Nouveau numéro',
+                  labelText: L.t.nouveauNumero,
                   hintText: '70 00 00 00',
-                  helperText: 'Sans indicatif : Burkina Faso (+226)',
+                  helperText: L.t.sansIndicatifBurkinaFaso226,
                   errorText: _error,
                 ),
               ),
@@ -192,12 +189,11 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
               FilledButton(
                 key: const Key('phone_change.send'),
                 onPressed: _busy ? null : _send,
-                child: Text(_busy ? 'Envoi…' : 'Recevoir un code sur ce numéro'),
+                child: Text(_busy ? L.t.envoi : L.t.recevoirCodeSurCeNumero),
               ),
             ] else ...[
               Text(
-                'Saisissez le code à 6 chiffres envoyé par SMS au '
-                '${PhoneNumber.format(_newPhone!)}.',
+                L.t.saisissezCode6ChiffresEnvoye2(PhoneNumber.format(_newPhone!)),
                 style: theme.textTheme.bodyLarge,
               ),
               const SizedBox(height: PrivioSpacing.xl),
@@ -215,7 +211,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
                   if (v.length == ChangePhoneScreen.codeLength) _verify();
                 },
                 decoration: InputDecoration(
-                  labelText: 'Code reçu par SMS',
+                  labelText: L.t.codeRecuParSms,
                   counterText: '',
                   errorText: _error,
                 ),
@@ -224,13 +220,13 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
               FilledButton(
                 key: const Key('phone_change.verify'),
                 onPressed: _busy ? null : _verify,
-                child: Text(_busy ? 'Vérification…' : 'Valider'),
+                child: Text(_busy ? L.t.verification : L.t.valider),
               ),
               TextButton(
                 key: const Key('phone_change.resend'),
                 onPressed: canResend ? _resend : null,
                 child: Text(
-                  canResend ? 'Renvoyer le code' : 'Renvoyer le code dans $_secondsLeft s',
+                  canResend ? L.t.renvoyerCode : L.t.renvoyerCodeDansSecondsleft(_secondsLeft),
                 ),
               ),
               TextButton(
@@ -242,7 +238,7 @@ class _ChangePhoneScreenState extends ConsumerState<ChangePhoneScreen> {
                         _code.clear();
                         _error = null;
                       }),
-                child: const Text('Changer le numéro saisi'),
+                child: Text(L.t.changerNumeroSaisi),
               ),
             ],
           ],

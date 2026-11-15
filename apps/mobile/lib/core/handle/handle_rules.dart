@@ -1,3 +1,5 @@
+import '../../l10n/l10n.dart';
+
 /// Règles de l'identifiant Privio. Miroir de `private.normalize_handle` et
 /// `private.handle_is_valid` : le serveur reste l'autorité, ces règles servent
 /// seulement à guider la saisie.
@@ -49,14 +51,13 @@ abstract final class HandleRules {
   }
 
   static String message(HandleIssue issue) => switch (issue) {
-    HandleIssue.empty => 'Choisissez un identifiant.',
-    HandleIssue.tooShort => 'Au moins $minLength caractères.',
-    HandleIssue.tooLong => 'Au maximum $maxLength caractères.',
-    HandleIssue.invalidCharacters =>
-      'Lettres minuscules sans accent, chiffres, « _ » et « . » uniquement.',
-    HandleIssue.invalidEdges => 'Commencez et terminez par une lettre ou un chiffre.',
-    HandleIssue.doubleDot => 'Deux points de suite ne sont pas autorisés.',
-    HandleIssue.reserved => 'Cet identifiant est réservé.',
+    HandleIssue.empty => L.t.choisissezIdentifiant,
+    HandleIssue.tooShort => L.t.moinsMinlengthCaracteres(minLength),
+    HandleIssue.tooLong => L.t.maximumMaxlengthCaracteres(maxLength),
+    HandleIssue.invalidCharacters => L.t.lettresMinusculesSansAccentChiffres,
+    HandleIssue.invalidEdges => L.t.commencezTerminezParLettreOu,
+    HandleIssue.doubleDot => L.t.deuxPointsSuiteNeSont,
+    HandleIssue.reserved => L.t.cetIdentifiantEstReserve,
   };
 }
 

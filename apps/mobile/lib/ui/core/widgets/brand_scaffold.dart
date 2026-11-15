@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/privio_palette.dart';
@@ -56,7 +58,7 @@ class BrandTitle extends StatelessWidget {
         ),
         const SizedBox(width: PrivioSpacing.s),
         Text(
-          'Privio',
+          L.t.privio,
           style: Theme.of(context).textTheme.headlineSmall
               ?.copyWith(color: p.onHeader, letterSpacing: -0.3),
         ),

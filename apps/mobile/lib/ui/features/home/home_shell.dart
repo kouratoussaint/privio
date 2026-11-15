@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -28,7 +30,7 @@ class HomeShell extends ConsumerStatefulWidget {
   /// Délai entre les deux appuis sur Retour.
   static const exitWindow = Duration(seconds: 2);
 
-  static const exitHint = 'Appuyez encore sur Retour pour quitter';
+  static String get exitHint => L.t.appuyezEncoreSurRetourPour;
 
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
@@ -59,8 +61,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
-          key: Key('home.exit_hint'),
+        SnackBar(
+          key: const Key('home.exit_hint'),
           content: Text(HomeShell.exitHint),
           duration: HomeShell.exitWindow,
         ),
@@ -119,19 +121,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             PrivioNavItem(
               icon: Icons.chat_bubble_outline,
               selectedIcon: Icons.chat_bubble,
-              label: 'Discussions',
+              label: L.t.discussions,
               badge: unread + requests,
             ),
             PrivioNavItem(
               icon: Icons.groups_outlined,
               selectedIcon: Icons.groups,
-              label: 'Groupes',
+              label: L.t.groupes,
               badge: invitations + unreadGroups,
             ),
-            const PrivioNavItem(
+            PrivioNavItem(
               icon: Icons.settings_outlined,
               selectedIcon: Icons.settings,
-              label: 'Paramètres',
+              label: L.t.parametres,
             ),
           ],
         ),
@@ -224,7 +226,7 @@ class _NavButton extends StatelessWidget {
     final theme = Theme.of(context);
     final color = selected ? accent : theme.colorScheme.onSurfaceVariant;
     final badgeText = item.badge > 99 ? '99+' : '${item.badge}';
-    final semantics = item.badge > 0 ? '${item.label}, ${item.badge} en attente' : item.label;
+    final semantics = item.badge > 0 ? L.t.labelBadgeAttente(item.label, item.badge) : item.label;
     return Semantics(
       button: true,
       selected: selected,

@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,10 +18,10 @@ class AppearanceScreen extends ConsumerWidget {
     final ctl = ref.read(appearanceProvider.notifier);
     return Scaffold(
       key: const Key('appearance.screen'),
-      appBar: AppBar(title: const Text('Apparence')),
+      appBar: AppBar(title: Text(L.t.apparence)),
       body: SettingsListView(
         children: [
-          const SettingsSectionTitle('Thème', first: true),
+          SettingsSectionTitle(L.t.theme, first: true),
           SettingsCard(
             children: [
               RadioGroup<String>(
@@ -40,7 +42,7 @@ class AppearanceScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SettingsSectionTitle('Taille du texte'),
+          SettingsSectionTitle(L.t.tailleTexte),
           SettingsCard(
             children: [
               RadioGroup<String>(
@@ -63,7 +65,7 @@ class AppearanceScreen extends ConsumerWidget {
           ),
           const SizedBox(height: PrivioSpacing.l),
           const _Preview(),
-          const SettingsNote('La taille choisie s’ajoute à celle réglée dans votre téléphone.'),
+          SettingsNote(L.t.tailleChoisieAjouteCelleReglee),
         ],
       ),
     );
@@ -103,8 +105,8 @@ class _Preview extends StatelessWidget {
       ),
       child: Column(
         children: [
-          bubble('Bonjour ! On se voit demain ?', out: false),
-          bubble('Oui, vers 10 h.', out: true),
+          bubble(L.t.bonjourOnSeVoitDemain, out: false),
+          bubble(L.t.ouiVers10H, out: true),
         ],
       ),
     );

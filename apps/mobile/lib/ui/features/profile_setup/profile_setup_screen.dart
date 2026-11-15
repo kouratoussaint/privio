@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -103,22 +105,22 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final theme = Theme.of(context);
     final phone = ref.watch(sessionControllerProvider).value?.account?.phoneE164;
     final helper = switch (_availability) {
-      _Availability.checking => 'Vérification de la disponibilité…',
-      _Availability.available => 'Cet identifiant est disponible.',
-      _ => 'Il permet à vos proches de vous trouver sans connaître votre numéro.',
+      _Availability.checking => L.t.verificationDisponibilite,
+      _Availability.available => L.t.cetIdentifiantEstDisponible,
+      _ => L.t.ilPermetVosProchesVous,
     };
     return Scaffold(
-      appBar: AppBar(title: const Text('Votre profil')),
+      appBar: AppBar(title: Text(L.t.votreProfil)),
       body: FlowLayout(
         bottom: FilledButton(
           key: const Key('profile.submit'),
           onPressed: _busy ? null : _submit,
-          child: _busy ? const Text('Création…') : const Text('Créer mon profil'),
+          child: _busy ? Text(L.t.creation) : Text(L.t.creerMonProfil),
         ),
         children: [
           if (phone != null)
             Text(
-              'Numéro vérifié\u202F: ${PhoneNumber.format(phone)}',
+              L.t.numeroVerifiePhone(PhoneNumber.format(phone)),
               style: theme.textTheme.bodyMedium,
             ),
           const SizedBox(height: PrivioSpacing.xl),
@@ -129,8 +131,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
-              labelText: 'Votre nom',
-              helperText: 'Visible par les personnes avec qui vous échangez.',
+              labelText: L.t.votreNom,
+              helperText: L.t.visibleParPersonnesAvecQui,
               errorText: _nameError,
             ),
           ),
@@ -143,7 +145,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             enableSuggestions: false,
             onChanged: _onHandleChanged,
             decoration: InputDecoration(
-              labelText: 'Identifiant',
+              labelText: L.t.identifiant,
               hintText: 'awa_s',
               prefixText: '@',
               helperText: helper,

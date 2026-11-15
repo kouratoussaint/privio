@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -96,7 +98,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
       title: const BrandTitle(),
       floatingActionButton: FloatingActionButton(
         key: const Key('discussions.new'),
-        tooltip: 'Nouvelle discussion',
+        tooltip: L.t.nouvelleDiscussion,
         onPressed: () => context.push(Routes.newConversation),
         child: const Icon(Icons.edit_outlined),
       ),
@@ -116,25 +118,25 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
             child: FilterBar(
               chips: [
                 FilterPill(
-                  label: 'Toutes',
+                  label: L.t.toutes,
                   selected: _filter == ConversationFilter.all,
                   onTap: () => setState(() => _filter = ConversationFilter.all),
                 ),
                 FilterPill(
-                  label: 'Non lues',
+                  label: L.t.nonLues,
                   count: unreadTotal,
                   selected: _filter == ConversationFilter.unread,
                   onTap: () => setState(() => _filter = ConversationFilter.unread),
                 ),
                 FilterPill(
-                  label: 'Épinglées',
+                  label: L.t.epinglees,
                   selected: _filter == ConversationFilter.pinned,
                   onTap: () => setState(() => _filter = ConversationFilter.pinned),
                 ),
                 if (together)
                   FilterPill(
                     key: const Key('filter.groups'),
-                    label: 'Groupes',
+                    label: L.t.groupes,
                     selected: _filter == ConversationFilter.groups,
                     onTap: () => setState(() => _filter = ConversationFilter.groups),
                   ),
@@ -149,19 +151,17 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
             ListTile(
               key: const Key('discussions.archived'),
               leading: const Icon(Icons.archive_outlined),
-              title: Text('Archivées ($archivedCount)'),
+              title: Text(L.t.archiveesArchivedcount(archivedCount)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () =>
                   context.push(together ? Routes.archived : Routes.archivedOf('discussions')),
             ),
           Expanded(
             child: switch (conversations) {
-              AsyncData(:final value) when value.isEmpty && archivedCount == 0 => const EmptyView(
+              AsyncData(:final value) when value.isEmpty && archivedCount == 0 => EmptyView(
                 icon: Icons.chat_bubble_outline,
-                title: 'Aucune discussion pour l’instant',
-                message:
-                    'Touchez le crayon pour écrire à quelqu’un. Vos messages s’effacent seuls '
-                    'au bout de 72 h.',
+                title: L.t.aucuneDiscussionPourInstant,
+                message: L.t.touchezCrayonPourEcrireQuelqu,
               ),
               AsyncData(:final value) => _List(
                 items: _apply(value),
@@ -384,10 +384,10 @@ class _List extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return const EmptyView(
+      return EmptyView(
         icon: Icons.search_off,
-        title: 'Aucun résultat',
-        message: 'Aucune discussion ne correspond à ce filtre.',
+        title: L.t.aucunResultat,
+        message: L.t.aucuneDiscussionNeCorrespondCe,
       );
     }
     return RefreshIndicator(
@@ -450,7 +450,7 @@ class OfflineBanner extends StatelessWidget {
             const SizedBox(width: PrivioSpacing.s),
             Expanded(
               child: Text(
-                'Hors connexion. Vos messages partiront dès le retour du réseau.',
+                L.t.horsConnexionVosMessagesPartiront,
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
               ),
             ),
@@ -478,9 +478,9 @@ class SwipeableConversationTile extends ConsumerWidget {
       if (archived != null) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(archived ? 'Discussion archivée.' : 'Discussion désarchivée.'),
+            content: Text(archived ? L.t.discussionArchivee : L.t.discussionDesarchivee),
             action: SnackBarAction(
-              label: 'Annuler',
+              label: L.t.annuler,
               onPressed: () => notifier.setFlags(summary.id, archived: !archived),
             ),
           ),
@@ -496,12 +496,12 @@ class SwipeableConversationTile extends ConsumerWidget {
     key: Key('swipe.${summary.id}'),
     right: SwipeAction(
       icon: summary.pinned ? Icons.push_pin_outlined : Icons.push_pin,
-      label: summary.pinned ? 'Désépingler' : 'Épingler',
+      label: summary.pinned ? L.t.desepingler : L.t.epingler,
       onTriggered: () => _flags(context, ref, pinned: !summary.pinned),
     ),
     left: SwipeAction(
       icon: summary.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
-      label: summary.archived ? 'Désarchiver' : 'Archiver',
+      label: summary.archived ? L.t.desarchiver : L.t.archiver,
       onTriggered: () => _flags(context, ref, archived: !summary.archived),
     ),
     child: ConversationTile(summary: summary),
@@ -523,16 +523,14 @@ Future<void> showConversationActions(
           ListTile(
             key: const Key('conv.pin'),
             leading: Icon(summary.pinned ? Icons.push_pin : Icons.push_pin_outlined),
-            title: Text(summary.pinned ? 'Désépingler' : 'Épingler en haut de la liste'),
+            title: Text(summary.pinned ? L.t.desepingler : L.t.epinglerHautListe),
             onTap: () => Navigator.pop(ctx, 'pin'),
           ),
           ListTile(
             key: const Key('conv.archive'),
             leading: Icon(summary.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-            title: Text(summary.archived ? 'Désarchiver' : 'Archiver'),
-            subtitle: summary.archived
-                ? null
-                : const Text('Un nouveau message la fera réapparaître dans la liste.'),
+            title: Text(summary.archived ? L.t.desarchiver : L.t.archiver),
+            subtitle: summary.archived ? null : Text(L.t.nouveauMessageFeraReapparaitreDans),
             onTap: () => Navigator.pop(ctx, 'archive'),
           ),
           // Lot 7.2c1 : un groupe se quitte (et disparaît de la liste) ; le créateur et les
@@ -542,7 +540,7 @@ Future<void> showConversationActions(
               key: const Key('conv.leave'),
               leading: Icon(Icons.logout, color: Theme.of(ctx).colorScheme.error),
               title: Text(
-                'Quitter et supprimer',
+                L.t.quitterSupprimer,
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
               onTap: () => Navigator.pop(ctx, 'leave'),
@@ -552,7 +550,7 @@ Future<void> showConversationActions(
               key: const Key('conv.delete_group'),
               leading: Icon(Icons.delete_forever_outlined, color: Theme.of(ctx).colorScheme.error),
               title: Text(
-                'Supprimer le groupe pour tous',
+                L.t.supprimerGroupePourTous,
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
               onTap: () => Navigator.pop(ctx, 'delete'),
@@ -563,7 +561,7 @@ Future<void> showConversationActions(
               key: const Key('conv.delete'),
               leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
               title: Text(
-                'Supprimer la discussion',
+                L.t.supprimerDiscussion,
                 style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
               onTap: () => Navigator.pop(ctx, 'delete'),
@@ -620,19 +618,17 @@ class ConversationTile extends ConsumerWidget {
         summary.lastExpiresAt!.difference(now) < kExpiringSoon;
     // Qui a écrit : « Vous : », ou le nom de l'expéditeur dans un groupe.
     final who = mine
-        ? 'Vous\u202F: '
+        ? L.t.vous2
         : (summary.isGroup && summary.lastSenderName != null
               ? '${summary.lastSenderName}\u202F: '
               : '');
     final preview = switch (summary) {
-      ConversationSummary(blocked: true) => 'Contact bloqué',
+      ConversationSummary(blocked: true) => L.t.contactBloque,
       ConversationSummary(:final clearRequestBy?) when clearRequestBy != me =>
-        'Propose de vider la discussion',
+        L.t.proposeViderDiscussion,
       ConversationSummary(lastMessageId: null) =>
-        summary.isGroup
-            ? '${summary.memberCount} membre${summary.memberCount > 1 ? 's' : ''}'
-            : 'Aucun message',
-      ConversationSummary(lastDeleted: true) => 'Message supprimé',
+        summary.isGroup ? L.t.membersCount(summary.memberCount) : L.t.aucunMessage,
+      ConversationSummary(lastDeleted: true) => L.t.messageSupprime,
       ConversationSummary(lastKind: 'system', :final lastBody)
           when (lastBody ?? '').startsWith('{') =>
         groupEventText(
@@ -650,11 +646,11 @@ class ConversationTile extends ConsumerWidget {
             '',
       ConversationSummary(lastKind: 'system') =>
         // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-        'Durée des messages : ${formatTtl(summary.ttlSeconds)}',
-      ConversationSummary(lastKind: 'voice') => '$who🎤 Message vocal',
+        L.t.dureeMessagesTtlseconds(formatTtl(summary.ttlSeconds)),
+      ConversationSummary(lastKind: 'voice') => L.t.whoMessageVocal(who),
       // Lot 7.3a : autocollant (son nom, pas son identifiant).
       ConversationSummary(lastKind: 'sticker', :final lastBody) =>
-        '$who🙂 ${stickerOf(lastBody)?.label ?? 'Autocollant'}',
+        '$who🙂 ${stickerOf(lastBody)?.label ?? L.t.stickerNoLabel}',
       // Lot 7.3b : GIF.
       ConversationSummary(lastKind: 'gif') => '${who}GIF',
       ConversationSummary(lastKind: 'photo', :final lastBody) =>
@@ -675,7 +671,7 @@ class ConversationTile extends ConsumerWidget {
             // Lot 8.1a : toucher la photo ouvre la fiche du contact ou du groupe.
             Semantics(
               button: true,
-              label: summary.isGroup ? 'Fiche du groupe' : 'Fiche de ${summary.title}',
+              label: summary.isGroup ? L.t.ficheGroupe : L.t.ficheTitle(summary.title),
               child: GestureDetector(
                 key: Key('conversation.avatar.${summary.id}'),
                 onTap: () => context.push(Routes.contact(summary.id)),
@@ -725,13 +721,13 @@ class ConversationTile extends ConsumerWidget {
                               Icons.done_all,
                               size: 16,
                               color: p.accentText,
-                              semanticLabel: 'Lu',
+                              semanticLabel: L.t.lu,
                             ),
                             const SizedBox(width: 4),
                           ],
                           Expanded(
                             child: Text(
-                              typing ? 'en train d’écrire…' : preview,
+                              typing ? L.t.trainEcrire : preview,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodyMedium?.copyWith(
@@ -752,7 +748,9 @@ class ConversationTile extends ConsumerWidget {
                               key: Key('expiring.${summary.id}'),
                               semanticsLabel:
                                   // typo-fr: ignore-next (rappel de durée inchangé, décision du 13/11/2026)
-                                  's\'efface dans ${formatRemaining(summary.lastExpiresAt!, now: now)}',
+                                  L.t.effaceDansNow(
+                                    formatRemaining(summary.lastExpiresAt!, now: now),
+                                  ),
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: p.warn,
                                 fontWeight: FontWeight.w600,
@@ -766,7 +764,7 @@ class ConversationTile extends ConsumerWidget {
                               key: Key('muted.${summary.id}'),
                               size: 16,
                               color: secondary,
-                              semanticLabel: 'En sourdine',
+                              semanticLabel: L.t.sourdine2,
                             ),
                           ],
                           if (summary.pinned) ...[
@@ -775,7 +773,7 @@ class ConversationTile extends ConsumerWidget {
                               Icons.push_pin,
                               size: 16,
                               color: secondary,
-                              semanticLabel: 'Épinglée',
+                              semanticLabel: L.t.epinglee,
                             ),
                           ],
                           if (unread > 0) ...[const SizedBox(width: 6), _CountBadge(count: unread)],
@@ -824,7 +822,7 @@ class ListSearchField extends StatelessWidget {
         controller: search,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Rechercher',
+          hintText: L.t.rechercher,
           prefixIcon: const Icon(Icons.search),
           filled: true,
           fillColor: p.field,
@@ -840,7 +838,7 @@ class ListSearchField extends StatelessWidget {
           suffixIcon: search.text.isEmpty
               ? null
               : IconButton(
-                  tooltip: 'Effacer la recherche',
+                  tooltip: L.t.effacerRecherche,
                   onPressed: search.clear,
                   icon: const Icon(Icons.close),
                 ),

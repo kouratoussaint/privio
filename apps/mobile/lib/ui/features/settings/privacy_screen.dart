@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -84,8 +86,8 @@ class PrivacyScreen extends ConsumerWidget {
     final current = s.defaultTtlSeconds ?? rules.maxTtlSeconds;
     final picked = await showTtlPicker(
       context,
-      title: 'Durée par défaut des messages',
-      help: 'Pour les discussions et groupes que vous créerez.',
+      title: L.t.dureeParDefautMessages,
+      help: L.t.pourDiscussionsGroupesQueVous,
       current: current,
       min: rules.minTtlSeconds,
       max: rules.maxTtlSeconds,
@@ -111,7 +113,7 @@ class PrivacyScreen extends ConsumerWidget {
     final s = privacy.value;
     if (s == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Confidentialité')),
+        appBar: AppBar(title: Text(L.t.confidentialite)),
         body: privacy.hasError
             ? ErrorView(
                 message: toAppFailure(privacy.error!).message,
@@ -123,23 +125,10 @@ class PrivacyScreen extends ConsumerWidget {
 
     Future<void> visibility(String which) async {
       final (label, help, current) = switch (which) {
-        'presence' => (
-          'Statut «\u202Fen ligne\u202F» et «\u202Fvu à\u202F»',
-          'Qui voit si vous êtes connecté, et quand vous l’étiez pour la dernière fois.',
-          s.presence,
-        ),
-        'avatar' => ('Photo de profil', 'Les autres voient vos initiales à la place.', s.avatar),
-        'about' => (
-          'À propos',
-          'Votre court texte de présentation, affiché sur votre fiche.',
-          s.about,
-        ),
-        _ => (
-          'Invitations dans les groupes',
-          'Les personnes non autorisées ne peuvent pas vous inviter (sans qu’on le leur dise). '
-              'Une invitation doit toujours être acceptée.',
-          s.groupInvites,
-        ),
+        'presence' => (L.t.statutLigneVu, L.t.quiVoitSiVousEtes, s.presence),
+        'avatar' => (L.t.photoProfil, L.t.autresVoientVosInitialesPlace, s.avatar),
+        'about' => (L.t.propos, L.t.votreCourtTextePresentationAffiche, s.about),
+        _ => (L.t.invitationsDansGroupes, L.t.personnesNonAutoriseesNePeuvent, s.groupInvites),
       };
       final v = await _pickVisibility(
         context,
@@ -158,23 +147,23 @@ class PrivacyScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Confidentialité')),
+      appBar: AppBar(title: Text(L.t.confidentialite)),
       body: SettingsListView(
         children: [
-          const SettingsSectionTitle('Qui voit quoi', first: true),
+          SettingsSectionTitle(L.t.quiVoitQuoi, first: true),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('privacy.presence'),
                 leading: Icon(Icons.circle_outlined, color: p.accentText),
-                title: const Text('En ligne et «\u202Fvu à\u202F»'),
+                title: Text(L.t.ligneVu),
                 subtitle: Text(visibilityLabel(s.presence)),
                 onTap: () => visibility('presence'),
               ),
               ListTile(
                 key: const Key('privacy.avatar'),
                 leading: Icon(Icons.account_circle_outlined, color: p.accentText),
-                title: const Text('Photo de profil'),
+                title: Text(L.t.photoProfil),
                 subtitle: Text(visibilityLabel(s.avatar)),
                 onTap: () => visibility('avatar'),
               ),
@@ -182,93 +171,82 @@ class PrivacyScreen extends ConsumerWidget {
               ListTile(
                 key: const Key('privacy.about'),
                 leading: Icon(Icons.info_outline, color: p.accentText),
-                title: const Text('À propos'),
+                title: Text(L.t.propos),
                 subtitle: Text(visibilityLabel(s.about)),
                 onTap: () => visibility('about'),
               ),
               ListTile(
                 key: const Key('privacy.invites'),
                 leading: Icon(Icons.group_add_outlined, color: p.accentText),
-                title: const Text('Qui peut m’inviter dans un groupe'),
+                title: Text(L.t.quiPeutMInviterDans),
                 subtitle: Text(visibilityLabel(s.groupInvites)),
                 onTap: () => visibility('invites'),
               ),
               const _ConnectionRequestsTile(),
             ],
           ),
-          const SettingsNote(
-            '«\u202FMes contacts\u202F»\u202F: les personnes avec qui vous êtes connecté (discussion à deux). '
-            'Une personne bloquée ne voit jamais rien. Chaque discussion peut avoir ses propres '
-            'réglages (fiche du contact ou du groupe).',
-          ),
-          const SettingsSectionTitle('Messages'),
+          SettingsNote(L.t.mesContactsPersonnesAvecQui),
+          SettingsSectionTitle(L.t.messages),
           SettingsCard(
             children: [
               SwitchListTile(
                 key: const Key('privacy.receipts'),
                 value: s.readReceipts,
                 secondary: Icon(Icons.done_all, color: p.accentText),
-                title: const Text('Accusés de lecture'),
-                subtitle: const Text(
-                  'Si désactivés, on ne voit plus quand vous avez lu. Vous voyez toujours ceux '
-                  'des autres.',
-                ),
+                title: Text(L.t.accusesLecture),
+                subtitle: Text(L.t.siDesactivesOnNeVoit),
                 onChanged: (v) => _save(context, ref, s.copyWith(readReceipts: v)),
               ),
               SwitchListTile(
                 key: const Key('privacy.typing'),
                 value: s.typing,
                 secondary: Icon(Icons.keyboard_outlined, color: p.accentText),
-                title: const Text('«\u202FEn train d’écrire\u202F»'),
-                subtitle: const Text('Désactivé\u202F: personne ne voit quand vous écrivez.'),
+                title: Text(L.t.trainEcrire2),
+                subtitle: Text(L.t.desactivePersonneNeVoitQuand),
                 onChanged: (v) => _save(context, ref, s.copyWith(typing: v)),
               ),
               ListTile(
                 key: const Key('privacy.ttl'),
                 leading: Icon(Icons.timer_outlined, color: p.accentText),
-                title: const Text('Durée par défaut des messages'),
+                title: Text(L.t.dureeParDefautMessages),
                 subtitle: Text(
-                  '${formatTtl(s.defaultTtlSeconds ?? rules.maxTtlSeconds)} · nouvelles discussions',
+                  L.t.maxttlsecondsNouvellesDiscussions(
+                    formatTtl(s.defaultTtlSeconds ?? rules.maxTtlSeconds),
+                  ),
                 ),
                 onTap: () => _pickTtl(context, ref, s),
               ),
             ],
           ),
-          const SettingsNote(
-            'Pour effacer une discussion entière\u202F: fiche du contact ou du groupe, '
-            '«\u202FVider la discussion\u202F».',
-          ),
+          SettingsNote(L.t.pourEffacerDiscussionEntiereFiche),
           // Lot 7.3b : aperçus des liens, contenu des GIF (réglages de ce téléphone).
-          const SettingsSectionTitle('Liens et GIF'),
+          SettingsSectionTitle(L.t.liensGif),
           const _ContentSettings(),
-          const SettingsNote(
-            'L’aperçu d’un lien est préparé par le serveur Privio : votre téléphone ne '
-            'contacte pas le site, et vos contacts non plus.',
-          ),
-          const SettingsSectionTitle('Sécurité'),
+          SettingsNote(L.t.apercuLienEstPreparePar),
+          SettingsSectionTitle(L.t.securite),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('privacy.lock'),
                 leading: Icon(Icons.lock_outline, color: p.accentText),
-                title: const Text('Verrouillage de l’application'),
+                title: Text(L.t.verrouillageApplication),
                 subtitle: Text(
                   (lock?.enabled ?? false)
-                      ? 'Activé · ${delayLabel(lock!.config.delaySeconds).toLowerCase()}'
-                      : 'Désactivé',
+                      ? L.t.activeTolowercase(delayLabel(lock!.config.delaySeconds).toLowerCase())
+                      : L.t.desactive2,
                 ),
                 onTap: () => context.push(Routes.appLock),
               ),
               ListTile(
                 key: const Key('privacy.blocked'),
                 leading: Icon(Icons.block, color: p.accentText),
-                title: const Text('Personnes bloquées'),
+                title: Text(L.t.personnesBloquees),
                 onTap: () => context.push(Routes.blockedUsers),
               ),
               ListTile(
                 leading: Icon(Icons.screenshot_monitor_outlined, color: p.accentText),
-                title: const Text('Captures d’écran'),
-                subtitle: const Text('Toujours bloquées dans Privio (non modifiable).'),
+                title: Text(L.t.capturesEcran),
+                subtitle: Text(L.t.toujoursBloqueesDansPrivioNon),
               ),
             ],
           ),
@@ -291,12 +269,8 @@ class _ConnectionRequestsTile extends ConsumerWidget {
       key: const Key('privacy.requests'),
       value: value,
       secondary: Icon(Icons.person_add_alt_1_outlined, color: p.accentText),
-      title: const Text('Demandes de connexion'),
-      subtitle: Text(
-        value
-            ? 'Tout le monde peut vous envoyer une demande.'
-            : 'Personne ne peut vous envoyer de demande.',
-      ),
+      title: Text(L.t.demandesConnexion),
+      subtitle: Text(value ? L.t.toutMondePeutVousEnvoyer : L.t.personneNePeutVousEnvoyer),
       onChanged: accept.isLoading
           ? null
           : (v) async {
@@ -347,20 +321,20 @@ class _ContentSettingsState extends ConsumerState<_ContentSettings> {
         child: RadioGroup<String>(
           groupValue: current,
           onChanged: (v) => Navigator.pop(ctx, v),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                key: Key('privacy.gif.g'),
+                key: const Key('privacy.gif.g'),
                 value: 'g',
-                title: Text('Tout public'),
-                subtitle: Text('Recommandé.'),
+                title: Text(L.t.toutPublic),
+                subtitle: Text(L.t.recommande),
               ),
               RadioListTile<String>(
-                key: Key('privacy.gif.pg13'),
+                key: const Key('privacy.gif.pg13'),
                 value: 'pg13',
-                title: Text('Modéré'),
-                subtitle: Text('Quelques contenus moins adaptés aux enfants.'),
+                title: Text(L.t.modere),
+                subtitle: Text(L.t.quelquesContenusMoinsAdaptesEnfants),
               ),
             ],
           ),
@@ -381,8 +355,8 @@ class _ContentSettingsState extends ConsumerState<_ContentSettings> {
           key: const Key('privacy.link_previews'),
           value: _previews ?? true,
           secondary: Icon(Icons.link_rounded, color: p.accentText),
-          title: const Text('Aperçus des liens'),
-          subtitle: const Text('Titre et image des liens que vous envoyez.'),
+          title: Text(L.t.apercusLiens),
+          subtitle: Text(L.t.titreImageLiensQueVous),
           onChanged: _previews == null
               ? null
               : (v) async {
@@ -393,8 +367,8 @@ class _ContentSettingsState extends ConsumerState<_ContentSettings> {
         ListTile(
           key: const Key('privacy.gif'),
           leading: Icon(Icons.gif_box_outlined, color: p.accentText),
-          title: const Text('Contenu des GIF'),
-          subtitle: Text((_gif ?? 'g') == 'pg13' ? 'Modéré' : 'Tout public'),
+          title: Text(L.t.contenuGif),
+          subtitle: Text((_gif ?? 'g') == 'pg13' ? L.t.modere : L.t.toutPublic),
           onTap: _pickGif,
         ),
       ],

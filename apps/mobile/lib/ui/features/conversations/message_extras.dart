@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +18,8 @@ import '../../core/widgets/avatar.dart';
 
 /// Aperçu court d'un message épinglé ou favori.
 String messageRefPreview(MessageRef r) => switch (r.kind) {
-  'voice' => '🎤 Message vocal',
-  'photo' => r.body == null || r.body!.isEmpty ? '📷 Photo' : '📷 ${r.body}',
+  'voice' => L.t.messageVocal2,
+  'photo' => r.body == null || r.body!.isEmpty ? L.t.photo2 : '📷 ${r.body}',
   _ => r.body ?? '',
 };
 
@@ -81,8 +83,8 @@ class PinnedBanner extends StatelessWidget {
                   children: [
                     Text(
                       pins.length > 1
-                          ? 'Message épinglé ${i + 1}/${pins.length}'
-                          : 'Message épinglé',
+                          ? L.t.messageEpingleIPinscount(i + 1, pins.length)
+                          : L.t.messageEpingle,
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -123,7 +125,7 @@ Future<void> showMessageRef(BuildContext context, MessageRef r, {required String
               Text(title, style: Theme.of(ctx).textTheme.titleMedium),
               const SizedBox(height: PrivioSpacing.xs),
               Text(
-                '${r.senderName ?? 'Vous'} · ${receiptTime(r.sentAt)}',
+                '${r.senderName ?? L.t.vous} · ${receiptTime(r.sentAt)}',
                 style: Theme.of(ctx).textTheme.bodySmall,
               ),
               const SizedBox(height: PrivioSpacing.m),
@@ -155,17 +157,17 @@ class _MessageInfoSheet extends ConsumerWidget {
     final p = PrivioPalette.of(context);
     final info = ref.watch(messageInfoProvider(message.id));
     String delivered(MessageReceipt r) => !r.delivered
-        ? 'Pas encore distribué'
+        ? L.t.pasEncoreDistribue
         : r.deliveredAt == null
-        ? 'Distribué'
-        : 'Distribué à ${receiptTime(r.deliveredAt!)}';
+        ? L.t.distribue
+        : L.t.distribueDeliveredat(receiptTime(r.deliveredAt!));
     String read(MessageReceipt r) => r.receiptsHidden
-        ? 'Lecture non partagée'
+        ? L.t.lectureNonPartagee
         : !r.read
-        ? 'Pas encore lu'
+        ? L.t.pasEncoreLu
         : r.readAt == null
-        ? 'Lu'
-        : 'Lu à ${receiptTime(r.readAt!)}';
+        ? L.t.lu
+        : L.t.luReadat(receiptTime(r.readAt!));
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
@@ -176,19 +178,19 @@ class _MessageInfoSheet extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-              child: Text('Infos du message', style: theme.textTheme.titleMedium),
+              child: Text(L.t.infosMessage, style: theme.textTheme.titleMedium),
             ),
             ListTile(
               leading: Icon(Icons.schedule_send_outlined, color: p.accentText),
-              title: const Text('Envoyé'),
+              title: Text(L.t.envoye),
               subtitle: Text(receiptTime(message.sentAt)),
             ),
             const Divider(height: 1),
             Flexible(
               child: switch (info) {
-                AsyncData(:final value) when value.isEmpty => const Padding(
-                  padding: EdgeInsets.all(PrivioSpacing.l),
-                  child: Text('Aucun destinataire pour l’instant.'),
+                AsyncData(:final value) when value.isEmpty => Padding(
+                  padding: const EdgeInsets.all(PrivioSpacing.l),
+                  child: Text(L.t.aucunDestinatairePourInstant),
                 ),
                 AsyncData(:final value) => ListView(
                   shrinkWrap: true,
@@ -241,12 +243,8 @@ class FavoritesRow extends ConsumerWidget {
     return ListTile(
       key: const Key('fiche.favorites'),
       leading: Icon(Icons.star_outline_rounded, color: p.accentText),
-      title: const Text('Messages favoris'),
-      subtitle: Text(
-        n == null || n == 0
-            ? 'Aucun pour l’instant'
-            : '$n message${n > 1 ? 's' : ''} · s’effacent avec les messages',
-      ),
+      title: Text(L.t.messagesFavoris),
+      subtitle: Text(n == null || n == 0 ? L.t.aucunPourInstant : L.t.favoritesCountErased(n)),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -270,14 +268,12 @@ class FavoritesScreen extends ConsumerWidget {
     final favorites = ref.watch(favoriteMessagesProvider(conversationId));
     return Scaffold(
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Messages favoris')),
+      appBar: AppBar(title: Text(L.t.messagesFavoris)),
       body: switch (favorites) {
-        AsyncData(:final value) when value.isEmpty => const EmptyView(
+        AsyncData(:final value) when value.isEmpty => EmptyView(
           icon: Icons.star_outline_rounded,
-          title: 'Aucun message favori',
-          message:
-              'Appui long sur un message, puis « Ajouter aux favoris ». Un favori '
-              's’efface en même temps que le message.',
+          title: L.t.aucunMessageFavori,
+          message: L.t.appuiLongSurMessagePuis,
         ),
         AsyncData(:final value) => ListView.separated(
           itemCount: value.length,
@@ -288,12 +284,12 @@ class FavoritesScreen extends ConsumerWidget {
               key: Key('favorite.${r.id}'),
               title: Text(messageRefPreview(r), maxLines: 3, overflow: TextOverflow.ellipsis),
               subtitle: Text(
-                '${r.senderName ?? 'Vous'} · ${receiptTime(r.sentAt)}',
+                '${r.senderName ?? L.t.vous} · ${receiptTime(r.sentAt)}',
                 style: theme.textTheme.bodySmall,
               ),
               trailing: IconButton(
                 key: Key('favorite.remove.${r.id}'),
-                tooltip: 'Retirer des favoris',
+                tooltip: L.t.retirerFavoris,
                 icon: Icon(Icons.star_rounded, color: theme.colorScheme.primary),
                 onPressed: () async {
                   try {
@@ -337,8 +333,8 @@ class MentionsOnlyTile extends ConsumerWidget {
     return SwitchListTile(
       key: const Key('group.mentions_only'),
       secondary: Icon(Icons.alternate_email_rounded, color: p.accentText),
-      title: const Text('Mentions seulement'),
-      subtitle: const Text('Notifié seulement quand quelqu’un vous @mentionne'),
+      title: Text(L.t.mentionsSeulement),
+      subtitle: Text(L.t.notifieSeulementQuandQuelquVous),
       value: mode == 'mentions',
       onChanged: mode == null
           ? null
@@ -394,8 +390,8 @@ Future<void> showReactionsSheet(
                 return ListTile(
                   key: Key('reactions.row.${r.userId}.${r.emoji}'),
                   leading: UserAvatar(name: w.name, avatarPath: w.path, seed: w.seed, radius: 20),
-                  title: Text(mine ? 'Vous' : w.name),
-                  subtitle: mine ? const Text('Toucher pour retirer') : null,
+                  title: Text(mine ? L.t.vous : w.name),
+                  subtitle: mine ? Text(L.t.toucherPourRetirer) : null,
                   trailing: Text(r.emoji, style: theme.textTheme.titleLarge),
                   onTap: mine
                       ? () {
@@ -422,7 +418,10 @@ Future<void> showReactionsSheet(
                   labelColor: theme.colorScheme.primary,
                   indicatorColor: theme.colorScheme.primary,
                   tabs: [
-                    Tab(key: const Key('reactions.tab.all'), text: 'Toutes ${reactions.length}'),
+                    Tab(
+                      key: const Key('reactions.tab.all'),
+                      text: L.t.toutesReactionscount(reactions.length),
+                    ),
                     for (final e in byEmoji.entries)
                       Tab(key: Key('reactions.tab.${e.key}'), text: '${e.key} ${e.value.length}'),
                   ],

@@ -1,3 +1,5 @@
+import '../../l10n/l10n.dart';
+
 import 'dart:convert';
 
 /// Personne trouvée par la recherche (réponse minimale du serveur, sans numéro).
@@ -133,8 +135,8 @@ class ConversationSummary {
   bool isMuted(DateTime now) => mutedUntil != null && mutedUntil!.isAfter(now);
 
   String get title => isGroup
-      ? (groupTitle ?? 'Groupe')
-      : (peerDeleted ? 'Compte supprimé' : (peerDisplayName ?? 'Inconnu'));
+      ? (groupTitle ?? L.t.groupe)
+      : (peerDeleted ? L.t.compteSupprime : (peerDisplayName ?? L.t.inconnu));
 
   /// Photo à afficher : celle du groupe, ou du correspondant.
   String? get avatarPath => isGroup ? groupAvatarPath : peerAvatarPath;
@@ -290,16 +292,16 @@ class GroupMember {
   bool get isAdmin => role == 'owner' || role == 'admin';
 
   String get roleLabel => switch (role) {
-    'owner' => 'Propriétaire',
-    'admin' => 'Administrateur',
-    'invited' => 'Invitation envoyée',
-    _ => 'Membre',
+    'owner' => L.t.proprietaire,
+    'admin' => L.t.administrateur,
+    'invited' => L.t.invitationEnvoyee,
+    _ => L.t.membre,
   };
 
   factory GroupMember.fromJson(Map<String, dynamic> j) => GroupMember(
     userId: j['user_id'] as String,
     handle: j['handle'] as String?,
-    displayName: j['display_name'] as String? ?? 'Compte supprimé',
+    displayName: j['display_name'] as String? ?? L.t.compteSupprime,
     avatarPath: j['avatar_path'] as String?,
     role: j['role'] as String,
     invited: j['invited'] as bool? ?? false,
@@ -331,7 +333,7 @@ class GroupInvitation {
   factory GroupInvitation.fromJson(Map<String, dynamic> j) => GroupInvitation(
     id: j['invitation_id'] as String,
     conversationId: j['conversation_id'] as String,
-    title: j['title'] as String? ?? 'Groupe',
+    title: j['title'] as String? ?? L.t.groupe,
     description: j['description'] as String?,
     avatarPath: j['avatar_path'] as String?,
     inviterName: j['inviter_name'] as String?,
@@ -616,32 +618,37 @@ String? groupEventText(ChatMessage m, {required String? me}) {
     return null;
   }
   final mine = m.senderId != null && m.senderId == me;
-  final a = j['a'] as String? ?? 'Quelqu’un';
-  final t = j['t'] as String? ?? 'un membre';
+  final a = j['a'] as String? ?? L.t.quelqu;
+  final t = j['t'] as String? ?? L.t.membre2;
   final v = j['v'] as String?;
-  String did(String verb) => mine ? 'Vous avez $verb' : '$a a $verb';
+  // Lot 8.2a : une phrase complète par événement (moi / un membre), pour la traduction.
+  String ev(String Function() mineText, String Function() otherText) =>
+      mine ? mineText() : otherText();
+  final title = v ?? '';
   return switch (j['e']) {
-    'created' => did('créé le groupe «\u202F${v ?? ''}\u202F»'),
-    'joined' => mine ? 'Vous avez rejoint le groupe' : '$a a rejoint le groupe',
-    'left' => mine ? 'Vous avez quitté le groupe' : '$a a quitté le groupe',
-    'removed' => did('retiré $t du groupe'),
-    'admin_added' => did('nommé $t administrateur'),
-    'admin_removed' => did('retiré le rôle d’administrateur à $t'),
+    'created' => ev(() => L.t.evtCreatedMine(title), () => L.t.evtCreatedOther(a, title)),
+    'joined' => mine ? L.t.vousAvezRejointGroupe : L.t.rejointGroupe(a),
+    'left' => mine ? L.t.vousAvezQuitteGroupe : L.t.quitteGroupe(a),
+    'removed' => ev(() => L.t.evtRemovedMine(t), () => L.t.evtRemovedOther(a, t)),
+    'admin_added' => ev(() => L.t.evtAdminAddedMine(t), () => L.t.evtAdminAddedOther(a, t)),
+    'admin_removed' => ev(() => L.t.evtAdminRemovedMine(t), () => L.t.evtAdminRemovedOther(a, t)),
     'owner_changed' =>
-      j['a'] == null ? '$t est maintenant propriétaire du groupe' : did('confié le groupe à $t'),
-    'title' => did('renommé le groupe «\u202F${v ?? ''}\u202F»'),
-    'description' => did('modifié la description du groupe'),
-    'photo' => did('changé la photo du groupe'),
-    'photo_removed' => did('retiré la photo du groupe'),
+      j['a'] == null
+          ? L.t.tEstMaintenantProprietaireGroupe(t)
+          : ev(() => L.t.evtOwnerChangedMine(t), () => L.t.evtOwnerChangedOther(a, t)),
+    'title' => ev(() => L.t.evtTitleMine(title), () => L.t.evtTitleOther(a, title)),
+    'description' => ev(() => L.t.evtDescriptionMine, () => L.t.evtDescriptionOther(a)),
+    'photo' => ev(() => L.t.evtPhotoMine, () => L.t.evtPhotoOther(a)),
+    'photo_removed' => ev(() => L.t.evtPhotoRemovedMine, () => L.t.evtPhotoRemovedOther(a)),
     'posting' =>
       v == 'admins'
-          ? did('réservé l’envoi de messages aux administrateurs')
-          : did('permis à tous les membres d’écrire'),
-    'closed' => 'Ce groupe a été fermé par Privio',
+          ? ev(() => L.t.evtPostingAdminsMine, () => L.t.evtPostingAdminsOther(a))
+          : ev(() => L.t.evtPostingAllMine, () => L.t.evtPostingAllOther(a)),
+    'closed' => L.t.ceGroupeEteFermePar2,
     'info_editing' =>
       v == 'admins'
-          ? did('réservé la modification du groupe aux administrateurs')
-          : did('permis à tous les membres de modifier le groupe'),
+          ? ev(() => L.t.evtInfoAdminsMine, () => L.t.evtInfoAdminsOther(a))
+          : ev(() => L.t.evtInfoAllMine, () => L.t.evtInfoAllOther(a)),
     _ => null,
   };
 }
@@ -752,7 +759,7 @@ class CommonGroup {
 
   factory CommonGroup.fromJson(Map<String, dynamic> j) => CommonGroup(
     id: j['conversation_id'] as String,
-    title: j['title'] as String? ?? 'Groupe',
+    title: j['title'] as String? ?? L.t.groupe,
     memberCount: (j['member_count'] as num?)?.toInt() ?? 0,
     avatarPath: j['avatar_path'] as String?,
   );
@@ -777,9 +784,9 @@ ChatMessage mediaMessageFromJson(Map<String, dynamic> j) {
 
 /// Libellé d'une visibilité.
 String visibilityLabel(String v) => switch (v) {
-  'everyone' => 'Tout le monde',
-  'contacts' => 'Mes contacts',
-  _ => 'Personne',
+  'everyone' => L.t.toutMonde,
+  'contacts' => L.t.mesContacts,
+  _ => L.t.personne,
 };
 
 /// Statut d'une personne (si elle le montre).
@@ -1016,7 +1023,7 @@ class JoinRequest {
   factory JoinRequest.fromJson(Map<String, dynamic> j) => JoinRequest(
     id: j['request_id'] as String,
     userId: j['user_id'] as String,
-    displayName: j['display_name'] as String? ?? 'Compte supprimé',
+    displayName: j['display_name'] as String? ?? L.t.compteSupprime,
     handle: j['handle'] as String?,
     createdAt: DateTime.parse(j['created_at'] as String),
     wasRemoved: j['was_removed'] as bool? ?? false,
@@ -1033,7 +1040,7 @@ class MyJoinRequest {
 
   factory MyJoinRequest.fromJson(Map<String, dynamic> j) => MyJoinRequest(
     conversationId: j['conversation_id'] as String,
-    title: j['title'] as String? ?? 'Groupe',
+    title: j['title'] as String? ?? L.t.groupe,
     createdAt: DateTime.parse(j['created_at'] as String),
   );
 }
@@ -1118,7 +1125,7 @@ class GroupDeletionNotice {
 
   factory GroupDeletionNotice.fromJson(Map<String, dynamic> j) => GroupDeletionNotice(
     id: j['id'] as String,
-    title: j['title'] as String? ?? 'Groupe',
+    title: j['title'] as String? ?? L.t.groupe,
     deletedAt: DateTime.parse(j['deleted_at'] as String),
   );
 }
@@ -1193,7 +1200,7 @@ class MessageReceipt {
 
   factory MessageReceipt.fromJson(Map<String, dynamic> j) => MessageReceipt(
     userId: j['user_id'] as String,
-    name: j['display_name'] as String? ?? 'Ancien membre',
+    name: j['display_name'] as String? ?? L.t.ancienMembre,
     delivered: j['delivered'] as bool? ?? false,
     deliveredAt: j['delivered_at'] == null ? null : DateTime.parse(j['delivered_at'] as String),
     read: j['read'] as bool? ?? false,

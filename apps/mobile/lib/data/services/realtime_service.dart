@@ -1,3 +1,5 @@
+import '../../l10n/l10n.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -22,10 +24,10 @@ class RealtimeStatus {
   final String? detail;
 
   String get label => switch (state) {
-    RealtimeState.connected => 'Connecté',
-    RealtimeState.connecting => 'Connexion…',
-    RealtimeState.error => 'Indisponible${detail == null ? '' : ' ($detail)'}',
-    RealtimeState.stopped => 'Arrêté',
+    RealtimeState.connected => L.t.connecte,
+    RealtimeState.connecting => L.t.connexion,
+    RealtimeState.error => detail == null ? L.t.unavailable : L.t.unavailableDetail(detail!),
+    RealtimeState.stopped => L.t.arrete,
   };
 }
 
@@ -133,7 +135,7 @@ class SupabaseRealtimeService implements RealtimeService {
           _scheduleRetry();
         case RealtimeSubscribeStatus.closed:
           if (_userId != null) {
-            _status.value = const RealtimeStatus(RealtimeState.error, 'fermé');
+            _status.value = RealtimeStatus(RealtimeState.error, L.t.ferme);
             _scheduleRetry();
           }
       }

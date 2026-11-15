@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -37,10 +39,13 @@ class ViewOnceContent extends StatelessWidget {
     final fg = outgoing ? p.onBubbleOut : p.onBubbleIn;
     final muted = outgoing ? p.bubbleOutMeta : p.bubbleInMeta;
     final voice = message.kind == 'voice';
-    final what = voice ? 'Vocal' : 'Photo';
+    final what = voice ? L.t.vocal : L.t.photo;
     final (String status, bool done) = outgoing
         ? _senderStatus(voice)
-        : (message.opened ? (voice ? 'Écouté' : 'Ouverte') : 'Toucher pour ouvrir', message.opened);
+        : (
+            message.opened ? (voice ? L.t.ecoute : L.t.ouverte) : L.t.toucherPourOuvrir,
+            message.opened,
+          );
     final canOpen = !outgoing && !message.opened && onOpen != null;
     final row = Row(
       mainAxisSize: MainAxisSize.min,
@@ -83,7 +88,7 @@ class ViewOnceContent extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '$what · vue unique',
+                    L.t.whatVueUnique(what),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: done ? muted : fg,
                       fontWeight: FontWeight.w600,
@@ -103,7 +108,7 @@ class ViewOnceContent extends StatelessWidget {
     );
     return Semantics(
       button: canOpen,
-      label: '$what en vue unique, $status',
+      label: L.t.whatVueUniqueStatus(what, status),
       excludeSemantics: true,
       child: GestureDetector(
         key: Key('view_once.${message.id}'),
@@ -119,9 +124,9 @@ class ViewOnceContent extends StatelessWidget {
 
   (String, bool) _senderStatus(bool voice) {
     final n = message.openedCount ?? 0;
-    if (n == 0) return (voice ? 'Pas encore écouté' : 'Pas encore ouverte', false);
-    if (!isGroup) return (voice ? 'Écouté' : 'Ouverte', true);
-    return (voice ? 'Écouté par $n' : 'Ouverte par $n', true);
+    if (n == 0) return (voice ? L.t.pasEncoreEcoute : L.t.pasEncoreOuverte, false);
+    if (!isGroup) return (voice ? L.t.ecoute : L.t.ouverte, true);
+    return (voice ? L.t.ecouteParN(n) : L.t.ouverteParN(n), true);
   }
 }
 
@@ -140,7 +145,7 @@ class PendingViewOnceContent extends StatelessWidget {
         Icon(voice ? Icons.mic_rounded : Icons.photo_outlined, size: 18, color: p.onBubbleOut),
         const SizedBox(width: 6),
         Text(
-          '${voice ? 'Vocal' : 'Photo'} · vue unique',
+          voice ? L.t.voiceViewOnce : L.t.photoViewOnce,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: p.onBubbleOut),
         ),
       ],
@@ -190,7 +195,7 @@ class _ViewOncePhotoScreenState extends State<ViewOncePhotoScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           key: const Key('view_once.viewer.close'),
-          tooltip: 'Fermer',
+          tooltip: L.t.fermer,
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.close),
         ),
@@ -199,7 +204,7 @@ class _ViewOncePhotoScreenState extends State<ViewOncePhotoScreen> {
           children: [
             Text(widget.title, style: theme.textTheme.titleMedium?.copyWith(color: Colors.white)),
             Text(
-              'Vue unique · disparaît à la fermeture',
+              L.t.vueUniqueDisparaitFermeture,
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
             ),
           ],
@@ -209,7 +214,7 @@ class _ViewOncePhotoScreenState extends State<ViewOncePhotoScreen> {
         child: InteractiveViewer(
           maxScale: 5,
           child: Center(
-            child: Image.memory(widget.bytes, fit: BoxFit.contain, semanticLabel: 'Photo'),
+            child: Image.memory(widget.bytes, fit: BoxFit.contain, semanticLabel: L.t.photo),
           ),
         ),
       ),
@@ -265,17 +270,17 @@ class _ViewOnceVoiceSheetState extends ConsumerState<_ViewOnceVoiceSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Vocal en vue unique', style: theme.textTheme.titleMedium),
+            Text(L.t.vocalVueUnique, style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'Il disparaît dès que vous fermez ce panneau.',
+              L.t.ilDisparaitQueVousFermez,
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: PrivioSpacing.m),
             IconButton.filled(
               key: const Key('view_once.voice.play'),
               iconSize: 36,
-              tooltip: playing ? 'Pause' : 'Écouter',
+              tooltip: playing ? L.t.pause : L.t.ecouter,
               onPressed: () => unawaited(_player.togglePreview(widget.audio)),
               icon: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
             ),
@@ -283,7 +288,7 @@ class _ViewOnceVoiceSheetState extends ConsumerState<_ViewOnceVoiceSheet> {
             TextButton(
               key: const Key('view_once.voice.close'),
               onPressed: () => Navigator.pop(context),
-              child: const Text('Fermer'),
+              child: Text(L.t.fermer),
             ),
           ],
         ),
@@ -315,7 +320,7 @@ class LinkPreviewCard extends ConsumerWidget {
     final site = preview.site ?? Uri.tryParse(preview.url)?.host ?? '';
     return Semantics(
       button: true,
-      label: 'Aperçu du lien ${preview.title ?? site}',
+      label: L.t.apercuLienSite(preview.title ?? site),
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -398,14 +403,14 @@ Future<void> openLink(BuildContext context, String url) async {
     context: context,
     builder: (ctx) => AlertDialog(
       key: const Key('link.confirm'),
-      title: const Text('Ouvrir ce lien ?'),
-      content: Text('Le site ${uri.host} s’ouvrira dans votre navigateur.'),
+      title: Text(L.t.ouvrirCeLien),
+      content: Text(L.t.siteHostOuvriraDansVotre(uri.host)),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
         FilledButton(
           key: const Key('link.confirm.open'),
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Ouvrir'),
+          child: Text(L.t.ouvrir),
         ),
       ],
     ),
@@ -434,10 +439,10 @@ class ViewOnceToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     toggled: value,
-    label: 'Vue unique',
+    label: L.t.vueUnique,
     excludeSemantics: true,
     child: IconButton(
-      tooltip: value ? 'Vue unique activée' : 'Vue unique',
+      tooltip: value ? L.t.vueUniqueActivee : L.t.vueUnique,
       onPressed: () => onChanged(!value),
       icon: Container(
         width: 28,

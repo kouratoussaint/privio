@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,18 +22,14 @@ class StorageScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Effacer les photos et vocaux gardés\u202F?'),
-        content: const Text(
-          'Les photos et vocaux gardés sur ce téléphone sont effacés. Tant que les messages '
-          'ne sont pas effacés, vous pourrez les télécharger de nouveau (cela consomme des données). '
-          'Les envois en attente sont conservés.',
-        ),
+        title: Text(L.t.effacerPhotosVocauxGardes),
+        content: Text(L.t.photosVocauxGardesSurCe),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
           FilledButton(
             key: const Key('storage.clear.confirm'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Effacer'),
+            child: Text(L.t.effacer),
           ),
         ],
       ),
@@ -40,13 +38,8 @@ class StorageScreen extends ConsumerWidget {
     final n = await ref.read(localCacheProvider).clearMedia();
     ref.invalidate(mediaUsageProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            n == 0 ? 'Rien à effacer.' : '$n fichier${n > 1 ? 's' : ''} effacé${n > 1 ? 's' : ''}.',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(n == 0 ? L.t.rienEffacer : L.t.filesErased(n))));
     }
   }
 
@@ -58,10 +51,10 @@ class StorageScreen extends ConsumerWidget {
     final space = ref.watch(mediaUsageProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stockage et données')),
+      appBar: AppBar(title: Text(L.t.stockageDonnees)),
       body: SettingsListView(
         children: [
-          const SettingsSectionTitle('Téléchargement automatique des photos', first: true),
+          SettingsSectionTitle(L.t.telechargementAutomatiquePhotos, first: true),
           SettingsCard(
             children: [
               RadioGroup<PhotoAutoDownload>(
@@ -82,31 +75,31 @@ class StorageScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SettingsNote(
-            'Sans téléchargement automatique, une photo reçue s’affiche en attente\u202F: '
-            'touchez-la pour la télécharger. Les vocaux ne se téléchargent que lorsque vous '
-            'les écoutez. Vos propres envois ne sont jamais retéléchargés.',
-          ),
-          const SettingsSectionTitle('Données utilisées par les photos et vocaux'),
+          SettingsNote(L.t.sansTelechargementAutomatiquePhotoRecue),
+          SettingsSectionTitle(L.t.donneesUtiliseesParPhotosVocaux),
           SettingsCard(
             children: [
               if (usage != null) ...[
                 ListTile(
                   key: const Key('storage.usage.month'),
                   leading: Icon(Icons.swap_vert, color: p.accentText),
-                  title: const Text('Ce mois-ci'),
+                  title: Text(L.t.ceMoisCi),
                   subtitle: Text(
-                    'Reçu ${formatBytes(usage.received(usage.month))} · '
-                    'envoyé ${formatBytes(usage.sent(usage.month))}',
+                    L.t.recuMonthEnvoyeMonth2(
+                      formatBytes(usage.received(usage.month)),
+                      formatBytes(usage.sent(usage.month)),
+                    ),
                   ),
                 ),
                 ListTile(
                   key: const Key('storage.usage.previous'),
                   leading: Icon(Icons.history, color: p.accentText),
-                  title: const Text('Mois précédent'),
+                  title: Text(L.t.moisPrecedent),
                   subtitle: Text(
-                    'Reçu ${formatBytes(usage.received(usage.previousMonth))} · '
-                    'envoyé ${formatBytes(usage.sent(usage.previousMonth))}',
+                    L.t.recuPreviousmonthEnvoyePreviousmonth2(
+                      formatBytes(usage.received(usage.previousMonth)),
+                      formatBytes(usage.sent(usage.previousMonth)),
+                    ),
                   ),
                 ),
                 const SettingsDivider(),
@@ -118,29 +111,24 @@ class StorageScreen extends ConsumerWidget {
                   child: TextButton(
                     key: const Key('storage.usage.reset'),
                     onPressed: () => ref.read(dataUsageProvider.notifier).reset(),
-                    child: const Text('Remettre les compteurs à zéro'),
+                    child: Text(L.t.remettreCompteursZero),
                   ),
                 ),
               ),
             ],
           ),
-          const SettingsNote(
-            'Photos, vocaux et photos de profil échangés depuis ce téléphone. Les messages '
-            'texte, très légers, ne sont pas comptés. Chiffres indicatifs\u202F: votre opérateur '
-            'fait foi.',
-          ),
-          const SettingsSectionTitle('Espace sur ce téléphone'),
+          SettingsNote(L.t.photosVocauxPhotosProfilEchanges),
+          SettingsSectionTitle(L.t.espaceSurCeTelephone),
           SettingsCard(
             children: [
               ListTile(
                 key: const Key('storage.space'),
                 leading: Icon(Icons.sd_storage_outlined, color: p.accentText),
-                title: const Text('Photos et vocaux sur ce téléphone'),
+                title: Text(L.t.photosVocauxSurCeTelephone),
                 subtitle: Text(switch (space) {
-                  AsyncData(:final value) =>
-                    '${value.files} fichier${value.files > 1 ? 's' : ''} · ${formatBytes(value.bytes)}',
-                  AsyncError() => 'Indisponible',
-                  _ => 'Calcul…',
+                  AsyncData(:final value) => L.t.filesSize(value.files, formatBytes(value.bytes)),
+                  AsyncError() => L.t.indisponible,
+                  _ => L.t.calcul,
                 }),
               ),
               Padding(
@@ -149,12 +137,12 @@ class StorageScreen extends ConsumerWidget {
                   key: const Key('storage.clear'),
                   onPressed: () => _clear(context, ref),
                   icon: const Icon(Icons.cleaning_services_outlined),
-                  label: const Text('Effacer les photos et vocaux gardés'),
+                  label: Text(L.t.effacerPhotosVocauxGardes2),
                 ),
               ),
             ],
           ),
-          const SettingsNote('Chaque photo ou vocal s’efface avec son message.'),
+          SettingsNote(L.t.chaquePhotoOuVocalEfface),
         ],
       ),
     );

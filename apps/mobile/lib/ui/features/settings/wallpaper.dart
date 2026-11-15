@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -34,11 +36,11 @@ const kWallpaperColors = <(String, Color, Color)>[
 ];
 
 /// Motifs proposés : (nom, libellé).
-const kWallpaperPatterns = <(String, String)>[
-  ('privacy', 'Motif Privio'),
-  ('dots', 'Points'),
-  ('waves', 'Vagues'),
-  ('plain', 'Uni'),
+List<(String, String)> get kWallpaperPatterns => <(String, String)>[
+  ('privacy', L.t.motifPrivio),
+  ('dots', L.t.points),
+  ('waves', L.t.vagues),
+  ('plain', L.t.uni),
 ];
 
 /// Choix enregistré (null : pas de choix) ; famille par discussion (null : par défaut).
@@ -249,7 +251,7 @@ class WallpaperScreen extends ConsumerWidget {
                           child: Icon(
                             Icons.check_circle_rounded,
                             color: theme.colorScheme.primary,
-                            semanticLabel: 'choisi',
+                            semanticLabel: L.t.semChosen,
                           ),
                         ),
                       ),
@@ -266,7 +268,7 @@ class WallpaperScreen extends ConsumerWidget {
 
     final photo = choice != null && choice.startsWith('photo:') ? choice : null;
     return Scaffold(
-      appBar: AppBar(title: Text(title == null ? 'Fond d’écran' : 'Fond · $title')),
+      appBar: AppBar(title: Text(title == null ? L.t.fondEcran : L.t.fondTitle(title!))),
       body: ListView(
         padding: const EdgeInsets.all(PrivioSpacing.l),
         children: [
@@ -286,12 +288,12 @@ class WallpaperScreen extends ConsumerWidget {
                     children: [
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: _PreviewBubble(text: 'Bonjour !', color: p.bubbleIn),
+                        child: _PreviewBubble(text: L.t.bonjour, color: p.bubbleIn),
                       ),
                       const SizedBox(height: PrivioSpacing.s),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: _PreviewBubble(text: 'Salut, ça va ?', color: p.bubbleOut),
+                        child: _PreviewBubble(text: L.t.salutCaVa, color: p.bubbleOut),
                       ),
                     ],
                   ),
@@ -302,9 +304,8 @@ class WallpaperScreen extends ConsumerWidget {
           const SizedBox(height: PrivioSpacing.l),
           Text(
             conversationId == null
-                ? 'Par défaut pour toutes les discussions. Chaque discussion peut avoir le '
-                      'sien (fiche de la discussion).'
-                : 'Seulement pour cette discussion. La photo choisie reste sur ce téléphone.',
+                ? L.t.parDefautPourToutesDiscussions
+                : L.t.seulementPourCetteDiscussionPhoto,
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: PrivioSpacing.l),
@@ -319,7 +320,7 @@ class WallpaperScreen extends ConsumerWidget {
               if (conversationId != null)
                 tile(
                   'default',
-                  'Par défaut',
+                  L.t.parDefaut,
                   value: null,
                   preview: Consumer(
                     builder: (context, ref, _) => WallpaperBackground(
@@ -331,7 +332,7 @@ class WallpaperScreen extends ConsumerWidget {
                 tile(name, label, value: 'pattern:$name'),
               for (final (name, _, _) in kWallpaperColors)
                 tile(name, name[0].toUpperCase() + name.substring(1), value: 'color:$name'),
-              if (photo != null) tile('photo', 'Ma photo', value: photo),
+              if (photo != null) tile('photo', L.t.maPhoto, value: photo),
             ],
           ),
           const SizedBox(height: PrivioSpacing.l),
@@ -339,11 +340,11 @@ class WallpaperScreen extends ConsumerWidget {
             key: const Key('wallpaper.pick_photo'),
             onPressed: () => _pickPhoto(context, ref),
             icon: const Icon(Icons.photo_library_outlined),
-            label: Text(photo == null ? 'Choisir une photo' : 'Choisir une autre photo'),
+            label: Text(photo == null ? L.t.choisirPhoto : L.t.choisirAutrePhoto),
           ),
           const SizedBox(height: PrivioSpacing.s),
           Text(
-            'La photo n’est jamais envoyée : elle reste sur ce téléphone.',
+            L.t.photoNEstJamaisEnvoyee,
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

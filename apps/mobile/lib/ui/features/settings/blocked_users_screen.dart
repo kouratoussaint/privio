@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,12 +19,12 @@ class BlockedUsersScreen extends ConsumerWidget {
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Personnes bloquées')),
+      appBar: AppBar(title: Text(L.t.personnesBloquees)),
       body: switch (blocked) {
-        AsyncData(:final value) when value.isEmpty => const EmptyView(
+        AsyncData(:final value) when value.isEmpty => EmptyView(
           icon: Icons.block,
-          title: 'Personne n’est bloqué',
-          message: 'Vous pouvez bloquer quelqu’un depuis sa fiche contact.',
+          title: L.t.personneNEstBloque,
+          message: L.t.vousPouvezBloquerQuelquDepuis,
         ),
         AsyncData(:final value) => ListView(
           children: [
@@ -43,7 +45,7 @@ class BlockedUsersScreen extends ConsumerWidget {
                       }
                     }
                   },
-                  child: const Text('Débloquer'),
+                  child: Text(L.t.debloquer),
                 ),
               ),
           ],

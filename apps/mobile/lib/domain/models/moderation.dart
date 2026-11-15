@@ -1,27 +1,29 @@
 /// Modération (lot 5.3) : signalements vus par la console, sanctions, situation d'un compte.
 library;
 
+import '../../l10n/l10n.dart';
+
 /// Motifs de signalement, en français.
-const kReportReasons = <String, String>{
-  'spam': 'Spam',
-  'harassment': 'Harcèlement',
-  'inappropriate': 'Contenu inapproprié',
-  'threat': 'Menace',
-  'impersonation': 'Usurpation d’identité',
-  'other': 'Autre',
-  'support': 'Demande d’assistance',
+Map<String, String> get kReportReasons => <String, String>{
+  'spam': L.t.spam,
+  'harassment': L.t.harcelement,
+  'inappropriate': L.t.contenuInapproprie,
+  'threat': L.t.menace,
+  'impersonation': L.t.usurpationIdentite,
+  'other': L.t.autre,
+  'support': L.t.demandeAssistance,
 };
 
-String reasonLabel(String? r) => kReportReasons[r] ?? 'Autre';
+String reasonLabel(String? r) => kReportReasons[r] ?? L.t.autre;
 
 /// Décisions, en français (journal, signalements traités).
-const kDecisionLabels = <String, String>{
-  'dismissed': 'Classé sans suite',
-  'warned': 'Avertissement',
-  'suspended': 'Suspension',
-  'message_deleted': 'Message supprimé',
-  'group_closed': 'Groupe fermé',
-  'answered': 'Répondue',
+Map<String, String> get kDecisionLabels => <String, String>{
+  'dismissed': L.t.classeSansSuite,
+  'warned': L.t.avertissement,
+  'suspended': L.t.suspension,
+  'message_deleted': L.t.messageSupprime,
+  'group_closed': L.t.groupeFerme,
+  'answered': L.t.repondue,
 };
 
 /// Un signalement tel que la console le voit (jamais de numéro de téléphone).

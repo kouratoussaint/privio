@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../state/session_controller.dart';
 import '../../core/widgets/privio_brand.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/motion/illustrations.dart';
+import '../settings/language_screen.dart';
 
 /// Écran 03 — un seul choix : le numéro de téléphone (aucune option e-mail).
 class WelcomeScreen extends ConsumerWidget {
@@ -32,17 +35,19 @@ class WelcomeScreen extends ConsumerWidget {
                     key: const Key('welcome.phone'),
                     onPressed: () => context.push(Routes.phone),
                     icon: const Icon(Icons.phone_android),
-                    label: const Text('Continuer avec mon numéro'),
+                    label: Text(L.t.continuerAvecMonNumero),
                   ),
                   const SizedBox(height: PrivioSpacing.s),
                   Text(
-                    'Un code de vérification vous sera envoyé par SMS.',
+                    L.t.codeVerificationVousSeraEnvoye,
                     style: theme.textTheme.bodySmall,
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
               children: [
+                // Lot 8.2a : choix de la langue (s'il y a un choix).
+                const LanguageChip(),
                 if (notice != null) ...[
                   NoticeBanner(
                     message: notice,
@@ -55,29 +60,29 @@ class WelcomeScreen extends ConsumerWidget {
                 const Center(child: PrivioWordmark()),
                 const SizedBox(height: PrivioSpacing.s),
                 Text(
-                  'Messagerie privée et éphémère',
+                  L.t.messageriePriveeEphemere,
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: PrivioSpacing.xl),
                 // Lot 7.2b2 : trois petites scènes animées.
-                const Row(
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Scene(
                       icon: Icons.chat_bubble_outline,
                       motion: IconMotion.vanish,
-                      label: 'Les messages s’effacent',
+                      label: L.t.messagesEffacent,
                     ),
                     _Scene(
                       icon: Icons.lock_outline,
                       motion: IconMotion.pulse,
-                      label: 'Transport protégé',
+                      label: L.t.transportProtege,
                     ),
                     _Scene(
                       icon: Icons.groups_outlined,
                       motion: IconMotion.float,
-                      label: 'Groupes privés',
+                      label: L.t.groupesPrives,
                     ),
                   ],
                 ),
