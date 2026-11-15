@@ -22,6 +22,7 @@ import 'my_profile_screen.dart';
 import '../../../state/feedback_providers.dart';
 import 'wallpaper.dart';
 import 'appearance_screen.dart';
+import '../../../data/services/share_service.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
 class SettingsTab extends ConsumerWidget {
@@ -345,6 +346,15 @@ class SettingsTab extends ConsumerWidget {
             const SizedBox(height: PrivioSpacing.l),
             SettingsCard(
               children: [
+                // Lot 8.1c : inviter un ami (partage de mon identifiant).
+                ListTile(
+                  key: const Key('settings.invite'),
+                  leading: Icon(Icons.favorite_border_rounded, color: p.accentText),
+                  title: const Text('Inviter un ami'),
+                  subtitle: const Text('Partager votre identifiant'),
+                  onTap: () => ref.read(shareTextProvider)(inviteText(profile?.handle)),
+                ),
+                const SettingsDivider(),
                 ListTile(
                   key: const Key('settings.help'),
                   leading: Icon(Icons.help_outline, color: p.accentText),

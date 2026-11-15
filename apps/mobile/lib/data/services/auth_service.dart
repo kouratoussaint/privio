@@ -10,6 +10,12 @@ abstract interface class AuthService {
   Future<void> requestOtp(String phoneE164);
   Future<void> verifyOtp({required String phoneE164, required String code});
   Future<void> signOut();
+
+  /// Lot 8.1c : changer de numéro. Le code part vers le NOUVEAU numéro ; rien ne change
+  /// tant qu'il n'est pas saisi. Renvoie vrai si le changement est déjà fait (projet sans
+  /// confirmation par SMS).
+  Future<bool> requestPhoneChange(String newPhoneE164);
+  Future<void> verifyPhoneChange({required String newPhoneE164, required String code});
 }
 
 class SupabaseAuthService implements AuthService {
@@ -37,6 +43,26 @@ class SupabaseAuthService implements AuthService {
     try {
       final res = await _auth.verifyOTP(phone: phoneE164, token: code, type: OtpType.sms);
       if (res.session == null) throw const AppFailure(FailureCode.otpInvalidOrExpired);
+    } on Object catch (e) {
+      throw toAppFailure(e);
+    }
+  }
+
+  @override
+  Future<bool> requestPhoneChange(String newPhoneE164) async {
+    try {
+      final res = await _auth.updateUser(UserAttributes(phone: newPhoneE164));
+      final now = res.user?.phone;
+      return now != null && '+${now.replaceFirst('+', '')}' == newPhoneE164;
+    } on Object catch (e) {
+      throw toAppFailure(e);
+    }
+  }
+
+  @override
+  Future<void> verifyPhoneChange({required String newPhoneE164, required String code}) async {
+    try {
+      await _auth.verifyOTP(phone: newPhoneE164, token: code, type: OtpType.phoneChange);
     } on Object catch (e) {
       throw toAppFailure(e);
     }

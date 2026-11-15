@@ -18,6 +18,8 @@ import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
 import 'person_card.dart';
 import '../groups/join_group_screen.dart';
+import '../../../data/services/share_service.dart';
+import '../../../state/session_controller.dart';
 
 /// Écran 09 — trouver une personne par son identifiant Privio (ou son numéro, si elle
 /// l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
@@ -283,6 +285,19 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
           if (_busy) const LinearProgressIndicator(),
           if (_message != null)
             Text(_message!, key: const Key('search.message'), style: theme.textTheme.bodyMedium),
+          // Lot 8.1c : personne introuvable : l'inviter (partage de mon identifiant).
+          if (_message != null && _message!.startsWith('Aucun compte'))
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('search.invite'),
+                onPressed: () => ref.read(shareTextProvider)(
+                  inviteText(ref.read(sessionControllerProvider).value?.account?.profile?.handle),
+                ),
+                icon: const Icon(Icons.share_outlined),
+                label: const Text('Inviter cette personne sur Privio'),
+              ),
+            ),
           if (found != null)
             Card(
               child: Padding(

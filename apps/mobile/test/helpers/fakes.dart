@@ -71,6 +71,24 @@ class FakeAuthService implements AuthService {
     signedIn = false;
     _changes.add(null);
   }
+
+  /// Lot 8.1c : changement de numéro.
+  final List<String> phoneChangeRequests = [];
+  String? changedPhone;
+  Set<String> takenPhones = {'+22670000002'};
+
+  @override
+  Future<bool> requestPhoneChange(String newPhoneE164) async {
+    if (takenPhones.contains(newPhoneE164)) throw const AppFailure(FailureCode.phoneTaken);
+    phoneChangeRequests.add(newPhoneE164);
+    return false;
+  }
+
+  @override
+  Future<void> verifyPhoneChange({required String newPhoneE164, required String code}) async {
+    if (code != validCode) throw const AppFailure(FailureCode.otpInvalidOrExpired);
+    changedPhone = newPhoneE164;
+  }
 }
 
 class FakeAccountApi implements AccountApi {

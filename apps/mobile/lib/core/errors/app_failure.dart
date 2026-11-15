@@ -44,6 +44,7 @@ enum FailureCode {
   notAdmin,
   pinLimitReached,
   viewOnceUnavailable,
+  phoneTaken,
   gifUnavailable,
   notOwner,
   roleInvalid,
@@ -137,6 +138,7 @@ class AppFailure implements Exception {
     FailureCode.cameraUnavailable => 'L’appareil photo ou la galerie n’est pas disponible.',
     FailureCode.notGroup => 'Cette action n’est possible que dans un groupe.',
     FailureCode.notAdmin => 'Seuls les administrateurs du groupe peuvent faire cela.',
+    FailureCode.phoneTaken => 'Ce numéro est déjà utilisé par un autre compte Privio.',
     FailureCode.viewOnceUnavailable => 'Ce message en vue unique a déjà été ouvert.',
     FailureCode.gifUnavailable =>
       'Les GIF sont momentanément indisponibles. Réessayez dans un instant.',
@@ -319,6 +321,8 @@ AppFailure toAppFailure(Object error) {
         return const AppFailure(FailureCode.smsRateLimited);
       case 'over_request_rate_limit':
         return const AppFailure(FailureCode.rateLimited);
+      case 'phone_exists':
+        return const AppFailure(FailureCode.phoneTaken);
       case 'sms_send_failed':
         return const AppFailure(FailureCode.smsSendFailed);
       case 'phone_provider_disabled':

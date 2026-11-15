@@ -603,8 +603,9 @@ class AppLockSettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Création, changement ou désactivation du code.
-enum PinFlow { create, change, disable }
+/// Création, changement ou désactivation du code ; lot 8.1c : confirmation d'une action
+/// sensible (renvoie vrai si le code est juste).
+enum PinFlow { create, change, disable, confirm }
 
 class PinFlowScreen extends ConsumerStatefulWidget {
   const PinFlowScreen({super.key, required this.flow});
@@ -647,6 +648,10 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
             if (widget.flow == PinFlow.disable) {
               await lock.disable();
               if (mounted) context.pop();
+              return;
+            }
+            if (widget.flow == PinFlow.confirm) {
+              Navigator.of(context).pop(true);
               return;
             }
             setState(() {
@@ -711,6 +716,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
         PinFlow.create => 'Créer un code',
         PinFlow.change => 'Changer le code',
         PinFlow.disable => 'Désactiver le verrouillage',
+        PinFlow.confirm => 'Code Privio',
       }),
     ),
     body: Center(

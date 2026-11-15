@@ -21,6 +21,7 @@ import '../../../state/feedback_providers.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/handle/handle_rules.dart';
+import 'change_phone_screen.dart';
 
 /// Lot 7.2a — « Ma fiche » (Paramètres → ligne du profil) : comme la fiche d'un contact,
 /// mais modifiable : photo (prendre, choisir, retirer, voir en grand), nom, À propos.
@@ -120,11 +121,21 @@ class MyProfileScreen extends ConsumerWidget {
               ),
               if (account.phoneE164 != null) ...[
                 const SettingsDivider(),
+                // Lot 8.1c : changer de numéro.
                 ListTile(
                   key: const Key('my.phone'),
                   leading: Icon(Icons.phone_outlined, color: p.accentText),
                   title: const Text('Numéro'),
                   subtitle: Text(PhoneNumber.format(account.phoneE164!)),
+                  trailing: Text(
+                    'Changer',
+                    style: theme.textTheme.labelLarge?.copyWith(color: p.accentText),
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => ChangePhoneScreen(currentPhone: account.phoneE164),
+                    ),
+                  ),
                 ),
               ],
             ],
