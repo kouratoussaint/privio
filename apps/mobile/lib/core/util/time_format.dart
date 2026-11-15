@@ -23,6 +23,14 @@ String formatRemaining(DateTime expiresAt, {DateTime? now}) {
   return L.t.unitHours(left.inHours);
 }
 
+/// Lot 8.4b : message de 12 h ou plus qui s'efface dans moins de 4 h.
+bool expiringSoon(DateTime sentAt, DateTime expiresAt, {DateTime? now}) {
+  final left = expiresAt.difference(now ?? DateTime.now());
+  return expiresAt.difference(sentAt) >= const Duration(hours: 12) &&
+      left <= const Duration(hours: 4) &&
+      !left.isNegative;
+}
+
 /// Durées proposées en puces pour une discussion ou un message (lot 4.6), bornées par
 /// les règles serveur ; toute autre durée passe par « Personnalisé » (72 h au plus).
 const kTtlChoices = [5 * 60, 15 * 60, 30 * 60, 3600, 6 * 3600, 12 * 3600, 24 * 3600, 48 * 3600];

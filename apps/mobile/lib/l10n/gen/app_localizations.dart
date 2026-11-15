@@ -6699,6 +6699,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Saisissez d’abord votre code de sécurité.'**
   String get twoStepRequired;
+
+  /// Écran : Notifications et sons
+  ///
+  /// In fr, this message translates to:
+  /// **'Rappel avant effacement'**
+  String get expiryReminderTitle;
+
+  /// Écran : Notifications et sons
+  ///
+  /// In fr, this message translates to:
+  /// **'Une notification sans contenu quand des messages non lus vont s’effacer dans moins de 4 h.'**
+  String get expiryReminderSubtitle;
+
+  /// Écran : Discussion (bulle, lecteur d’écran)
+  ///
+  /// In fr, this message translates to:
+  /// **'S’efface bientôt, dans {remaining}'**
+  String bubbleSoon(Object remaining);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -5531,5 +5531,22 @@
   "twoStepRequired": "Saisissez d’abord votre code de sécurité.",
   "@twoStepRequired": {
     "description": "Écran : Messages d’erreur"
+  },
+  "expiryReminderTitle": "Rappel avant effacement",
+  "@expiryReminderTitle": {
+    "description": "Écran : Notifications et sons"
+  },
+  "expiryReminderSubtitle": "Une notification sans contenu quand des messages non lus vont s’effacer dans moins de 4 h.",
+  "@expiryReminderSubtitle": {
+    "description": "Écran : Notifications et sons"
+  },
+  "bubbleSoon": "S’efface bientôt, dans {remaining}",
+  "@bubbleSoon": {
+    "description": "Écran : Discussion (bulle, lecteur d’écran)",
+    "placeholders": {
+      "remaining": {
+        "type": "Object"
+      }
+    }
   }
 }

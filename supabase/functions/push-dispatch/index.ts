@@ -1,6 +1,6 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
 // invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4 ;
-// demandes d'adhésion et @mentions : lot 7.1b).
+// demandes d'adhésion et @mentions : lot 7.1b ; rappel avant effacement : lot 8.4b).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que
@@ -16,6 +16,7 @@ import {
   sendGeneric,
   sendInvitation,
   sendJoinEvent,
+  sendExpiryReminder,
   sendRequestEvent,
   sendSupportReply,
 } from "../_shared/fcm.ts";
@@ -39,6 +40,7 @@ Deno.serve(async (req) => {
   let refId = "";
   let supportReplyId = "";
   let joinRequestId = "";
+  let expiryReminderId = "";
   try {
     const body = (await req.json()) as {
       message_id?: string;
@@ -48,6 +50,7 @@ Deno.serve(async (req) => {
       ref_id?: string;
       support_reply_id?: string;
       join_request_id?: string;
+      expiry_reminder_id?: string;
     };
     messageId = body.message_id ?? "";
     requestId = body.request_id ?? "";
@@ -56,6 +59,7 @@ Deno.serve(async (req) => {
     refId = body.ref_id ?? "";
     supportReplyId = body.support_reply_id ?? "";
     joinRequestId = body.join_request_id ?? "";
+    expiryReminderId = body.expiry_reminder_id ?? "";
   } catch {
     return json(400, { error: "BODY_INVALID" });
   }
@@ -91,6 +95,20 @@ Deno.serve(async (req) => {
         serviceHeaders(),
       ),
       (sa, t) => sendJoinEvent(sa, t.token, t.event, t.conversation_id),
+    );
+  }
+  // Lot 8.4b : des messages non lus vont bientôt s'effacer.
+  if (expiryReminderId) {
+    if (!UUID.test(expiryReminderId)) return json(400, { error: "BODY_INVALID" });
+    return await dispatchTargets(
+      token,
+      expiryReminderId,
+      () => rpc<{ token: string; conversation_id: string }[]>(
+        "push_expiry_reminder_targets",
+        { p_token: token, p_reminder_id: expiryReminderId },
+        serviceHeaders(),
+      ),
+      (sa, t) => sendExpiryReminder(sa, t.token, t.conversation_id),
     );
   }
   // Lot 5.3 : signalement, demande d'assistance ou contestation, pour l'administration.

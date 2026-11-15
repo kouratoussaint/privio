@@ -20,6 +20,8 @@ import '../lock/app_lock_screens.dart' show delayLabel;
 import 'change_phone_screen.dart';
 import 'two_step_screens.dart';
 import 'wallpaper.dart';
+import '../../../state/providers.dart';
+import '../../../core/errors/app_failure.dart';
 
 /// Lot 8.3a : sous-écrans des Paramètres (page d'accueil courte, une ligne par écran).
 
@@ -106,6 +108,11 @@ class SecurityScreen extends ConsumerWidget {
   }
 }
 
+/// Lot 8.4b : rappel avant effacement (serveur).
+final expiryReminderProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.watch(accountApiProvider).expiryReminder(),
+);
+
 /// Notifications et sons.
 class NotificationSettingsScreen extends ConsumerWidget {
   const NotificationSettingsScreen({super.key});
@@ -137,6 +144,26 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: Text(L.t.sonsVibrations),
                 subtitle: Text(L.t.envoiReceptionEffacementRienMode),
                 onChanged: (v) => ref.read(soundsEnabledProvider.notifier).set(v),
+              ),
+              const SettingsDivider(),
+              // Lot 8.4b : rappel avant effacement (réglage gardé sur le serveur).
+              SwitchListTile(
+                key: const Key('settings.expiry_reminder'),
+                value: ref.watch(expiryReminderProvider).value ?? true,
+                secondary: Icon(Icons.hourglass_bottom_rounded, color: p.accentText),
+                title: Text(L.t.expiryReminderTitle),
+                subtitle: Text(L.t.expiryReminderSubtitle),
+                onChanged: ref.watch(expiryReminderProvider).isLoading
+                    ? null
+                    : (v) async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await ref.read(accountApiProvider).setExpiryReminder(v);
+                        } on Object catch (e) {
+                          messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+                        }
+                        ref.invalidate(expiryReminderProvider);
+                      },
               ),
             ],
           ),

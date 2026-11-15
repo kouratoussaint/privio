@@ -2008,6 +2008,8 @@ class _MessageList extends StatelessWidget {
         time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
         edited: m.editedAt != null && !m.isDeleted,
         remaining: formatRemaining(m.expiresAt, now: now),
+        // Lot 8.4b : 4 h avant l'effacement d'un message de 12 h ou plus.
+        expiringSoon: expiringSoon(m.sentAt, m.expiresAt, now: now) && !m.isDeleted,
         delivery: outgoing && !m.isDeleted ? deliveryOf(m, summary) : null,
         reactions: m.reactions,
         me: me,
@@ -2344,6 +2346,7 @@ class _Bubble extends StatelessWidget {
     this.time,
     this.edited = false,
     this.remaining,
+    this.expiringSoon = false,
     this.status,
     this.italic = false,
     this.failed = false,
@@ -2406,6 +2409,9 @@ class _Bubble extends StatelessWidget {
   final String? time;
   final bool edited;
   final String? remaining;
+
+  /// Lot 8.4b : s'efface bientôt (compte à rebours mis en valeur).
+  final bool expiringSoon;
   final String? status;
   final bool italic;
   final bool failed;
@@ -2426,6 +2432,12 @@ class _Bubble extends StatelessWidget {
     final bg = outgoing ? p.bubbleOut : p.bubbleIn;
     final fg = outgoing ? p.onBubbleOut : p.onBubbleIn;
     final meta = outgoing && !bare ? p.bubbleOutMeta : p.bubbleInMeta;
+    // Lot 8.4b : sur le violet, le jaune des coches « lu » ; ailleurs, la couleur d'alerte.
+    final soonColor = outgoing && !bare
+        ? PrivioColors.readTick
+        : theme.brightness == Brightness.dark
+        ? PrivioColors.errorDark
+        : PrivioColors.error;
     final metaStyle = theme.textTheme.labelSmall?.copyWith(
       fontSize: kBubbleMetaSize,
       fontWeight: FontWeight.w400,
@@ -2578,13 +2590,31 @@ class _Bubble extends StatelessWidget {
                           Text('${time ?? ''}${edited ? L.t.editedSuffix : ''}', style: metaStyle),
                           if (remaining != null) ...[
                             const SizedBox(width: 5),
-                            Icon(Icons.timer_outlined, size: 11, color: meta),
-                            const SizedBox(width: 2),
-                            Text(
-                              remaining!,
-                              semanticsLabel: L.t.expireDansRemaining(remaining!),
-                              style: metaStyle,
-                            ),
+                            if (expiringSoon) ...[
+                              Icon(
+                                Icons.hourglass_bottom_rounded,
+                                key: const Key('bubble.soon'),
+                                size: 12,
+                                color: soonColor,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                remaining!,
+                                semanticsLabel: L.t.bubbleSoon(remaining!),
+                                style: metaStyle?.copyWith(
+                                  color: soonColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ] else ...[
+                              Icon(Icons.timer_outlined, size: 11, color: meta),
+                              const SizedBox(width: 2),
+                              Text(
+                                remaining!,
+                                semanticsLabel: L.t.expireDansRemaining(remaining!),
+                                style: metaStyle,
+                              ),
+                            ],
                           ],
                           if (delivery != null) ...[
                             const SizedBox(width: 4),

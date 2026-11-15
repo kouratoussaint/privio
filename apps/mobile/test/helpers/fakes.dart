@@ -208,6 +208,15 @@ class FakeAccountApi implements AccountApi {
   @override
   Future<DateTime> requestTwoStepReset() async => twoStepResetAt ??= DateTime.now();
 
+  /// Lot 8.4b : rappel avant effacement.
+  bool expiryReminderOn = true;
+
+  @override
+  Future<bool> expiryReminder() async => expiryReminderOn;
+
+  @override
+  Future<bool> setExpiryReminder(bool on) async => expiryReminderOn = on;
+
   @override
   Future<Account> getMyAccount() async {
     if (_pending) throw const AppFailure(FailureCode.authRequired);
@@ -1055,13 +1064,13 @@ class FakeMessagingApi implements MessagingApi {
   String? bobAvatarPath;
 
   /// Simule un message reçu de Bob.
-  ChatMessage receive(String conversationId, String body, {DateTime? expiresAt}) {
+  ChatMessage receive(String conversationId, String body, {DateTime? expiresAt, DateTime? sentAt}) {
     final now = DateTime.now();
     final m = ChatMessage(
       id: 'srv-${_seq++}',
       senderId: bob.id,
       body: body,
-      sentAt: now,
+      sentAt: sentAt ?? now,
       expiresAt: expiresAt ?? now.add(const Duration(hours: 72)),
       updatedAt: now,
     );

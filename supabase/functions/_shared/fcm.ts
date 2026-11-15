@@ -156,6 +156,21 @@ export function sendSupportReply(sa: ServiceAccount, token: string): Promise<Sen
   });
 }
 
+/** Rappel avant effacement (lot 8.4b) : sans nom ni contenu ; l'appui ouvre la discussion. */
+export const EXPIRY_REMINDER_BODY = "Des messages non lus vont bientôt s’effacer";
+
+export function sendExpiryReminder(
+  sa: ServiceAccount,
+  token: string,
+  conversationId: string,
+): Promise<SendResult> {
+  return sendNotification(sa, token, {
+    body: EXPIRY_REMINDER_BODY,
+    data: { type: "message", conversation_id: conversationId },
+    tag: `privio-expiry-${conversationId}`,
+  });
+}
+
 async function sendNotification(
   sa: ServiceAccount,
   token: string,

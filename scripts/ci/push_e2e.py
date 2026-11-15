@@ -51,4 +51,26 @@ m2 = http("/rest/v1/rpc/send_message", {"p_conversation_id": CONV, "p_client_msg
 row2 = wait_log(m2[0]["id"])
 ok(row2.startswith("0|"), "discussion en sourdine : personne n'est notifié", row2)
 http("/rest/v1/rpc/set_conversation_mute", {"p_conversation_id": CONV, "p_until": None}, TB)
+# Lot 8.4b : rappel avant effacement (non lu, durée 72 h, s'efface dans 3 h).
+m3 = http("/rest/v1/rpc/send_message", {"p_conversation_id": CONV, "p_client_msg_id": str(uuid.uuid4()),
+          "p_body": "Bientôt effacé"}, TA)
+mid3 = m3[0]["id"]
+wait_log(mid3)
+B_ID = "(select user_id from private.push_tokens limit 1)"
+before = sql(f"select coalesce(read_up_to::text, '') from public.conversation_members "
+             f"where conversation_id = '{CONV}' and user_id = {B_ID}")
+sql(f"update public.messages set sent_at = now() - interval '69 hours', expires_at = now() + interval '3 hours' "
+    f"where id = '{mid3}'")
+sql(f"update public.conversation_members set read_up_to = null "
+    f"where conversation_id = '{CONV}' and user_id = {B_ID}")
+n = sql("select private.send_expiry_reminders()")
+ok(n == "1", "rappel avant effacement : un destinataire (B)", n)
+rid = sql("select id from private.expiry_reminders order by created_at desc limit 1")
+row3 = wait_log(rid)
+ok(row3.split("|")[0] == "1", "push-dispatch : rappel envoyé au téléphone de B", row3)
+ok(sql("select private.send_expiry_reminders()") == "0", "pas de second rappel pour la même discussion", "")
+sql(f"delete from public.messages where id = '{mid3}'")
+sql(f"update public.conversation_members set read_up_to = "
+    f"{'null' if not before else repr(before)}::timestamptz "
+    f"where conversation_id = '{CONV}' and user_id = {B_ID}")
 print("Test notifications bout à bout : OK")

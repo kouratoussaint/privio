@@ -45,6 +45,10 @@ abstract interface class AccountApi {
 
   /// Code oublié : demande à l'assistance ; renvoie l'heure de la demande.
   Future<DateTime> requestTwoStepReset();
+
+  /// Lot 8.4b : rappel avant effacement (activé par défaut).
+  Future<bool> expiryReminder();
+  Future<bool> setExpiryReminder(bool on);
 }
 
 class SupabaseAccountApi implements AccountApi {
@@ -161,4 +165,11 @@ class SupabaseAccountApi implements AccountApi {
   @override
   Future<DateTime> requestTwoStepReset() async =>
       DateTime.parse(await _rpc('request_two_step_reset') as String);
+
+  @override
+  Future<bool> expiryReminder() async => await _rpc('get_expiry_reminder') as bool;
+
+  @override
+  Future<bool> setExpiryReminder(bool on) async =>
+      await _rpc('set_expiry_reminder', {'p_on': on}) as bool;
 }

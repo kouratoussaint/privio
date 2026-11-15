@@ -3983,4 +3983,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get twoStepRequired => 'Saisissez d’abord votre code de sécurité.';
+
+  @override
+  String get expiryReminderTitle => 'Rappel avant effacement';
+
+  @override
+  String get expiryReminderSubtitle =>
+      'Une notification sans contenu quand des messages non lus vont s’effacer dans moins de 4 h.';
+
+  @override
+  String bubbleSoon(Object remaining) {
+    return 'S’efface bientôt, dans $remaining';
+  }
 }
