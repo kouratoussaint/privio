@@ -628,11 +628,21 @@ String? groupEventText(ChatMessage m, {required String? me}) {
   // Lot 9.1a : trace d'un appel, du point de vue de chacun (auteur : l'appelant).
   if (j['e'] == 'call') {
     final value = v ?? '';
+    final video = j['k'] == 'video';
     if (value.startsWith('ended:')) {
       final secs = int.tryParse(value.substring(6)) ?? 0;
       final d =
           '${(secs ~/ 60).toString().padLeft(2, '0')}:${(secs % 60).toString().padLeft(2, '0')}';
+      if (video) return mine ? L.t.callTraceVideoOutgoing(d) : L.t.callTraceVideoIncoming(d);
       return mine ? L.t.callTraceOutgoing(d) : L.t.callTraceIncoming(d);
+    }
+    // Lot 9.2 : appel vidéo (« k » = video).
+    if (video) {
+      return switch (value) {
+        'declined' => L.t.callTraceVideoDeclined,
+        'cancelled' => mine ? L.t.callTraceVideoCancelled : L.t.callTraceVideoMissed,
+        _ => mine ? L.t.callTraceVideoNoAnswer : L.t.callTraceVideoMissed,
+      };
     }
     return switch (value) {
       'declined' => L.t.callTraceDeclined,

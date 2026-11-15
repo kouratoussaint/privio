@@ -3,10 +3,13 @@ package com.privio.app
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PictureInPictureParams
+import android.content.res.Configuration
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.util.Rational
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -26,6 +29,9 @@ import io.flutter.plugin.common.MethodChannel
  * Lot 9.1b : canal « privio/call » — pendant un appel, l'écran d'appel s'affiche
  * par-dessus l'écran de verrouillage du téléphone (réduit, le verrouillage revient) et
  * l'écran s'éteint à l'oreille (capteur de proximité, écouteur seulement).
+ *
+ * Lot 9.2 : appel vidéo → petite fenêtre au-dessus des autres applications quand on quitte
+ * Privio (« pip »), signalée à Flutter (« pipChanged ») qui n'y montre que l'image.
  */
 class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,12 +44,18 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private var proximityLock: PowerManager.WakeLock? = null
+    private var callChannel: MethodChannel? = null
+    private var pipAllowed = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "privio/call")
-            .setMethodCallHandler { call, result ->
+        callChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "privio/call")
+        callChannel?.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "pip" -> {
+                        setPipAllowed(call.arguments == true)
+                        result.success(null)
+                    }
                     "overLock" -> {
                         setOverLock(call.arguments == true)
                         result.success(null)
@@ -55,6 +67,42 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun pipParams(): PictureInPictureParams? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        val b = PictureInPictureParams.Builder().setAspectRatio(Rational(9, 16))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) b.setAutoEnterEnabled(pipAllowed)
+        return b.build()
+    }
+
+    private fun setPipAllowed(on: Boolean) {
+        pipAllowed = on
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                pipParams()?.let { setPictureInPictureParams(it) }
+            } catch (_: Exception) {
+                // Fenêtre réduite indisponible sur ce téléphone.
+            }
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (pipAllowed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+        ) {
+            try {
+                pipParams()?.let { enterPictureInPictureMode(it) }
+            } catch (_: Exception) {
+                // Fenêtre réduite refusée (réglage du téléphone) : l'appel continue.
+            }
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(inPip, newConfig)
+        callChannel?.invokeMethod("pipChanged", inPip)
     }
 
     private fun setOverLock(on: Boolean) {

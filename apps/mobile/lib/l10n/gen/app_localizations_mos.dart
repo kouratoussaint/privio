@@ -4208,7 +4208,7 @@ class AppLocalizationsMos extends AppLocalizations {
 
   @override
   String get keepCalls =>
-      'Appels : la voix n’est jamais enregistrée ni gardée. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.';
+      'Appels : ni la voix ni l’image ne sont jamais enregistrées ni gardées. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.';
 
   @override
   String get callWeak => 'Connexion faible';
@@ -4249,4 +4249,47 @@ class AppLocalizationsMos extends AppLocalizations {
 
   @override
   String get callFullScreenAllow => 'Autoriser';
+
+  @override
+  String get callVideoButton => 'Appel vidéo';
+
+  @override
+  String get callVideoIncoming => 'Appel vidéo entrant';
+
+  @override
+  String get callVideoIncomingLocked => 'Appel vidéo Privio entrant';
+
+  @override
+  String get callCamera => 'Caméra';
+
+  @override
+  String get callCameraOff => 'Caméra coupée';
+
+  @override
+  String get callFlip => 'Changer de caméra';
+
+  @override
+  String get callCameraDenied => 'Caméra refusée : autorisez-la dans les réglages du téléphone.';
+
+  @override
+  String callTraceVideoOutgoing(String duration) {
+    return 'Appel vidéo sortant · $duration';
+  }
+
+  @override
+  String callTraceVideoIncoming(String duration) {
+    return 'Appel vidéo entrant · $duration';
+  }
+
+  @override
+  String get callTraceVideoNoAnswer => 'Appel vidéo sans réponse';
+
+  @override
+  String get callTraceVideoMissed => 'Appel vidéo manqué';
+
+  @override
+  String get callTraceVideoDeclined => 'Appel vidéo refusé';
+
+  @override
+  String get callTraceVideoCancelled => 'Appel vidéo annulé';
 }

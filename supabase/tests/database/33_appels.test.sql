@@ -55,8 +55,8 @@ grant execute on function pg_temp.call(text, text) to authenticated;
 select pg_temp.as_user('a');
 set local role authenticated;
 select throws_ok($$ select pg_temp.call('g') $$, 'P0001', 'CALL_DIRECT_ONLY', 'pas d''appel de groupe');
-select throws_ok($$ select pg_temp.call('ab', 'video') $$, 'P0001', 'CALL_KIND_UNAVAILABLE',
-  'vidéo : pas encore');
+select throws_ok($$ select pg_temp.call('ab', 'ecran') $$, 'P0001', 'CALL_KIND_UNAVAILABLE',
+  'type d''appel inconnu refusé');
 select pg_temp.as_user('c');
 select throws_ok($$ select pg_temp.call('ab') $$, 'P0001', 'NOT_MEMBER', 'pas un contact : refusé');
 select pg_temp.as_user('b');

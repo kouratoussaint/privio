@@ -5832,7 +5832,7 @@
   "@callKindUnavailableError": {
     "description": "Écran : Messages d’erreur"
   },
-  "keepCalls": "Appels : la voix n’est jamais enregistrée ni gardée. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.",
+  "keepCalls": "Appels : ni la voix ni l’image ne sont jamais enregistrées ni gardées. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.",
   "@keepCalls": {
     "description": "Écran : Ce que Privio garde — ligne validée le 15/11/2026"
   },
@@ -5887,5 +5887,67 @@
   "callFullScreenAllow": "Autoriser",
   "@callFullScreenAllow": {
     "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callVideoButton": "Appel vidéo",
+  "@callVideoButton": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callVideoIncoming": "Appel vidéo entrant",
+  "@callVideoIncoming": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callVideoIncomingLocked": "Appel vidéo Privio entrant",
+  "@callVideoIncomingLocked": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callCamera": "Caméra",
+  "@callCamera": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callCameraOff": "Caméra coupée",
+  "@callCameraOff": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callFlip": "Changer de caméra",
+  "@callFlip": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callCameraDenied": "Caméra refusée : autorisez-la dans les réglages du téléphone.",
+  "@callCameraDenied": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callTraceVideoOutgoing": "Appel vidéo sortant · {duration}",
+  "@callTraceVideoOutgoing": {
+    "description": "Appels vidéo (lot 9.2)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "callTraceVideoIncoming": "Appel vidéo entrant · {duration}",
+  "@callTraceVideoIncoming": {
+    "description": "Appels vidéo (lot 9.2)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "callTraceVideoNoAnswer": "Appel vidéo sans réponse",
+  "@callTraceVideoNoAnswer": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callTraceVideoMissed": "Appel vidéo manqué",
+  "@callTraceVideoMissed": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callTraceVideoDeclined": "Appel vidéo refusé",
+  "@callTraceVideoDeclined": {
+    "description": "Appels vidéo (lot 9.2)"
+  },
+  "callTraceVideoCancelled": "Appel vidéo annulé",
+  "@callTraceVideoCancelled": {
+    "description": "Appels vidéo (lot 9.2)"
   }
 }

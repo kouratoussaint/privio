@@ -7099,7 +7099,7 @@ abstract class AppLocalizations {
   /// Écran : Ce que Privio garde — ligne validée le 15/11/2026
   ///
   /// In fr, this message translates to:
-  /// **'Appels : la voix n’est jamais enregistrée ni gardée. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.'**
+  /// **'Appels : ni la voix ni l’image ne sont jamais enregistrées ni gardées. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.'**
   String get keepCalls;
 
   /// Écran : Appel (lot 9.1b)
@@ -7179,6 +7179,84 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Autoriser'**
   String get callFullScreenAllow;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo'**
+  String get callVideoButton;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo entrant'**
+  String get callVideoIncoming;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo Privio entrant'**
+  String get callVideoIncomingLocked;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Caméra'**
+  String get callCamera;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Caméra coupée'**
+  String get callCameraOff;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de caméra'**
+  String get callFlip;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Caméra refusée : autorisez-la dans les réglages du téléphone.'**
+  String get callCameraDenied;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo sortant · {duration}'**
+  String callTraceVideoOutgoing(String duration);
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo entrant · {duration}'**
+  String callTraceVideoIncoming(String duration);
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo sans réponse'**
+  String get callTraceVideoNoAnswer;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo manqué'**
+  String get callTraceVideoMissed;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo refusé'**
+  String get callTraceVideoDeclined;
+
+  /// Appels vidéo (lot 9.2)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo annulé'**
+  String get callTraceVideoCancelled;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

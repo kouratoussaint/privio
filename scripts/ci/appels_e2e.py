@@ -115,4 +115,12 @@ check(status == 200 and end["status"] in ("cancelled", "missed"), "A annule avan
 logs = push_logs(cid2, 2)
 check(len(logs) == 2 and all(r.split("|")[0] == "1" for r in logs),
       "B : sonnerie puis « Appel manqué »", logs)
-print("Lot 9.1a/9.1b (appels audio, mise en relation, réveil) : OK")
+# Lot 9.2 : appel vidéo (même mise en relation, type annoncé).
+status, call = rpc("start_call", {"p_conversation_id": CONV, "p_kind": "video"}, TA)
+check(status == 200 and call["kind"] == "video" and call["status"] == "ringing",
+      "lot 9.2 : A lance un appel vidéo", (status, call))
+status, opened = rpc("my_open_call", {}, TB)
+check(status == 200 and opened and opened["kind"] == "video", "B voit l'appel vidéo entrant", opened)
+status, end = rpc("end_call", {"p_call_id": call["id"], "p_reason": "hangup"}, TA)
+check(status == 200, "A annule l'appel vidéo", end)
+print("Lot 9.1a/9.1b/9.2 (appels audio et vidéo, mise en relation, réveil) : OK")

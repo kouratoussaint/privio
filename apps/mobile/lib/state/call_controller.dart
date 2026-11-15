@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding;
+import 'package:flutter/widgets.dart' show AppLifecycleState, Widget, WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_failure.dart';
@@ -21,6 +21,10 @@ import 'providers.dart';
 /// Lot 9.1b (ADR-037) : appel reçu Privio fermé ou téléphone verrouillé (écran d'appel du
 /// téléphone), appel maintenu écran éteint, sortie du son, reconnexion au changement de
 /// réseau, « Connexion faible ».
+///
+/// Lot 9.2 (ADR-038) : appels vidéo. Chacun allume ou coupe sa caméra à tout moment (sans
+/// demande) ; on décroche toujours caméra coupée ; image réduite en données mobiles ;
+/// petite fenêtre quand on quitte Privio pendant un appel avec image.
 
 final callsApiProvider = Provider<CallsApi>(
   (ref) => throw UnimplementedError('callsApiProvider doit être surchargé'),
@@ -72,6 +76,11 @@ class CallState {
     this.connectedAt,
     this.endStatus,
     this.minimized = false,
+    this.camera = false,
+    this.peerCamera = false,
+    this.frontCamera = true,
+    this.pip = false,
+    this.cameraDenied = false,
   });
 
   final CallInfo info;
@@ -92,6 +101,22 @@ class CallState {
   /// Écran d'appel réduit en bandeau (on continue d'utiliser Privio).
   final bool minimized;
 
+  /// Lot 9.2 : ma caméra, celle du correspondant, caméra avant ou arrière.
+  final bool camera;
+  final bool peerCamera;
+  final bool frontCamera;
+
+  /// Privio affiché dans la petite fenêtre (on a quitté Privio pendant l'appel).
+  final bool pip;
+
+  /// Caméra refusée par le téléphone (message affiché un moment).
+  final bool cameraDenied;
+
+  bool get videoCall => info.kind == 'video';
+
+  /// Une image passe (dans un sens ou dans l'autre).
+  bool get hasVideo => camera || peerCamera;
+
   CallState copyWith({
     CallInfo? info,
     CallPhase? phase,
@@ -101,6 +126,11 @@ class CallState {
     DateTime? connectedAt,
     String? endStatus,
     bool? minimized,
+    bool? camera,
+    bool? peerCamera,
+    bool? frontCamera,
+    bool? pip,
+    bool? cameraDenied,
   }) => CallState(
     info: info ?? this.info,
     phase: phase ?? this.phase,
@@ -110,6 +140,11 @@ class CallState {
     connectedAt: connectedAt ?? this.connectedAt,
     endStatus: endStatus ?? this.endStatus,
     minimized: minimized ?? this.minimized,
+    camera: camera ?? this.camera,
+    peerCamera: peerCamera ?? this.peerCamera,
+    frontCamera: frontCamera ?? this.frontCamera,
+    pip: pip ?? this.pip,
+    cameraDenied: cameraDenied ?? this.cameraDenied,
   );
 }
 
@@ -133,6 +168,8 @@ class CallController extends Notifier<CallState?> {
   bool _systemRinging = false;
   bool _overLock = false;
   bool _proximity = false;
+  bool _pipAllowed = false;
+  Timer? _deniedClear;
 
   CallsApi get _api => ref.read(callsApiProvider);
   // Lu une fois (build) : utilisable aussi à la destruction, où Ref est interdit.
@@ -156,9 +193,15 @@ class CallController extends Notifier<CallState?> {
     final events = _system.events.listen(_onSystem);
     // Changement de réseau pendant l'appel (Wi-Fi ↔ données) : renégocier la liaison.
     final net = ref.read(networkMonitorProvider).changes().listen(_onNetwork);
+    // Lot 9.2 : petite fenêtre (Privio quitté pendant un appel avec image).
+    final pip = _system.pipMode.listen((on) {
+      final s = state;
+      if (s != null && s.pip != on) state = s.copyWith(pip: on);
+    });
     listenSelf(_syncSystem);
     ref.onDispose(() {
       unawaited(events.cancel());
+      unawaited(pip.cancel());
       unawaited(net.cancel());
       _reset();
     });
@@ -171,10 +214,11 @@ class CallController extends Notifier<CallState?> {
   // Appeler
   // ---------------------------------------------------------------------------
   /// Lance un appel audio dans une discussion à deux. Lève une [AppFailure] si impossible.
-  Future<void> start(String conversationId) async {
+  /// [kind] : « audio » ou « video » (lot 9.2 : caméra allumée dès l'appel).
+  Future<void> start(String conversationId, {String kind = 'audio'}) async {
     if (busy) throw const AppFailure(FailureCode.callAlreadyActive);
     await _ensureMic();
-    final info = await _api.startCall(conversationId);
+    final info = await _api.startCall(conversationId, kind: kind);
     if (!info.open) {
       // Correspondant déjà en appel.
       _show(
@@ -192,6 +236,11 @@ class CallController extends Notifier<CallState?> {
       await _api.signal(info.id, 'offer', offer);
     } on Object {
       await hangUp(reason: 'failed');
+      return;
+    }
+    if (info.kind == 'video') {
+      await selectRoute(AudioRoute.speaker);
+      await toggleCamera();
     }
   }
 
@@ -245,7 +294,7 @@ class CallController extends Notifier<CallState?> {
       unawaited(_tones.ring());
     } else {
       _systemRinging = true;
-      unawaited(_system.showIncoming(info.id));
+      unawaited(_system.showIncoming(info.id, video: info.kind == 'video'));
     }
     _startPolling();
   }
@@ -308,7 +357,10 @@ class CallController extends Notifier<CallState?> {
       await _answerIfReady();
     } on Object {
       await hangUp(reason: 'failed');
+      return;
     }
+    // Lot 9.2 : on décroche toujours caméra coupée ; appel vidéo → haut-parleur.
+    if (s.info.kind == 'video') await selectRoute(AudioRoute.speaker);
   }
 
   Future<void> decline() async {
@@ -346,6 +398,72 @@ class CallController extends Notifier<CallState?> {
 
   Future<void> toggleSpeaker() =>
       selectRoute(state?.speaker == true ? AudioRoute.earpiece : AudioRoute.speaker);
+
+  /// Lot 9.2 : allumer ou couper ma caméra (sans demande au correspondant).
+  Future<void> toggleCamera() async {
+    final s = state;
+    final engine = _engine;
+    if (s == null || engine == null || s.phase == CallPhase.ended) return;
+    if (s.camera) {
+      state = s.copyWith(camera: false);
+      try {
+        await engine.setCamera(false);
+      } on Object {
+        // Déjà coupée.
+      }
+      return;
+    }
+    var granted = false;
+    try {
+      granted = await ref.read(permissionGatewayProvider).requestCamera();
+    } on Object {
+      granted = false;
+    }
+    if (!granted) {
+      state = state?.copyWith(cameraDenied: true);
+      _deniedClear?.cancel();
+      _deniedClear = Timer(const Duration(seconds: 4), () {
+        if (state?.cameraDenied == true) state = state!.copyWith(cameraDenied: false);
+      });
+      return;
+    }
+    try {
+      await engine.setCamera(true, front: state?.frontCamera ?? true);
+    } on Object {
+      state = state?.copyWith(cameraDenied: true);
+      return;
+    }
+    state = state?.copyWith(camera: true, cameraDenied: false);
+    await _speakerForVideo();
+  }
+
+  Future<void> switchCamera() async {
+    final s = state;
+    if (s == null || !s.camera) return;
+    try {
+      await _engine?.switchCamera();
+      state = state?.copyWith(frontCamera: !s.frontCamera);
+    } on Object {
+      // Une seule caméra.
+    }
+  }
+
+  /// Image de ma caméra et du correspondant (écran d'appel).
+  Widget? localView() => _engine?.localView(mirror: state?.frontCamera ?? true);
+  Widget? remoteView() => _engine?.remoteView();
+
+  /// Image allumée pendant un appel à l'écouteur : passage au haut-parleur (on regarde
+  /// l'écran, le téléphone n'est plus à l'oreille).
+  Future<void> _speakerForVideo() async {
+    if (state?.route == AudioRoute.earpiece) await selectRoute(AudioRoute.speaker);
+  }
+
+  void _onPeerCamera(bool on) {
+    final s = state;
+    if (s == null || s.peerCamera == on) return;
+    state = s.copyWith(peerCamera: on);
+    if (on) unawaited(_speakerForVideo());
+  }
 
   /// Sorties du son disponibles maintenant (Bluetooth, casque filaire s'ils sont branchés).
   Future<List<AudioRoute>> audioRoutes() async {
@@ -401,6 +519,7 @@ class CallController extends Notifier<CallState?> {
       iceServers: servers,
       onCandidate: (c) => unawaited(_api.signal(id, 'ice', c).catchError((Object _) {})),
       onState: _onMedia,
+      onPeerCamera: _onPeerCamera,
       onQuality: (weak) {
         final s = state;
         if (s != null && s.phase == CallPhase.connected && s.weak != weak) {
@@ -409,6 +528,14 @@ class CallController extends Notifier<CallState?> {
       },
     );
     _engineOpen = true;
+    // Lot 9.2 : image réduite en données mobiles, meilleure en Wi-Fi.
+    try {
+      final kind = await ref.read(networkMonitorProvider).current();
+      _net ??= kind;
+      await engine.setEconomy(kind != NetKind.wifi);
+    } on Object {
+      // Réseau inconnu : image réduite.
+    }
     for (final c in _pendingIce) {
       await engine.addCandidate(c);
     }
@@ -453,6 +580,9 @@ class CallController extends Notifier<CallState?> {
   void _onNetwork(NetKind kind) {
     final previous = _net;
     _net = kind;
+    if (_engineOpen && kind != NetKind.none) {
+      unawaited(_engine?.setEconomy(kind != NetKind.wifi).catchError((Object _) {}));
+    }
     final s = state;
     if (s == null || kind == NetKind.none || previous == kind) return;
     if (s.phase == CallPhase.connected || s.phase == CallPhase.reconnecting) {
@@ -497,18 +627,28 @@ class CallController extends Notifier<CallState?> {
       _overLock = active;
       unawaited(_system.setOverLock(active));
     }
-    final proximity = active && next.route == AudioRoute.earpiece;
+    final proximity = active && next.route == AudioRoute.earpiece && !next.hasVideo;
     if (proximity != _proximity) {
       _proximity = proximity;
       unawaited(_system.setProximity(proximity));
+    }
+    // Lot 9.2 : petite fenêtre seulement pendant un appel avec image.
+    final pip =
+        next != null &&
+        next.hasVideo &&
+        next.phase != CallPhase.ended &&
+        next.phase != CallPhase.incomingRinging;
+    if (pip != _pipAllowed) {
+      _pipAllowed = pip;
+      unawaited(_system.setPip(pip));
     }
     final id = next?.info.id ?? prev?.info.id;
     if (id == null || prev?.phase == next?.phase) return;
     switch (next?.phase) {
       case CallPhase.outgoingRinging:
-        unawaited(_system.activate(id));
+        unawaited(_system.activate(id, video: next!.videoCall));
       case CallPhase.connecting when prev?.phase == CallPhase.incomingRinging:
-        unawaited(_system.activate(id));
+        unawaited(_system.activate(id, video: next!.videoCall));
       case CallPhase.connected when prev?.phase != CallPhase.reconnecting:
         unawaited(_system.connected(id));
       case CallPhase.ended:
@@ -604,6 +744,8 @@ class CallController extends Notifier<CallState?> {
   void _stopMedia() {
     _poll?.cancel();
     _poll = null;
+    _deniedClear?.cancel();
+    _deniedClear = null;
     _restart?.cancel();
     _restart = null;
     _giveUp?.cancel();

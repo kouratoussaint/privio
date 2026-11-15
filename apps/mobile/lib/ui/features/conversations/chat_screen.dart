@@ -1407,7 +1407,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 titleSpacing: 0,
                 toolbarHeight: 64,
                 actions: [
-                  // Lot 9.1a : appel audio (discussion à deux, contact non bloqué).
+                  // Lot 9.1a / 9.2 : appel audio et vidéo (discussion à deux, contact non bloqué).
+                  if (summary != null &&
+                      !summary.isGroup &&
+                      !summary.blocked &&
+                      !summary.peerDeleted &&
+                      !_searching)
+                    IconButton(
+                      key: const Key('chat.video'),
+                      tooltip: L.t.callVideoButton,
+                      onPressed: () => startCallFrom(context, ref, summary.id, video: true),
+                      icon: const Icon(Icons.videocam_outlined),
+                    ),
                   if (summary != null &&
                       !summary.isGroup &&
                       !summary.blocked &&

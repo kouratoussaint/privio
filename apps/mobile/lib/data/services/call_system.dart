@@ -27,13 +27,13 @@ abstract interface class CallSystem {
   Future<String?> acceptedCall();
 
   /// Privio en arrière-plan : l'écran d'appel du téléphone sonne (sans nom).
-  Future<void> showIncoming(String callId);
+  Future<void> showIncoming(String callId, {bool video = false});
 
   /// Privio revenu au premier plan : son propre écran d'appel prend le relais.
   Future<void> hideIncoming(String callId);
 
   /// Appel en cours : maintenu écran éteint ou Privio en arrière-plan.
-  Future<void> activate(String callId);
+  Future<void> activate(String callId, {bool video = false});
   Future<void> connected(String callId);
   Future<void> end(String callId);
 
@@ -42,6 +42,11 @@ abstract interface class CallSystem {
 
   /// Écran éteint à l'oreille (écouteur seulement).
   Future<void> setProximity(bool on);
+
+  /// Lot 9.2 : petite fenêtre au-dessus des autres applications quand on quitte Privio
+  /// pendant un appel avec image ; [pipMode] : Privio affiché dans cette fenêtre.
+  Future<void> setPip(bool allowed);
+  Stream<bool> get pipMode;
 
   /// Android 14+ : affichage plein écran des appels autorisé par l'utilisateur.
   Future<bool> fullScreenAllowed();
@@ -57,11 +62,15 @@ class NoCallSystem implements CallSystem {
   @override
   Future<String?> acceptedCall() async => null;
   @override
-  Future<void> showIncoming(String callId) async {}
+  Future<void> showIncoming(String callId, {bool video = false}) async {}
   @override
   Future<void> hideIncoming(String callId) async {}
   @override
-  Future<void> activate(String callId) async {}
+  Future<void> activate(String callId, {bool video = false}) async {}
+  @override
+  Future<void> setPip(bool allowed) async {}
+  @override
+  Stream<bool> get pipMode => const Stream.empty();
   @override
   Future<void> connected(String callId) async {}
   @override
@@ -78,36 +87,39 @@ class NoCallSystem implements CallSystem {
 
 /// Paramètres de l'écran d'appel du téléphone : JAMAIS de nom ni de numéro (décision C) —
 /// il s'affiche aussi téléphone verrouillé. Identifiant = celui de l'appel Privio.
-CallKitParams incomingCallParams(String callId, {Duration ring = const Duration(seconds: 45)}) =>
-    CallKitParams(
-      id: callId,
-      nameCaller: L.t.callIncomingLocked,
-      appName: 'Privio',
-      handle: '',
-      type: 0,
-      duration: ring.inMilliseconds,
-      missedCallNotification: const NotificationParams(showNotification: false),
-      callingNotification: NotificationParams(
-        showNotification: true,
-        isShowCallback: true,
-        subtitle: L.t.callOngoingNotice,
-        callbackText: L.t.raccrocher,
-      ),
-      android: AndroidParams(
-        isCustomNotification: false,
-        isShowLogo: false,
-        isShowFullLockedScreen: true,
-        isShowCallID: false,
-        backgroundColor: '#2A0F5C',
-        actionColor: '#5B1FB8',
-        textColor: '#FFFFFF',
-        incomingCallNotificationChannelName: L.t.callChannelIncoming,
-        missedCallNotificationChannelName: L.t.callChannelMissed,
-        isImportant: true,
-        textAccept: L.t.decrocher,
-        textDecline: L.t.refuser2,
-      ),
-    );
+CallKitParams incomingCallParams(
+  String callId, {
+  Duration ring = const Duration(seconds: 45),
+  bool video = false,
+}) => CallKitParams(
+  id: callId,
+  nameCaller: video ? L.t.callVideoIncomingLocked : L.t.callIncomingLocked,
+  appName: 'Privio',
+  handle: '',
+  type: video ? 1 : 0,
+  duration: ring.inMilliseconds,
+  missedCallNotification: const NotificationParams(showNotification: false),
+  callingNotification: NotificationParams(
+    showNotification: true,
+    isShowCallback: true,
+    subtitle: L.t.callOngoingNotice,
+    callbackText: L.t.raccrocher,
+  ),
+  android: AndroidParams(
+    isCustomNotification: false,
+    isShowLogo: false,
+    isShowFullLockedScreen: true,
+    isShowCallID: false,
+    backgroundColor: '#2A0F5C',
+    actionColor: '#5B1FB8',
+    textColor: '#FFFFFF',
+    incomingCallNotificationChannelName: L.t.callChannelIncoming,
+    missedCallNotificationChannelName: L.t.callChannelMissed,
+    isImportant: true,
+    textAccept: L.t.decrocher,
+    textDecline: L.t.refuser2,
+  ),
+);
 
 /// Action faite sur l'écran d'appel du téléphone ou sa notification (null : sans intérêt).
 CallSystemEvent? callSystemEventOf(CallEvent? e) {
@@ -128,10 +140,21 @@ CallSystemEvent? callSystemEventOf(CallEvent? e) {
 }
 
 class DeviceCallSystem implements CallSystem {
-  DeviceCallSystem({MethodChannel? channel}) : _channel = channel ?? const MethodChannel(_name);
+  DeviceCallSystem({MethodChannel? channel}) : _channel = channel ?? const MethodChannel(_name) {
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'pipChanged') _pip.add(call.arguments == true);
+    });
+  }
 
   static const _name = 'privio/call';
   final MethodChannel _channel;
+  final _pip = StreamController<bool>.broadcast();
+
+  @override
+  Stream<bool> get pipMode => _pip.stream;
+
+  @override
+  Future<void> setPip(bool allowed) => _safe(() => _channel.invokeMethod<void>('pip', allowed));
 
   @override
   Stream<CallSystemEvent> get events =>
@@ -159,18 +182,19 @@ class DeviceCallSystem implements CallSystem {
   }
 
   @override
-  Future<void> showIncoming(String callId) =>
-      _safe(() => FlutterCallkitIncoming.showCallkitIncoming(incomingCallParams(callId)));
+  Future<void> showIncoming(String callId, {bool video = false}) => _safe(
+    () => FlutterCallkitIncoming.showCallkitIncoming(incomingCallParams(callId, video: video)),
+  );
 
   @override
   Future<void> hideIncoming(String callId) =>
       _safe(() => FlutterCallkitIncoming.hideCallkitIncoming(incomingCallParams(callId)));
 
   @override
-  Future<void> activate(String callId) => _safe(() async {
+  Future<void> activate(String callId, {bool video = false}) => _safe(() async {
     final calls = await FlutterCallkitIncoming.activeCalls();
     if (calls.any((c) => c.id == callId && c.isAccepted)) return;
-    await FlutterCallkitIncoming.startCall(incomingCallParams(callId));
+    await FlutterCallkitIncoming.startCall(incomingCallParams(callId, video: video));
   });
 
   @override

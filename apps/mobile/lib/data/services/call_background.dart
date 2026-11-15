@@ -46,7 +46,7 @@ Future<void> handleCallPush(
       final left = created == null
           ? const Duration(seconds: 45)
           : const Duration(seconds: 45) - now().difference(created);
-      await show(incomingCallParams(id, ring: left));
+      await show(incomingCallParams(id, ring: left, video: data['kind'] == 'video'));
     case 'call_end':
       await end(id);
   }

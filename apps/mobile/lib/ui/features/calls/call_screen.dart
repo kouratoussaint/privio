@@ -61,7 +61,8 @@ class _CallOverlayState extends ConsumerState<CallOverlay> {
             ),
           ],
         ),
-        if (call != null && !call.minimized)
+        // Lot 9.2 : dans la petite fenêtre, seule l'image de l'appel (même réduit en bandeau).
+        if (call != null && (!call.minimized || call.pip))
           Positioned.fill(
             // Écran autonome (posé au-dessus du navigateur de l'application).
             child: Overlay(initialEntries: [OverlayEntry(builder: (_) => const _CallView())]),
@@ -159,6 +160,9 @@ class _CallViewState extends ConsumerState<_CallView> {
   /// Choix de la sortie du son ouvert (lot 9.1b) : sorties proposées.
   List<AudioRoute>? _routes;
 
+  /// Lot 9.2 : position de ma petite image (déplaçable).
+  Offset _preview = const Offset(-1, -1);
+
   /// Haut-parleur d'un geste ; avec un appareil Bluetooth ou un casque branché, choix de
   /// la sortie du son (panneau dans l'écran d'appel, posé hors du navigateur).
   Future<void> _chooseRoute() async {
@@ -201,18 +205,80 @@ class _CallViewState extends ConsumerState<_CallView> {
     }
   }
 
+  /// Ma petite image (déplaçable), avec le bouton pour changer de caméra.
+  Widget _localPreview(BuildContext context, Widget local, CallController ctrl) {
+    const w = 104.0;
+    const h = 156.0;
+    final size = MediaQuery.sizeOf(context);
+    final pad = MediaQuery.paddingOf(context);
+    final maxX = size.width - w - PrivioSpacing.m;
+    final maxY = size.height - h - pad.bottom - 220;
+    final pos = _preview.dx < 0
+        ? Offset(maxX, pad.top + 56)
+        : Offset(
+            _preview.dx.clamp(PrivioSpacing.m, maxX),
+            _preview.dy.clamp(pad.top, maxY < pad.top ? pad.top : maxY),
+          );
+    return Positioned(
+      left: pos.dx,
+      top: pos.dy,
+      child: GestureDetector(
+        onPanUpdate: (d) => setState(() => _preview = pos + d.delta),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            key: const Key('call.local'),
+            width: w,
+            height: h,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ColoredBox(color: Colors.black, child: local),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Material(
+                    color: Colors.black45,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      key: const Key('call.flip'),
+                      tooltip: L.t.callFlip,
+                      iconSize: 20,
+                      color: Colors.white,
+                      icon: const Icon(Icons.cameraswitch_rounded),
+                      onPressed: ctrl.switchCamera,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final call = ref.watch(callControllerProvider);
     if (call == null) return const SizedBox.shrink();
     final ctrl = ref.read(callControllerProvider.notifier);
     final theme = Theme.of(context);
+    final live = call.phase != CallPhase.ended;
+    if (call.pip) return _PipView(call: call, remote: ctrl.remoteView());
     // Privio verrouillé : pas de nom tant que le code n'est pas saisi (décision C).
     final locked = ref.watch(appLockProvider).value?.locked ?? false;
     final hideName = locked && call.phase == CallPhase.incomingRinging;
     final white = theme.textTheme.bodyLarge?.copyWith(color: Colors.white70);
+    // Lot 9.2 : image du correspondant en plein écran, la mienne en petit.
+    final remote = live && call.peerCamera ? ctrl.remoteView() : null;
+    final local = live && call.camera ? ctrl.localView() : null;
     final status = switch (call.phase) {
-      CallPhase.incomingRinging => Text(L.t.callIncoming, style: white),
+      CallPhase.incomingRinging => Text(
+        call.videoCall ? L.t.callVideoIncoming : L.t.callIncoming,
+        style: white,
+      ),
       CallPhase.outgoingRinging => Text(L.t.callRinging, style: white),
       CallPhase.connecting => Text(L.t.callConnecting, style: white),
       CallPhase.reconnecting => Text(L.t.callReconnecting, style: white),
@@ -254,6 +320,23 @@ class _CallViewState extends ConsumerState<_CallView> {
         ),
         child: Stack(
           children: [
+            if (remote != null)
+              Positioned.fill(
+                child: KeyedSubtree(key: const Key('call.remote'), child: remote),
+              ),
+            if (remote != null)
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x99000000), Color(0x00000000), Color(0xB3000000)],
+                      stops: [0, 0.35, 1],
+                    ),
+                  ),
+                ),
+              ),
             SafeArea(
               child: Column(
                 children: [
@@ -269,8 +352,10 @@ class _CallViewState extends ConsumerState<_CallView> {
                             onTap: () => ctrl.setMinimized(true),
                           ),
                   ),
-                  const Spacer(),
-                  if (hideName)
+                  if (remote == null) const Spacer(),
+                  if (remote != null)
+                    const SizedBox.shrink()
+                  else if (hideName)
                     const CircleAvatar(
                       radius: 56,
                       backgroundColor: Colors.white24,
@@ -298,6 +383,16 @@ class _CallViewState extends ConsumerState<_CallView> {
                   ),
                   const SizedBox(height: PrivioSpacing.s),
                   KeyedSubtree(key: const Key('call.status'), child: status),
+                  if (call.cameraDenied)
+                    Padding(
+                      padding: const EdgeInsets.all(PrivioSpacing.m),
+                      child: Text(
+                        L.t.callCameraDenied,
+                        key: const Key('call.camera.denied'),
+                        textAlign: TextAlign.center,
+                        style: white?.copyWith(color: const Color(0xFFFFC857)),
+                      ),
+                    ),
                   const Spacer(flex: 2),
                   Padding(
                     padding: const EdgeInsets.only(bottom: PrivioSpacing.xxl),
@@ -322,33 +417,49 @@ class _CallViewState extends ConsumerState<_CallView> {
                         ],
                       ),
                       CallPhase.ended => const SizedBox(height: 96),
-                      _ => Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      _ => Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _RoundButton(
-                            key: const Key('call.mute'),
-                            icon: call.muted ? Icons.mic_off_rounded : Icons.mic_none_rounded,
-                            label: call.muted ? L.t.microCoupe : L.t.micro,
-                            selected: call.muted,
-                            onTap: ctrl.toggleMute,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _RoundButton(
+                                key: const Key('call.mute'),
+                                icon: call.muted ? Icons.mic_off_rounded : Icons.mic_none_rounded,
+                                label: call.muted ? L.t.microCoupe : L.t.micro,
+                                selected: call.muted,
+                                onTap: ctrl.toggleMute,
+                              ),
+                              // Lot 9.2 : ma caméra, à tout moment (décision A).
+                              _RoundButton(
+                                key: const Key('call.camera'),
+                                icon: call.camera
+                                    ? Icons.videocam_rounded
+                                    : Icons.videocam_off_rounded,
+                                label: call.camera ? L.t.callCamera : L.t.callCameraOff,
+                                selected: call.camera,
+                                onTap: ctrl.toggleCamera,
+                              ),
+                              _RoundButton(
+                                key: const Key('call.speaker'),
+                                icon: routeIcon(call.route),
+                                label: switch (call.route) {
+                                  AudioRoute.bluetooth => L.t.callRouteBluetooth,
+                                  AudioRoute.wired => L.t.callRouteWired,
+                                  _ => L.t.hautParleur,
+                                },
+                                selected: call.route != AudioRoute.earpiece,
+                                onTap: _chooseRoute,
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: PrivioSpacing.l),
                           _RoundButton(
                             key: const Key('call.hangup'),
                             icon: Icons.call_end_rounded,
                             label: L.t.raccrocher,
                             color: PrivioColors.error,
                             onTap: () => _run(context, ctrl.hangUp),
-                          ),
-                          _RoundButton(
-                            key: const Key('call.speaker'),
-                            icon: routeIcon(call.route),
-                            label: switch (call.route) {
-                              AudioRoute.bluetooth => L.t.callRouteBluetooth,
-                              AudioRoute.wired => L.t.callRouteWired,
-                              _ => L.t.hautParleur,
-                            },
-                            selected: call.route != AudioRoute.earpiece,
-                            onTap: _chooseRoute,
                           ),
                         ],
                       ),
@@ -357,6 +468,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                 ],
               ),
             ),
+            if (local != null) _localPreview(context, local, ctrl),
             if (_routes != null && call.phase != CallPhase.ended) ...[
               Positioned.fill(
                 child: GestureDetector(
@@ -376,6 +488,30 @@ class _CallViewState extends ConsumerState<_CallView> {
       ),
     );
   }
+}
+
+/// Lot 9.2 : Privio quitté pendant un appel avec image → petite fenêtre : l'image seule.
+class _PipView extends StatelessWidget {
+  const _PipView({required this.call, required this.remote});
+
+  final CallState call;
+  final Widget? remote;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const Key('call.pip'),
+    color: Colors.black,
+    child: call.peerCamera && remote != null
+        ? remote!
+        : Center(
+            child: UserAvatar(
+              name: call.info.peerName,
+              avatarPath: call.info.peerAvatar,
+              seed: call.info.peerId,
+              radius: 32,
+            ),
+          ),
+  );
 }
 
 class _RoutePanel extends StatelessWidget {
@@ -515,10 +651,17 @@ class _RoundButton extends StatelessWidget {
 }
 
 /// Lance un appel audio depuis une discussion à deux (bouton 📞) ; erreur affichée sur place.
-Future<void> startCallFrom(BuildContext context, WidgetRef ref, String conversationId) async {
+Future<void> startCallFrom(
+  BuildContext context,
+  WidgetRef ref,
+  String conversationId, {
+  bool video = false,
+}) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   try {
-    await ref.read(callControllerProvider.notifier).start(conversationId);
+    await ref
+        .read(callControllerProvider.notifier)
+        .start(conversationId, kind: video ? 'video' : 'audio');
   } on Object catch (e) {
     messenger?.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
   }

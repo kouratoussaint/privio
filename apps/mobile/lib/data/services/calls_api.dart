@@ -5,7 +5,8 @@ import '../../domain/models/call.dart';
 
 /// Lot 9.1a — mise en relation des appels (la voix ne passe jamais par le serveur).
 abstract interface class CallsApi {
-  Future<CallInfo> startCall(String conversationId);
+  /// [kind] : « audio » ou « video » (lot 9.2).
+  Future<CallInfo> startCall(String conversationId, {String kind = 'audio'});
   Future<CallInfo> answer(String callId);
   Future<CallInfo> decline(String callId);
   Future<CallInfo> end(String callId, {String reason = 'hangup'});
@@ -40,8 +41,8 @@ class SupabaseCallsApi implements CallsApi {
       CallInfo.fromJson(Map<String, dynamic>.from(await _rpc(fn, params) as Map));
 
   @override
-  Future<CallInfo> startCall(String conversationId) =>
-      _call('start_call', {'p_conversation_id': conversationId, 'p_kind': 'audio'});
+  Future<CallInfo> startCall(String conversationId, {String kind = 'audio'}) =>
+      _call('start_call', {'p_conversation_id': conversationId, 'p_kind': kind});
 
   @override
   Future<CallInfo> answer(String callId) => _call('answer_call', {'p_call_id': callId});

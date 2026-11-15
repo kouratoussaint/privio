@@ -118,13 +118,13 @@ Deno.serve(async (req) => {
     return await dispatchTargets(
       token,
       callId,
-      () => rpc<{ token: string; conversation_id: string; created_at: string }[]>(
+      () => rpc<{ token: string; conversation_id: string; created_at: string; kind: string }[]>(
         "push_call_targets",
         { p_token: token, p_call_id: callId, p_event: callEvent },
         serviceHeaders(),
       ),
       (sa, t) => callEvent === "ring"
-        ? sendCallRing(sa, t.token, callId, t.conversation_id, t.created_at)
+        ? sendCallRing(sa, t.token, callId, t.conversation_id, t.created_at, t.kind)
         : sendCallMissed(sa, t.token, callId, t.conversation_id, muted),
     );
   }

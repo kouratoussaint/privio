@@ -6,6 +6,9 @@ abstract interface class PermissionGateway {
 
   /// Lot 9.1b : appareils Bluetooth pendant un appel (Android 12+ : « Appareils à proximité »).
   Future<bool> requestNearbyDevices();
+
+  /// Lot 9.2 : caméra, au moment où on l'allume pendant un appel.
+  Future<bool> requestCamera();
 }
 
 class DevicePermissionGateway implements PermissionGateway {
@@ -17,4 +20,7 @@ class DevicePermissionGateway implements PermissionGateway {
   @override
   Future<bool> requestNearbyDevices() async =>
       (await Permission.bluetoothConnect.request()).isGranted;
+
+  @override
+  Future<bool> requestCamera() async => (await Permission.camera.request()).isGranted;
 }

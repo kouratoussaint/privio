@@ -180,12 +180,15 @@ export async function sendCallRing(
   callId: string,
   conversationId: string,
   createdAt: string,
+  kind: string,
 ): Promise<SendResult> {
   return await sendData(sa, token, {
     type: "call",
     call_id: callId,
     conversation_id: conversationId,
     created_at: createdAt,
+    // Lot 9.2 : « audio » ou « video » (l'écran d'appel l'annonce, toujours sans nom).
+    kind: kind === "video" ? "video" : "audio",
   }, "45s");
 }
 

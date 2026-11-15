@@ -503,6 +503,14 @@ class FakePermissionGateway implements PermissionGateway {
     nearbyRequests++;
     return true;
   }
+
+  int cameraRequests = 0;
+  bool cameraGranted = true;
+  @override
+  Future<bool> requestCamera() async {
+    cameraRequests++;
+    return cameraGranted;
+  }
 }
 
 /// Fausse messagerie avec état : deux comptes, « me » (u1) et Bob (u2).
@@ -3027,15 +3035,17 @@ class FakeCallsApi implements CallsApi {
     peerId: c.peerId,
     peerName: c.peerName,
     peerAvatar: c.peerAvatar,
+    kind: c.kind,
     answeredAt: answeredAt ?? c.answeredAt,
     endReason: endReason ?? c.endReason,
   );
 
   @override
-  Future<CallInfo> startCall(String conversationId) async {
+  Future<CallInfo> startCall(String conversationId, {String kind = 'audio'}) async {
     if (!accept) throw const AppFailure(FailureCode.callsDisabled);
     final c = CallInfo(
       id: 'call-${_seq++}',
+      kind: kind,
       conversationId: conversationId,
       status: peerBusy ? 'missed' : 'ringing',
       outgoing: true,
@@ -3048,9 +3058,10 @@ class FakeCallsApi implements CallsApi {
   }
 
   /// Appel reçu de Bob.
-  CallInfo incoming({String conversationId = 'conv-bob'}) {
+  CallInfo incoming({String conversationId = 'conv-bob', String kind = 'audio'}) {
     final c = CallInfo(
       id: 'call-${_seq++}',
+      kind: kind,
       conversationId: conversationId,
       status: 'ringing',
       outgoing: false,
@@ -3119,6 +3130,10 @@ class FakeCallEngine implements CallEngine {
   final List<String> log = [];
   void Function(CallMediaState)? onState;
   void Function(bool weak)? onQuality;
+  void Function(bool on)? onPeerCamera;
+  bool camera = false;
+  bool? economy;
+  int flips = 0;
   bool muted = false;
   bool speaker = false;
   List<AudioRoute> routes = const [AudioRoute.earpiece, AudioRoute.speaker];
@@ -3130,12 +3145,32 @@ class FakeCallEngine implements CallEngine {
     required void Function(Map<String, dynamic> candidate) onCandidate,
     required void Function(CallMediaState state) onState,
     void Function(bool weak)? onQuality,
+    void Function(bool on)? onPeerCamera,
   }) async {
     log.add('open');
     this.onState = onState;
     this.onQuality = onQuality;
+    this.onPeerCamera = onPeerCamera;
     onCandidate({'candidate': 'local-1'});
   }
+
+  @override
+  Future<void> setCamera(bool on, {bool front = true}) async {
+    log.add('camera:$on');
+    camera = on;
+  }
+
+  @override
+  Future<void> switchCamera() async => flips++;
+
+  @override
+  Future<void> setEconomy(bool economy) async => this.economy = economy;
+
+  @override
+  Widget localView({bool mirror = true}) => SizedBox(key: Key('fake.local.$mirror'));
+
+  @override
+  Widget remoteView() => const SizedBox(key: Key('fake.remote'));
 
   @override
   Future<Map<String, dynamic>> restartIce() async {
@@ -3189,12 +3224,19 @@ class FakeCallSystem implements CallSystem {
   Stream<CallSystemEvent> get events => _events.stream;
   @override
   Future<String?> acceptedCall() async => accepted;
+  final _pip = StreamController<bool>.broadcast();
+  void emitPip(bool on) => _pip.add(on);
   @override
-  Future<void> showIncoming(String callId) async => log.add('show:$callId');
+  Stream<bool> get pipMode => _pip.stream;
+  @override
+  Future<void> setPip(bool allowed) async => log.add('pip:$allowed');
+  @override
+  Future<void> showIncoming(String callId, {bool video = false}) async =>
+      log.add(video ? 'show-video:$callId' : 'show:$callId');
   @override
   Future<void> hideIncoming(String callId) async => log.add('hide:$callId');
   @override
-  Future<void> activate(String callId) async => log.add('activate:$callId');
+  Future<void> activate(String callId, {bool video = false}) async => log.add('activate:$callId');
   @override
   Future<void> connected(String callId) async => log.add('connected:$callId');
   @override

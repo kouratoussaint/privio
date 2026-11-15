@@ -161,13 +161,25 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               if (!summary.blocked && !summary.peerDeleted)
                 Padding(
                   padding: const EdgeInsets.only(top: PrivioSpacing.m),
-                  child: Center(
-                    child: FilledButton.tonalIcon(
-                      key: const Key('contact.call'),
-                      onPressed: () => startCallFrom(context, ref, summary.id),
-                      icon: const Icon(Icons.call_outlined),
-                      label: Text(L.t.appeler),
-                    ),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: PrivioSpacing.m,
+                    runSpacing: PrivioSpacing.s,
+                    children: [
+                      FilledButton.tonalIcon(
+                        key: const Key('contact.call'),
+                        onPressed: () => startCallFrom(context, ref, summary.id),
+                        icon: const Icon(Icons.call_outlined),
+                        label: Text(L.t.appeler),
+                      ),
+                      // Lot 9.2 : appel vidéo.
+                      FilledButton.tonalIcon(
+                        key: const Key('contact.video'),
+                        onPressed: () => startCallFrom(context, ref, summary.id, video: true),
+                        icon: const Icon(Icons.videocam_outlined),
+                        label: Text(L.t.callVideoButton),
+                      ),
+                    ],
                   ),
                 ),
               if (about != null)
