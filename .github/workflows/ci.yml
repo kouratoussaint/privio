@@ -119,18 +119,25 @@ jobs:
           --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}
           --dart-define=PRIVIO_ENV=staging
           --dart-define=APP_VERSION=0.1.0+${{ github.run_number }}
-      - uses: actions/upload-artifact@v4
+      # APK téléchargeables tels quels (sans .zip) : upload-artifact v7, archive: false.
+      # Le nom du fichier devient le nom de l'artefact.
+      - name: Nommer les APK
+        run: |
+          mkdir -p apk
+          cp apps/mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            "apk/privio-0.1.0+${{ github.run_number }}-arm64.apk"
+          cp apps/mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+            "apk/privio-0.1.0+${{ github.run_number }}-32bits.apk"
+      - uses: actions/upload-artifact@v7
         with:
-          name: privio-apk-arm64-${{ github.run_number }}
-          path: apps/mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: apk/privio-0.1.0+${{ github.run_number }}-arm64.apk
+          archive: false
           retention-days: 2
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: privio-apk-32bits-${{ github.run_number }}
-          path: apps/mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          path: apk/privio-0.1.0+${{ github.run_number }}-32bits.apk
+          archive: false
           retention-days: 2
-          compression-level: 0
       - uses: actions/upload-artifact@v4
         with:
           name: couverture-tests-${{ github.run_number }}
