@@ -137,7 +137,7 @@ void main() {
     expect(tester.widget<PrivioNavBar>(find.byType(PrivioNavBar)).items[0].badge, 1);
 
     await _menu(tester, 'discussions.menu');
-    for (final k in ['new_group', 'scan', 'requests', 'archived', 'favorites', 'read_all']) {
+    for (final k in ['new_conversation', 'scan', 'requests', 'archived', 'favorites', 'read_all']) {
       expect(find.byKey(Key('discussions.menu.$k')), findsOneWidget, reason: k);
     }
     expect(find.byKey(const Key('discussions.menu.lock')), findsNothing, reason: 'pas de code');
@@ -158,11 +158,11 @@ void main() {
     expect(item.enabled, isFalse);
   });
 
-  testWidgets('Discussions ⋮ : nouveau groupe, demandes, archivées', (tester) async {
+  testWidgets('Discussions ⋮ : nouvelle discussion, demandes, archivées', (tester) async {
     final deps = _deps();
     await _start(tester, deps);
-    await _menu(tester, 'discussions.menu', 'discussions.menu.new_group');
-    expect(find.text('Nouveau groupe'), findsWidgets);
+    await _menu(tester, 'discussions.menu', 'discussions.menu.new_conversation');
+    expect(find.byKey(const Key('search.input')), findsOneWidget);
     await _back(tester);
     await _menu(tester, 'discussions.menu', 'discussions.menu.requests');
     expect(find.text('Demandes de connexion'), findsWidgets);

@@ -24,7 +24,8 @@ et Ma fiche) et dépassait deux écrans de défilement.
   dans un groupe, personnes bloquées), Messages, Liens et GIF. Le verrouillage passe dans
   Sécurité.
 - **Menu ⋮** en haut des listes :
-  - Discussions : nouveau groupe, scanner un QR code, demandes de connexion (nombre),
+  - Discussions : nouvelle discussion (correction du 15/11/2026 : remplace « nouveau
+    groupe », qui a son bouton dans l'onglet Groupes), scanner un QR code, demandes de connexion (nombre),
     archivées (toujours accessibles), messages favoris de toutes les discussions, tout
     marquer comme lu, verrouiller Privio maintenant (si le code est activé).
   - Groupes (icône QR gardée) : rejoindre un groupe, demandes envoyées (feuille avec

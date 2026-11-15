@@ -17,7 +17,7 @@ import '../../../ui/features/groups/join_group_screen.dart';
 /// Lot 8.3a : menu ⋮ en haut des listes Discussions et Groupes.
 enum ListMenuKind { discussions, groups }
 
-enum _Action { newGroup, scan, requests, join, sent, archived, favorites, readAll, lock }
+enum _Action { newConversation, scan, requests, join, sent, archived, favorites, readAll, lock }
 
 class ListMenuButton extends ConsumerWidget {
   const ListMenuButton({super.key, required this.kind});
@@ -72,7 +72,13 @@ class ListMenuButton extends ConsumerWidget {
       onSelected: (a) => _run(context, ref, a, together: together, unread: unread),
       itemBuilder: (_) => [
         if (!_groups) ...[
-          item(_Action.newGroup, 'new_group', Icons.group_add_outlined, L.t.nouveauGroupe),
+          // Correction du 15/11/2026 : « Nouvelle discussion » (le groupe a son onglet).
+          item(
+            _Action.newConversation,
+            'new_conversation',
+            Icons.edit_outlined,
+            L.t.nouvelleDiscussion,
+          ),
           item(_Action.scan, 'scan', Icons.qr_code_scanner_rounded, L.t.scannerQrCode),
           item(
             _Action.requests,
@@ -119,8 +125,8 @@ class ListMenuButton extends ConsumerWidget {
     required int unread,
   }) async {
     switch (a) {
-      case _Action.newGroup:
-        await context.push(Routes.newGroup);
+      case _Action.newConversation:
+        await context.push(Routes.newConversation);
       case _Action.scan:
         await _scan(context, ref);
       case _Action.requests:
