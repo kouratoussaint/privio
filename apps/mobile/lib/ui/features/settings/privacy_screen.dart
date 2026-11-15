@@ -17,6 +17,7 @@ import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/ttl_picker.dart';
 import '../../../state/providers.dart';
+import 'what_privio_keeps_screen.dart';
 
 /// Écran 23 — confidentialité et sécurité (lot 4.3). Chaque réglage est appliqué par le
 /// serveur ; « mes contacts » = personnes avec qui l'on a une discussion à deux.
@@ -150,7 +151,20 @@ class PrivacyScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(L.t.confidentialite)),
       body: SettingsListView(
         children: [
-          SettingsSectionTitle(L.t.quiVoitQuoi, first: true),
+          // Lot 8.4c : ce que Privio garde.
+          SettingsCard(
+            children: [
+              ListTile(
+                key: const Key('privacy.keeps'),
+                leading: Icon(Icons.inventory_2_outlined, color: p.accentText),
+                title: Text(L.t.keepTitle),
+                subtitle: Text(L.t.keepEntrySubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(WhatPrivioKeepsScreen.route()),
+              ),
+            ],
+          ),
+          SettingsSectionTitle(L.t.quiVoitQuoi),
           SettingsCard(
             children: [
               ListTile(

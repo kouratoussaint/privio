@@ -13,6 +13,7 @@ import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/motion/illustrations.dart';
+import 'what_privio_keeps_screen.dart';
 
 /// Aide : questions fréquentes et contact de l'assistance (lot 2.5).
 class HelpScreen extends ConsumerWidget {
@@ -46,6 +47,20 @@ class HelpScreen extends ConsumerWidget {
         children: [
           // Lot 7.2b2 : en-tête illustré.
           const Center(child: FloatingIcon(icon: Icons.support_agent, size: 40)),
+          // Lot 8.4c : ce que Privio garde.
+          const SizedBox(height: PrivioSpacing.l),
+          SettingsCard(
+            children: [
+              ListTile(
+                key: const Key('help.keeps'),
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: Text(L.t.keepTitle),
+                subtitle: Text(L.t.keepEntrySubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(WhatPrivioKeepsScreen.route()),
+              ),
+            ],
+          ),
           SettingsSectionTitle(L.t.questionsFrequentes),
           SettingsCard(
             children: [

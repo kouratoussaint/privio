@@ -6717,6 +6717,156 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'S’efface bientôt, dans {remaining}'**
   String bubbleSoon(Object remaining);
+
+  /// Écran : Demandes de connexion, Nouvelle discussion, Carte d’une personne
+  ///
+  /// In fr, this message translates to:
+  /// **'Attention : vous avez déjà un contact nommé {name} (@{contactHandle}). Ce compte est différent : @{handle}. Vérifiez auprès de la personne avant d’accepter ou de lui écrire.'**
+  String impersonationWarning(Object name, Object contactHandle, Object handle);
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce que Privio garde'**
+  String get keepTitle;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Privio est fait pour que vos échanges ne durent pas. Voici ce que nous gardons, combien de temps, et pourquoi.'**
+  String get keepIntro;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos messages'**
+  String get keepMessagesTitle;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages, photos, vocaux, GIF et aperçus de liens sont gardés sur nos serveurs le temps de vous les remettre, puis effacés automatiquement à la fin de leur durée (72 h au plus). Une fois effacés, personne ne peut les récupérer, ni vous, ni nous.'**
+  String get keepMessages1;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'« Supprimer pour tout le monde » efface aussitôt. Une photo ou un vocal en vue unique ne s’ouvre qu’une fois.'**
+  String get keepMessages2;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Favoris et messages épinglés disparaissent avec le message.'**
+  String get keepMessages3;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre compte'**
+  String get keepAccountTitle;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre numéro sert à vous connecter. Il n’est jamais montré aux autres ; on ne vous trouve par votre numéro que si vous l’avez autorisé.'**
+  String get keepAccount1;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre nom, votre identifiant, votre photo et votre « À propos » sont visibles selon vos réglages de confidentialité.'**
+  String get keepAccount2;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos contacts, vos groupes, vos blocages et vos réglages sont gardés jusqu’à la suppression de votre compte, qui efface tout.'**
+  String get keepAccount3;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Gardé un peu plus longtemps'**
+  String get keepLongerTitle;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandes de connexion : le petit mot est effacé 5 minutes après l’acceptation ; la demande, 7 jours après la réponse.'**
+  String get keepLonger1;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Signalements et demandes d’assistance : 90 jours. Un signalement ne contient la copie d’un message que si la personne qui signale l’a jointe.'**
+  String get keepLonger2;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Journal des notifications (sans nom ni contenu) : 7 jours.'**
+  String get keepLonger3;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Journal des actions de l’équipe Privio : 30 jours.'**
+  String get keepLonger4;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce que nous ne faisons jamais'**
+  String get keepNeverTitle;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de publicité, pas de revente de vos données.'**
+  String get keepNever1;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas d’annuaire : on ne trouve quelqu’un que par son identifiant exact, ou par son numéro s’il l’a permis.'**
+  String get keepNever2;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Les notifications n’affichent ni nom ni contenu.'**
+  String get keepNever3;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'L’outil de l’équipe Privio n’affiche jamais vos discussions, sauf la copie jointe à un signalement.'**
+  String get keepNever4;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Captures d’écran bloquées, pas de sauvegarde de Privio vers le cloud.'**
+  String get keepNever5;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur ce téléphone'**
+  String get keepPhoneTitle;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Une copie protégée de vos discussions permet de les lire hors connexion. Elle s’efface avec les messages, et entièrement quand vous vous déconnectez.'**
+  String get keepPhone1;
+
+  /// Écran : Ce que Privio garde — texte validé le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce que nous gardons, combien de temps, et pourquoi'**
+  String get keepEntrySubtitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -5548,5 +5548,116 @@
         "type": "Object"
       }
     }
+  },
+  "impersonationWarning": "Attention : vous avez déjà un contact nommé {name} (@{contactHandle}). Ce compte est différent : @{handle}. Vérifiez auprès de la personne avant d’accepter ou de lui écrire.",
+  "@impersonationWarning": {
+    "description": "Écran : Demandes de connexion, Nouvelle discussion, Carte d’une personne",
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "contactHandle": {
+        "type": "Object"
+      },
+      "handle": {
+        "type": "Object"
+      }
+    }
+  },
+  "keepTitle": "Ce que Privio garde",
+  "@keepTitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepIntro": "Privio est fait pour que vos échanges ne durent pas. Voici ce que nous gardons, combien de temps, et pourquoi.",
+  "@keepIntro": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepMessagesTitle": "Vos messages",
+  "@keepMessagesTitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepMessages1": "Messages, photos, vocaux, GIF et aperçus de liens sont gardés sur nos serveurs le temps de vous les remettre, puis effacés automatiquement à la fin de leur durée (72 h au plus). Une fois effacés, personne ne peut les récupérer, ni vous, ni nous.",
+  "@keepMessages1": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepMessages2": "« Supprimer pour tout le monde » efface aussitôt. Une photo ou un vocal en vue unique ne s’ouvre qu’une fois.",
+  "@keepMessages2": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepMessages3": "Favoris et messages épinglés disparaissent avec le message.",
+  "@keepMessages3": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepAccountTitle": "Votre compte",
+  "@keepAccountTitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepAccount1": "Votre numéro sert à vous connecter. Il n’est jamais montré aux autres ; on ne vous trouve par votre numéro que si vous l’avez autorisé.",
+  "@keepAccount1": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepAccount2": "Votre nom, votre identifiant, votre photo et votre « À propos » sont visibles selon vos réglages de confidentialité.",
+  "@keepAccount2": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepAccount3": "Vos contacts, vos groupes, vos blocages et vos réglages sont gardés jusqu’à la suppression de votre compte, qui efface tout.",
+  "@keepAccount3": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepLongerTitle": "Gardé un peu plus longtemps",
+  "@keepLongerTitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepLonger1": "Demandes de connexion : le petit mot est effacé 5 minutes après l’acceptation ; la demande, 7 jours après la réponse.",
+  "@keepLonger1": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepLonger2": "Signalements et demandes d’assistance : 90 jours. Un signalement ne contient la copie d’un message que si la personne qui signale l’a jointe.",
+  "@keepLonger2": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepLonger3": "Journal des notifications (sans nom ni contenu) : 7 jours.",
+  "@keepLonger3": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepLonger4": "Journal des actions de l’équipe Privio : 30 jours.",
+  "@keepLonger4": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepNeverTitle": "Ce que nous ne faisons jamais",
+  "@keepNeverTitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepNever1": "Pas de publicité, pas de revente de vos données.",
+  "@keepNever1": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepNever2": "Pas d’annuaire : on ne trouve quelqu’un que par son identifiant exact, ou par son numéro s’il l’a permis.",
+  "@keepNever2": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepNever3": "Les notifications n’affichent ni nom ni contenu.",
+  "@keepNever3": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepNever4": "L’outil de l’équipe Privio n’affiche jamais vos discussions, sauf la copie jointe à un signalement.",
+  "@keepNever4": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepNever5": "Captures d’écran bloquées, pas de sauvegarde de Privio vers le cloud.",
+  "@keepNever5": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepPhoneTitle": "Sur ce téléphone",
+  "@keepPhoneTitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepPhone1": "Une copie protégée de vos discussions permet de les lire hors connexion. Elle s’efface avec les messages, et entièrement quand vous vous déconnectez.",
+  "@keepPhone1": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "keepEntrySubtitle": "Ce que nous gardons, combien de temps, et pourquoi",
+  "@keepEntrySubtitle": {
+    "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
   }
 }

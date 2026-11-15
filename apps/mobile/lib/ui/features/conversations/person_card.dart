@@ -17,6 +17,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/success_snack.dart';
 import 'new_conversation_screen.dart' show ConnectionRequestSheet;
 import 'report_sheet.dart';
+import 'impersonation.dart';
 
 /// Lot 8.1a : toucher le nom ou la photo d'une personne.
 /// - moi : « Ma fiche » ;
@@ -358,6 +359,9 @@ class _PersonCardState extends ConsumerState<PersonCard> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: p.accentText),
               ),
+            // Lot 8.4c : membre d'un groupe qui imite le nom d'un de mes contacts.
+            if ((_handle ?? '').isNotEmpty)
+              ImpersonationWarning(userId: widget.userId, name: _name, handle: _handle!),
             if (about != null && about.isNotEmpty) ...[
               const SizedBox(height: PrivioSpacing.m),
               Text(

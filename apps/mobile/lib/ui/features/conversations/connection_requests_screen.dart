@@ -16,6 +16,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
+import 'impersonation.dart';
 
 /// Demandes de connexion (lot 4.7) : reçues (accepter, refuser, bloquer) et envoyées
 /// (en attente, refusées, expirées).
@@ -211,6 +212,8 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
                 ),
               ],
             ),
+            // Lot 8.4c : nom identique ou très proche de celui d'un de mes contacts.
+            ImpersonationWarning(userId: r.userId, name: r.displayName, handle: r.handle),
             if (r.note != null) ...[
               const SizedBox(height: PrivioSpacing.s),
               Container(

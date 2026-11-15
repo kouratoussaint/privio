@@ -3995,4 +3995,92 @@ class AppLocalizationsFr extends AppLocalizations {
   String bubbleSoon(Object remaining) {
     return 'S’efface bientôt, dans $remaining';
   }
+
+  @override
+  String impersonationWarning(Object name, Object contactHandle, Object handle) {
+    return 'Attention : vous avez déjà un contact nommé $name (@$contactHandle). Ce compte est différent : @$handle. Vérifiez auprès de la personne avant d’accepter ou de lui écrire.';
+  }
+
+  @override
+  String get keepTitle => 'Ce que Privio garde';
+
+  @override
+  String get keepIntro =>
+      'Privio est fait pour que vos échanges ne durent pas. Voici ce que nous gardons, combien de temps, et pourquoi.';
+
+  @override
+  String get keepMessagesTitle => 'Vos messages';
+
+  @override
+  String get keepMessages1 =>
+      'Messages, photos, vocaux, GIF et aperçus de liens sont gardés sur nos serveurs le temps de vous les remettre, puis effacés automatiquement à la fin de leur durée (72 h au plus). Une fois effacés, personne ne peut les récupérer, ni vous, ni nous.';
+
+  @override
+  String get keepMessages2 =>
+      '« Supprimer pour tout le monde » efface aussitôt. Une photo ou un vocal en vue unique ne s’ouvre qu’une fois.';
+
+  @override
+  String get keepMessages3 => 'Favoris et messages épinglés disparaissent avec le message.';
+
+  @override
+  String get keepAccountTitle => 'Votre compte';
+
+  @override
+  String get keepAccount1 =>
+      'Votre numéro sert à vous connecter. Il n’est jamais montré aux autres ; on ne vous trouve par votre numéro que si vous l’avez autorisé.';
+
+  @override
+  String get keepAccount2 =>
+      'Votre nom, votre identifiant, votre photo et votre « À propos » sont visibles selon vos réglages de confidentialité.';
+
+  @override
+  String get keepAccount3 =>
+      'Vos contacts, vos groupes, vos blocages et vos réglages sont gardés jusqu’à la suppression de votre compte, qui efface tout.';
+
+  @override
+  String get keepLongerTitle => 'Gardé un peu plus longtemps';
+
+  @override
+  String get keepLonger1 =>
+      'Demandes de connexion : le petit mot est effacé 5 minutes après l’acceptation ; la demande, 7 jours après la réponse.';
+
+  @override
+  String get keepLonger2 =>
+      'Signalements et demandes d’assistance : 90 jours. Un signalement ne contient la copie d’un message que si la personne qui signale l’a jointe.';
+
+  @override
+  String get keepLonger3 => 'Journal des notifications (sans nom ni contenu) : 7 jours.';
+
+  @override
+  String get keepLonger4 => 'Journal des actions de l’équipe Privio : 30 jours.';
+
+  @override
+  String get keepNeverTitle => 'Ce que nous ne faisons jamais';
+
+  @override
+  String get keepNever1 => 'Pas de publicité, pas de revente de vos données.';
+
+  @override
+  String get keepNever2 =>
+      'Pas d’annuaire : on ne trouve quelqu’un que par son identifiant exact, ou par son numéro s’il l’a permis.';
+
+  @override
+  String get keepNever3 => 'Les notifications n’affichent ni nom ni contenu.';
+
+  @override
+  String get keepNever4 =>
+      'L’outil de l’équipe Privio n’affiche jamais vos discussions, sauf la copie jointe à un signalement.';
+
+  @override
+  String get keepNever5 => 'Captures d’écran bloquées, pas de sauvegarde de Privio vers le cloud.';
+
+  @override
+  String get keepPhoneTitle => 'Sur ce téléphone';
+
+  @override
+  String get keepPhone1 =>
+      'Une copie protégée de vos discussions permet de les lire hors connexion. Elle s’efface avec les messages, et entièrement quand vous vous déconnectez.';
+
+  @override
+  String get keepEntrySubtitle => 'Ce que nous gardons, combien de temps, et pourquoi';
 }

@@ -219,6 +219,8 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const Key('privacy.requests')));
+    await tester.pumpAndSettle();
     expect(find.text('Tout le monde peut vous envoyer une demande.'), findsOneWidget);
     await tester.tap(find.byKey(const Key('privacy.requests')));
     await tester.pumpAndSettle();

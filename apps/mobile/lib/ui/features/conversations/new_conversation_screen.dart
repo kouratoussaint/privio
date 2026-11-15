@@ -22,6 +22,7 @@ import '../groups/join_group_screen.dart';
 import '../../../data/services/share_service.dart';
 import '../../../state/session_controller.dart';
 import '../../../core/util/search_text.dart';
+import 'impersonation.dart';
 
 /// Écran 09 — mes contacts (lot 8.3b : liste filtrée en tapant) et trouver une nouvelle
 /// personne par son identifiant Privio (ou son numéro, si elle l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
@@ -423,6 +424,15 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
                               ),
                               title: Text(found.displayName),
                               subtitle: Text('@${found.handle}'),
+                            ),
+                            // Lot 8.4c : alerte anti-usurpation.
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                              child: ImpersonationWarning(
+                                userId: found.id,
+                                name: found.displayName,
+                                handle: found.handle,
+                              ),
                             ),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
