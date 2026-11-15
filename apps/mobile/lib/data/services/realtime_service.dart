@@ -9,10 +9,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Signal sans contenu reçu du serveur : « quelque chose a changé dans telle discussion ».
 /// `conversationId == null` : rafraîchir tout (reconnexion, retour dans l'application).
 class RealtimeSignal {
-  const RealtimeSignal({required this.event, this.conversationId});
+  const RealtimeSignal({required this.event, this.conversationId, this.callId});
 
   final String event;
   final String? conversationId;
+
+  /// Lot 9.1a : appel concerné (événement « call »).
+  final String? callId;
 }
 
 enum RealtimeState { stopped, connecting, connected, error }
@@ -60,6 +63,8 @@ class SupabaseRealtimeService implements RealtimeService {
     'join_request',
     // Lot 7.2b1 : groupe supprimé par un administrateur.
     'group_deleted',
+    // Lot 9.1a : appel (nouveau, décroché, signal réseau, fin).
+    'call',
   ];
   static const _retryDelays = [
     Duration(seconds: 2),
@@ -116,7 +121,11 @@ class SupabaseRealtimeService implements RealtimeService {
           final inner = payload['payload'];
           final data = inner is Map ? inner : payload;
           _controller.add(
-            RealtimeSignal(event: event, conversationId: data['conversation_id'] as String?),
+            RealtimeSignal(
+              event: event,
+              conversationId: data['conversation_id'] as String?,
+              callId: data['call_id'] as String?,
+            ),
           );
         },
       );

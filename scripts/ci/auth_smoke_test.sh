@@ -98,6 +98,7 @@ python3 "$(dirname "$0")/finitions_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV"
 python3 "$(dirname "$0")/suppression_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/confort_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/expression_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
+python3 "$(dirname "$0")/appels_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB_URL"
 python3 "$(dirname "$0")/console_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 python3 "$(dirname "$0")/moderation_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Lot 8.1c : changement de numéro (numéros de test 004 et 005, comptes indépendants).

@@ -106,7 +106,8 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 9 — Appels (après l'étape 8, avant le pilote : décision du 15/11/2026)
 | Lot | Contenu | Statut |
 |---|---|---|
-| 9.1 | Appels audio à deux (service relais gratuit de préférence) | ⏳ |
+| 9.1a | Appels audio, Privio ouvert (ADR-036) : bouton **📞** dans une discussion à deux et sur la fiche du contact ; écran d'appel (sonnerie, tonalité d'attente, décrocher / refuser, micro, haut-parleur, raccrocher, **réduire en bandeau**) ; voix de téléphone à téléphone, relais **Cloudflare** si besoin (clé côté serveur seulement) ; seuls les contacts appellent, jamais en cas de blocage ; « occupé » si déjà en appel ; réglage **« Recevoir des appels »** (Confidentialité) ; Privio verrouillé : on décroche sans le code, sans nom affiché à la sonnerie ; **trace** dans la discussion (« Appel sortant · 03:12 », « Appel manqué »…) qui s'efface comme les messages. Migration `20261115000400`, fonction `call-ice`. **Tests** (deux téléphones, Privio ouvert sur les deux) : appeler, décrocher, parler, micro coupé, haut-parleur, réduire puis revenir, raccrocher ; refuser ; ne pas répondre (45 s) ; appeler quelqu'un déjà en appel ; couper « Recevoir des appels » ; en Wi-Fi puis en données mobiles | 🧪 15/11/2026 |
+| 9.1b | Appels reçus téléphone fermé ou verrouillé : sonnerie plein écran, appel qui continue écran éteint, écouteur / haut-parleur / Bluetooth, reconnexion Wi-Fi ↔ données, « connexion faible », appel manqué notifié | ⏳ |
 | 9.2 | Appels vidéo à deux | ⏳ |
 
 ## Étape 10 — Propre à Privio (avant le pilote : le pilote vient après toutes les intégrations, décision du 15/11/2026)

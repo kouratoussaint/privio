@@ -18,6 +18,7 @@ import '../../core/widgets/state_views.dart';
 import '../../core/widgets/ttl_picker.dart';
 import '../../../state/providers.dart';
 import 'what_privio_keeps_screen.dart';
+import '../../../state/call_controller.dart';
 
 /// Écran 23 — confidentialité et sécurité (lot 4.3). Chaque réglage est appliqué par le
 /// serveur ; « mes contacts » = personnes avec qui l'on a une discussion à deux.
@@ -198,6 +199,7 @@ class PrivacyScreen extends ConsumerWidget {
             children: [
               const _DiscoverableTile(),
               const _ConnectionRequestsTile(),
+              const _AcceptCallsTile(),
               ListTile(
                 key: const Key('privacy.invites'),
                 leading: Icon(Icons.group_add_outlined, color: p.accentText),
@@ -300,6 +302,40 @@ class _DiscoverableTile extends ConsumerWidget {
             ? L.t.desactiveOnVousTrouveSeulement
             : L.t.desactiveOnVousTrouveSeulement2(handle),
       ),
+    );
+  }
+}
+
+/// Lot 9.1a : « Recevoir des appels » (activé par défaut ; seuls les contacts appellent).
+final acceptCallsProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.watch(callsApiProvider).acceptCalls(),
+);
+
+class _AcceptCallsTile extends ConsumerWidget {
+  const _AcceptCallsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = PrivioPalette.of(context);
+    final accept = ref.watch(acceptCallsProvider);
+    final value = accept.value ?? true;
+    return SwitchListTile(
+      key: const Key('privacy.calls'),
+      value: value,
+      secondary: Icon(Icons.call_outlined, color: p.accentText),
+      title: Text(L.t.acceptCallsTitle),
+      subtitle: Text(value ? L.t.acceptCallsOn : L.t.acceptCallsOff),
+      onChanged: accept.isLoading
+          ? null
+          : (v) async {
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref.read(callsApiProvider).setAcceptCalls(v);
+              } on Object catch (e) {
+                messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+              }
+              ref.invalidate(acceptCallsProvider);
+            },
     );
   }
 }

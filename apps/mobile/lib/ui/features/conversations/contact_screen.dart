@@ -22,6 +22,7 @@ import 'report_sheet.dart';
 import '../../core/widgets/settings_card.dart';
 import 'message_extras.dart';
 import '../settings/wallpaper.dart';
+import '../calls/call_screen.dart';
 
 /// Fiche contact (depuis une discussion) : photo en grand, « À propos », durée, sourdine,
 /// « Vider », médias, groupes en commun, blocage et signalement (lot 7.1a).
@@ -155,6 +156,19 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                             ),
                           );
                   },
+                ),
+              // Lot 9.1a : appeler ce contact.
+              if (!summary.blocked && !summary.peerDeleted)
+                Padding(
+                  padding: const EdgeInsets.only(top: PrivioSpacing.m),
+                  child: Center(
+                    child: FilledButton.tonalIcon(
+                      key: const Key('contact.call'),
+                      onPressed: () => startCallFrom(context, ref, summary.id),
+                      icon: const Icon(Icons.call_outlined),
+                      label: Text(L.t.appeler),
+                    ),
+                  ),
                 ),
               if (about != null)
                 Padding(

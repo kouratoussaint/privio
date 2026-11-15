@@ -5659,5 +5659,177 @@
   "keepEntrySubtitle": "Ce que nous gardons, combien de temps, et pourquoi",
   "@keepEntrySubtitle": {
     "description": "Écran : Ce que Privio garde — texte validé le 15/11/2026"
+  },
+  "callIncoming": "Appel entrant",
+  "@callIncoming": {
+    "description": "Écran : Appel"
+  },
+  "callIncomingLocked": "Appel Privio entrant",
+  "@callIncomingLocked": {
+    "description": "Écran : Appel"
+  },
+  "callRinging": "Ça sonne…",
+  "@callRinging": {
+    "description": "Écran : Appel"
+  },
+  "callConnecting": "Connexion…",
+  "@callConnecting": {
+    "description": "Écran : Appel"
+  },
+  "callReconnecting": "Connexion faible, reconnexion…",
+  "@callReconnecting": {
+    "description": "Écran : Appel"
+  },
+  "callEndedDuration": "Appel terminé · {duration}",
+  "@callEndedDuration": {
+    "description": "Écran : Appel",
+    "placeholders": {
+      "duration": {
+        "type": "Object"
+      }
+    }
+  },
+  "callEnded": "Appel terminé",
+  "@callEnded": {
+    "description": "Écran : Appel"
+  },
+  "callDeclined": "Appel refusé",
+  "@callDeclined": {
+    "description": "Écran : Appel"
+  },
+  "callNoAnswer": "Pas de réponse",
+  "@callNoAnswer": {
+    "description": "Écran : Appel"
+  },
+  "callBusy": "Déjà en appel",
+  "@callBusy": {
+    "description": "Écran : Appel"
+  },
+  "callFailed": "Appel interrompu",
+  "@callFailed": {
+    "description": "Écran : Appel"
+  },
+  "callCancelled": "Appel annulé",
+  "@callCancelled": {
+    "description": "Écran : Appel"
+  },
+  "callMissed": "Appel manqué",
+  "@callMissed": {
+    "description": "Écran : Appel"
+  },
+  "decrocher": "Décrocher",
+  "@decrocher": {
+    "description": "Écran : Appel"
+  },
+  "refuser2": "Refuser",
+  "@refuser2": {
+    "description": "Écran : Appel"
+  },
+  "raccrocher": "Raccrocher",
+  "@raccrocher": {
+    "description": "Écran : Appel"
+  },
+  "micro": "Micro",
+  "@micro": {
+    "description": "Écran : Appel"
+  },
+  "microCoupe": "Micro coupé",
+  "@microCoupe": {
+    "description": "Écran : Appel"
+  },
+  "hautParleur": "Haut-parleur",
+  "@hautParleur": {
+    "description": "Écran : Appel"
+  },
+  "reduire": "Réduire",
+  "@reduire": {
+    "description": "Écran : Appel"
+  },
+  "callBar": "Appel en cours · {duration} — toucher pour revenir",
+  "@callBar": {
+    "description": "Écran : Appel",
+    "placeholders": {
+      "duration": {
+        "type": "Object"
+      }
+    }
+  },
+  "callBarRinging": "Appel en cours — toucher pour revenir",
+  "@callBarRinging": {
+    "description": "Écran : Appel"
+  },
+  "appeler": "Appeler",
+  "@appeler": {
+    "description": "Écran : Discussion, Fiche du contact"
+  },
+  "callTraceOutgoing": "Appel sortant · {duration}",
+  "@callTraceOutgoing": {
+    "description": "Écran : Discussion (trace d’appel)",
+    "placeholders": {
+      "duration": {
+        "type": "Object"
+      }
+    }
+  },
+  "callTraceIncoming": "Appel entrant · {duration}",
+  "@callTraceIncoming": {
+    "description": "Écran : Discussion (trace d’appel)",
+    "placeholders": {
+      "duration": {
+        "type": "Object"
+      }
+    }
+  },
+  "callTraceNoAnswer": "Appel sans réponse",
+  "@callTraceNoAnswer": {
+    "description": "Écran : Discussion (trace d’appel)"
+  },
+  "callTraceMissed": "Appel manqué",
+  "@callTraceMissed": {
+    "description": "Écran : Discussion (trace d’appel)"
+  },
+  "callTraceDeclined": "Appel refusé",
+  "@callTraceDeclined": {
+    "description": "Écran : Discussion (trace d’appel)"
+  },
+  "callTraceCancelled": "Appel annulé",
+  "@callTraceCancelled": {
+    "description": "Écran : Discussion (trace d’appel)"
+  },
+  "acceptCallsTitle": "Recevoir des appels",
+  "@acceptCallsTitle": {
+    "description": "Écran : Confidentialité"
+  },
+  "acceptCallsOn": "Vos contacts peuvent vous appeler.",
+  "@acceptCallsOn": {
+    "description": "Écran : Confidentialité"
+  },
+  "acceptCallsOff": "Personne ne peut vous appeler.",
+  "@acceptCallsOff": {
+    "description": "Écran : Confidentialité"
+  },
+  "callsDisabledError": "Cette personne ne reçoit pas d’appels pour le moment.",
+  "@callsDisabledError": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "callAlreadyActiveError": "Un appel est déjà en cours.",
+  "@callAlreadyActiveError": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "callDirectOnlyError": "Les appels se font à deux, avec un contact.",
+  "@callDirectOnlyError": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "callNotFoundError": "Cet appel n’existe plus.",
+  "@callNotFoundError": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "callEndedError": "Cet appel est terminé.",
+  "@callEndedError": {
+    "description": "Écran : Messages d’erreur"
+  },
+  "callKindUnavailableError": "Ce type d’appel n’est pas encore disponible.",
+  "@callKindUnavailableError": {
+    "description": "Écran : Messages d’erreur"
   }
 }

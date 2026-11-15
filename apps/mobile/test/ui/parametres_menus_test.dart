@@ -113,13 +113,14 @@ void main() {
 
     // Confidentialité : « Qui peut me joindre » (numéro, demandes, invitations, bloqués).
     await openSettingsEntry(tester, 'settings.privacy');
-    await scrollToKey(tester, 'privacy.blocked');
+    await scrollToKey(tester, 'settings.discoverable');
     expect(find.text('QUI PEUT ME JOINDRE', skipOffstage: false), findsOneWidget);
-    expect(find.byKey(const Key('settings.discoverable')), findsOneWidget);
-    expect(find.byKey(const Key('privacy.requests')), findsOneWidget);
+    await scrollToKey(tester, 'privacy.requests');
+    await scrollToKey(tester, 'privacy.blocked');
     expect(find.byKey(const Key('privacy.lock')), findsNothing, reason: 'déplacé dans Sécurité');
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, 300));
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, 600));
     await tester.pumpAndSettle();
+    await scrollToKey(tester, 'settings.discoverable');
     await tester.tap(find.byKey(const Key('settings.discoverable')));
     await tester.pumpAndSettle();
     expect(

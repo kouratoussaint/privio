@@ -14,6 +14,7 @@ import 'ui/features/lock/app_lock_screens.dart';
 import 'state/feedback_providers.dart';
 import 'state/appearance_providers.dart';
 import 'l10n/l10n.dart';
+import 'ui/features/calls/call_screen.dart';
 
 class PrivioApp extends ConsumerWidget {
   const PrivioApp({super.key});
@@ -64,8 +65,11 @@ class PrivioApp extends ConsumerWidget {
         // Lot 8.2a : changer de langue reconstruit tous les écrans (textes lus via L.t).
         final app = KeyedSubtree(
           key: ValueKey(look.language),
-          child: AppLockGate(
-            child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+          // Lot 9.1a : l'écran d'appel passe au-dessus de tout, verrouillage compris.
+          child: CallOverlay(
+            child: AppLockGate(
+              child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+            ),
           ),
         );
         if (look.textFactor == 1.0) return app;

@@ -625,6 +625,21 @@ String? groupEventText(ChatMessage m, {required String? me}) {
   String ev(String Function() mineText, String Function() otherText) =>
       mine ? mineText() : otherText();
   final title = v ?? '';
+  // Lot 9.1a : trace d'un appel, du point de vue de chacun (auteur : l'appelant).
+  if (j['e'] == 'call') {
+    final value = v ?? '';
+    if (value.startsWith('ended:')) {
+      final secs = int.tryParse(value.substring(6)) ?? 0;
+      final d =
+          '${(secs ~/ 60).toString().padLeft(2, '0')}:${(secs % 60).toString().padLeft(2, '0')}';
+      return mine ? L.t.callTraceOutgoing(d) : L.t.callTraceIncoming(d);
+    }
+    return switch (value) {
+      'declined' => L.t.callTraceDeclined,
+      'cancelled' => mine ? L.t.callTraceCancelled : L.t.callTraceMissed,
+      _ => mine ? L.t.callTraceNoAnswer : L.t.callTraceMissed,
+    };
+  }
   return switch (j['e']) {
     'created' => ev(() => L.t.evtCreatedMine(title), () => L.t.evtCreatedOther(a, title)),
     'joined' => mine ? L.t.vousAvezRejointGroupe : L.t.rejointGroupe(a),

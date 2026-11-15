@@ -326,7 +326,9 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     final cache = ref.watch(localCacheProvider);
     await cache.ensureLoaded();
     ref.listen(realtimeSignalsProvider, (_, next) {
-      if (next.value?.event == 'typing') return;
+      // Lot 9.1a : les signaux d'appel ne changent pas la liste (la trace arrive en « message »).
+      final e = next.value?.event;
+      if (e == 'typing' || e == 'call') return;
       unawaited(refresh());
     });
     // Effacement local des messages expirés, même sans réseau.
@@ -564,7 +566,7 @@ class ChatController extends AsyncNotifier<ChatState> {
     ref.listen(privacyProvider, (_, _) {});
     ref.listen(realtimeSignalsProvider, (_, next) {
       final signal = next.value;
-      if (signal == null || signal.event == 'typing') return;
+      if (signal == null || signal.event == 'typing' || signal.event == 'call') return;
       if (signal.conversationId == null || signal.conversationId == conversationId) {
         unawaited(reload());
       }

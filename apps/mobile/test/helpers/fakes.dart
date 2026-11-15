@@ -37,6 +37,11 @@ import 'package:privio/state/push_providers.dart';
 import 'package:privio/state/session_controller.dart';
 import 'package:privio/state/feedback_providers.dart';
 import 'package:privio/data/services/sound_service.dart';
+import 'package:privio/data/services/calls_api.dart';
+import 'package:privio/data/services/call_engine.dart';
+import 'package:privio/data/services/call_tones.dart';
+import 'package:privio/domain/models/call.dart';
+import 'package:privio/state/call_controller.dart';
 
 class FakeAuthService implements AuthService {
   FakeAuthService({this.signedIn = false});
@@ -2445,6 +2450,11 @@ class FakeRealtimeService implements RealtimeService {
   void emit(String conversationId, {String event = 'message'}) =>
       _controller.add(RealtimeSignal(event: event, conversationId: conversationId));
 
+  /// Lot 9.1a : signal d'appel.
+  void emitCall(String conversationId, String callId) => _controller.add(
+    RealtimeSignal(event: 'call', conversationId: conversationId, callId: callId),
+  );
+
   @override
   Stream<RealtimeSignal> get signals => _controller.stream;
 
@@ -2914,6 +2924,10 @@ class TestDeps {
   final lockStore = MemoryAppLockStore();
   final biometrics = FakeBiometricGate();
   final network = FakeNetworkMonitor();
+  // Lot 9.1a : appels.
+  final calls = FakeCallsApi();
+  final callEngine = FakeCallEngine();
+  final tones = FakeCallTones();
   DateTime Function() clock = DateTime.now;
 
   List<Override> get overrides => [
@@ -2937,6 +2951,16 @@ class TestDeps {
     audioEngineProvider.overrideWithValue(audio),
     soundPlayerProvider.overrideWithValue(sounds),
     photoPickerProvider.overrideWithValue(photos),
+    callsApiProvider.overrideWithValue(calls),
+    callEngineFactoryProvider.overrideWithValue(() => callEngine),
+    callTonesProvider.overrideWithValue(tones),
+    callTimingsProvider.overrideWithValue(
+      const CallTimings(
+        fastPoll: Duration(milliseconds: 200),
+        slowPoll: Duration(milliseconds: 400),
+        endedLinger: Duration(milliseconds: 600),
+      ),
+    ),
     // Préparation synchrone (pas d'isolat dans les tests de widgets).
     photoPreparerProvider.overrideWithValue(
       (raw, {avatar = false}) async =>
@@ -2958,4 +2982,171 @@ class TestDeps {
     retry: (_, _) => null,
     child: MaterialApp(theme: PrivioTheme.light, home: child),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Lot 9.1a : appels
+// ---------------------------------------------------------------------------
+/// Serveur d'appels en mémoire, vu par « moi » (u1). Le correspondant est piloté par le test
+/// (peerAnswer, peerHangUp, peerSignal, incoming).
+class FakeCallsApi implements CallsApi {
+  final Map<String, CallInfo> calls = {};
+  final List<(String, String, Map<String, dynamic>)> sent = [];
+  final Map<String, List<CallSignal>> inbox = {};
+  bool accept = true;
+  bool peerBusy = false;
+  int _seq = 0;
+  int _sig = 0;
+  final List<String> ended = [];
+  final List<String> declined = [];
+
+  CallInfo _with(CallInfo c, String status, {DateTime? answeredAt, String? endReason}) => CallInfo(
+    id: c.id,
+    conversationId: c.conversationId,
+    status: status,
+    outgoing: c.outgoing,
+    peerId: c.peerId,
+    peerName: c.peerName,
+    peerAvatar: c.peerAvatar,
+    answeredAt: answeredAt ?? c.answeredAt,
+    endReason: endReason ?? c.endReason,
+  );
+
+  @override
+  Future<CallInfo> startCall(String conversationId) async {
+    if (!accept) throw const AppFailure(FailureCode.callsDisabled);
+    final c = CallInfo(
+      id: 'call-${_seq++}',
+      conversationId: conversationId,
+      status: peerBusy ? 'missed' : 'ringing',
+      outgoing: true,
+      peerId: 'u2',
+      peerName: 'Bob',
+      endReason: peerBusy ? 'busy' : null,
+    );
+    calls[c.id] = c;
+    return c;
+  }
+
+  /// Appel reçu de Bob.
+  CallInfo incoming({String conversationId = 'conv-bob'}) {
+    final c = CallInfo(
+      id: 'call-${_seq++}',
+      conversationId: conversationId,
+      status: 'ringing',
+      outgoing: false,
+      peerId: 'u2',
+      peerName: 'Bob',
+    );
+    calls[c.id] = c;
+    return c;
+  }
+
+  void peerAnswer(String id) =>
+      calls[id] = _with(calls[id]!, 'accepted', answeredAt: DateTime.now());
+  void peerEnd(String id, String status) => calls[id] = _with(calls[id]!, status);
+  void peerSignal(String id, String kind, Map<String, dynamic> payload) =>
+      (inbox[id] ??= []).add(CallSignal(id: ++_sig, kind: kind, payload: payload));
+
+  @override
+  Future<CallInfo> answer(String callId) async =>
+      calls[callId] = _with(calls[callId]!, 'accepted', answeredAt: DateTime.now());
+
+  @override
+  Future<CallInfo> decline(String callId) async {
+    declined.add(callId);
+    return calls[callId] = _with(calls[callId]!, 'declined');
+  }
+
+  @override
+  Future<CallInfo> end(String callId, {String reason = 'hangup'}) async {
+    ended.add(callId);
+    final c = calls[callId]!;
+    return calls[callId] = _with(
+      c,
+      c.status == 'accepted' ? 'ended' : 'cancelled',
+      endReason: reason,
+    );
+  }
+
+  @override
+  Future<void> signal(String callId, String kind, Map<String, dynamic> payload) async =>
+      sent.add((callId, kind, payload));
+
+  @override
+  Future<CallSnapshot> state(String callId, {int after = 0}) async => CallSnapshot(calls[callId]!, [
+    for (final s in inbox[callId] ?? const <CallSignal>[])
+      if (s.id > after) s,
+  ]);
+
+  @override
+  Future<CallInfo?> openCall() async => calls.values.where((c) => c.open && !c.outgoing).lastOrNull;
+
+  @override
+  Future<List<Map<String, dynamic>>> iceServers() async => const [
+    {
+      'urls': ['stun:stun.test'],
+    },
+  ];
+
+  bool acceptCallsSetting = true;
+  @override
+  Future<bool> acceptCalls() async => acceptCallsSetting;
+  @override
+  Future<bool> setAcceptCalls(bool on) async => acceptCallsSetting = on;
+}
+
+class FakeCallEngine implements CallEngine {
+  final List<String> log = [];
+  void Function(CallMediaState)? onState;
+  bool muted = false;
+  bool speaker = false;
+
+  @override
+  Future<void> open({
+    required List<Map<String, dynamic>> iceServers,
+    required void Function(Map<String, dynamic> candidate) onCandidate,
+    required void Function(CallMediaState state) onState,
+  }) async {
+    log.add('open');
+    this.onState = onState;
+    onCandidate({'candidate': 'local-1'});
+  }
+
+  @override
+  Future<Map<String, dynamic>> createOffer() async {
+    log.add('offer');
+    return {'type': 'offer', 'sdp': 'o'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> acceptOffer(Map<String, dynamic> offer) async {
+    log.add('accept:${offer['sdp']}');
+    return {'type': 'answer', 'sdp': 'a'};
+  }
+
+  @override
+  Future<void> setAnswer(Map<String, dynamic> answer) async => log.add('answer:${answer['sdp']}');
+
+  @override
+  Future<void> addCandidate(Map<String, dynamic> c) async => log.add('ice:${c['candidate']}');
+
+  @override
+  Future<void> setMuted(bool m) async => muted = m;
+
+  @override
+  Future<void> setSpeaker(bool on) async => speaker = on;
+
+  @override
+  Future<void> close() async => log.add('close');
+}
+
+class FakeCallTones implements CallTones {
+  final List<String> log = [];
+  @override
+  Future<void> ring() async => log.add('ring');
+  @override
+  Future<void> ringback() async => log.add('ringback');
+  @override
+  Future<void> stop() async => log.add('stop');
 }

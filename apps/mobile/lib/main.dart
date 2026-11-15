@@ -27,6 +27,8 @@ import 'state/data_providers.dart';
 import 'state/messaging_providers.dart';
 import 'state/providers.dart';
 import 'state/push_providers.dart';
+import 'data/services/calls_api.dart';
+import 'state/call_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +63,7 @@ Future<void> main() async {
         audioEngineProvider.overrideWithValue(DeviceAudioEngine()),
         photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
+        callsApiProvider.overrideWithValue(SupabaseCallsApi(client)),
         adminApiProvider.overrideWithValue(SupabaseAdminApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
         appLockStoreProvider.overrideWithValue(SecureAppLockStore()),

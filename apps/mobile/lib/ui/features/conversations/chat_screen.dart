@@ -49,6 +49,7 @@ import 'package:flutter/semantics.dart';
 
 import '../../../state/session_controller.dart';
 import '../groups/group_screens.dart';
+import '../calls/call_screen.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -1406,6 +1407,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 titleSpacing: 0,
                 toolbarHeight: 64,
                 actions: [
+                  // Lot 9.1a : appel audio (discussion à deux, contact non bloqué).
+                  if (summary != null &&
+                      !summary.isGroup &&
+                      !summary.blocked &&
+                      !summary.peerDeleted &&
+                      !_searching)
+                    IconButton(
+                      key: const Key('chat.call'),
+                      tooltip: L.t.appeler,
+                      onPressed: () => startCallFrom(context, ref, summary.id),
+                      icon: const Icon(Icons.call_outlined),
+                    ),
                   IconButton(
                     key: const Key('chat.search'),
                     tooltip: _searching ? L.t.fermerRecherche : L.t.rechercherDansDiscussion,

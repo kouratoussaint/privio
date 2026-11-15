@@ -4083,4 +4083,126 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get keepEntrySubtitle => 'Ce que nous gardons, combien de temps, et pourquoi';
+
+  @override
+  String get callIncoming => 'Appel entrant';
+
+  @override
+  String get callIncomingLocked => 'Appel Privio entrant';
+
+  @override
+  String get callRinging => 'Ça sonne…';
+
+  @override
+  String get callConnecting => 'Connexion…';
+
+  @override
+  String get callReconnecting => 'Connexion faible, reconnexion…';
+
+  @override
+  String callEndedDuration(Object duration) {
+    return 'Appel terminé · $duration';
+  }
+
+  @override
+  String get callEnded => 'Appel terminé';
+
+  @override
+  String get callDeclined => 'Appel refusé';
+
+  @override
+  String get callNoAnswer => 'Pas de réponse';
+
+  @override
+  String get callBusy => 'Déjà en appel';
+
+  @override
+  String get callFailed => 'Appel interrompu';
+
+  @override
+  String get callCancelled => 'Appel annulé';
+
+  @override
+  String get callMissed => 'Appel manqué';
+
+  @override
+  String get decrocher => 'Décrocher';
+
+  @override
+  String get refuser2 => 'Refuser';
+
+  @override
+  String get raccrocher => 'Raccrocher';
+
+  @override
+  String get micro => 'Micro';
+
+  @override
+  String get microCoupe => 'Micro coupé';
+
+  @override
+  String get hautParleur => 'Haut-parleur';
+
+  @override
+  String get reduire => 'Réduire';
+
+  @override
+  String callBar(Object duration) {
+    return 'Appel en cours · $duration — toucher pour revenir';
+  }
+
+  @override
+  String get callBarRinging => 'Appel en cours — toucher pour revenir';
+
+  @override
+  String get appeler => 'Appeler';
+
+  @override
+  String callTraceOutgoing(Object duration) {
+    return 'Appel sortant · $duration';
+  }
+
+  @override
+  String callTraceIncoming(Object duration) {
+    return 'Appel entrant · $duration';
+  }
+
+  @override
+  String get callTraceNoAnswer => 'Appel sans réponse';
+
+  @override
+  String get callTraceMissed => 'Appel manqué';
+
+  @override
+  String get callTraceDeclined => 'Appel refusé';
+
+  @override
+  String get callTraceCancelled => 'Appel annulé';
+
+  @override
+  String get acceptCallsTitle => 'Recevoir des appels';
+
+  @override
+  String get acceptCallsOn => 'Vos contacts peuvent vous appeler.';
+
+  @override
+  String get acceptCallsOff => 'Personne ne peut vous appeler.';
+
+  @override
+  String get callsDisabledError => 'Cette personne ne reçoit pas d’appels pour le moment.';
+
+  @override
+  String get callAlreadyActiveError => 'Un appel est déjà en cours.';
+
+  @override
+  String get callDirectOnlyError => 'Les appels se font à deux, avec un contact.';
+
+  @override
+  String get callNotFoundError => 'Cet appel n’existe plus.';
+
+  @override
+  String get callEndedError => 'Cet appel est terminé.';
+
+  @override
+  String get callKindUnavailableError => 'Ce type d’appel n’est pas encore disponible.';
 }

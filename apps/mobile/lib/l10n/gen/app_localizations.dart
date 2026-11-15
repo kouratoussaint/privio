@@ -6867,6 +6867,234 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce que nous gardons, combien de temps, et pourquoi'**
   String get keepEntrySubtitle;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel entrant'**
+  String get callIncoming;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel Privio entrant'**
+  String get callIncomingLocked;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Ça sonne…'**
+  String get callRinging;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion…'**
+  String get callConnecting;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion faible, reconnexion…'**
+  String get callReconnecting;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel terminé · {duration}'**
+  String callEndedDuration(Object duration);
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel terminé'**
+  String get callEnded;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel refusé'**
+  String get callDeclined;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de réponse'**
+  String get callNoAnswer;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà en appel'**
+  String get callBusy;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel interrompu'**
+  String get callFailed;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel annulé'**
+  String get callCancelled;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel manqué'**
+  String get callMissed;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Décrocher'**
+  String get decrocher;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Refuser'**
+  String get refuser2;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Raccrocher'**
+  String get raccrocher;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Micro'**
+  String get micro;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Micro coupé'**
+  String get microCoupe;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Haut-parleur'**
+  String get hautParleur;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduire'**
+  String get reduire;
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel en cours · {duration} — toucher pour revenir'**
+  String callBar(Object duration);
+
+  /// Écran : Appel
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel en cours — toucher pour revenir'**
+  String get callBarRinging;
+
+  /// Écran : Discussion, Fiche du contact
+  ///
+  /// In fr, this message translates to:
+  /// **'Appeler'**
+  String get appeler;
+
+  /// Écran : Discussion (trace d’appel)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel sortant · {duration}'**
+  String callTraceOutgoing(Object duration);
+
+  /// Écran : Discussion (trace d’appel)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel entrant · {duration}'**
+  String callTraceIncoming(Object duration);
+
+  /// Écran : Discussion (trace d’appel)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel sans réponse'**
+  String get callTraceNoAnswer;
+
+  /// Écran : Discussion (trace d’appel)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel manqué'**
+  String get callTraceMissed;
+
+  /// Écran : Discussion (trace d’appel)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel refusé'**
+  String get callTraceDeclined;
+
+  /// Écran : Discussion (trace d’appel)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel annulé'**
+  String get callTraceCancelled;
+
+  /// Écran : Confidentialité
+  ///
+  /// In fr, this message translates to:
+  /// **'Recevoir des appels'**
+  String get acceptCallsTitle;
+
+  /// Écran : Confidentialité
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos contacts peuvent vous appeler.'**
+  String get acceptCallsOn;
+
+  /// Écran : Confidentialité
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne ne peut vous appeler.'**
+  String get acceptCallsOff;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette personne ne reçoit pas d’appels pour le moment.'**
+  String get callsDisabledError;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Un appel est déjà en cours.'**
+  String get callAlreadyActiveError;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Les appels se font à deux, avec un contact.'**
+  String get callDirectOnlyError;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appel n’existe plus.'**
+  String get callNotFoundError;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appel est terminé.'**
+  String get callEndedError;
+
+  /// Écran : Messages d’erreur
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce type d’appel n’est pas encore disponible.'**
+  String get callKindUnavailableError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
