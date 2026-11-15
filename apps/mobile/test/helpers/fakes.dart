@@ -42,6 +42,7 @@ import 'package:privio/data/services/call_engine.dart';
 import 'package:privio/data/services/call_tones.dart';
 import 'package:privio/domain/models/call.dart';
 import 'package:privio/state/call_controller.dart';
+import 'package:privio/data/services/call_system.dart';
 
 class FakeAuthService implements AuthService {
   FakeAuthService({this.signedIn = false});
@@ -414,6 +415,12 @@ class FakeLocalFlags implements LocalFlags {
   @override
   Future<void> setTwoStepPromptDismissed() async => twoStepPromptClosed = true;
 
+  bool fullScreenAsked = false;
+  @override
+  Future<bool> fullScreenCallsAsked() async => fullScreenAsked;
+  @override
+  Future<void> setFullScreenCallsAsked() async => fullScreenAsked = true;
+
   FakeLocalFlags({this.onboarding = false, this.permissions = false});
 
   bool onboarding;
@@ -484,9 +491,16 @@ class FakeNetworkMonitor implements NetworkMonitor {
 
 class FakePermissionGateway implements PermissionGateway {
   int requests = 0;
+  int nearbyRequests = 0;
   @override
   Future<bool> requestNotifications() async {
     requests++;
+    return true;
+  }
+
+  @override
+  Future<bool> requestNearbyDevices() async {
+    nearbyRequests++;
     return true;
   }
 }
@@ -2928,6 +2942,9 @@ class TestDeps {
   final calls = FakeCallsApi();
   final callEngine = FakeCallEngine();
   final tones = FakeCallTones();
+  // Lot 9.1b : écran d'appel du téléphone, premier plan.
+  final callSystem = FakeCallSystem();
+  bool foreground = true;
   DateTime Function() clock = DateTime.now;
 
   List<Override> get overrides => [
@@ -2954,6 +2971,8 @@ class TestDeps {
     callsApiProvider.overrideWithValue(calls),
     callEngineFactoryProvider.overrideWithValue(() => callEngine),
     callTonesProvider.overrideWithValue(tones),
+    callSystemProvider.overrideWithValue(callSystem),
+    appForegroundProvider.overrideWithValue(() => foreground),
     callTimingsProvider.overrideWithValue(
       const CallTimings(
         fastPoll: Duration(milliseconds: 200),
@@ -3099,19 +3118,36 @@ class FakeCallsApi implements CallsApi {
 class FakeCallEngine implements CallEngine {
   final List<String> log = [];
   void Function(CallMediaState)? onState;
+  void Function(bool weak)? onQuality;
   bool muted = false;
   bool speaker = false;
+  List<AudioRoute> routes = const [AudioRoute.earpiece, AudioRoute.speaker];
+  AudioRoute? selected;
 
   @override
   Future<void> open({
     required List<Map<String, dynamic>> iceServers,
     required void Function(Map<String, dynamic> candidate) onCandidate,
     required void Function(CallMediaState state) onState,
+    void Function(bool weak)? onQuality,
   }) async {
     log.add('open');
     this.onState = onState;
+    this.onQuality = onQuality;
     onCandidate({'candidate': 'local-1'});
   }
+
+  @override
+  Future<Map<String, dynamic>> restartIce() async {
+    log.add('restart');
+    return {'type': 'offer', 'sdp': 'o2'};
+  }
+
+  @override
+  Future<List<AudioRoute>> audioRoutes() async => routes;
+
+  @override
+  Future<void> selectAudioRoute(AudioRoute route) async => selected = route;
 
   @override
   Future<Map<String, dynamic>> createOffer() async {
@@ -3139,6 +3175,38 @@ class FakeCallEngine implements CallEngine {
 
   @override
   Future<void> close() async => log.add('close');
+}
+
+class FakeCallSystem implements CallSystem {
+  final List<String> log = [];
+  final _events = StreamController<CallSystemEvent>.broadcast();
+  String? accepted;
+  bool allowed = true;
+
+  void emit(CallSystemAction a, String id) => _events.add(CallSystemEvent(a, id));
+
+  @override
+  Stream<CallSystemEvent> get events => _events.stream;
+  @override
+  Future<String?> acceptedCall() async => accepted;
+  @override
+  Future<void> showIncoming(String callId) async => log.add('show:$callId');
+  @override
+  Future<void> hideIncoming(String callId) async => log.add('hide:$callId');
+  @override
+  Future<void> activate(String callId) async => log.add('activate:$callId');
+  @override
+  Future<void> connected(String callId) async => log.add('connected:$callId');
+  @override
+  Future<void> end(String callId) async => log.add('end:$callId');
+  @override
+  Future<void> setOverLock(bool on) async => log.add('overLock:$on');
+  @override
+  Future<void> setProximity(bool on) async => log.add('proximity:$on');
+  @override
+  Future<bool> fullScreenAllowed() async => allowed;
+  @override
+  Future<void> openFullScreenSettings() async => log.add('settings');
 }
 
 class FakeCallTones implements CallTones {

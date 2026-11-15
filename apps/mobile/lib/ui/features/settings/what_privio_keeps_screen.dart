@@ -31,7 +31,7 @@ class WhatPrivioKeepsScreen extends StatelessWidget {
       (
         Icons.history_rounded,
         L.t.keepLongerTitle,
-        [L.t.keepLonger1, L.t.keepLonger2, L.t.keepLonger3, L.t.keepLonger4],
+        [L.t.keepCalls, L.t.keepLonger1, L.t.keepLonger2, L.t.keepLonger3, L.t.keepLonger4],
       ),
       (
         Icons.block_outlined,

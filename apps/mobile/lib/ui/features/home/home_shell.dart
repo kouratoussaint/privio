@@ -16,6 +16,7 @@ import '../../../state/messaging_providers.dart';
 import '../../../state/push_providers.dart';
 import '../../../domain/models/messaging.dart';
 import '../../core/motion/motion.dart';
+import '../calls/call_screen.dart' show offerFullScreenCalls;
 
 /// Navigation MVP validée : Discussions / Groupes / Paramètres, et rien d'autre.
 /// Active aussi les notifications (lot 4.1) et ouvre la discussion d'une notification touchée.
@@ -39,6 +40,15 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   /// Armé par un premier appui sur Retour, désarmé après [HomeShell.exitWindow].
   Timer? _exitArmed;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lot 9.1b : appels visibles téléphone verrouillé (Android 14+), proposé une fois.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(offerFullScreenCalls(context, ref));
+    });
+  }
 
   @override
   void dispose() {

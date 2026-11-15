@@ -55,6 +55,10 @@ abstract interface class LocalFlags {
   Future<bool> twoStepPromptDismissed();
   Future<void> setTwoStepPromptDismissed();
 
+  /// Lot 9.1b : affichage des appels en plein écran déjà proposé (une seule fois).
+  Future<bool> fullScreenCallsAsked();
+  Future<void> setFullScreenCallsAsked();
+
   // Économie de données (lot 4.2).
   /// 'always', 'wifi' ou 'never' (téléchargement automatique des photos).
   Future<String> photoAutoDownload();
@@ -84,6 +88,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _language = 'privio.language';
   static const _linkPreviews = 'privio.link_previews';
   static const _twoStepPrompt = 'privio.two_step_prompt_dismissed';
+  static const _fullScreenCalls = 'privio.full_screen_calls_asked';
   final SharedPreferencesAsync _prefs;
 
   @override
@@ -182,6 +187,12 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setTwoStepPromptDismissed() => _prefs.setBool(_twoStepPrompt, true);
+
+  @override
+  Future<bool> fullScreenCallsAsked() async => (await _prefs.getBool(_fullScreenCalls)) ?? false;
+
+  @override
+  Future<void> setFullScreenCallsAsked() => _prefs.setBool(_fullScreenCalls, true);
 
   @override
   Future<String> photoAutoDownload() async => (await _prefs.getString(_autoPhoto)) ?? 'always';

@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../data/services/call_engine.dart' show AudioRoute;
+import '../../../state/providers.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/call_controller.dart';
 import '../../../state/messaging_providers.dart';
@@ -146,8 +148,33 @@ class _CallBar extends ConsumerWidget {
   }
 }
 
-class _CallView extends ConsumerWidget {
+class _CallView extends ConsumerStatefulWidget {
   const _CallView();
+
+  @override
+  ConsumerState<_CallView> createState() => _CallViewState();
+}
+
+class _CallViewState extends ConsumerState<_CallView> {
+  /// Choix de la sortie du son ouvert (lot 9.1b) : sorties proposées.
+  List<AudioRoute>? _routes;
+
+  /// Haut-parleur d'un geste ; avec un appareil Bluetooth ou un casque branché, choix de
+  /// la sortie du son (panneau dans l'écran d'appel, posé hors du navigateur).
+  Future<void> _chooseRoute() async {
+    final ctrl = ref.read(callControllerProvider.notifier);
+    final routes = await ctrl.audioRoutes();
+    if (routes.length <= 2) {
+      await ctrl.toggleSpeaker();
+    } else if (mounted) {
+      setState(() => _routes = routes);
+    }
+  }
+
+  Future<void> _pick(AudioRoute r) async {
+    setState(() => _routes = null);
+    await ref.read(callControllerProvider.notifier).selectRoute(r);
+  }
 
   String _endText(CallState c) {
     final answered = c.info.answeredAt;
@@ -175,7 +202,7 @@ class _CallView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final call = ref.watch(callControllerProvider);
     if (call == null) return const SizedBox.shrink();
     final ctrl = ref.read(callControllerProvider.notifier);
@@ -191,7 +218,26 @@ class _CallView extends ConsumerWidget {
       CallPhase.reconnecting => Text(L.t.callReconnecting, style: white),
       CallPhase.connected => _Ticker(
         since: call.connectedAt ?? DateTime.now(),
-        builder: (d) => Text(d, style: white),
+        builder: (d) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(d, style: white),
+            // Lot 9.1b : pertes ou latence, l'appel continue.
+            if (call.weak)
+              Padding(
+                padding: const EdgeInsets.only(top: PrivioSpacing.s),
+                child: Row(
+                  key: const Key('call.weak'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.network_check_rounded, color: Color(0xFFFFC857), size: 18),
+                    const SizedBox(width: 6),
+                    Text(L.t.callWeak, style: white?.copyWith(color: const Color(0xFFFFC857))),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
       CallPhase.ended => Text(_endText(call), style: white),
     };
@@ -206,108 +252,209 @@ class _CallView extends ConsumerWidget {
             colors: [Color(0xFF5B1FB8), Color(0xFF1B0B3D)],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.topLeft,
-                child: call.phase == CallPhase.ended || call.phase == CallPhase.incomingRinging
-                    ? const SizedBox(height: 48)
-                    : _RoundButton(
-                        key: const Key('call.minimize'),
-                        icon: Icons.keyboard_arrow_down_rounded,
-                        label: L.t.reduire,
-                        small: true,
-                        onTap: () => ctrl.setMinimized(true),
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: call.phase == CallPhase.ended || call.phase == CallPhase.incomingRinging
+                        ? const SizedBox(height: 48)
+                        : _RoundButton(
+                            key: const Key('call.minimize'),
+                            icon: Icons.keyboard_arrow_down_rounded,
+                            label: L.t.reduire,
+                            small: true,
+                            onTap: () => ctrl.setMinimized(true),
+                          ),
+                  ),
+                  const Spacer(),
+                  if (hideName)
+                    const CircleAvatar(
+                      radius: 56,
+                      backgroundColor: Colors.white24,
+                      child: Icon(Icons.call, size: 48, color: Colors.white),
+                    )
+                  else
+                    UserAvatar(
+                      name: call.info.peerName,
+                      avatarPath: call.info.peerAvatar,
+                      seed: call.info.peerId,
+                      radius: 56,
+                    ),
+                  const SizedBox(height: PrivioSpacing.l),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.xl),
+                    child: Text(
+                      hideName ? L.t.callIncomingLocked : call.info.peerName,
+                      key: const Key('call.name'),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: PrivioSpacing.s),
+                  KeyedSubtree(key: const Key('call.status'), child: status),
+                  const Spacer(flex: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: PrivioSpacing.xxl),
+                    child: switch (call.phase) {
+                      CallPhase.incomingRinging => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _RoundButton(
+                            key: const Key('call.decline'),
+                            icon: Icons.call_end_rounded,
+                            label: L.t.refuser2,
+                            color: PrivioColors.error,
+                            onTap: () => _run(context, ctrl.decline),
+                          ),
+                          _RoundButton(
+                            key: const Key('call.accept'),
+                            icon: Icons.call_rounded,
+                            label: L.t.decrocher,
+                            color: PrivioColors.success,
+                            onTap: () => _run(context, ctrl.accept),
+                          ),
+                        ],
+                      ),
+                      CallPhase.ended => const SizedBox(height: 96),
+                      _ => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _RoundButton(
+                            key: const Key('call.mute'),
+                            icon: call.muted ? Icons.mic_off_rounded : Icons.mic_none_rounded,
+                            label: call.muted ? L.t.microCoupe : L.t.micro,
+                            selected: call.muted,
+                            onTap: ctrl.toggleMute,
+                          ),
+                          _RoundButton(
+                            key: const Key('call.hangup'),
+                            icon: Icons.call_end_rounded,
+                            label: L.t.raccrocher,
+                            color: PrivioColors.error,
+                            onTap: () => _run(context, ctrl.hangUp),
+                          ),
+                          _RoundButton(
+                            key: const Key('call.speaker'),
+                            icon: routeIcon(call.route),
+                            label: switch (call.route) {
+                              AudioRoute.bluetooth => L.t.callRouteBluetooth,
+                              AudioRoute.wired => L.t.callRouteWired,
+                              _ => L.t.hautParleur,
+                            },
+                            selected: call.route != AudioRoute.earpiece,
+                            onTap: _chooseRoute,
+                          ),
+                        ],
+                      ),
+                    },
+                  ),
+                ],
               ),
-              const Spacer(),
-              if (hideName)
-                const CircleAvatar(
-                  radius: 56,
-                  backgroundColor: Colors.white24,
-                  child: Icon(Icons.call, size: 48, color: Colors.white),
-                )
-              else
-                UserAvatar(
-                  name: call.info.peerName,
-                  avatarPath: call.info.peerAvatar,
-                  seed: call.info.peerId,
-                  radius: 56,
-                ),
-              const SizedBox(height: PrivioSpacing.l),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.xl),
-                child: Text(
-                  hideName ? L.t.callIncomingLocked : call.info.peerName,
-                  key: const Key('call.name'),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
+            ),
+            if (_routes != null && call.phase != CallPhase.ended) ...[
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => setState(() => _routes = null),
+                  child: const ColoredBox(color: Colors.black38),
                 ),
               ),
-              const SizedBox(height: PrivioSpacing.s),
-              KeyedSubtree(key: const Key('call.status'), child: status),
-              const Spacer(flex: 2),
-              Padding(
-                padding: const EdgeInsets.only(bottom: PrivioSpacing.xxl),
-                child: switch (call.phase) {
-                  CallPhase.incomingRinging => Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _RoundButton(
-                        key: const Key('call.decline'),
-                        icon: Icons.call_end_rounded,
-                        label: L.t.refuser2,
-                        color: PrivioColors.error,
-                        onTap: () => _run(context, ctrl.decline),
-                      ),
-                      _RoundButton(
-                        key: const Key('call.accept'),
-                        icon: Icons.call_rounded,
-                        label: L.t.decrocher,
-                        color: PrivioColors.success,
-                        onTap: () => _run(context, ctrl.accept),
-                      ),
-                    ],
-                  ),
-                  CallPhase.ended => const SizedBox(height: 96),
-                  _ => Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _RoundButton(
-                        key: const Key('call.mute'),
-                        icon: call.muted ? Icons.mic_off_rounded : Icons.mic_none_rounded,
-                        label: call.muted ? L.t.microCoupe : L.t.micro,
-                        selected: call.muted,
-                        onTap: ctrl.toggleMute,
-                      ),
-                      _RoundButton(
-                        key: const Key('call.hangup'),
-                        icon: Icons.call_end_rounded,
-                        label: L.t.raccrocher,
-                        color: PrivioColors.error,
-                        onTap: () => _run(context, ctrl.hangUp),
-                      ),
-                      _RoundButton(
-                        key: const Key('call.speaker'),
-                        icon: call.speaker ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-                        label: L.t.hautParleur,
-                        selected: call.speaker,
-                        onTap: ctrl.toggleSpeaker,
-                      ),
-                    ],
-                  ),
-                },
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _RoutePanel(routes: _routes!, current: call.route, onPick: _pick),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _RoutePanel extends StatelessWidget {
+  const _RoutePanel({required this.routes, required this.current, required this.onPick});
+
+  final List<AudioRoute> routes;
+  final AudioRoute current;
+  final ValueChanged<AudioRoute> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      key: const Key('call.routes'),
+      color: theme.colorScheme.surface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(PrivioSpacing.l),
+              child: Text(L.t.callRouteTitle, style: theme.textTheme.titleMedium),
+            ),
+            for (final r in routes)
+              ListTile(
+                key: Key('call.route.${r.name}'),
+                leading: Icon(routeIcon(r)),
+                title: Text(routeLabel(r)),
+                trailing: r == current ? const Icon(Icons.check_rounded) : null,
+                onTap: () => onPick(r),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+IconData routeIcon(AudioRoute r) => switch (r) {
+  AudioRoute.earpiece => Icons.phone_in_talk_rounded,
+  AudioRoute.speaker => Icons.volume_up_rounded,
+  AudioRoute.bluetooth => Icons.bluetooth_audio_rounded,
+  AudioRoute.wired => Icons.headset_rounded,
+};
+
+String routeLabel(AudioRoute r) => switch (r) {
+  AudioRoute.earpiece => L.t.callRouteEarpiece,
+  AudioRoute.speaker => L.t.callRouteSpeaker,
+  AudioRoute.bluetooth => L.t.callRouteBluetooth,
+  AudioRoute.wired => L.t.callRouteWired,
+};
+
+/// Lot 9.1b : Android 14+ demande d'autoriser l'affichage des appels en plein écran
+/// (téléphone verrouillé, Privio fermé). Proposé une seule fois.
+Future<void> offerFullScreenCalls(BuildContext context, WidgetRef ref) async {
+  final flags = ref.read(localFlagsProvider);
+  final system = ref.read(callSystemProvider);
+  if (await flags.fullScreenCallsAsked() || await system.fullScreenAllowed()) return;
+  await flags.setFullScreenCallsAsked();
+  if (!context.mounted) return;
+  final allow = await showDialog<bool>(
+    context: context,
+    builder: (d) => AlertDialog(
+      key: const Key('call.fullscreen'),
+      title: Text(L.t.callFullScreenTitle),
+      content: Text(L.t.callFullScreenBody),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(d, false), child: Text(L.t.plusTard)),
+        FilledButton(
+          key: const Key('call.fullscreen.allow'),
+          onPressed: () => Navigator.pop(d, true),
+          child: Text(L.t.callFullScreenAllow),
+        ),
+      ],
+    ),
+  );
+  if (allow == true) await system.openFullScreenSettings();
 }
 
 class _RoundButton extends StatelessWidget {

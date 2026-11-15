@@ -3,6 +3,9 @@ import 'package:permission_handler/permission_handler.dart';
 /// Autorisations facultatives (AUTH-004) : jamais bloquantes pour l'utilisation.
 abstract interface class PermissionGateway {
   Future<bool> requestNotifications();
+
+  /// Lot 9.1b : appareils Bluetooth pendant un appel (Android 12+ : « Appareils à proximité »).
+  Future<bool> requestNearbyDevices();
 }
 
 class DevicePermissionGateway implements PermissionGateway {
@@ -10,4 +13,8 @@ class DevicePermissionGateway implements PermissionGateway {
 
   @override
   Future<bool> requestNotifications() async => (await Permission.notification.request()).isGranted;
+
+  @override
+  Future<bool> requestNearbyDevices() async =>
+      (await Permission.bluetoothConnect.request()).isGranted;
 }

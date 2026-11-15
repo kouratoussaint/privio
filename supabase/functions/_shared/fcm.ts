@@ -171,6 +171,63 @@ export function sendExpiryReminder(
   });
 }
 
+/** Lot 9.1b : appel entrant. Message de données seul, prioritaire, valable le temps de la
+ * sonnerie : l'application affiche elle-même l'écran d'appel (sans nom tant que le téléphone
+ * ou Privio est verrouillé). Ni nom, ni numéro dans le message. */
+export async function sendCallRing(
+  sa: ServiceAccount,
+  token: string,
+  callId: string,
+  conversationId: string,
+  createdAt: string,
+): Promise<SendResult> {
+  return await sendData(sa, token, {
+    type: "call",
+    call_id: callId,
+    conversation_id: conversationId,
+    created_at: createdAt,
+  }, "45s");
+}
+
+/** Lot 9.1b : appel non décroché. Arrête la sonnerie, puis « Appel manqué » (sans nom). */
+export const MISSED_CALL_BODY = "Appel manqué";
+
+export async function sendCallMissed(
+  sa: ServiceAccount,
+  token: string,
+  callId: string,
+  conversationId: string,
+  muted: boolean,
+): Promise<SendResult> {
+  const stop = await sendData(sa, token, { type: "call_end", call_id: callId }, "60s");
+  if (stop === "invalid_token" || muted) return stop;
+  return await sendNotification(sa, token, {
+    body: MISSED_CALL_BODY,
+    data: { type: "message", conversation_id: conversationId },
+    tag: `privio-call-${conversationId}`,
+  });
+}
+
+async function sendData(
+  sa: ServiceAccount,
+  token: string,
+  data: Record<string, string>,
+  ttl: string,
+): Promise<SendResult> {
+  const res = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${await accessToken(sa)}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: { token, data, android: { priority: "HIGH", ttl } } }),
+    },
+  );
+  return await sendResult(res);
+}
+
 async function sendNotification(
   sa: ServiceAccount,
   token: string,
@@ -204,6 +261,10 @@ async function sendNotification(
       }),
     },
   );
+  return await sendResult(res);
+}
+
+async function sendResult(res: Response): Promise<SendResult> {
   if (res.ok) {
     await res.body?.cancel();
     return "sent";

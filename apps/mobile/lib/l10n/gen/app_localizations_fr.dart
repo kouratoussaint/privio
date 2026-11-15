@@ -4205,4 +4205,48 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get callKindUnavailableError => 'Ce type d’appel n’est pas encore disponible.';
+
+  @override
+  String get keepCalls =>
+      'Appels : la voix n’est jamais enregistrée ni gardée. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.';
+
+  @override
+  String get callWeak => 'Connexion faible';
+
+  @override
+  String get callOngoingNotice => 'Appel en cours';
+
+  @override
+  String get callChannelIncoming => 'Appels entrants';
+
+  @override
+  String get callChannelMissed => 'Appels manqués';
+
+  @override
+  String get callRouteTitle => 'Sortie du son';
+
+  @override
+  String get callRouteButton => 'Son';
+
+  @override
+  String get callRouteEarpiece => 'Écouteur du téléphone';
+
+  @override
+  String get callRouteSpeaker => 'Haut-parleur';
+
+  @override
+  String get callRouteBluetooth => 'Bluetooth';
+
+  @override
+  String get callRouteWired => 'Casque filaire';
+
+  @override
+  String get callFullScreenTitle => 'Appels avec le téléphone verrouillé';
+
+  @override
+  String get callFullScreenBody =>
+      'Pour voir et décrocher les appels Privio quand le téléphone est verrouillé ou que Privio est fermé, autorisez Privio à afficher les appels en plein écran. Le nom de la personne n’apparaît pas tant que le téléphone est verrouillé.';
+
+  @override
+  String get callFullScreenAllow => 'Autoriser';
 }

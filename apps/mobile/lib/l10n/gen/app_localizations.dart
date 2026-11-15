@@ -7095,6 +7095,90 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce type d’appel n’est pas encore disponible.'**
   String get callKindUnavailableError;
+
+  /// Écran : Ce que Privio garde — ligne validée le 15/11/2026
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels : la voix n’est jamais enregistrée ni gardée. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.'**
+  String get keepCalls;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion faible'**
+  String get callWeak;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel en cours'**
+  String get callOngoingNotice;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels entrants'**
+  String get callChannelIncoming;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels manqués'**
+  String get callChannelMissed;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie du son'**
+  String get callRouteTitle;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Son'**
+  String get callRouteButton;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouteur du téléphone'**
+  String get callRouteEarpiece;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Haut-parleur'**
+  String get callRouteSpeaker;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Bluetooth'**
+  String get callRouteBluetooth;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Casque filaire'**
+  String get callRouteWired;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels avec le téléphone verrouillé'**
+  String get callFullScreenTitle;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour voir et décrocher les appels Privio quand le téléphone est verrouillé ou que Privio est fermé, autorisez Privio à afficher les appels en plein écran. Le nom de la personne n’apparaît pas tant que le téléphone est verrouillé.'**
+  String get callFullScreenBody;
+
+  /// Écran : Appel (lot 9.1b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser'**
+  String get callFullScreenAllow;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

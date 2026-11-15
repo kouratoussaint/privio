@@ -1,6 +1,10 @@
 import 'l10n/l10n.dart';
 
+import 'dart:io' show Platform;
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -28,6 +32,8 @@ import 'state/messaging_providers.dart';
 import 'state/providers.dart';
 import 'state/push_providers.dart';
 import 'data/services/calls_api.dart';
+import 'data/services/call_background.dart';
+import 'data/services/call_system.dart';
 import 'state/call_controller.dart';
 
 Future<void> main() async {
@@ -49,6 +55,16 @@ Future<void> main() async {
   );
   final client = Supabase.instance.client;
 
+  // Lot 9.1b : appels reçus Privio fermé (message de réveil, écran d'appel du téléphone).
+  if (Platform.isAndroid) {
+    FirebaseMessaging.onBackgroundMessage(privioBackgroundMessage);
+    try {
+      await FlutterCallkitIncoming.onBackgroundMessage(privioCallkitBackground);
+    } on Object {
+      // Sans écran d'appel du téléphone, les appels sonnent Privio ouvert.
+    }
+  }
+
   runApp(
     ProviderScope(
       retry: (_, _) => null,
@@ -64,6 +80,7 @@ Future<void> main() async {
         photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
         callsApiProvider.overrideWithValue(SupabaseCallsApi(client)),
+        if (Platform.isAndroid) callSystemProvider.overrideWithValue(DeviceCallSystem()),
         adminApiProvider.overrideWithValue(SupabaseAdminApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
         appLockStoreProvider.overrideWithValue(SecureAppLockStore()),

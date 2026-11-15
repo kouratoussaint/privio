@@ -5831,5 +5831,61 @@
   "callKindUnavailableError": "Ce type d’appel n’est pas encore disponible.",
   "@callKindUnavailableError": {
     "description": "Écran : Messages d’erreur"
+  },
+  "keepCalls": "Appels : la voix n’est jamais enregistrée ni gardée. Qui a appelé qui, quand et combien de temps est gardé 7 jours, puis effacé ; la trace dans la discussion s’efface comme les messages.",
+  "@keepCalls": {
+    "description": "Écran : Ce que Privio garde — ligne validée le 15/11/2026"
+  },
+  "callWeak": "Connexion faible",
+  "@callWeak": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callOngoingNotice": "Appel en cours",
+  "@callOngoingNotice": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callChannelIncoming": "Appels entrants",
+  "@callChannelIncoming": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callChannelMissed": "Appels manqués",
+  "@callChannelMissed": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callRouteTitle": "Sortie du son",
+  "@callRouteTitle": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callRouteButton": "Son",
+  "@callRouteButton": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callRouteEarpiece": "Écouteur du téléphone",
+  "@callRouteEarpiece": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callRouteSpeaker": "Haut-parleur",
+  "@callRouteSpeaker": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callRouteBluetooth": "Bluetooth",
+  "@callRouteBluetooth": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callRouteWired": "Casque filaire",
+  "@callRouteWired": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callFullScreenTitle": "Appels avec le téléphone verrouillé",
+  "@callFullScreenTitle": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callFullScreenBody": "Pour voir et décrocher les appels Privio quand le téléphone est verrouillé ou que Privio est fermé, autorisez Privio à afficher les appels en plein écran. Le nom de la personne n’apparaît pas tant que le téléphone est verrouillé.",
+  "@callFullScreenBody": {
+    "description": "Écran : Appel (lot 9.1b)"
+  },
+  "callFullScreenAllow": "Autoriser",
+  "@callFullScreenAllow": {
+    "description": "Écran : Appel (lot 9.1b)"
   }
 }

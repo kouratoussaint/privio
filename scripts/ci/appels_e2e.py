@@ -9,6 +9,7 @@ Usage : appels_e2e.py <API_URL> <CLÉ_PUBLIQUE> <JETON_A> <JETON_B> <CONVERSATIO
 import json
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -48,12 +49,30 @@ def sql(query):
                           text=True).stdout.strip()
 
 
+def push_logs(target_id, count, tries=30):
+    rows = []
+    for _ in range(tries):
+        rows = [r for r in sql(f"select recipients || '|' || status from private.push_log "
+                               f"where message_id = '{target_id}' order by id").splitlines() if r]
+        if len(rows) >= count:
+            return rows
+        time.sleep(1)
+    return rows
+
+
+status, _ = rpc("register_push_token", {"p_token": "jeton-ci-de-bob-appels-" + "0" * 20}, TB)
+check(status in (200, 204), "B enregistre un jeton de notification", status)
+
 status, _ = post("/functions/v1/call-ice", {}, TA)
 check(status == 403, "call-ice : refusé hors appel", status)
 
 status, call = rpc("start_call", {"p_conversation_id": CONV, "p_kind": "audio"}, TA)
 check(status == 200 and call["status"] == "ringing", "A appelle B : ça sonne", (status, call))
 cid = call["id"]
+logs = push_logs(cid, 1)
+check(len(logs) == 1 and logs[0].split("|")[0] == "1"
+      and logs[0].split("|")[1] in ("not_configured", "sent", "partial"),
+      "lot 9.1b : le téléphone de B est réveillé par l'appel (une seule fois)", logs)
 status, opened = rpc("my_open_call", {}, TB)
 check(status == 200 and opened and opened["id"] == cid and opened["outgoing"] is False,
       "B voit l'appel entrant", opened)
@@ -84,4 +103,16 @@ check(sql(f"select count(*) from private.call_signals where call_id = '{cid}'") 
       "signaux effacés à la fin", "")
 status, _ = post("/functions/v1/call-ice", {}, TB)
 check(status == 403, "call-ice : refusé après l'appel", status)
-print("Lot 9.1a (appels audio, mise en relation) : OK")
+check(len(push_logs(cid, 2, tries=5)) == 1, "lot 9.1b : appel décroché, pas d'« appel manqué »", "")
+
+# Lot 9.1b : appel non décroché (A annule) : sonnerie arrêtée et « Appel manqué ».
+status, call = rpc("start_call", {"p_conversation_id": CONV, "p_kind": "audio"}, TA)
+check(status == 200 and call["status"] == "ringing", "A rappelle B", (status, call))
+cid2 = call["id"]
+push_logs(cid2, 1)
+status, end = rpc("end_call", {"p_call_id": cid2, "p_reason": "hangup"}, TA)
+check(status == 200 and end["status"] in ("cancelled", "missed"), "A annule avant la réponse", end)
+logs = push_logs(cid2, 2)
+check(len(logs) == 2 and all(r.split("|")[0] == "1" for r in logs),
+      "B : sonnerie puis « Appel manqué »", logs)
+print("Lot 9.1a/9.1b (appels audio, mise en relation, réveil) : OK")

@@ -1,6 +1,7 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
 // invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4 ;
-// demandes d'adhésion et @mentions : lot 7.1b ; rappel avant effacement : lot 8.4b).
+// demandes d'adhésion et @mentions : lot 7.1b ; rappel avant effacement : lot 8.4b ;
+// appels entrants et manqués : lot 9.1b).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que
@@ -16,6 +17,8 @@ import {
   sendGeneric,
   sendInvitation,
   sendJoinEvent,
+  sendCallMissed,
+  sendCallRing,
   sendExpiryReminder,
   sendRequestEvent,
   sendSupportReply,
@@ -41,6 +44,8 @@ Deno.serve(async (req) => {
   let supportReplyId = "";
   let joinRequestId = "";
   let expiryReminderId = "";
+  let callEvent = "";
+  let callId = "";
   try {
     const body = (await req.json()) as {
       message_id?: string;
@@ -51,6 +56,8 @@ Deno.serve(async (req) => {
       support_reply_id?: string;
       join_request_id?: string;
       expiry_reminder_id?: string;
+      call_event?: string;
+      call_id?: string;
     };
     messageId = body.message_id ?? "";
     requestId = body.request_id ?? "";
@@ -60,6 +67,8 @@ Deno.serve(async (req) => {
     supportReplyId = body.support_reply_id ?? "";
     joinRequestId = body.join_request_id ?? "";
     expiryReminderId = body.expiry_reminder_id ?? "";
+    callEvent = body.call_event ?? "";
+    callId = body.call_id ?? "";
   } catch {
     return json(400, { error: "BODY_INVALID" });
   }
@@ -95,6 +104,28 @@ Deno.serve(async (req) => {
         serviceHeaders(),
       ),
       (sa, t) => sendJoinEvent(sa, t.token, t.event, t.conversation_id),
+    );
+  }
+  // Lot 9.1b : appel entrant (sonnerie) ou non décroché (arrêt + « Appel manqué »).
+  if (callEvent) {
+    if (!["ring", "missed"].includes(callEvent) || !UUID.test(callId)) {
+      return json(400, { error: "BODY_INVALID" });
+    }
+    const muted = callEvent === "missed"
+      ? await rpc<boolean>("push_call_muted", { p_token: token, p_call_id: callId }, serviceHeaders())
+        .catch(() => false)
+      : false;
+    return await dispatchTargets(
+      token,
+      callId,
+      () => rpc<{ token: string; conversation_id: string; created_at: string }[]>(
+        "push_call_targets",
+        { p_token: token, p_call_id: callId, p_event: callEvent },
+        serviceHeaders(),
+      ),
+      (sa, t) => callEvent === "ring"
+        ? sendCallRing(sa, t.token, callId, t.conversation_id, t.created_at)
+        : sendCallMissed(sa, t.token, callId, t.conversation_id, muted),
     );
   }
   // Lot 8.4b : des messages non lus vont bientôt s'effacer.
