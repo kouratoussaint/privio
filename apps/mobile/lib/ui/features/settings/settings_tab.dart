@@ -21,6 +21,7 @@ import '../../core/widgets/settings_card.dart';
 import 'my_profile_screen.dart';
 import '../../../state/feedback_providers.dart';
 import 'wallpaper.dart';
+import 'appearance_screen.dart';
 
 /// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
 class SettingsTab extends ConsumerWidget {
@@ -249,6 +250,19 @@ class SettingsTab extends ConsumerWidget {
                     'Envoi, réception, effacement… Rien en mode silencieux du téléphone.',
                   ),
                   onChanged: (v) => ref.read(soundsEnabledProvider.notifier).set(v),
+                ),
+                const SettingsDivider(),
+                // Lot 8.1a : thème et taille du texte.
+                ListTile(
+                  key: const Key('settings.appearance'),
+                  leading: Icon(Icons.palette_outlined, color: p.accentText),
+                  title: const Text('Apparence'),
+                  subtitle: const Text('Thème clair ou sombre, taille du texte'),
+                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  onTap: () => Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).push(MaterialPageRoute<void>(builder: (_) => const AppearanceScreen())),
                 ),
                 const SettingsDivider(),
                 // Lot 7.3a : fond d'écran par défaut des discussions.

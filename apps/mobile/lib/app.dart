@@ -11,6 +11,7 @@ import 'state/privacy_providers.dart';
 import 'ui/features/moderation/moderation_gate.dart';
 import 'ui/features/lock/app_lock_screens.dart';
 import 'state/feedback_providers.dart';
+import 'state/appearance_providers.dart';
 
 class PrivioApp extends ConsumerWidget {
   const PrivioApp({super.key});
@@ -33,21 +34,33 @@ class PrivioApp extends ConsumerWidget {
         ref.invalidate(conversationsProvider);
       }
     });
+    // Lot 8.1a : thème et taille du texte choisis dans Paramètres → Apparence.
+    final look = ref.watch(appearanceProvider).value ?? const Appearance();
     return MaterialApp.router(
       title: 'Privio',
       debugShowCheckedModeBanner: false,
       theme: PrivioTheme.light,
       darkTheme: PrivioTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: look.themeMode,
       locale: const Locale('fr'),
       supportedLocales: const [Locale('fr')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
       // Verrouillage (SEC-004) : recouvre tout, navigateur compris.
       // Modération (lot 5.3) : compte suspendu ou avertissement, sous le verrouillage.
-      builder: (context, child) => AppLockGate(
-        child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
-      ),
+      builder: (context, child) {
+        final app = AppLockGate(
+          child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+        );
+        if (look.textFactor == 1.0) return app;
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(media.textScaler.scale(1) * look.textFactor),
+          ),
+          child: app,
+        );
+      },
     );
   }
 }

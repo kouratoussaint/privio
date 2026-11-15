@@ -236,7 +236,11 @@ void main() {
       expect(find.text('Toussaint (vous)'), findsOneWidget);
 
       // Bob devient administrateur.
+      // Lot 8.1a : la carte de la personne s'ouvre ; « Gérer ce membre » pour l'admin.
       await tester.tap(find.byKey(const Key('member.u2')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('person.card')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('card.manage')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('member.make_admin')));
       await tester.pumpAndSettle();
@@ -244,6 +248,8 @@ void main() {
 
       // Awa (administratrice) est retirée par le propriétaire, après confirmation.
       await tester.tap(find.byKey(const Key('member.u3')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('card.manage')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('member.remove')));
       await tester.pumpAndSettle();

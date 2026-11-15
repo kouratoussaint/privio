@@ -40,6 +40,7 @@ import 'expression_panel.dart';
 import '../settings/wallpaper.dart';
 import 'rich_messages.dart';
 import 'gif_picker.dart';
+import 'person_card.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -1457,6 +1458,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           onOpenPhoto: (m, bytes) => _openPhoto(m, bytes, summary?.title),
                           onOpenViewOnce: (m) => unawaited(_openViewOnce(m, summary?.title)),
                           openingViewOnce: _openingViewOnce,
+                          onOpenPerson: (m) => unawaited(
+                            openPerson(
+                              context,
+                              ref,
+                              userId: m.senderId!,
+                              name: m.senderName,
+                              groupId: isGroup ? widget.conversationId : null,
+                            ),
+                          ),
                           ttlSeconds: summary?.ttlSeconds ?? 259200,
                           peerName: summary?.title ?? 'Votre contact',
                           onTtlTap: canSetTtl ? () => _chooseConversationTtl(summary) : null,
@@ -1680,7 +1690,11 @@ class _MessageList extends StatelessWidget {
     this.unreadMarker,
     this.onOpenViewOnce,
     this.openingViewOnce,
+    this.onOpenPerson,
   });
+
+  /// Lot 8.1a : toucher le nom ou la photo de l'auteur ouvre sa carte.
+  final void Function(ChatMessage m)? onOpenPerson;
 
   /// Lot 7.3b : ouvrir une photo ou un vocal reçu en vue unique.
   final void Function(ChatMessage m)? onOpenViewOnce;
@@ -1815,6 +1829,9 @@ class _MessageList extends StatelessWidget {
         onQuoteTap: m.replyToId == null ? null : () => onQuoteTap(m.replyToId!),
         outgoing: outgoing,
         sender: isGroup && !outgoing && firstOfRun ? (m.senderName ?? 'Ancien membre') : null,
+        onSenderTap: ghost == null && m.senderId != null && onOpenPerson != null
+            ? () => onOpenPerson!(m)
+            : null,
         text: m.isDeleted ? 'Message supprimé' : (m.body ?? ''),
         mentions: {for (final id in m.mentions) ?memberNames[id]: id == me},
         // Lot 7.3a : autocollant, ou grands émojis.
@@ -1864,12 +1881,21 @@ class _MessageList extends StatelessWidget {
         avatar: who == null
             ? null
             : (lastOfRun
-                  ? UserAvatar(
-                      key: Key('message.avatar.${m.id}'),
-                      name: who.name,
-                      avatarPath: who.path,
-                      seed: who.seed,
-                      radius: 14,
+                  ? GestureDetector(
+                      onTap: ghost == null && m.senderId != null && onOpenPerson != null
+                          ? () => onOpenPerson!(m)
+                          : null,
+                      child: Semantics(
+                        button: true,
+                        label: 'Voir ${who.name}',
+                        child: UserAvatar(
+                          key: Key('message.avatar.${m.id}'),
+                          name: who.name,
+                          avatarPath: who.path,
+                          seed: who.seed,
+                          radius: 14,
+                        ),
+                      ),
                     )
                   : const SizedBox.shrink()),
       );
@@ -2189,7 +2215,11 @@ class _Bubble extends StatelessWidget {
     this.bare = false,
     this.jumbo = false,
     this.attachment,
+    this.onSenderTap,
   });
+
+  /// Lot 8.1a : toucher le nom de l'auteur (groupe) ouvre sa carte.
+  final VoidCallback? onSenderTap;
 
   /// Lot 7.3b : aperçu d'un lien, au-dessus du texte.
   final Widget? attachment;
@@ -2290,14 +2320,17 @@ class _Bubble extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 2),
-                        child: Text(
-                          sender!,
-                          key: const Key('bubble.sender'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: p.accentText,
+                        child: GestureDetector(
+                          onTap: onSenderTap,
+                          child: Text(
+                            sender!,
+                            key: const Key('bubble.sender'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: p.accentText,
+                            ),
                           ),
                         ),
                       ),

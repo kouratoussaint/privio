@@ -30,6 +30,7 @@ import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
 import '../conversations/message_extras.dart';
 import '../settings/wallpaper.dart';
+import '../conversations/person_card.dart';
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -1111,9 +1112,22 @@ class GroupInfoScreen extends ConsumerWidget {
                             color: m.invited ? theme.colorScheme.onSurfaceVariant : p.accentText,
                           ),
                         ),
-                  onTap: s.isAdmin && m.userId != me && !m.invited && m.role != 'owner'
-                      ? () => _memberActions(context, ref, s, m)
-                      : null,
+                  // Lot 8.1a : la carte de la personne ; les administrateurs y retrouvent
+                  // « Gérer ce membre ».
+                  onTap: m.invited
+                      ? null
+                      : () => openPerson(
+                          context,
+                          ref,
+                          userId: m.userId,
+                          name: m.displayName,
+                          handle: m.handle,
+                          avatarPath: m.avatarPath,
+                          groupId: conversationId,
+                          onManage: s.isAdmin && m.userId != me && m.role != 'owner'
+                              ? () => _memberActions(context, ref, s, m)
+                              : null,
+                        ),
                 ),
             ],
           ),

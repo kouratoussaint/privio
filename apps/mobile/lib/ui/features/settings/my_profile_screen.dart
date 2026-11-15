@@ -18,6 +18,10 @@ import '../conversations/conversation_details.dart' show FicheAvatar;
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
 
+import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../../core/handle/handle_rules.dart';
+
 /// Lot 7.2a — « Ma fiche » (Paramètres → ligne du profil) : comme la fiche d'un contact,
 /// mais modifiable : photo (prendre, choisir, retirer, voir en grand), nom, À propos.
 /// L'@identifiant et le numéro ne se changent pas ici.
@@ -102,6 +106,17 @@ class MyProfileScreen extends ConsumerWidget {
                 leading: Icon(Icons.alternate_email, color: p.accentText),
                 title: const Text('Identifiant'),
                 subtitle: Text('@${profile.handle} · ne peut pas être changé'),
+              ),
+              const SettingsDivider(),
+              // Lot 8.1a : QR code de l'identifiant, à faire scanner dans Privio.
+              ListTile(
+                key: const Key('my.qr'),
+                leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),
+                title: const Text('Mon QR code'),
+                subtitle: const Text('À faire scanner dans Privio pour vous trouver'),
+                trailing: Icon(Icons.chevron_right, color: secondary),
+                onTap: () =>
+                    showMyQrCode(context, handle: profile.handle, name: profile.displayName),
               ),
               if (account.phoneE164 != null) ...[
                 const SettingsDivider(),
@@ -346,3 +361,56 @@ class AboutDialogBoxState extends State<AboutDialogBox> {
     );
   }
 }
+
+/// Lot 8.1a : mon QR code (identifiant). Lisible seulement dans Privio :
+/// Nouvelle discussion → Scanner.
+Future<void> showMyQrCode(
+  BuildContext context, {
+  required String handle,
+  required String name,
+}) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  builder: (ctx) {
+    final theme = Theme.of(ctx);
+    return SafeArea(
+      child: Padding(
+        key: const Key('my.qr.sheet'),
+        padding: const EdgeInsets.fromLTRB(PrivioSpacing.xl, 0, PrivioSpacing.xl, PrivioSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(name, style: theme.textTheme.titleLarge),
+            Text(
+              '@$handle',
+              style: theme.textTheme.bodyMedium?.copyWith(color: PrivioPalette.of(ctx).accentText),
+            ),
+            const SizedBox(height: PrivioSpacing.l),
+            Container(
+              padding: const EdgeInsets.all(PrivioSpacing.m),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(PrivioRadius.large),
+              ),
+              child: QrImageView(
+                key: const Key('my.qr.code'),
+                data: profileQrData(handle),
+                size: 220,
+                backgroundColor: Colors.white,
+                semanticsLabel: 'Mon QR code Privio',
+              ),
+            ),
+            const SizedBox(height: PrivioSpacing.l),
+            Text(
+              'Pour vous trouver, la personne ouvre Privio\u202F: Nouvelle discussion → '
+              'Scanner un QR code.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  },
+);

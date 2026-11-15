@@ -16,6 +16,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
+import '../../../core/handle/handle_rules.dart';
 
 /// Lecture d'un QR code : l'écran caméra, remplacé dans les tests (pas de caméra).
 final qrScannerProvider = Provider<Future<String?> Function(BuildContext context)>(
@@ -354,10 +355,34 @@ class _PreviewCard extends StatelessWidget {
   }
 }
 
-/// Caméra pour lire le QR code d'un groupe. Le texte lu ne quitte pas le téléphone : seul
-/// le code reconnu est renvoyé à l'écran « Rejoindre un groupe ».
+/// Lot 8.1a : lire le QR code d'un identifiant Privio (« Nouvelle discussion »).
+final profileQrScannerProvider = Provider<Future<String?> Function(BuildContext context)>(
+  (ref) =>
+      (context) => Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => const QrScanScreen(
+            parse: parseProfileCode,
+            hint: 'Placez le QR code de la personne dans le cadre.',
+            invalid: 'Ce QR code n’est pas un identifiant Privio.',
+          ),
+          fullscreenDialog: true,
+        ),
+      ),
+);
+
+/// Caméra pour lire un QR code Privio (groupe par défaut). Le texte lu ne quitte pas le
+/// téléphone : seul le code reconnu est renvoyé à l'écran qui l'a demandé.
 class QrScanScreen extends StatefulWidget {
-  const QrScanScreen({super.key});
+  const QrScanScreen({
+    super.key,
+    this.parse = parseInviteCode,
+    this.hint = 'Placez le QR code du groupe dans le cadre.',
+    this.invalid = 'Ce QR code n’est pas un code de groupe Privio.',
+  });
+
+  final String? Function(String? raw) parse;
+  final String hint;
+  final String invalid;
 
   @override
   State<QrScanScreen> createState() => _QrScanScreenState();
@@ -377,7 +402,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
   void _onDetect(BarcodeCapture capture) {
     if (_done) return;
     for (final b in capture.barcodes) {
-      final code = parseInviteCode(b.rawValue);
+      final code = widget.parse(b.rawValue);
       if (code != null) {
         _done = true;
         Navigator.of(context).pop(code);
@@ -387,9 +412,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     final now = DateTime.now();
     if (_warnedAt == null || now.difference(_warnedAt!) > const Duration(seconds: 3)) {
       _warnedAt = now;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ce QR code n’est pas un code de groupe Privio.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.invalid)));
     }
   }
 
@@ -432,14 +455,14 @@ class _QrScanScreenState extends State<QrScanScreen> {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: PrivioSpacing.xl,
             right: PrivioSpacing.xl,
             bottom: PrivioSpacing.xxl,
             child: Text(
-              'Placez le QR code du groupe dans le cadre.',
+              widget.hint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
         ],

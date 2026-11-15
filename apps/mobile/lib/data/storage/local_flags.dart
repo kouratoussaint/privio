@@ -22,6 +22,13 @@ abstract interface class LocalFlags {
   Future<bool> soundsEnabled();
   Future<void> setSoundsEnabled(bool value);
 
+  /// Lot 8.1a : thème (« system », « light », « dark ») et taille du texte
+  /// (« small », « normal », « large », « xlarge »).
+  Future<String> themeChoice();
+  Future<void> setThemeChoice(String value);
+  Future<String> textSize();
+  Future<void> setTextSize(String value);
+
   /// Lot 7.3b : contenu des GIF : « g » (tout public, par défaut) ou « pg13 » (modéré).
   Future<String> gifFilter();
   Future<void> setGifFilter(String value);
@@ -64,6 +71,8 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _sounds = 'privio.sounds_enabled';
   static const _wallpaper = 'privio.wallpaper';
   static const _gifFilter = 'privio.gif_filter';
+  static const _theme = 'privio.theme';
+  static const _textSize = 'privio.text_size';
   static const _linkPreviews = 'privio.link_previews';
   final SharedPreferencesAsync _prefs;
 
@@ -95,6 +104,24 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setQuickReaction(String emoji) => _prefs.setString(_quick, emoji);
+
+  @override
+  Future<String> themeChoice() async {
+    final v = await _prefs.getString(_theme);
+    return v == 'light' || v == 'dark' ? v! : 'system';
+  }
+
+  @override
+  Future<void> setThemeChoice(String value) => _prefs.setString(_theme, value);
+
+  @override
+  Future<String> textSize() async {
+    final v = await _prefs.getString(_textSize);
+    return const {'small', 'large', 'xlarge'}.contains(v) ? v! : 'normal';
+  }
+
+  @override
+  Future<void> setTextSize(String value) => _prefs.setString(_textSize, value);
 
   @override
   Future<String> gifFilter() async => (await _prefs.getString(_gifFilter)) == 'pg13' ? 'pg13' : 'g';

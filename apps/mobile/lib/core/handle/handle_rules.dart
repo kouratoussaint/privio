@@ -59,3 +59,15 @@ abstract final class HandleRules {
     HandleIssue.reserved => 'Cet identifiant est réservé.',
   };
 }
+
+/// Lot 8.1a : contenu du QR code d'un identifiant (lisible seulement dans Privio).
+String profileQrData(String handle) => 'privio:@$handle';
+
+/// Identifiant lu dans un QR code Privio (« privio:@identifiant »), sinon null.
+String? parseProfileCode(String? raw) {
+  final v = (raw ?? '').trim();
+  final m = RegExp(r'^privio:@(\S+)$', caseSensitive: false).firstMatch(v);
+  if (m == null) return null;
+  final handle = HandleRules.normalize(m.group(1)!);
+  return HandleRules.validate(handle) == null ? handle : null;
+}

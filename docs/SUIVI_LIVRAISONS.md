@@ -92,7 +92,8 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 8 — Compte et réglages (avant l'étape 6 ; langues en dernier)
 | Lot | Contenu | Statut |
 |---|---|---|
-| 8.1 | QR code de l'identifiant, « Inviter un ami », changer de numéro, thème clair / sombre / automatique, taille du texte | ⏳ |
+| 8.1a | Carte et apparence : **carte d'une personne** (toucher le nom ou la photo d'un auteur dans un groupe, un membre dans la fiche du groupe, un QR code scanné : sa fiche si on a déjà une discussion à deux, sinon une carte avec photo, nom, identifiant, À propos selon ses réglages, groupes en commun, « Envoyer un message » ou demande, Bloquer, Signaler ; « Gérer ce membre » pour les administrateurs) ; toucher la photo dans la liste des discussions ouvre la fiche ; **Apparence** (Paramètres : thème automatique, clair ou sombre ; taille du texte Petit à Très grand) ; **QR code de l'identifiant** (Ma fiche → Mon QR code ; Nouvelle discussion → Scanner). **Tests** : dans un groupe, toucher le nom puis la photo d'un membre non contact (carte) et d'un contact (fiche) ; en administrateur, « Gérer ce membre » ; toucher la photo dans la liste des discussions ; thème sombre puis clair ; Très grand texte ; scanner le QR code de l'autre téléphone | 🧪 15/11/2026 |
+| 8.1b | Numéro et invitations : **changer de numéro** (code SMS sur le nouveau numéro, code Privio demandé si le verrouillage est activé, contacts non prévenus), **inviter un ami** (partage de l'identifiant ; lien de téléchargement ajouté plus tard) | ⏳ |
 | 8.2 | Langues : français, mooré, dioula (traductions à relire par des locuteurs natifs) | ⏳ |
 
 ## Étape 9 — Appels (après le pilote)

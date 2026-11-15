@@ -16,6 +16,8 @@ import '../../core/widgets/state_views.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
+import 'person_card.dart';
+import '../groups/join_group_screen.dart';
 
 /// Écran 09 — trouver une personne par son identifiant Privio (ou son numéro, si elle
 /// l'a autorisé). Recherche exacte uniquement, limitée côté serveur. Lot 4.7 : le premier
@@ -79,6 +81,37 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     }
   }
 
+  Future<void> _scan() async {
+    final handle = await ref.read(profileQrScannerProvider)(context);
+    if (handle == null || !mounted) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+      _found = null;
+    });
+    try {
+      final user = await ref.read(messagingApiProvider).findByHandle(handle);
+      if (!mounted) return;
+      if (user == null) {
+        setState(() => _message = 'Aucun compte trouvé pour @$handle.');
+        return;
+      }
+      setState(() => _busy = false);
+      await openPerson(
+        context,
+        ref,
+        userId: user.id,
+        name: user.displayName,
+        handle: user.handle,
+        avatarPath: user.avatarPath,
+      );
+    } on Object catch (e) {
+      if (mounted) setState(() => _message = toAppFailure(e).message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   /// Ouvre la discussion (déjà connectés), sinon envoie la demande avec le mot.
   Future<void> _send(FoundUser user, {String? note}) async {
     setState(() => _busy = true);
@@ -115,7 +148,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => _RequestSheet(user: user),
+      builder: (_) => ConnectionRequestSheet(user: user),
     );
     if (note == null || !mounted) return;
     await _send(user, note: note.isEmpty ? null : note);
@@ -212,7 +245,18 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     return Scaffold(
       // Lot 7.2a : écran en liste, fond blanc (comme Discussions).
       backgroundColor: PrivioPalette.of(context).sheet,
-      appBar: AppBar(title: const Text('Nouvelle discussion')),
+      appBar: AppBar(
+        title: const Text('Nouvelle discussion'),
+        actions: [
+          // Lot 8.1a : QR code d'un identifiant Privio → carte de la personne.
+          IconButton(
+            key: const Key('search.scan'),
+            tooltip: 'Scanner un QR code',
+            onPressed: _busy ? null : _scan,
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+          ),
+        ],
+      ),
       body: FlowLayout(
         children: [
           TextField(
@@ -280,18 +324,18 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
 }
 
 /// Envoi d'une demande : petit mot facultatif (140 caractères), puis « Envoyer ».
-class _RequestSheet extends StatefulWidget {
-  const _RequestSheet({required this.user});
+class ConnectionRequestSheet extends StatefulWidget {
+  const ConnectionRequestSheet({super.key, required this.user});
 
   final FoundUser user;
 
   static const maxNote = 140;
 
   @override
-  State<_RequestSheet> createState() => _RequestSheetState();
+  State<ConnectionRequestSheet> createState() => _ConnectionRequestSheetState();
 }
 
-class _RequestSheetState extends State<_RequestSheet> {
+class _ConnectionRequestSheetState extends State<ConnectionRequestSheet> {
   final _note = TextEditingController();
 
   @override
@@ -328,7 +372,7 @@ class _RequestSheetState extends State<_RequestSheet> {
               TextField(
                 key: const Key('request.note'),
                 controller: _note,
-                maxLength: _RequestSheet.maxNote,
+                maxLength: ConnectionRequestSheet.maxNote,
                 minLines: 1,
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,

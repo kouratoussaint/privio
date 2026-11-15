@@ -672,11 +672,20 @@ class ConversationTile extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l, vertical: 10),
         child: Row(
           children: [
-            UserAvatar(
-              name: summary.title,
-              avatarPath: summary.avatarPath,
-              seed: summary.peerId ?? summary.id,
-              icon: summary.isGroup ? Icons.groups_rounded : null,
+            // Lot 8.1a : toucher la photo ouvre la fiche du contact ou du groupe.
+            Semantics(
+              button: true,
+              label: summary.isGroup ? 'Fiche du groupe' : 'Fiche de ${summary.title}',
+              child: GestureDetector(
+                key: Key('conversation.avatar.${summary.id}'),
+                onTap: () => context.push(Routes.contact(summary.id)),
+                child: UserAvatar(
+                  name: summary.title,
+                  avatarPath: summary.avatarPath,
+                  seed: summary.peerId ?? summary.id,
+                  icon: summary.isGroup ? Icons.groups_rounded : null,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(

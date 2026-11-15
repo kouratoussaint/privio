@@ -238,6 +238,18 @@ class FakeLocalFlags implements LocalFlags {
   /// L'application, elle, sépare par défaut (testé dans test/ui/suppression_test.dart).
   bool groupsTogether = true;
 
+  /// Lot 8.1a : apparence.
+  String theme = 'system';
+  String size = 'normal';
+  @override
+  Future<String> themeChoice() async => theme;
+  @override
+  Future<void> setThemeChoice(String value) async => theme = value;
+  @override
+  Future<String> textSize() async => size;
+  @override
+  Future<void> setTextSize(String value) async => size = value;
+
   /// Lot 7.3b : contenu des GIF, aperçus des liens.
   String gif = 'g';
   bool previews = true;
@@ -488,7 +500,21 @@ class FakeMessagingApi implements MessagingApi {
   Future<ContactProfile?> getContactProfile(String userId) async {
     _net();
     final c = conversations.values.where((c) => c.peerId == userId).firstOrNull;
-    if (c == null) return null;
+    if (c == null) {
+      // Lot 8.1a : membre d'un groupe commun (comme private.shares_conversation).
+      final shared = groups.values.any(
+        (g) => g.roles.containsKey(me) && g.roles.containsKey(userId),
+      );
+      final known = [bob, awa].where((u) => u.id == userId).firstOrNull;
+      if (!shared || known == null) return null;
+      return ContactProfile(
+        userId: userId,
+        handle: known.handle,
+        displayName: known.displayName,
+        about: contactAbout[userId],
+        avatarPath: known.avatarPath,
+      );
+    }
     return ContactProfile(
       userId: userId,
       handle: c.peerHandle ?? 'inconnu',
