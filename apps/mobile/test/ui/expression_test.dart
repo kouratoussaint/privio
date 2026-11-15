@@ -12,6 +12,7 @@ import 'package:privio/ui/features/conversations/photo_editor.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 7.3a — émojis, autocollants, retouche photo, fond d'écran.
 TestDeps _deps() =>
@@ -284,11 +285,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(_tab('Paramètres'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const Key('settings.wallpaper')),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await openSettingsEntry(tester, 'settings.chats');
       await tester.ensureVisible(find.byKey(const Key('settings.wallpaper')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('settings.wallpaper')));
@@ -299,6 +296,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(deps.flags.wallpapers[null], 'color:lavande');
 
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       await tester.tap(_tab('Discussions'));

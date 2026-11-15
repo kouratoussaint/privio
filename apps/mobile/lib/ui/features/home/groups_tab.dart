@@ -26,6 +26,7 @@ import 'discussions_tab.dart'
         matchesSearch;
 import '../../core/motion/illustrations.dart';
 import '../../../state/providers.dart';
+import 'list_menu.dart';
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
@@ -130,6 +131,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           onPressed: () => context.push(Routes.joinGroup),
           icon: const Icon(Icons.qr_code_scanner_rounded),
         ),
+        // Lot 8.3a : menu ⋮ (rejoindre, demandes envoyées, archivés, tout marquer lu…).
+        const ListMenuButton(kind: ListMenuKind.groups),
       ],
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('groups.new'),

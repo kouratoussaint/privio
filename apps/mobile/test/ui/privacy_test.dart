@@ -8,6 +8,7 @@ import 'package:privio/state/privacy_providers.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 4.3 — confidentialité avancée, présence, « vider la discussion », via les écrans réels.
 TestDeps _deps() =>
@@ -91,6 +92,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(deps.messaging.privacy.avatar, 'contacts');
 
+    await scrollToKey(tester, 'privacy.invites');
     await tester.tap(find.byKey(const Key('privacy.invites')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('privacy.invites.nobody')));

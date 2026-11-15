@@ -3788,4 +3788,87 @@ class AppLocalizationsDyu extends AppLocalizations {
   String ttlHoursMinutes(Object h, Object m) {
     return '$h h $m';
   }
+
+  @override
+  String get settingsAccountSection => 'Mon compte';
+
+  @override
+  String get settingsPreferencesSection => 'Préférences';
+
+  @override
+  String get settingsPrivioSection => 'Privio';
+
+  @override
+  String get settingsPrivacySubtitle =>
+      'Qui voit quoi, demandes, accusés de lecture, personnes bloquées';
+
+  @override
+  String get settingsSecuritySubtitle => 'Verrouillage, changement de numéro, captures d’écran';
+
+  @override
+  String get notificationsSons => 'Notifications et sons';
+
+  @override
+  String get settingsNotificationsSubtitle => 'Notifications sans contenu, sons et vibrations';
+
+  @override
+  String get settingsChatsSubtitle => 'Fond d’écran, réaction du double appui, archivées';
+
+  @override
+  String get privacyReachSection => 'Qui peut me joindre';
+
+  @override
+  String get archivesTitle => 'Archivés';
+
+  @override
+  String get toutMarquerCommeLu => 'Tout marquer comme lu';
+
+  @override
+  String get markAllReadTitle => 'Tout marquer comme lu ?';
+
+  @override
+  String markAllReadBody(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Les messages non lus de $n discussions seront marqués comme lus.',
+      one: 'Les messages non lus d’une discussion seront marqués comme lus.',
+    );
+    return '$_temp0 Si vos accusés de lecture sont activés, les personnes verront « lu ».';
+  }
+
+  @override
+  String get marquerCommeLu => 'Marquer comme lu';
+
+  @override
+  String markAllReadDone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n discussions marquées comme lues.',
+      one: '1 discussion marquée comme lue.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get verrouillerMaintenant => 'Verrouiller Privio maintenant';
+
+  @override
+  String demandesConnexionCount(int n) {
+    return 'Demandes de connexion ($n)';
+  }
+
+  @override
+  String demandesEnvoyeesCount(int n) {
+    return 'Demandes envoyées ($n)';
+  }
+
+  @override
+  String get aucuneDemandeEnvoyee => 'Aucune demande en attente.';
+
+  @override
+  String favoriteLine(Object conversation, Object sender, Object time) {
+    return '$conversation · $sender · $time';
+  }
 }

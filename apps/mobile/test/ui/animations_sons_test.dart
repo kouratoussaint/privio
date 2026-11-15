@@ -7,6 +7,7 @@ import 'package:privio/state/feedback_providers.dart';
 import 'package:privio/ui/core/motion/motion.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 7.2b2 — animations, sons, illustrations ; photo de l'auteur à côté des messages.
 TestDeps _deps({bool sounds = true}) =>
@@ -79,11 +80,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('nav.Paramètres')));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('settings.sounds')),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await openSettingsEntry(tester, 'settings.notifications');
     final tile = find.byKey(const Key('settings.sounds'));
     await tester.ensureVisible(tile);
     await tester.pumpAndSettle();

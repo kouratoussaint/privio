@@ -201,8 +201,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(_tab('Paramètres'));
     await tester.pumpAndSettle();
-    expect(find.text('Ajouter un court texte de présentation'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('settings.about')));
+    // Lot 8.3a : « À propos » se modifie dans Ma fiche (plus de doublon dans Paramètres).
+    expect(find.byKey(const Key('settings.about')), findsNothing);
+    await tester.tap(find.byKey(const Key('settings.profile')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('my.about')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('about.text')), '  Disponible   le soir ');
     await tester.tap(find.byKey(const Key('about.save')));

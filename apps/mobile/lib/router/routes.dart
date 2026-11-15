@@ -27,6 +27,12 @@ abstract final class Routes {
   static const appLockDisable = '/app-lock/disable';
   static const storage = '/storage';
   static const privacy = '/privacy';
+
+  /// Lot 8.3a : sous-écrans des Paramètres et favoris de toutes les discussions.
+  static const security = '/security';
+  static const notificationSettings = '/notification-settings';
+  static const chatSettings = '/chat-settings';
+  static const favorites = '/favorites';
   static const requests = '/requests';
   static const console = '/console';
   static const mySupport = '/support';

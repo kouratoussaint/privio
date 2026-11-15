@@ -24,6 +24,7 @@ import '../../core/motion/motion.dart';
 import '../../core/motion/illustrations.dart';
 import '../groups/group_screens.dart';
 import '../conversations/expression_panel.dart';
+import 'list_menu.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -96,6 +97,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
 
     return BrandScaffold(
       title: const BrandTitle(),
+      // Lot 8.3a : menu ⋮ (nouveau groupe, QR code, demandes, archivées, favoris…).
+      actions: const [ListMenuButton(kind: ListMenuKind.discussions)],
       floatingActionButton: FloatingActionButton(
         key: const Key('discussions.new'),
         tooltip: L.t.nouvelleDiscussion,

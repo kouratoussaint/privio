@@ -5273,5 +5273,116 @@
         "type": "Object"
       }
     }
+  },
+  "settingsAccountSection": "Mon compte",
+  "@settingsAccountSection": {
+    "description": "Écran : Paramètres"
+  },
+  "settingsPreferencesSection": "Préférences",
+  "@settingsPreferencesSection": {
+    "description": "Écran : Paramètres"
+  },
+  "settingsPrivioSection": "Privio",
+  "@settingsPrivioSection": {
+    "description": "Écran : Paramètres"
+  },
+  "settingsPrivacySubtitle": "Qui voit quoi, demandes, accusés de lecture, personnes bloquées",
+  "@settingsPrivacySubtitle": {
+    "description": "Écran : Paramètres"
+  },
+  "settingsSecuritySubtitle": "Verrouillage, changement de numéro, captures d’écran",
+  "@settingsSecuritySubtitle": {
+    "description": "Écran : Paramètres"
+  },
+  "notificationsSons": "Notifications et sons",
+  "@notificationsSons": {
+    "description": "Écran : Paramètres"
+  },
+  "settingsNotificationsSubtitle": "Notifications sans contenu, sons et vibrations",
+  "@settingsNotificationsSubtitle": {
+    "description": "Écran : Paramètres"
+  },
+  "settingsChatsSubtitle": "Fond d’écran, réaction du double appui, archivées",
+  "@settingsChatsSubtitle": {
+    "description": "Écran : Paramètres"
+  },
+  "privacyReachSection": "Qui peut me joindre",
+  "@privacyReachSection": {
+    "description": "Écran : Confidentialité"
+  },
+  "archivesTitle": "Archivés",
+  "@archivesTitle": {
+    "description": "Écran : Liste des groupes (menu ⋮)"
+  },
+  "toutMarquerCommeLu": "Tout marquer comme lu",
+  "@toutMarquerCommeLu": {
+    "description": "Écran : Listes des discussions et des groupes (menu ⋮)"
+  },
+  "markAllReadTitle": "Tout marquer comme lu ?",
+  "@markAllReadTitle": {
+    "description": "Écran : Listes des discussions et des groupes (menu ⋮)"
+  },
+  "markAllReadBody": "{n, plural, one{Les messages non lus d’une discussion seront marqués comme lus.} other{Les messages non lus de {n} discussions seront marqués comme lus.}} Si vos accusés de lecture sont activés, les personnes verront « lu ».",
+  "@markAllReadBody": {
+    "description": "Écran : Listes des discussions et des groupes (menu ⋮)",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "marquerCommeLu": "Marquer comme lu",
+  "@marquerCommeLu": {
+    "description": "Écran : Listes des discussions et des groupes (menu ⋮)"
+  },
+  "markAllReadDone": "{n, plural, one{1 discussion marquée comme lue.} other{{n} discussions marquées comme lues.}}",
+  "@markAllReadDone": {
+    "description": "Écran : Listes des discussions et des groupes (menu ⋮)",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "verrouillerMaintenant": "Verrouiller Privio maintenant",
+  "@verrouillerMaintenant": {
+    "description": "Écran : Listes des discussions et des groupes (menu ⋮)"
+  },
+  "demandesConnexionCount": "Demandes de connexion ({n})",
+  "@demandesConnexionCount": {
+    "description": "Écran : Liste des discussions (menu ⋮)",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "demandesEnvoyeesCount": "Demandes envoyées ({n})",
+  "@demandesEnvoyeesCount": {
+    "description": "Écran : Liste des groupes (menu ⋮)",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "aucuneDemandeEnvoyee": "Aucune demande en attente.",
+  "@aucuneDemandeEnvoyee": {
+    "description": "Écran : Liste des groupes (menu ⋮)"
+  },
+  "favoriteLine": "{conversation} · {sender} · {time}",
+  "@favoriteLine": {
+    "description": "Écran : Messages favoris (toutes les discussions)",
+    "placeholders": {
+      "conversation": {
+        "type": "Object"
+      },
+      "sender": {
+        "type": "Object"
+      },
+      "time": {
+        "type": "Object"
+      }
+    }
   }
 }

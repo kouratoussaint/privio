@@ -10,13 +10,12 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../core/util/time_format.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
-import '../../../state/app_lock_providers.dart';
+import '../../../state/session_controller.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/privacy_providers.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/ttl_picker.dart';
-import '../lock/app_lock_screens.dart' show delayLabel;
 import '../../../state/providers.dart';
 
 /// Écran 23 — confidentialité et sécurité (lot 4.3). Chaque réglage est appliqué par le
@@ -107,7 +106,8 @@ class PrivacyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = PrivioPalette.of(context);
     final privacy = ref.watch(privacyProvider);
-    final lock = ref.watch(appLockProvider).value;
+    final blockedCount = ref.watch(blockedUsersProvider).value?.length;
+    final secondary = Theme.of(context).colorScheme.onSurfaceVariant;
     final rules = ref.watch(messagingRulesProvider).value ?? const MessagingRules();
 
     final s = privacy.value;
@@ -175,6 +175,15 @@ class PrivacyScreen extends ConsumerWidget {
                 subtitle: Text(visibilityLabel(s.about)),
                 onTap: () => visibility('about'),
               ),
+            ],
+          ),
+          SettingsNote(L.t.mesContactsPersonnesAvecQui),
+          // Lot 8.3a : qui peut me trouver, m'écrire, m'inviter ; personnes bloquées.
+          SettingsSectionTitle(L.t.privacyReachSection),
+          SettingsCard(
+            children: [
+              const _DiscoverableTile(),
+              const _ConnectionRequestsTile(),
               ListTile(
                 key: const Key('privacy.invites'),
                 leading: Icon(Icons.group_add_outlined, color: p.accentText),
@@ -182,10 +191,26 @@ class PrivacyScreen extends ConsumerWidget {
                 subtitle: Text(visibilityLabel(s.groupInvites)),
                 onTap: () => visibility('invites'),
               ),
-              const _ConnectionRequestsTile(),
+              ListTile(
+                key: const Key('privacy.blocked'),
+                leading: Icon(Icons.block, color: p.accentText),
+                title: Text(L.t.personnesBloquees),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (blockedCount != null)
+                      Text(
+                        '$blockedCount',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: secondary),
+                      ),
+                    const SizedBox(width: PrivioSpacing.xs),
+                    Icon(Icons.chevron_right, color: secondary),
+                  ],
+                ),
+                onTap: () => context.push(Routes.blockedUsers),
+              ),
             ],
           ),
-          SettingsNote(L.t.mesContactsPersonnesAvecQui),
           SettingsSectionTitle(L.t.messages),
           SettingsCard(
             children: [
@@ -223,34 +248,43 @@ class PrivacyScreen extends ConsumerWidget {
           SettingsSectionTitle(L.t.liensGif),
           const _ContentSettings(),
           SettingsNote(L.t.apercuLienEstPreparePar),
-          SettingsSectionTitle(L.t.securite),
-          SettingsCard(
-            children: [
-              ListTile(
-                key: const Key('privacy.lock'),
-                leading: Icon(Icons.lock_outline, color: p.accentText),
-                title: Text(L.t.verrouillageApplication),
-                subtitle: Text(
-                  (lock?.enabled ?? false)
-                      ? L.t.activeTolowercase(delayLabel(lock!.config.delaySeconds).toLowerCase())
-                      : L.t.desactive2,
-                ),
-                onTap: () => context.push(Routes.appLock),
-              ),
-              ListTile(
-                key: const Key('privacy.blocked'),
-                leading: Icon(Icons.block, color: p.accentText),
-                title: Text(L.t.personnesBloquees),
-                onTap: () => context.push(Routes.blockedUsers),
-              ),
-              ListTile(
-                leading: Icon(Icons.screenshot_monitor_outlined, color: p.accentText),
-                title: Text(L.t.capturesEcran),
-                subtitle: Text(L.t.toujoursBloqueesDansPrivioNon),
-              ),
-            ],
-          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Lot 8.3a (déplacé depuis Paramètres) : « Me trouver par mon numéro ».
+class _DiscoverableTile extends ConsumerWidget {
+  const _DiscoverableTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = PrivioPalette.of(context);
+    final account = ref.watch(sessionControllerProvider).value?.account;
+    final handle = account?.profile?.handle;
+    final on = account?.phoneDiscoverable ?? false;
+    return SwitchListTile(
+      key: const Key('settings.discoverable'),
+      value: on,
+      onChanged: account == null
+          ? null
+          : (v) async {
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref.read(sessionControllerProvider.notifier).setPhoneDiscoverable(v);
+              } on Object catch (e) {
+                messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+              }
+            },
+      secondary: Icon(Icons.phone_outlined, color: p.accentText),
+      title: Text(L.t.meTrouverParMonNumero),
+      subtitle: Text(
+        on
+            ? L.t.activeOnPeutAussiVous
+            : handle == null
+            ? L.t.desactiveOnVousTrouveSeulement
+            : L.t.desactiveOnVousTrouveSeulement2(handle),
       ),
     );
   }

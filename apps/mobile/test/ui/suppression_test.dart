@@ -7,6 +7,7 @@ import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 7.2b1 — « lu » seulement à l'écran, supprimer une discussion ou un groupe,
 /// groupes séparés des discussions.
@@ -227,10 +228,12 @@ void main() {
 
       await tester.tap(_tab('Paramètres'));
       await tester.pumpAndSettle();
-      await _scrollTo(tester, 'settings.groups_together');
+      await openSettingsEntry(tester, 'settings.chats');
       await tester.tap(find.byKey(const Key('settings.groups_together')));
       await tester.pumpAndSettle();
       expect(deps.flags.groupsTogether, isTrue);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
       await tester.tap(_tab('Discussions'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('conversation.g1')), findsOneWidget, reason: 'ensemble');

@@ -1141,9 +1141,13 @@ class MessageRef {
     required this.sentAt,
     required this.at,
     this.expiresAt,
+    this.conversationId,
   });
 
   final String id;
+
+  /// Lot 8.3a : discussion du message (favoris de toutes les discussions).
+  final String? conversationId;
   final String? senderId;
   final String? senderName;
   final String kind;
@@ -1166,6 +1170,7 @@ class MessageRef {
 
   factory MessageRef.favorite(Map<String, dynamic> j) => MessageRef(
     id: j['message_id'] as String,
+    conversationId: j['conversation_id'] as String?,
     senderId: j['sender_id'] as String?,
     senderName: j['sender_name'] as String?,
     kind: j['kind'] as String? ?? 'text',

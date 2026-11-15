@@ -691,8 +691,9 @@ class FakeMessagingApi implements MessagingApi {
     return found;
   }
 
-  MessageRef _ref(ChatMessage m) => MessageRef(
+  MessageRef _ref(ChatMessage m, [String? conversationId]) => MessageRef(
     id: m.id,
+    conversationId: conversationId,
     senderId: m.senderId,
     senderName: m.senderName ?? (m.senderId == bob.id ? bob.displayName : null),
     kind: m.kind,
@@ -754,6 +755,17 @@ class FakeMessagingApi implements MessagingApi {
         if (favorites.contains(m.id) && _usable(m)) _ref(m),
     ];
     return list.reversed.toList();
+  }
+
+  @override
+  Future<List<MessageRef>> listAllFavorites() async {
+    _net();
+    final list = [
+      for (final MapEntry(key: id, value: ms) in messages.entries)
+        for (final m in ms)
+          if (favorites.contains(m.id) && _usable(m)) _ref(m, id),
+    ]..sort((x, y) => y.sentAt.compareTo(x.sentAt));
+    return list;
   }
 
   @override

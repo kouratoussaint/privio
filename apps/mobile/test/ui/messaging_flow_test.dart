@@ -5,6 +5,7 @@ import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 2.2 — parcours complet avec le vrai routeur et une messagerie simulée.
 TestDeps _readyUser() =>
@@ -117,13 +118,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('settings.blocked')),
-      150,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settings.blocked')));
+    await openSettingsEntry(tester, 'settings.privacy');
+    await scrollToKey(tester, 'privacy.blocked');
+    await tester.tap(find.byKey(const Key('privacy.blocked')));
     await tester.pumpAndSettle();
     expect(find.text('Bob'), findsOneWidget);
     await tester.tap(find.byKey(const Key('blocked.unblock.u2')));

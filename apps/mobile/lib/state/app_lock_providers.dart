@@ -112,6 +112,14 @@ class AppLockController extends AsyncNotifier<AppLockState> {
     }
   }
 
+  /// Lot 8.3a : « Verrouiller Privio maintenant » (menu ⋮ des listes).
+  void lockNow() {
+    final s = state.value;
+    if (s == null || !s.enabled || s.locked) return;
+    _backgroundAt = null;
+    state = AsyncData(s.copyWith(locked: true));
+  }
+
   /// Appareil photo ou galerie : sortie voulue, sans reverrouillage au retour.
   Future<T> runExternal<T>(Future<T> Function() action) async {
     _externalDepth++;

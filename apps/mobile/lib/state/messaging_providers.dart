@@ -406,6 +406,32 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     unawaited(refresh());
   }
 
+  /// Lot 8.3a : « Tout marquer comme lu » (menu ⋮). Discussions non archivées de la liste
+  /// choisie (groupes ou non) ; c'est un geste voulu : l'accusé « lu » part comme à
+  /// l'ouverture (selon le réglage Accusés de lecture). Renvoie le nombre de discussions.
+  Future<int> markAllRead({required bool Function(ConversationSummary c) where}) async {
+    final api = ref.read(messagingApiProvider);
+    final targets = [
+      for (final c in state.value ?? const <ConversationSummary>[])
+        if (!c.archived && c.unreadCount > 0 && c.lastSentAt != null && where(c)) c,
+    ];
+    if (targets.isEmpty) return 0;
+    final ids = {for (final c in targets) c.id};
+    state = AsyncData([
+      for (final c in state.value ?? const <ConversationSummary>[])
+        ids.contains(c.id) ? c.copyWith(unreadCount: 0) : c,
+    ]);
+    try {
+      await Future.wait([
+        for (final c in targets)
+          api.markConversation(c.id, deliveredUpTo: c.lastSentAt, readUpTo: c.lastSentAt),
+      ]);
+    } finally {
+      await refresh();
+    }
+    return targets.length;
+  }
+
   /// Épingler / archiver (état personnel), affiché aussitôt puis confirmé.
   Future<void> setFlags(String conversationId, {bool? pinned, bool? archived}) async {
     final before = state.value ?? const [];
@@ -1171,6 +1197,11 @@ final pinnedMessagesProvider = FutureProvider.autoDispose.family<List<MessageRef
 /// Mes favoris dans une discussion.
 final favoriteMessagesProvider = FutureProvider.autoDispose.family<List<MessageRef>, String>(
   (ref, conversationId) => ref.watch(messagingApiProvider).listFavorites(conversationId),
+);
+
+/// Lot 8.3a : favoris de toutes les discussions (menu ⋮ de la liste).
+final allFavoritesProvider = FutureProvider.autoDispose<List<MessageRef>>(
+  (ref) => ref.watch(messagingApiProvider).listAllFavorites(),
 );
 
 /// Infos d'un de mes messages (distribué, lu, par destinataire).

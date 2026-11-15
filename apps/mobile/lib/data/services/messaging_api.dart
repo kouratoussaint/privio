@@ -210,6 +210,9 @@ abstract interface class MessagingApi {
   Future<List<MessageRef>> listPinnedMessages(String conversationId);
   Future<int> setFavorites(List<String> messageIds, {required bool on});
   Future<List<MessageRef>> listFavorites(String conversationId);
+
+  /// Lot 8.3a : favoris de toutes mes discussions (les plus récents d'abord).
+  Future<List<MessageRef>> listAllFavorites();
   Future<List<MessageReceipt>> getMessageInfo(String messageId);
 
   /// 'all' ou 'mentions'.
@@ -920,6 +923,10 @@ class SupabaseMessagingApi implements MessagingApi {
     'list_favorite_messages',
     {'p_conversation_id': conversationId},
   )).map(MessageRef.favorite).toList();
+
+  @override
+  Future<List<MessageRef>> listAllFavorites() async =>
+      (await _rows('list_all_favorite_messages')).map(MessageRef.favorite).toList();
 
   @override
   Future<List<MessageReceipt>> getMessageInfo(String messageId) async => (await _rows(

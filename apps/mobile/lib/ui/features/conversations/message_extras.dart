@@ -255,17 +255,36 @@ class FavoritesRow extends ConsumerWidget {
   }
 }
 
-/// Mes messages favoris d'une discussion. Toucher : retour au message dans la discussion.
+/// Mes messages favoris d'une discussion, ou de toutes (lot 8.3a, [conversationId] nul :
+/// menu ⋮ de la liste). Toucher : retour au message dans sa discussion.
 class FavoritesScreen extends ConsumerWidget {
-  const FavoritesScreen({super.key, required this.conversationId, required this.title});
+  const FavoritesScreen({super.key, this.conversationId, this.title});
 
-  final String conversationId;
-  final String title;
+  final String? conversationId;
+  final String? title;
+
+  void _refresh(WidgetRef ref) {
+    final id = conversationId;
+    if (id == null) {
+      ref.invalidate(allFavoritesProvider);
+    } else {
+      ref.invalidate(favoriteMessagesProvider(id));
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final favorites = ref.watch(favoriteMessagesProvider(conversationId));
+    final id = conversationId;
+    final favorites = id == null
+        ? ref.watch(allFavoritesProvider)
+        : ref.watch(favoriteMessagesProvider(id));
+    final titles = id != null
+        ? const <String, String>{}
+        : {
+            for (final c in ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+              c.id: c.title,
+          };
     return Scaffold(
       backgroundColor: PrivioPalette.of(context).sheet,
       appBar: AppBar(title: Text(L.t.messagesFavoris)),
@@ -280,11 +299,19 @@ class FavoritesScreen extends ConsumerWidget {
           separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (context, i) {
             final r = value[i];
+            final target = id ?? r.conversationId;
+            final sender = r.senderName ?? L.t.vous;
             return ListTile(
               key: Key('favorite.${r.id}'),
               title: Text(messageRefPreview(r), maxLines: 3, overflow: TextOverflow.ellipsis),
               subtitle: Text(
-                '${r.senderName ?? L.t.vous} · ${receiptTime(r.sentAt)}',
+                id == null
+                    ? L.t.favoriteLine(
+                        titles[r.conversationId] ?? '',
+                        sender,
+                        receiptTime(r.sentAt),
+                      )
+                    : '$sender · ${receiptTime(r.sentAt)}',
                 style: theme.textTheme.bodySmall,
               ),
               trailing: IconButton(
@@ -300,19 +327,21 @@ class FavoritesScreen extends ConsumerWidget {
                           .showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
                     }
                   }
-                  ref.invalidate(favoriteMessagesProvider(conversationId));
+                  _refresh(ref);
                 },
               ),
-              onTap: () {
-                ref.read(jumpToMessageProvider.notifier).request(conversationId, r.id);
-                context.go(Routes.chat(conversationId));
-              },
+              onTap: target == null
+                  ? null
+                  : () {
+                      ref.read(jumpToMessageProvider.notifier).request(target, r.id);
+                      context.go(Routes.chat(target));
+                    },
             );
           },
         ),
         AsyncError(:final error) => ErrorView(
           message: toAppFailure(error).message,
-          onRetry: () => ref.invalidate(favoriteMessagesProvider(conversationId)),
+          onRetry: () => _refresh(ref),
         ),
         _ => const LoadingView(),
       },

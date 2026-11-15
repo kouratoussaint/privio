@@ -9,6 +9,7 @@ import 'package:privio/domain/models/account.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 4.2 — verrouillage de l'application (SEC-004), via les écrans réels.
 const _pin = '258014';
@@ -85,15 +86,11 @@ void main() {
     await _start(tester, deps);
     await tester.tap(_tab('Paramètres'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('settings.lock')),
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
+    await openSettingsEntry(tester, 'settings.security');
     expect(find.text('Désactivé'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('settings.lock')));
+    await tester.ensureVisible(find.byKey(const Key('security.lock')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settings.lock')));
+    await tester.tap(find.byKey(const Key('security.lock')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('lock.enabled')));
     await tester.pumpAndSettle();
@@ -223,14 +220,10 @@ void main() {
     await _type(tester, _pin);
     await tester.tap(_tab('Paramètres'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('settings.lock')),
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.ensureVisible(find.byKey(const Key('settings.lock')));
+    await openSettingsEntry(tester, 'settings.security');
+    await tester.ensureVisible(find.byKey(const Key('security.lock')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settings.lock')));
+    await tester.tap(find.byKey(const Key('security.lock')));
     await tester.pumpAndSettle();
 
     // Changer le code.

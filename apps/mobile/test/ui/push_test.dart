@@ -5,6 +5,7 @@ import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Lot 4.1 — notifications (jeton, interrupteur, déconnexion, ouverture d'une discussion).
 TestDeps _deps() =>
@@ -31,11 +32,7 @@ Future<void> _launch(WidgetTester tester, TestDeps deps) async {
 Future<void> _openSettingsSwitch(WidgetTester tester) async {
   await tester.tap(find.text('Paramètres'));
   await tester.pumpAndSettle();
-  await tester.scrollUntilVisible(
-    find.byKey(const Key('settings.push')),
-    200,
-    scrollable: find.byType(Scrollable).last,
-  );
+  await openSettingsEntry(tester, 'settings.notifications');
   // En haut de l'écran : la barre de navigation ne doit pas recouvrir l'interrupteur.
   await tester.ensureVisible(find.byKey(const Key('settings.push')));
   await tester.pumpAndSettle();

@@ -5,6 +5,7 @@ import 'package:privio/app.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/settings_nav.dart';
 
 /// Parcours critique complet avec le vrai routeur et des services simulés :
 /// onboarding → accueil → téléphone → OTP → profil → autorisations → discussions.
@@ -73,6 +74,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Toussaint'), findsOneWidget);
     expect(find.text('@toussaint_bf'), findsOneWidget); // carte de profil
+    await openSettingsEntry(tester, 'settings.privacy');
+    await scrollToKey(tester, 'settings.discoverable');
     expect(
       tester.widget<SwitchListTile>(find.byKey(const Key('settings.discoverable'))).value,
       isFalse,

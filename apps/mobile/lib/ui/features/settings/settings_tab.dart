@@ -4,31 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/app_failure.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
-import '../../../core/util/reactions.dart';
 import '../../../router/routes.dart';
-import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
-import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
-import '../../../state/push_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/avatar.dart';
-import '../lock/app_lock_screens.dart' show delayLabel;
 import '../../core/widgets/brand_scaffold.dart';
 import '../../core/widgets/settings_card.dart';
 import 'my_profile_screen.dart';
-import '../../../state/feedback_providers.dart';
-import 'wallpaper.dart';
 import 'appearance_screen.dart';
 import '../../../data/services/share_service.dart';
 import 'language_screen.dart';
 import '../../../state/appearance_providers.dart';
 
-/// Écran 22 — paramètres (design lot 2.D) : profil, confidentialité, appareil, déconnexion.
+/// Écran 22 — paramètres (design lot 2.D, réorganisés au lot 8.3a) : profil, puis une ligne
+/// par écran (Mon compte, Préférences, Ce téléphone, Privio), déconnexion.
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({super.key});
 
@@ -51,51 +44,12 @@ class SettingsTab extends ConsumerWidget {
     if (ok == true) await ref.read(sessionControllerProvider.notifier).signOut();
   }
 
-  Future<void> _chooseQuickReaction(BuildContext context, WidgetRef ref) async {
-    final current = ref.read(quickReactionProvider).value ?? '❤️';
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(PrivioSpacing.l, 0, PrivioSpacing.l, PrivioSpacing.l),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: PrivioSpacing.s,
-            children: [
-              for (final e in kQuickReactions)
-                ChoiceChip(
-                  key: Key('quick.$e'),
-                  selected: e == current,
-                  label: Text(e, style: const TextStyle(fontSize: 22)),
-                  onSelected: (_) => Navigator.pop(ctx, e),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (picked != null) await ref.read(quickReactionProvider.notifier).set(picked);
-  }
-
-  Future<void> _toggleDiscoverable(BuildContext context, WidgetRef ref, bool value) async {
-    try {
-      await ref.read(sessionControllerProvider.notifier).setPhoneDiscoverable(value);
-    } on Object catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final p = PrivioPalette.of(context);
     final account = ref.watch(sessionControllerProvider).value?.account;
     final profile = account?.profile;
-    final blockedCount = ref.watch(blockedUsersProvider).value?.length;
     final secondary = theme.colorScheme.onSurfaceVariant;
 
     return BrandScaffold(
@@ -145,6 +99,17 @@ class SettingsTab extends ConsumerWidget {
                               ],
                             ),
                           ),
+                          // Lot 8.3a : mon QR code, sans passer par Ma fiche.
+                          IconButton(
+                            key: const Key('settings.qr'),
+                            tooltip: L.t.monQrCode,
+                            icon: Icon(Icons.qr_code_2_rounded, color: p.accentText),
+                            onPressed: () => showMyQrCode(
+                              context,
+                              handle: profile.handle,
+                              name: profile.displayName,
+                            ),
+                          ),
                           Icon(Icons.chevron_right, color: secondary),
                         ],
                       ),
@@ -152,198 +117,83 @@ class SettingsTab extends ConsumerWidget {
                   ),
                 ],
               ),
-            SettingsSectionTitle(L.t.confidentialite),
-            // Lot 7.1a : « À propos » (140 caractères), visible selon Confidentialité.
-            if (profile != null)
-              SettingsCard(
-                children: [
-                  ListTile(
-                    key: const Key('settings.about'),
-                    leading: Icon(Icons.info_outline, color: p.accentText),
-                    title: Text(L.t.propos),
-                    subtitle: Text(
-                      (profile.about ?? '').isEmpty
-                          ? L.t.ajouterCourtTextePresentation
-                          : profile.about!,
-                    ),
-                    trailing: Icon(Icons.edit_outlined, color: secondary),
-                    onTap: () => editMyAbout(context, ref, profile.about),
-                  ),
-                ],
-              ),
-            if (profile != null) const SizedBox(height: PrivioSpacing.l),
+            // Lot 8.3a : une ligne par écran, regroupées par thème.
+            SettingsSectionTitle(L.t.settingsAccountSection),
             SettingsCard(
               children: [
-                ListTile(
+                _Entry(
                   key: const Key('settings.privacy'),
-                  leading: Icon(Icons.shield_outlined, color: p.accentText),
-                  title: Text(L.t.confidentialite),
-                  subtitle: Text(L.t.lignePhotoAccusesLectureInvitations),
-                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  icon: Icons.shield_outlined,
+                  title: L.t.confidentialite,
+                  subtitle: L.t.settingsPrivacySubtitle,
                   onTap: () => context.push(Routes.privacy),
                 ),
                 const SettingsDivider(),
-                SwitchListTile(
-                  key: const Key('settings.discoverable'),
-                  value: account?.phoneDiscoverable ?? false,
-                  onChanged: account == null ? null : (v) => _toggleDiscoverable(context, ref, v),
-                  secondary: Icon(Icons.phone_outlined, color: p.accentText),
-                  title: Text(L.t.meTrouverParMonNumero),
-                  subtitle: Text(
-                    (account?.phoneDiscoverable ?? false)
-                        ? L.t.activeOnPeutAussiVous
-                        : profile == null
-                        ? L.t.desactiveOnVousTrouveSeulement
-                        : L.t.desactiveOnVousTrouveSeulement2(profile.handle),
-                  ),
-                ),
-                const SettingsDivider(),
-                ListTile(
-                  key: const Key('settings.blocked'),
-                  leading: Icon(Icons.block, color: p.accentText),
-                  title: Text(L.t.personnesBloquees),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (blockedCount != null)
-                        Text(
-                          '$blockedCount',
-                          style: theme.textTheme.bodyMedium?.copyWith(color: secondary),
-                        ),
-                      const SizedBox(width: PrivioSpacing.xs),
-                      Icon(Icons.chevron_right, color: secondary),
-                    ],
-                  ),
-                  onTap: () => context.push(Routes.blockedUsers),
-                ),
-                const SettingsDivider(),
-                ListTile(
-                  key: const Key('settings.lock'),
-                  leading: Icon(Icons.lock_outline, color: p.accentText),
-                  title: Text(L.t.verrouillageApplication),
-                  subtitle: Text(
-                    (ref.watch(appLockProvider).value?.enabled ?? false)
-                        ? L.t.activeTolowercase(
-                            delayLabel(ref.watch(appLockProvider).value!.config.delaySeconds)
-                                .toLowerCase(),
-                          )
-                        : L.t.desactive2,
-                  ),
-                  trailing: Icon(Icons.chevron_right, color: secondary),
-                  onTap: () => context.push(Routes.appLock),
+                _Entry(
+                  key: const Key('settings.security'),
+                  icon: Icons.lock_outline,
+                  title: L.t.securite,
+                  subtitle: L.t.settingsSecuritySubtitle,
+                  onTap: () => context.push(Routes.security),
                 ),
               ],
             ),
-            SettingsSectionTitle(L.t.notificationsGestes),
+            SettingsSectionTitle(L.t.settingsPreferencesSection),
             SettingsCard(
               children: [
-                SwitchListTile(
-                  key: const Key('settings.push'),
-                  value: ref.watch(pushProvider).value ?? false,
-                  onChanged: (v) => ref.read(pushProvider.notifier).setEnabled(v),
-                  secondary: Icon(Icons.notifications_outlined, color: p.accentText),
-                  title: Text(L.t.notifications),
-                  subtitle: Text(L.t.sansNomNiContenu),
+                _Entry(
+                  key: const Key('settings.notifications'),
+                  icon: Icons.notifications_outlined,
+                  title: L.t.notificationsSons,
+                  subtitle: L.t.settingsNotificationsSubtitle,
+                  onTap: () => context.push(Routes.notificationSettings),
                 ),
                 const SettingsDivider(),
-                // Lot 7.2b2 : sons courts et vibrations (activés par défaut).
-                SwitchListTile(
-                  key: const Key('settings.sounds'),
-                  value: ref.watch(soundsEnabledProvider).value ?? true,
-                  secondary: Icon(Icons.volume_up_outlined, color: p.accentText),
-                  title: Text(L.t.sonsVibrations),
-                  subtitle: Text(L.t.envoiReceptionEffacementRienMode),
-                  onChanged: (v) => ref.read(soundsEnabledProvider.notifier).set(v),
-                ),
-                const SettingsDivider(),
-                // Lot 8.2a : langue de l'application.
-                ListTile(
-                  key: const Key('settings.language'),
-                  leading: Icon(Icons.translate_rounded, color: p.accentText),
-                  title: Text(L.t.languageTitle),
-                  subtitle: Text(
-                    ref.watch(releasedLanguagesProvider).length < 2
-                        ? '${kLanguages[ref.watch(appearanceProvider).value?.language ?? 'fr']} · '
-                              '${L.t.languageSubtitleSoon}'
-                        : kLanguages[ref.watch(appearanceProvider).value?.language ?? 'fr'] ?? '',
-                  ),
-                  trailing: Icon(Icons.chevron_right, color: secondary),
-                  onTap: () => Navigator.of(
-                    context,
-                    rootNavigator: true,
-                  ).push(MaterialPageRoute<void>(builder: (_) => const LanguageScreen())),
+                _Entry(
+                  key: const Key('settings.chats'),
+                  icon: Icons.forum_outlined,
+                  title: L.t.discussions,
+                  subtitle: L.t.settingsChatsSubtitle,
+                  onTap: () => context.push(Routes.chatSettings),
                 ),
                 const SettingsDivider(),
                 // Lot 8.1a : thème et taille du texte.
-                ListTile(
+                _Entry(
                   key: const Key('settings.appearance'),
-                  leading: Icon(Icons.palette_outlined, color: p.accentText),
-                  title: Text(L.t.apparence),
-                  subtitle: Text(L.t.themeClairOuSombreTaille),
-                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  icon: Icons.palette_outlined,
+                  title: L.t.apparence,
+                  subtitle: L.t.themeClairOuSombreTaille,
                   onTap: () => Navigator.of(
                     context,
                     rootNavigator: true,
                   ).push(MaterialPageRoute<void>(builder: (_) => const AppearanceScreen())),
                 ),
                 const SettingsDivider(),
-                // Lot 7.3a : fond d'écran par défaut des discussions.
-                ListTile(
-                  key: const Key('settings.wallpaper'),
-                  leading: Icon(Icons.wallpaper_outlined, color: p.accentText),
-                  title: Text(L.t.fondEcranDiscussions),
-                  subtitle: Text(L.t.motifsCouleursOuVosPhotos),
-                  trailing: Icon(Icons.chevron_right, color: secondary),
-                  // Au-dessus des onglets, comme les autres écrans des Paramètres.
+                // Lot 8.2a : langue de l'application.
+                _Entry(
+                  key: const Key('settings.language'),
+                  icon: Icons.translate_rounded,
+                  title: L.t.languageTitle,
+                  subtitle: ref.watch(releasedLanguagesProvider).length < 2
+                      ? '${kLanguages[ref.watch(appearanceProvider).value?.language ?? 'fr']} · '
+                            '${L.t.languageSubtitleSoon}'
+                      : kLanguages[ref.watch(appearanceProvider).value?.language ?? 'fr'] ?? '',
                   onTap: () => Navigator.of(
                     context,
                     rootNavigator: true,
-                  ).push(MaterialPageRoute<void>(builder: (_) => const WallpaperScreen())),
-                ),
-                const SettingsDivider(),
-                // Lot 7.2b1 : groupes séparés des discussions (par défaut) ou ensemble.
-                SwitchListTile(
-                  key: const Key('settings.groups_together'),
-                  value: ref.watch(groupsInDiscussionsProvider).value ?? false,
-                  secondary: Icon(Icons.forum_outlined, color: p.accentText),
-                  title: Text(L.t.groupesDansDiscussions),
-                  subtitle: Text(
-                    ref.watch(groupsInDiscussionsProvider).value ?? false
-                        ? L.t.groupesApparaissentAussiDansDiscussions
-                        : L.t.separesGroupesSontSeulementDans,
-                  ),
-                  onChanged: (v) => ref.read(groupsInDiscussionsProvider.notifier).set(v),
-                ),
-                const SettingsDivider(),
-                ListTile(
-                  key: const Key('settings.quick_reaction'),
-                  leading: Icon(Icons.touch_app_outlined, color: p.accentText),
-                  title: Text(L.t.reactionDoubleAppui),
-                  subtitle: Text(L.t.toucherDeuxFoisMessagePour),
-                  trailing: Text(
-                    ref.watch(quickReactionProvider).value ?? '❤️',
-                    style: theme.textTheme.titleLarge,
-                  ),
-                  onTap: () => _chooseQuickReaction(context, ref),
+                  ).push(MaterialPageRoute<void>(builder: (_) => const LanguageScreen())),
                 ),
               ],
             ),
             SettingsSectionTitle(L.t.ceTelephone),
             SettingsCard(
               children: [
-                ListTile(
+                _Entry(
                   key: const Key('settings.storage'),
-                  leading: Icon(Icons.data_saver_on_outlined, color: p.accentText),
-                  title: Text(L.t.stockageDonnees),
-                  subtitle: Text(L.t.telechargementPhotosDonneesUtiliseesEspace),
-                  trailing: Icon(Icons.chevron_right, color: secondary),
+                  icon: Icons.data_saver_on_outlined,
+                  title: L.t.stockageDonnees,
+                  subtitle: L.t.telechargementPhotosDonneesUtiliseesEspace,
                   onTap: () => context.push(Routes.storage),
-                ),
-                const SettingsDivider(),
-                ListTile(
-                  leading: Icon(Icons.phone_android, color: p.accentText),
-                  title: Text(L.t.seulAppareilConnecte),
-                  subtitle: Text(L.t.connexionSurAutreTelephoneDeconnecte),
                 ),
               ],
             ),
@@ -364,7 +214,7 @@ class SettingsTab extends ConsumerWidget {
                 ],
               ),
             ],
-            const SizedBox(height: PrivioSpacing.l),
+            SettingsSectionTitle(L.t.settingsPrivioSection),
             SettingsCard(
               children: [
                 // Lot 8.1c : inviter un ami (partage de mon identifiant).
@@ -420,4 +270,29 @@ class SettingsTab extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Ligne des Paramètres qui ouvre un écran.
+class _Entry extends StatelessWidget {
+  const _Entry({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: Icon(icon, color: PrivioPalette.of(context).accentText),
+    title: Text(title),
+    subtitle: Text(subtitle),
+    trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+    onTap: onTap,
+  );
 }

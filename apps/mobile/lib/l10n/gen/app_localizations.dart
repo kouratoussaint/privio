@@ -622,7 +622,7 @@ abstract class AppLocalizations {
   /// **'Au maximum {maxLength} caractères.'**
   String maximumMaxlengthCaracteres(Object maxLength);
 
-  /// Écran : core/handle/handle_rules.dart
+  /// Écran : core/handle/handle_rules.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'Lettres minuscules sans accent, chiffres, « _ » et « . » uniquement.'**
@@ -886,13 +886,13 @@ abstract class AppLocalizations {
   /// **'Répondue'**
   String get repondue;
 
-  /// Écran : main.dart
+  /// Écran : main.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'Configuration absente : compilez avec --dart-define=SUPABASE_URL=… et --dart-define=SUPABASE_PUBLISHABLE_KEY=… (voir README).'**
   String get configurationAbsenteCompilezAvecDart;
 
-  /// Écran : main.dart
+  /// Écran : main.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'Clé refusée : une clé SECRÈTE Supabase ne doit jamais être intégrée à l\'application. Utilisez la clé publique (publishable).'**
@@ -4162,7 +4162,7 @@ abstract class AppLocalizations {
   /// **'Propose de vider la discussion'**
   String get proposeViderDiscussion;
 
-  /// Écran : ui/features/home/discussions_tab.dart
+  /// Écran : ui/features/home/discussions_tab.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'Durée des messages : {ttlSeconds}'**
@@ -4186,7 +4186,7 @@ abstract class AppLocalizations {
   /// **'Fiche de {title}'**
   String ficheTitle(Object title);
 
-  /// Écran : ui/features/home/discussions_tab.dart
+  /// Écran : ui/features/home/discussions_tab.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'s\'efface dans {now}'**
@@ -4636,7 +4636,7 @@ abstract class AppLocalizations {
   /// **'Des messages qui disparaissent'**
   String get messagesQuiDisparaissent;
 
-  /// Écran : ui/features/onboarding/onboarding_screen.dart
+  /// Écran : ui/features/onboarding/onboarding_screen.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'Chaque message est effacé automatiquement 72 heures après son envoi, qu\'il ait été lu ou non.'**
@@ -4660,7 +4660,7 @@ abstract class AppLocalizations {
   /// **'Pas de transfert ni de copie'**
   String get pasTransfertNiCopie;
 
-  /// Écran : ui/features/onboarding/onboarding_screen.dart
+  /// Écran : ui/features/onboarding/onboarding_screen.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'Les messages ne peuvent être ni transférés, ni copiés, ni enregistrés dans la galerie. Les captures d\'écran sont bloquées sur Android ; une photo prise avec un autre appareil reste toutefois possible.'**
@@ -4678,7 +4678,7 @@ abstract class AppLocalizations {
   /// **'Une messagerie privée où les messages s’effacent tout seuls. Ce qu’il faut savoir :'**
   String get messageriePriveeOuMessagesEffacent;
 
-  /// Écran : ui/features/onboarding/onboarding_screen.dart
+  /// Écran : ui/features/onboarding/onboarding_screen.dart — typo-fr: ignore (texte validé, inchangé)
   ///
   /// In fr, this message translates to:
   /// **'J\'ai lu et compris ces engagements.'**
@@ -6381,6 +6381,126 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{h} h {m}'**
   String ttlHoursMinutes(Object h, Object m);
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon compte'**
+  String get settingsAccountSection;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Préférences'**
+  String get settingsPreferencesSection;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Privio'**
+  String get settingsPrivioSection;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui voit quoi, demandes, accusés de lecture, personnes bloquées'**
+  String get settingsPrivacySubtitle;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Verrouillage, changement de numéro, captures d’écran'**
+  String get settingsSecuritySubtitle;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications et sons'**
+  String get notificationsSons;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications sans contenu, sons et vibrations'**
+  String get settingsNotificationsSubtitle;
+
+  /// Écran : Paramètres
+  ///
+  /// In fr, this message translates to:
+  /// **'Fond d’écran, réaction du double appui, archivées'**
+  String get settingsChatsSubtitle;
+
+  /// Écran : Confidentialité
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui peut me joindre'**
+  String get privacyReachSection;
+
+  /// Écran : Liste des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Archivés'**
+  String get archivesTitle;
+
+  /// Écran : Listes des discussions et des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout marquer comme lu'**
+  String get toutMarquerCommeLu;
+
+  /// Écran : Listes des discussions et des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout marquer comme lu ?'**
+  String get markAllReadTitle;
+
+  /// Écran : Listes des discussions et des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, one{Les messages non lus d’une discussion seront marqués comme lus.} other{Les messages non lus de {n} discussions seront marqués comme lus.}} Si vos accusés de lecture sont activés, les personnes verront « lu ».'**
+  String markAllReadBody(int n);
+
+  /// Écran : Listes des discussions et des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Marquer comme lu'**
+  String get marquerCommeLu;
+
+  /// Écran : Listes des discussions et des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, one{1 discussion marquée comme lue.} other{{n} discussions marquées comme lues.}}'**
+  String markAllReadDone(int n);
+
+  /// Écran : Listes des discussions et des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Verrouiller Privio maintenant'**
+  String get verrouillerMaintenant;
+
+  /// Écran : Liste des discussions (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandes de connexion ({n})'**
+  String demandesConnexionCount(int n);
+
+  /// Écran : Liste des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandes envoyées ({n})'**
+  String demandesEnvoyeesCount(int n);
+
+  /// Écran : Liste des groupes (menu ⋮)
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune demande en attente.'**
+  String get aucuneDemandeEnvoyee;
+
+  /// Écran : Messages favoris (toutes les discussions)
+  ///
+  /// In fr, this message translates to:
+  /// **'{conversation} · {sender} · {time}'**
+  String favoriteLine(Object conversation, Object sender, Object time);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

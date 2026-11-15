@@ -15,6 +15,8 @@ import '../ui/features/groups/join_group_screen.dart';
 import '../ui/features/home/archived_screen.dart';
 import '../ui/features/lock/app_lock_screens.dart';
 import '../ui/features/settings/privacy_screen.dart';
+import '../ui/features/settings/settings_sections.dart';
+import '../ui/features/conversations/message_extras.dart' show FavoritesScreen;
 import '../ui/features/settings/storage_screen.dart';
 import '../ui/features/home/discussions_tab.dart';
 import '../ui/features/home/groups_tab.dart';
@@ -85,6 +87,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.storage, builder: (_, _) => const StorageScreen()),
       GoRoute(path: Routes.privacy, builder: (_, _) => const PrivacyScreen()),
+      GoRoute(path: Routes.security, builder: (_, _) => const SecurityScreen()),
+      GoRoute(
+        path: Routes.notificationSettings,
+        builder: (_, _) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(path: Routes.chatSettings, builder: (_, _) => const ChatSettingsScreen()),
+      GoRoute(path: Routes.favorites, builder: (_, _) => const FavoritesScreen()),
       GoRoute(
         path: '/chat/:id',
         builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']!),
