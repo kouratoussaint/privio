@@ -12,8 +12,13 @@ abstract interface class AccountApi {
   Future<Profile> createProfile({required String handle, required String displayName});
   Future<bool> isHandleAvailable(String handle);
   Future<bool> setPhoneDiscoverable(bool value);
-  Future<String> registerDevice({required String appVersion});
+
+  /// Lot 5.6 : modèle et version d'Android, visibles par l'assistance (console).
+  Future<String> registerDevice({required String appVersion, String? model, String? osVersion});
   Future<void> unregisterCurrentDevice();
+
+  /// Lot 5.6 : nouvel identifiant, seulement quand l'équipe Privio a remplacé l'ancien.
+  Future<String> chooseNewHandle(String handle);
 
   /// Jeton de notification de CET appareil (lot 4.1).
   Future<void> registerPushToken(String token);
@@ -86,9 +91,20 @@ class SupabaseAccountApi implements AccountApi {
       await _rpc('set_phone_discoverable', {'p_discoverable': value}) as bool;
 
   @override
-  Future<String> registerDevice({required String appVersion}) async =>
-      await _rpc('register_device', {'p_platform': 'android', 'p_app_version': appVersion})
-          as String;
+  Future<String> registerDevice({
+    required String appVersion,
+    String? model,
+    String? osVersion,
+  }) async => await _rpc('register_device', {
+    'p_platform': 'android',
+    'p_app_version': appVersion,
+    'p_model': model,
+    'p_os_version': osVersion,
+  }) as String;
+
+  @override
+  Future<String> chooseNewHandle(String handle) async =>
+      await _rpc('choose_new_handle', {'p_handle': handle}) as String;
 
   @override
   Future<void> unregisterCurrentDevice() async => _rpc('unregister_current_device');

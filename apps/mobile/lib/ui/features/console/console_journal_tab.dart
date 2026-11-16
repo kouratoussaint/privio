@@ -180,10 +180,17 @@ String _who(JournalEntry e) {
   return 'dossier';
 }
 
+/// Lot 5.6 : filtre de la liste des comptes (« , nouveaux (7 j) »), rien pour « Tous ».
+String _filter(JournalEntry e) {
+  final f = e.detail['filter'];
+  if (f == null || f == 'all') return '';
+  return ', ${(kAccountFilters[f] ?? '$f').toLowerCase()}';
+}
+
 String journalText(JournalEntry e, String unit) => switch (e.action) {
   'dashboard' => 'Consultation du tableau de bord',
   'stats' => 'Consultation des statistiques',
-  'account_list' => 'Liste des comptes consultée (page ${e.detail['page'] ?? 1})',
+  'account_list' => 'Liste des comptes consultée (page ${e.detail['page'] ?? 1}${_filter(e)})',
   'evidence' => 'Lecture d’une copie signalée (${_who(e)})',
   'account' => 'Fiche de ${_who(e)} consultée',
   'account_search' =>
@@ -191,6 +198,14 @@ String journalText(JournalEntry e, String unit) => switch (e.action) {
   'disconnect' => 'Téléphone de ${_who(e)} déconnecté',
   'two_step_reset' => 'Vérification en deux étapes de ${_who(e)} réinitialisée',
   'reply' => 'Réponse à la demande d’assistance de ${_who(e)}',
+  // Lot 5.6
+  'avatar_remove' => 'Photo de profil de ${_who(e)} retirée',
+  'handle_reset' =>
+    'Nouvel identifiant imposé à @${e.detail['old_handle'] ?? '—'} (provisoire : ${_who(e)})',
+  'reserved_handle' =>
+    e.detail['reserved'] == false
+        ? 'Identifiant ${_who(e)} libéré'
+        : 'Identifiant ${_who(e)} réservé',
   'lift' => 'Réactivation de ${_who(e)}',
   'appeal' =>
     'Contestation de ${_who(e)}\u202F: ${e.detail['lift'] == true ? 'suspension levée' : 'suspension maintenue'}',
@@ -237,6 +252,8 @@ class _EntryTile extends StatelessWidget {
         'disconnect' => Icons.phonelink_erase,
         'two_step_reset' => Icons.lock_reset,
         'reply' => Icons.support_agent,
+        'avatar_remove' => Icons.hide_image_outlined,
+        'handle_reset' || 'reserved_handle' => Icons.alternate_email,
         _ => Icons.visibility_outlined,
       }),
       title: Text(journalText(e, unit)),

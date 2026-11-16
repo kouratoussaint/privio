@@ -436,13 +436,60 @@ const kJournalTypes = <String, String>{
 
 /// Même classement que le serveur (`private.journal_type`).
 String journalTypeOf(String action) => switch (action) {
-  'account' || 'account_search' || 'account_list' || 'lift' => 'accounts',
+  'account' ||
+  'account_search' ||
+  'account_list' ||
+  'lift' ||
+  'avatar_remove' ||
+  'handle_reset' => 'accounts',
   'moderation' || 'evidence' || 'appeal' => 'reports',
-  'policy' => 'settings',
+  'policy' || 'reserved_handle' => 'settings',
   'two_step_reset' || 'disconnect' => 'security',
   'reply' => 'support',
   _ => 'views',
 };
+
+/// Lot 5.6 : filtres de la liste des comptes (clé serveur → libellé), dans l'ordre.
+const kAccountFilters = <String, String>{
+  'all': 'Tous',
+  'suspended': 'Suspendus',
+  'deleted': 'Supprimés',
+  'new': 'Nouveaux (7 j)',
+  'inactive': 'Inactifs (30 j)',
+  'two_step': 'Deux étapes',
+};
+
+/// Lot 5.6 : identifiants réservés (mots toujours réservés + ajoutés depuis la console).
+class ReservedHandles {
+  const ReservedHandles({this.base = const [], this.added = const []});
+
+  final List<String> base;
+  final List<ReservedHandle> added;
+
+  factory ReservedHandles.fromJson(Map<String, dynamic> j) => ReservedHandles(
+    base: [for (final h in (j['base'] as List? ?? const [])) h as String],
+    added: [
+      for (final r in (j['added'] as List? ?? const []))
+        ReservedHandle.fromJson(Map<String, dynamic>.from(r as Map)),
+    ],
+  );
+}
+
+class ReservedHandle {
+  const ReservedHandle({required this.handle, required this.createdAt, this.inUse = false});
+
+  final String handle;
+  final DateTime createdAt;
+
+  /// Déjà porté par un compte (la réservation ne le lui retire pas).
+  final bool inUse;
+
+  factory ReservedHandle.fromJson(Map<String, dynamic> j) => ReservedHandle(
+    handle: j['handle'] as String,
+    createdAt: DateTime.parse(j['created_at'] as String),
+    inUse: j['in_use'] as bool? ?? false,
+  );
+}
 
 /// Page d'une liste paginée.
 class ConsolePage<T> {
@@ -452,6 +499,7 @@ class ConsolePage<T> {
     required this.size,
     required this.rows,
     this.letters = const {},
+    this.counts = const {},
   });
 
   final int total;
@@ -461,6 +509,9 @@ class ConsolePage<T> {
 
   /// Comptes : première position (0…) de chaque initiale (A–Z, « # » pour le reste).
   final Map<String, int> letters;
+
+  /// Lot 5.6 : comptes, nombre par filtre (« all », « suspended »…).
+  final Map<String, int> counts;
 
   int get pages => total == 0 ? 1 : (total + size - 1) ~/ size;
 

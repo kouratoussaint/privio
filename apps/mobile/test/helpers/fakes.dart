@@ -12,6 +12,7 @@ import 'package:privio/core/theme/privio_theme.dart';
 import 'package:privio/data/services/account_api.dart';
 import 'package:privio/data/services/audio/audio_engine.dart';
 import 'package:privio/data/services/device_services.dart';
+import 'package:privio/data/services/device_info.dart';
 import 'package:privio/data/storage/app_lock_store.dart';
 import 'package:privio/state/app_lock_providers.dart';
 import 'package:privio/state/data_providers.dart';
@@ -291,10 +292,30 @@ class FakeAccountApi implements AccountApi {
   Future<bool> setPhoneDiscoverable(bool value) async => value;
 
   @override
-  Future<String> registerDevice({required String appVersion}) async {
+  Future<String> registerDevice({
+    required String appVersion,
+    String? model,
+    String? osVersion,
+  }) async {
     if (_pending) throw const AppFailure(FailureCode.authRequired);
     registeredDevices++;
+    lastDevice = (model, osVersion);
     return 'device-1';
+  }
+
+  /// Lot 5.6 : dernier modèle et version d'Android transmis.
+  (String?, String?)? lastDevice;
+
+  /// Lot 5.6 : identifiants choisis après un identifiant imposé.
+  final chosenHandles = <String>[];
+
+  @override
+  Future<String> chooseNewHandle(String handle) async {
+    if (!moderation.handleReset) throw const AppFailure(FailureCode.handleChangeNotAllowed);
+    if (takenHandles.contains(handle)) throw const AppFailure(FailureCode.handleTaken);
+    chosenHandles.add(handle);
+    moderation = ModerationStatus(suspension: moderation.suspension, warning: moderation.warning);
+    return handle;
   }
 
   @override
@@ -2807,9 +2828,14 @@ class FakeAdminApi implements AdminApi {
   final replies = <(String, String)>[];
 
   @override
-  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25}) async {
+  Future<ConsolePage<AccountHit>> accountsPage(
+    int page, {
+    int size = 25,
+    String filter = 'all',
+  }) async {
     if (!admin) throw const AppFailure(FailureCode.adminRequired);
     _audit('account_list');
+    accountFilters.add(filter);
     String key(String s) => s
         .toUpperCase()
         .replaceAll(RegExp('[ÀÂÄÁ]'), 'A')
@@ -2818,8 +2844,19 @@ class FakeAdminApi implements AdminApi {
         .replaceAll(RegExp('[ÔÖ]'), 'O')
         .replaceAll(RegExp('[ÛÜÙ]'), 'U')
         .replaceAll('Ç', 'C');
-    final all = accounts.values.toList()
-      ..sort((a, b) => key(a.displayName).compareTo(key(b.displayName)));
+    final now = DateTime.now();
+    bool matches(String f, ConsoleAccount a) => switch (f) {
+      'suspended' => a.suspended && !a.deleted,
+      'deleted' => a.deleted,
+      'new' => now.difference(a.createdAt).inDays < 7,
+      'inactive' => !a.deleted && now.difference(a.lastSeenAt ?? a.createdAt).inDays > 30,
+      'two_step' => a.twoStep,
+      _ => true,
+    };
+    final all = [
+      for (final a in accounts.values)
+        if (matches(filter, a)) a,
+    ]..sort((a, b) => key(a.displayName).compareTo(key(b.displayName)));
     final letters = <String, int>{};
     for (final (i, a) in all.indexed) {
       final c = key(a.displayName).isEmpty ? '#' : key(a.displayName)[0];
@@ -2830,17 +2867,62 @@ class FakeAdminApi implements AdminApi {
       page: page,
       size: size,
       letters: letters,
-      rows: [
-        for (final a in all.skip((page - 1) * size).take(size))
-          AccountHit(
-            userId: a.userId,
-            handle: a.handle,
-            displayName: a.displayName,
-            createdAt: a.createdAt,
-            suspended: a.suspended,
-          ),
-      ],
+      counts: {
+        for (final f in kAccountFilters.keys) f: accounts.values.where((a) => matches(f, a)).length,
+      },
+      rows: [for (final a in all.skip((page - 1) * size).take(size)) _hit(a)],
     );
+  }
+
+  AccountHit _hit(ConsoleAccount a) => AccountHit(
+    userId: a.userId,
+    handle: a.handle,
+    displayName: a.displayName,
+    createdAt: a.createdAt,
+    suspended: a.suspended,
+    deleted: a.deleted,
+    phoneE164: a.phoneE164,
+    avatarPath: a.avatarPath,
+  );
+
+  /// Lot 5.6
+  final accountFilters = <String>[];
+  final removedAvatars = <(String, String)>[];
+  final handleResets = <(String, String)>[];
+  final deviceDisconnects = <(String, String, String)>[];
+  final reservedAdded = <String>[];
+  final reservedBase = const ['privio', 'admin', 'support', 'moderation'];
+
+  @override
+  Future<void> removeAvatar(String userId, String note) async {
+    if (accounts[userId]?.protected ?? false) throw const AppFailure(FailureCode.adminProtected);
+    removedAvatars.add((userId, note));
+  }
+
+  @override
+  Future<String> resetHandle(String userId, String note) async {
+    if (accounts[userId]?.protected ?? false) throw const AppFailure(FailureCode.adminProtected);
+    handleResets.add((userId, note));
+    return 'compte_${userId.padRight(8, '0').substring(0, 8)}';
+  }
+
+  @override
+  Future<void> disconnectOneDevice(String userId, String deviceId, String note) async =>
+      deviceDisconnects.add((userId, deviceId, note));
+
+  @override
+  Future<ReservedHandles> reservedHandles() async => ReservedHandles(
+    base: reservedBase,
+    added: [
+      for (final h in reservedAdded) ReservedHandle(handle: h, createdAt: DateTime(2026, 11, 16)),
+    ],
+  );
+
+  @override
+  Future<void> reserveHandle(String handle, {required bool reserved}) async {
+    final h = handle.replaceFirst('@', '').toLowerCase();
+    if (reservedBase.contains(h)) throw const AppFailure(FailureCode.handleAlwaysReserved);
+    reserved ? reservedAdded.add(h) : reservedAdded.remove(h);
   }
 
   final journalQueries = <(String?, int?, int)>[];
@@ -2873,20 +2955,18 @@ class FakeAdminApi implements AdminApi {
   Future<List<AccountHit>> searchAccounts(String query) async {
     searches.add(query);
     final q = query.trim();
-    if (RegExp(r'^[+0-9 .-]+$').hasMatch(q) && q.replaceAll(RegExp('[^0-9]'), '').length < 8) {
-      throw const AppFailure(FailureCode.searchPhoneIncomplete);
+    if (RegExp(r'^[+0-9 .-]+$').hasMatch(q)) {
+      final digits = q.replaceAll(RegExp('[^0-9]'), '');
+      if (digits.length < 4) throw const AppFailure(FailureCode.searchPhoneIncomplete);
+      return [
+        for (final a in accounts.values)
+          if (a.phoneE164?.contains(digits) ?? false) _hit(a),
+      ];
     }
     final needle = q.toLowerCase().replaceFirst('@', '');
     return [
       for (final a in accounts.values)
-        if (a.handle.startsWith(needle) || a.displayName.toLowerCase().contains(needle))
-          AccountHit(
-            userId: a.userId,
-            handle: a.handle,
-            displayName: a.displayName,
-            createdAt: a.createdAt,
-            suspended: a.suspended,
-          ),
+        if (a.handle.startsWith(needle) || a.displayName.toLowerCase().contains(needle)) _hit(a),
     ];
   }
 
@@ -3033,6 +3113,7 @@ class TestDeps {
     networkMonitorProvider.overrideWithValue(network),
     authServiceProvider.overrideWithValue(auth),
     accountApiProvider.overrideWithValue(api),
+    deviceInfoProvider.overrideWithValue(const FakeDeviceInfo()),
     localFlagsProvider.overrideWithValue(flags),
     permissionGatewayProvider.overrideWithValue(permissions),
     appVersionProvider.overrideWithValue('0.1.0-test'),
@@ -3329,4 +3410,12 @@ class FakeCallTones implements CallTones {
   Future<void> ringback() async => log.add('ringback');
   @override
   Future<void> stop() async => log.add('stop');
+}
+
+/// Lot 5.6 : modèle et version d'Android d'un téléphone de test.
+class FakeDeviceInfo implements DeviceInfoSource {
+  const FakeDeviceInfo();
+
+  @override
+  Future<DeviceInfo> read() async => const DeviceInfo(model: 'Tecno Spark 10', osVersion: '13');
 }

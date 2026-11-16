@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_failure.dart';
+import '../data/services/device_info.dart';
 import '../domain/models/account.dart';
 import 'app_lock_providers.dart';
 import 'providers.dart';
@@ -99,6 +100,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     try {
       final account = await api.getMyAccount();
       _forcedNotice = null;
+      if (account.hasProfile) _refreshDeviceOnce();
       return SessionState(
         onboardingDone: onboardingDone,
         signedIn: true,
@@ -156,12 +158,35 @@ class SessionController extends AsyncNotifier<SessionState> {
     await _reload();
   }
 
+  /// Lot 5.6 : enregistre ce téléphone avec son modèle et sa version d'Android.
+  Future<void> _registerDevice() async {
+    _deviceRefreshed = true;
+    final info = await ref.read(deviceInfoProvider).read();
+    await ref
+        .read(accountApiProvider)
+        .registerDevice(
+          appVersion: ref.read(appVersionProvider),
+          model: info.model,
+          osVersion: info.osVersion,
+        );
+  }
+
+  /// Lot 5.6 : une fois par lancement, met à jour la version de l'app, le modèle et la
+  /// version d'Android de ce téléphone (sans effet si la session n'est pas prête).
+  bool _deviceRefreshed = false;
+
+  void _refreshDeviceOnce() {
+    if (_deviceRefreshed) return;
+    _deviceRefreshed = true;
+    unawaited(_registerDevice().catchError((Object _) {}));
+  }
+
   /// Après un OTP valide : enregistre cet appareil (révoque les autres), puis recharge.
   Future<void> onOtpVerified() async {
     _pendingNotice = null;
     _lastSignedIn = ref.read(authServiceProvider).hasSession;
     try {
-      await ref.read(accountApiProvider).registerDevice(appVersion: ref.read(appVersionProvider));
+      await _registerDevice();
     } on AppFailure catch (f) {
       // Lot 8.4a : compte protégé, code de vérification attendu (l'autre téléphone reste
       // connecté jusque-là).
@@ -176,7 +201,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     final api = ref.read(accountApiProvider);
     final r = await api.verifyTwoStep(pin);
     if (r.ok) {
-      await api.registerDevice(appVersion: ref.read(appVersionProvider));
+      await _registerDevice();
       await _reload();
     }
     return r;
@@ -187,7 +212,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     final api = ref.read(accountApiProvider);
     final s = await api.twoStepState();
     if (!s.pending) {
-      await api.registerDevice(appVersion: ref.read(appVersionProvider));
+      await _registerDevice();
     }
     await _reload();
   }

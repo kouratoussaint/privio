@@ -6037,5 +6037,12 @@
   "signupsClosedError": "Les inscriptions sont fermées pour le moment. Réessayez plus tard.",
   "@signupsClosedError": {
     "description": "Erreur : inscriptions fermées (lot 5.5)"
-  }
+  },
+  "saisissezAuMoins4Chiffres": "Saisissez au moins 4 chiffres du numéro.",
+  "handleChangeNotAllowedError": "Votre identifiant ne peut pas être changé.",
+  "handleAlwaysReservedError": "Ce mot est toujours réservé.",
+  "avatarNotFoundError": "Ce compte n’a plus de photo de profil.",
+  "deviceNotFoundError": "Cet appareil est déjà déconnecté.",
+  "choisissezUnNouvelIdentifiant": "Choisissez un nouvel identifiant",
+  "equipePrivioRemplaceIdentifiant": "L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas."
 }

@@ -230,10 +230,13 @@ class Sanction {
 
 /// Situation du compte connecté (écran « Compte suspendu », avertissement).
 class ModerationStatus {
-  const ModerationStatus({this.suspension, this.warning});
+  const ModerationStatus({this.suspension, this.warning, this.handleReset = false});
 
   final SuspensionInfo? suspension;
   final WarningInfo? warning;
+
+  /// Lot 5.6 : identifiant remplacé par l'équipe Privio ; en choisir un nouveau.
+  final bool handleReset;
 
   static const none = ModerationStatus();
 
@@ -243,6 +246,7 @@ class ModerationStatus {
     return ModerationStatus(
       suspension: s is Map ? SuspensionInfo.fromJson(Map<String, dynamic>.from(s)) : null,
       warning: w is Map ? WarningInfo.fromJson(Map<String, dynamic>.from(w)) : null,
+      handleReset: j['handle_reset'] as bool? ?? false,
     );
   }
 }
@@ -289,7 +293,8 @@ class WarningInfo {
 // Lot 5.4 : comptes et assistance
 // ---------------------------------------------------------------------------
 
-/// Résultat de recherche (jamais de numéro).
+/// Compte dans la liste ou la recherche de la console. Lot 5.6 : numéro et photo
+/// (visibles dans la console seulement).
 class AccountHit {
   const AccountHit({
     required this.userId,
@@ -298,6 +303,8 @@ class AccountHit {
     required this.createdAt,
     this.deleted = false,
     this.suspended = false,
+    this.phoneE164,
+    this.avatarPath,
   });
 
   final String userId;
@@ -306,6 +313,8 @@ class AccountHit {
   final DateTime createdAt;
   final bool deleted;
   final bool suspended;
+  final String? phoneE164;
+  final String? avatarPath;
 
   factory AccountHit.fromJson(Map<String, dynamic> j) => AccountHit(
     userId: j['user_id'] as String,
@@ -314,6 +323,68 @@ class AccountHit {
     createdAt: DateTime.parse(j['created_at'] as String),
     deleted: j['deleted'] as bool? ?? false,
     suspended: j['suspended'] as bool? ?? false,
+    phoneE164: j['phone_e164'] as String?,
+    avatarPath: j['avatar_path'] as String?,
+  );
+}
+
+/// Lot 5.6 : un téléphone (actif ou ancien) d'un compte, vu depuis la console.
+class ConsoleDevice {
+  const ConsoleDevice({
+    required this.id,
+    required this.platform,
+    required this.appVersion,
+    required this.createdAt,
+    required this.lastSeenAt,
+    this.model,
+    this.osVersion,
+    this.revokedAt,
+    this.revokedReason,
+    this.push = false,
+  });
+
+  final String id;
+  final String platform;
+  final String appVersion;
+  final DateTime createdAt;
+  final DateTime lastSeenAt;
+  final String? model;
+  final String? osVersion;
+  final DateTime? revokedAt;
+
+  /// new_device, logout, admin, account_deleted.
+  final String? revokedReason;
+  final bool push;
+
+  bool get active => revokedAt == null;
+
+  factory ConsoleDevice.fromJson(Map<String, dynamic> j) => ConsoleDevice(
+    id: j['id'] as String,
+    platform: j['platform'] as String? ?? 'android',
+    appVersion: j['app_version'] as String? ?? '?',
+    createdAt: DateTime.parse(j['created_at'] as String),
+    lastSeenAt: DateTime.parse(j['last_seen_at'] as String),
+    model: j['model'] as String?,
+    osVersion: j['os_version'] as String?,
+    revokedAt: DateTime.tryParse(j['revoked_at'] as String? ?? ''),
+    revokedReason: j['revoked_reason'] as String?,
+    push: j['push'] as bool? ?? false,
+  );
+}
+
+/// Lot 5.6 : action de l'administration sur un compte (photo retirée, identifiant imposé,
+/// téléphone déconnecté, deux étapes réinitialisées).
+class AccountAction {
+  const AccountAction({required this.action, required this.at, this.detail = const {}});
+
+  final String action;
+  final DateTime at;
+  final Map<String, dynamic> detail;
+
+  factory AccountAction.fromJson(Map<String, dynamic> j) => AccountAction(
+    action: j['action'] as String,
+    at: DateTime.parse(j['created_at'] as String),
+    detail: j['detail'] is Map ? Map<String, dynamic>.from(j['detail'] as Map) : const {},
   );
 }
 
@@ -344,13 +415,20 @@ class SupportRequest {
   );
 }
 
-/// Fiche d'un compte dans la console : aucun numéro, contact, discussion ni message.
+/// Fiche d'un compte dans la console : aucun contact, discussion ni message. Lot 5.6 :
+/// numéro, appareils et historique des actions de l'administration.
 class ConsoleAccount {
   const ConsoleAccount({
     required this.userId,
     required this.handle,
     required this.displayName,
     required this.createdAt,
+    this.phoneE164,
+    this.lastSeenAt,
+    this.handleReset = false,
+    this.twoStep = false,
+    this.devices = const [],
+    this.actions = const [],
     this.avatarPath,
     this.deleted = false,
     this.lastSeenDay,
@@ -372,6 +450,16 @@ class ConsoleAccount {
   final String handle;
   final String displayName;
   final DateTime createdAt;
+  final String? phoneE164;
+  final DateTime? lastSeenAt;
+
+  /// Identifiant imposé par l'équipe : la personne doit en choisir un autre.
+  final bool handleReset;
+  final bool twoStep;
+
+  /// Téléphones, du plus récent au plus ancien (10 au plus).
+  final List<ConsoleDevice> devices;
+  final List<AccountAction> actions;
   final String? avatarPath;
   final bool deleted;
   final DateTime? lastSeenDay;
@@ -400,6 +488,18 @@ class ConsoleAccount {
       handle: j['handle'] as String,
       displayName: j['display_name'] as String? ?? '',
       createdAt: DateTime.parse(j['created_at'] as String),
+      phoneE164: j['phone_e164'] as String?,
+      lastSeenAt: DateTime.tryParse(j['last_seen_at'] as String? ?? ''),
+      handleReset: j['handle_reset'] as bool? ?? false,
+      twoStep: j['two_step'] as bool? ?? false,
+      devices: [
+        for (final d in (j['devices'] as List? ?? const []))
+          ConsoleDevice.fromJson(Map<String, dynamic>.from(d as Map)),
+      ],
+      actions: [
+        for (final a in (j['actions'] as List? ?? const []))
+          AccountAction.fromJson(Map<String, dynamic>.from(a as Map)),
+      ],
       avatarPath: j['avatar_path'] as String?,
       deleted: j['deleted'] as bool? ?? false,
       lastSeenDay: DateTime.tryParse(j['last_seen_day'] as String? ?? ''),

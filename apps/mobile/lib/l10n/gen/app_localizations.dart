@@ -7389,6 +7389,48 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les inscriptions sont fermées pour le moment. Réessayez plus tard.'**
   String get signupsClosedError;
+
+  /// No description provided for @saisissezAuMoins4Chiffres.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez au moins 4 chiffres du numéro.'**
+  String get saisissezAuMoins4Chiffres;
+
+  /// No description provided for @handleChangeNotAllowedError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre identifiant ne peut pas être changé.'**
+  String get handleChangeNotAllowedError;
+
+  /// No description provided for @handleAlwaysReservedError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce mot est toujours réservé.'**
+  String get handleAlwaysReservedError;
+
+  /// No description provided for @avatarNotFoundError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce compte n’a plus de photo de profil.'**
+  String get avatarNotFoundError;
+
+  /// No description provided for @deviceNotFoundError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet appareil est déjà déconnecté.'**
+  String get deviceNotFoundError;
+
+  /// No description provided for @choisissezUnNouvelIdentifiant.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un nouvel identifiant'**
+  String get choisissezUnNouvelIdentifiant;
+
+  /// No description provided for @equipePrivioRemplaceIdentifiant.
+  ///
+  /// In fr, this message translates to:
+  /// **'L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas.'**
+  String get equipePrivioRemplaceIdentifiant;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

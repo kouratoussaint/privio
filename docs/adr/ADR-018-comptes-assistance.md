@@ -22,3 +22,5 @@
 ## Preuves
 pgTAP `21_comptes_assistance`, `scripts/ci/support_e2e.py` (dont la session réellement coupée
 par l'API), tests Flutter `test/ui/support_accounts_test.dart`.
+
+> **16/11/2026** : la règle « numéro jamais affiché » est levée pour la console seulement (numéro et photo dans la liste, la recherche et la fiche) — voir ADR-043.

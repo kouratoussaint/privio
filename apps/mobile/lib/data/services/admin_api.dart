@@ -38,11 +38,20 @@ abstract interface class AdminApi {
   Future<void> answerAppeal(String sanctionId, {required bool lift, required String note});
 
   // Lot 5.4 : comptes et assistance
-  /// @identifiant, nom, ou numéro COMPLET (jamais renvoyé).
+  /// @identifiant, nom, ou numéro (lot 5.6 : 4 chiffres au moins, n'importe où).
   Future<List<AccountHit>> searchAccounts(String query);
 
-  /// Lot 5.5 : tous les comptes, par ordre alphabétique, page par page.
-  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25});
+  /// Lot 5.5 : tous les comptes, par ordre alphabétique, page par page. Lot 5.6 : filtre
+  /// (clé de [kAccountFilters], « all » par défaut).
+  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25, String filter = 'all'});
+
+  /// Lot 5.6 : retirer la photo, imposer un nouvel identifiant (renvoie l'identifiant
+  /// provisoire), déconnecter un appareil précis, identifiants réservés.
+  Future<void> removeAvatar(String userId, String note);
+  Future<String> resetHandle(String userId, String note);
+  Future<void> disconnectOneDevice(String userId, String deviceId, String note);
+  Future<ReservedHandles> reservedHandles();
+  Future<void> reserveHandle(String handle, {required bool reserved});
 
   /// Lot 5.5 : journal filtré par type d'action et par période (jours), page par page.
   Future<ConsolePage<JournalEntry>> journalPage({
@@ -189,24 +198,71 @@ class SupabaseAdminApi implements AdminApi {
       );
 
   @override
-  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25}) => _guard(() async {
-    final j = Map<String, dynamic>.from(
-      await _client.rpc<dynamic>('console_accounts_page', params: {'p_page': page, 'p_size': size})
-          as Map,
-    );
-    return ConsolePage(
-      total: (j['total'] as num).toInt(),
-      page: (j['page'] as num).toInt(),
-      size: (j['size'] as num).toInt(),
-      rows: [
-        for (final r in j['rows'] as List) AccountHit.fromJson(Map<String, dynamic>.from(r as Map)),
-      ],
-      letters: {
-        for (final e in Map<String, dynamic>.from(j['letters'] as Map).entries)
-          e.key: (e.value as num).toInt(),
-      },
-    );
-  });
+  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25, String filter = 'all'}) =>
+      _guard(() async {
+        final j = Map<String, dynamic>.from(
+          await _client.rpc<dynamic>(
+            'console_accounts_page',
+            params: {'p_page': page, 'p_size': size, 'p_filter': filter},
+          ) as Map,
+        );
+        return ConsolePage(
+          total: (j['total'] as num).toInt(),
+          page: (j['page'] as num).toInt(),
+          size: (j['size'] as num).toInt(),
+          rows: [
+            for (final r in j['rows'] as List)
+              AccountHit.fromJson(Map<String, dynamic>.from(r as Map)),
+          ],
+          letters: {
+            for (final e in Map<String, dynamic>.from(j['letters'] as Map).entries)
+              e.key: (e.value as num).toInt(),
+          },
+          counts: {
+            for (final e in Map<String, dynamic>.from(j['counts'] as Map? ?? const {}).entries)
+              e.key: (e.value as num).toInt(),
+          },
+        );
+      });
+
+  @override
+  Future<void> removeAvatar(String userId, String note) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_remove_avatar',
+      params: {'p_user_id': userId, 'p_note': note},
+    ),
+  );
+
+  @override
+  Future<String> resetHandle(String userId, String note) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'console_reset_handle',
+      params: {'p_user_id': userId, 'p_note': note},
+    ) as String,
+  );
+
+  @override
+  Future<void> disconnectOneDevice(String userId, String deviceId, String note) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_disconnect_device',
+      params: {'p_user_id': userId, 'p_note': note, 'p_device_id': deviceId},
+    ),
+  );
+
+  @override
+  Future<ReservedHandles> reservedHandles() => _guard(
+    () async => ReservedHandles.fromJson(
+      Map<String, dynamic>.from(await _client.rpc<dynamic>('console_reserved_handles') as Map),
+    ),
+  );
+
+  @override
+  Future<void> reserveHandle(String handle, {required bool reserved}) => _guard(
+    () => _client.rpc<dynamic>(
+      'console_reserve_handle',
+      params: {'p_handle': handle, 'p_reserved': reserved},
+    ),
+  );
 
   @override
   Future<ConsolePage<JournalEntry>> journalPage({

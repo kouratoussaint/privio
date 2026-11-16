@@ -41,8 +41,8 @@ def sql(query):
                           text=True).stdout.strip()
 
 
-before = sql("select value from private.runtime_settings where key = 'admin_phone_e164'")
-check(before.startswith("+226"), "numéro administrateur enregistré côté serveur")
+admin_before = sql("select value from private.runtime_settings where key = 'admin_phone_e164'")
+check(admin_before.startswith("+226"), "numéro administrateur enregistré côté serveur")
 sql("update private.runtime_settings set value = '+22670000001' where key = 'admin_phone_e164'")
 try:
     status, ok = rpc("console_access", {}, TB)
@@ -110,7 +110,10 @@ try:
     status, page = rpc("console_accounts_page", {"p_page": 1, "p_size": 25}, TA)
     check(status == 200 and page["total"] >= 2 and len(page["rows"]) >= 2 and page["letters"],
           "lot 5.5 : comptes par ordre alphabétique, index A–Z", {k: page.get(k) for k in ("total", "letters")})
-    check("+226" not in json.dumps(page), "liste des comptes : aucun numéro")
+    # Lot 5.6 : numéro et photo visibles dans la console seulement.
+    check(all(r.get("phone_e164", "").startswith("+226") for r in page["rows"]),
+          "lot 5.6 : liste des comptes avec numéro (console)")
+    check("counts" in page and page["counts"]["all"] == page["total"], "nombre par filtre", page.get("counts"))
     status, data = rpc("console_accounts_page", {"p_page": 1}, TB)
     check(isinstance(data, dict) and data.get("message") == "ADMIN_REQUIRED", "liste refusée à un autre compte", data)
     status, val = rpc("console_set_policy", {"p_key": "gif_enabled", "p_value": False}, TA)
@@ -121,9 +124,34 @@ try:
     _, pol = rpc("get_client_policies", {}, TB)
     check(pol["values"].get("gif_enabled") is False, "les téléphones voient l'interrupteur coupé", pol["values"].get("gif_enabled"))
     rpc("console_set_policy", {"p_key": "gif_enabled", "p_value": True}, TA)
+    # Lot 5.6 : modèle du téléphone, filtres, recherche partielle, @ réservés.
+    status, _ = rpc("register_device", {"p_platform": "android", "p_app_version": "0.1.0+e2e",
+                                        "p_model": "Tecno Spark 10", "p_os_version": "13"}, TB)
+    check(status == 200, "téléphone enregistré avec son modèle et sa version d'Android")
+    uid_b = sql("select user_id from public.devices where model = 'Tecno Spark 10' and revoked_at is null limit 1")
+    status, acc = rpc("console_account", {"p_user_id": uid_b}, TA)
+    dev = (acc.get("devices") or [{}])[0] if isinstance(acc, dict) else {}
+    check(status == 200 and dev.get("model") == "Tecno Spark 10" and dev.get("os_version") == "13"
+          and acc.get("phone_e164", "").startswith("+226"),
+          "fiche : numéro, modèle et Android", {k: dev.get(k) for k in ("model", "os_version")})
+    status, newp = rpc("console_accounts_page", {"p_page": 1, "p_filter": "new"}, TA)
+    check(status == 200 and newp["filter"] == "new" and newp["total"] >= 2,
+          f"filtre « nouveaux » : {newp.get('total')} comptes")
+    digits = acc["phone_e164"][-4:]
+    status, hits = rpc("console_search_accounts", {"p_query": digits}, TA)
+    check(status == 200 and any(h["user_id"] == uid_b for h in hits), "recherche par numéro partiel (4 chiffres)")
+    status, _ = rpc("console_reserve_handle", {"p_handle": "orange_e2e", "p_reserved": True}, TA)
+    check(status in (200, 204), "identifiant réservé depuis la console", status)
+    _, free = rpc("is_handle_available", {"p_handle": "orange_e2e"}, TB)
+    check(free is False, "réservé : indisponible pour les autres", free)
+    rpc("console_reserve_handle", {"p_handle": "orange_e2e", "p_reserved": False}, TA)
+    _, free = rpc("is_handle_available", {"p_handle": "orange_e2e"}, TB)
+    check(free is True, "libéré : de nouveau disponible", free)
+    status, data = rpc("console_reserve_handle", {"p_handle": "vip_e2e", "p_reserved": True}, TB)
+    check(isinstance(data, dict) and data.get("message") == "ADMIN_REQUIRED", "réserver : refusé à un autre compte", data)
     status, jp = rpc("console_journal_page", {"p_type": "settings", "p_days": 1, "p_page": 1, "p_size": 10}, TA)
     check(status == 200 and jp["total"] >= 2 and all(r["type"] == "settings" for r in jp["rows"]),
           "journal filtré : fonctionnalités et réglages du jour", jp.get("total"))
 finally:
-    sql(f"update private.runtime_settings set value = '{before}' where key = 'admin_phone_e164'")
-print("Console d'administration (dont lot 5.5) : OK")
+    sql(f"update private.runtime_settings set value = '{admin_before}' where key = 'admin_phone_e164'")
+print("Console d'administration (dont lots 5.5 et 5.6) : OK")

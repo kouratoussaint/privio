@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_failure.dart';
+import '../../../core/handle/handle_rules.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/moderation.dart';
 import '../../../state/messaging_providers.dart';
@@ -33,6 +34,8 @@ class ModerationGate extends ConsumerWidget {
     final status = ref.watch(moderationStatusProvider).value ?? ModerationStatus.none;
     final overlay = switch (status) {
       ModerationStatus(:final suspension?) => _SuspendedView(s: suspension),
+      // Lot 5.6 : identifiant remplacé par l'équipe Privio → en choisir un nouveau.
+      ModerationStatus(handleReset: true) => const _NewHandleView(),
       ModerationStatus(:final warning?) => _WarningView(w: warning),
       _ => null,
     };
@@ -47,7 +50,7 @@ class ModerationGate extends ConsumerWidget {
           child: Overlay(
             key: ValueKey(
               '${status.suspension?.id}/${status.suspension?.appealed}/'
-              '${status.suspension?.appealDecision}/${status.warning?.id}',
+              '${status.suspension?.appealDecision}/${status.handleReset}/${status.warning?.id}',
             ),
             initialEntries: [OverlayEntry(builder: (_) => Material(child: overlay))],
           ),
@@ -167,6 +170,105 @@ class _SuspendedViewState extends ConsumerState<_SuspendedView> {
                 const SizedBox(height: PrivioSpacing.xl),
                 TextButton(
                   key: const Key('moderation.signout'),
+                  onPressed: () =>
+                      unawaited(ref.read(sessionControllerProvider.notifier).signOut()),
+                  child: Text(L.t.seDeconnecter),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lot 5.6 : l'équipe Privio a remplacé l'identifiant ; la personne en choisit un nouveau
+/// avant de continuer (mêmes règles qu'à la création du profil).
+class _NewHandleView extends ConsumerStatefulWidget {
+  const _NewHandleView();
+
+  @override
+  ConsumerState<_NewHandleView> createState() => _NewHandleViewState();
+}
+
+class _NewHandleViewState extends ConsumerState<_NewHandleView> {
+  final _text = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final handle = HandleRules.normalize(_text.text);
+    final issue = HandleRules.validate(handle);
+    if (issue != null) {
+      setState(() => _error = HandleRules.message(issue));
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(accountApiProvider).chooseNewHandle(handle);
+      await ref.read(sessionControllerProvider.notifier).refreshAccount();
+      ref.invalidate(moderationStatusProvider);
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = toAppFailure(e).message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          key: const Key('moderation.handle'),
+          padding: const EdgeInsets.all(PrivioSpacing.xl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.alternate_email, size: 56, color: theme.colorScheme.primary),
+                const SizedBox(height: PrivioSpacing.l),
+                Text(
+                  L.t.choisissezUnNouvelIdentifiant,
+                  style: theme.textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: PrivioSpacing.m),
+                Text(L.t.equipePrivioRemplaceIdentifiant, style: theme.textTheme.bodyMedium),
+                const SizedBox(height: PrivioSpacing.xl),
+                TextField(
+                  key: const Key('moderation.handle.input'),
+                  controller: _text,
+                  maxLength: HandleRules.maxLength + 1,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  onChanged: (_) => setState(() => _error = null),
+                  decoration: InputDecoration(
+                    labelText: L.t.identifiant,
+                    prefixText: '@',
+                    errorText: _error,
+                  ),
+                ),
+                FilledButton(
+                  key: const Key('moderation.handle.save'),
+                  onPressed: _busy || _text.text.trim().isEmpty ? null : _save,
+                  child: Text(L.t.enregistrer),
+                ),
+                const SizedBox(height: PrivioSpacing.xl),
+                TextButton(
+                  key: const Key('moderation.handle.signout'),
                   onPressed: () =>
                       unawaited(ref.read(sessionControllerProvider.notifier).signOut()),
                   child: Text(L.t.seDeconnecter),

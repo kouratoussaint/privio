@@ -50,12 +50,13 @@ try:
     # --- Recherche et fiche ----------------------------------------------------------
     status, found = rpc("console_search_accounts", {"p_query": "70 00 00 02"}, TA)
     check(status == 200 and [f["user_id"] for f in found] == [B], "recherche par numéro complet", found)
-    check("+226" not in json.dumps(found) and "7000" not in json.dumps(found), "le numéro n'est jamais renvoyé")
-    status, data = rpc("console_search_accounts", {"p_query": "7000"}, TA)
-    check(isinstance(data, dict) and data.get("message") == "SEARCH_PHONE_INCOMPLETE", "numéro partiel refusé", data)
+    # Lot 5.6 : numéro visible dans la console (et seulement là), recherche dès 4 chiffres.
+    check(found[0].get("phone_e164") == "+22670000002", "console : numéro renvoyé", found)
+    status, data = rpc("console_search_accounts", {"p_query": "700"}, TA)
+    check(isinstance(data, dict) and data.get("message") == "SEARCH_PHONE_INCOMPLETE", "moins de 4 chiffres : refusé", data)
     status, fiche = rpc("console_account", {"p_user_id": B}, TA)
     check(status == 200 and fiche["user_id"] == B and fiche["device"] is not None, "fiche du compte", fiche)
-    check("+226" not in json.dumps(fiche), "fiche sans numéro")
+    check(fiche.get("phone_e164") == "+22670000002", "fiche : numéro (console)")
 
     # --- Assistance --------------------------------------------------------------------
     status, rid = rpc("report", {"p_reason": "support", "p_details": "Les vocaux ne partent plus"}, TB)

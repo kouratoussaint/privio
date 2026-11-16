@@ -4365,4 +4365,26 @@ class AppLocalizationsDyu extends AppLocalizations {
   @override
   String get signupsClosedError =>
       'Les inscriptions sont fermées pour le moment. Réessayez plus tard.';
+
+  @override
+  String get saisissezAuMoins4Chiffres => 'Saisissez au moins 4 chiffres du numéro.';
+
+  @override
+  String get handleChangeNotAllowedError => 'Votre identifiant ne peut pas être changé.';
+
+  @override
+  String get handleAlwaysReservedError => 'Ce mot est toujours réservé.';
+
+  @override
+  String get avatarNotFoundError => 'Ce compte n’a plus de photo de profil.';
+
+  @override
+  String get deviceNotFoundError => 'Cet appareil est déjà déconnecté.';
+
+  @override
+  String get choisissezUnNouvelIdentifiant => 'Choisissez un nouvel identifiant';
+
+  @override
+  String get equipePrivioRemplaceIdentifiant =>
+      'L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas.';
 }

@@ -71,16 +71,19 @@ select results_eq($$ select handle from public.console_search_accounts('70 00 00
   $$ values ('bob_ouaga'::text) $$, 'par numéro complet (8 chiffres)');
 select results_eq($$ select handle from public.console_search_accounts('+226 70000002') $$,
   $$ values ('bob_ouaga'::text) $$, 'par numéro international');
-select throws_ok($$ select * from public.console_search_accounts('7000') $$, 'P0001', 'SEARCH_PHONE_INCOMPLETE',
-  'numéro partiel refusé');
+-- Lot 5.6 : numéro partiel accepté dès 4 chiffres.
+select results_eq($$ select handle from public.console_search_accounts('0002') $$,
+  $$ values ('bob_ouaga'::text) $$, 'par numéro partiel (4 chiffres)');
+select throws_ok($$ select * from public.console_search_accounts('700') $$, 'P0001', 'SEARCH_PHONE_INCOMPLETE',
+  'moins de 4 chiffres : refusé');
 select throws_ok($$ select * from public.console_search_accounts('b') $$, 'P0001', 'SEARCH_TOO_SHORT',
   'recherche trop courte');
 select is((select count(*)::int from information_schema.columns
             where table_schema = 'public' and table_name = 'console_search_accounts'), 0, 'fonction, pas une vue');
 reset role;
-select is((select count(*)::int from private.admin_audit where action = 'account_search'), 4,
+select is((select count(*)::int from private.admin_audit where action = 'account_search'), 5,
   'recherches abouties journalisées');
-select ok((select bool_and(coalesce(detail::text, '') not like '%7000%') from private.admin_audit),
+select ok((select bool_and(coalesce(detail::text, '') not like '%0002%') from private.admin_audit),
   'le numéro recherché n''est jamais inscrit au journal');
 
 -- ---------------------------------------------------------------------------
@@ -95,8 +98,9 @@ select is((pg_temp.v('fiche')::jsonb ->> 'directs')::int, 1, 'fiche : 1 discussi
 select is(pg_temp.v('fiche')::jsonb #>> '{device,app_version}', '0.1.0+30', 'fiche : version de l''app');
 select is((pg_temp.v('fiche')::jsonb #>> '{device,push}')::boolean, true, 'fiche : notifications activées');
 select is(jsonb_array_length(pg_temp.v('fiche')::jsonb -> 'support'), 1, 'fiche : 1 demande d''assistance');
-select ok(pg_temp.v('fiche') not like '%2267000%' and pg_temp.v('fiche') not like '%carla%',
-  'fiche : ni numéro ni correspondant');
+-- Lot 5.6 : le numéro est visible dans la console (et seulement là) ; jamais de correspondant.
+select is(pg_temp.v('fiche')::jsonb ->> 'phone_e164', '+22670000002', 'fiche : numéro');
+select ok(pg_temp.v('fiche') not like '%carla%', 'fiche : aucun correspondant');
 select is((select count(*)::int from private.admin_audit where action = 'account'), 1, 'fiche ouverte : journalisée');
 
 -- ---------------------------------------------------------------------------

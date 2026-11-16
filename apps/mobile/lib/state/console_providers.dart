@@ -16,9 +16,15 @@ final consoleAccessProvider = FutureProvider<bool>((ref) async {
   return ref.watch(adminApiProvider).consoleAccess();
 });
 
-/// Lot 5.5 : page [page] de la liste des comptes (A–Z).
-final consoleAccountsPageProvider = FutureProvider.autoDispose.family<ConsolePage<AccountHit>, int>(
-  (ref, page) => ref.watch(adminApiProvider).accountsPage(page),
+/// Lot 5.5 : page de la liste des comptes (A–Z). Lot 5.6 : (filtre, page).
+final consoleAccountsPageProvider = FutureProvider.autoDispose
+    .family<ConsolePage<AccountHit>, (String, int)>(
+      (ref, f) => ref.watch(adminApiProvider).accountsPage(f.$2, filter: f.$1),
+    );
+
+/// Lot 5.6 : identifiants réservés.
+final reservedHandlesProvider = FutureProvider.autoDispose<ReservedHandles>(
+  (ref) => ref.watch(adminApiProvider).reservedHandles(),
 );
 
 /// Lot 5.5 : journal (type d'action, période en jours, page).

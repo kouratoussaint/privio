@@ -735,6 +735,21 @@ class _DecisionDialogState extends State<DecisionDialog> {
         'À faire seulement après avoir vérifié l’identité de la personne. La vérification est '
             'désactivée\u202F: le téléphone qui attend le code s’ouvre, sans code de sécurité.',
       ),
+      // Lot 5.6
+      'remove_avatar' => (
+        'Retirer la photo de profil',
+        'La photo disparaît pour tout le monde. La personne pourra en choisir une autre.',
+      ),
+      'reset_handle' => (
+        'Imposer un nouvel identifiant',
+        'L’identifiant est remplacé tout de suite par un identifiant neutre. À sa prochaine '
+            'ouverture de l’application, la personne devra en choisir un nouveau.',
+      ),
+      'disconnect_device' => (
+        'Déconnecter cet appareil',
+        'Seul ce téléphone est déconnecté. La personne devra se reconnecter avec son numéro '
+            'et le code reçu par SMS.',
+      ),
       'uphold' => (
         'Maintenir la suspension',
         'La personne verra que sa contestation a été examinée et que la suspension est maintenue.',

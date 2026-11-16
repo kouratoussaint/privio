@@ -76,6 +76,18 @@ Future<void> _openConsoleTab(WidgetTester tester, TestDeps deps, String tab) asy
   await openConsoleSection(tester, tab);
 }
 
+/// Lot 5.6 : la fiche est longue ; on fait défiler jusqu'à l'élément.
+Future<void> _scrollTo(WidgetTester tester, String key) async {
+  await tester.scrollUntilVisible(
+    find.byKey(Key(key)),
+    200,
+    scrollable: find
+        .descendant(of: find.byKey(const Key('account.view')), matching: find.byType(Scrollable))
+        .first,
+  );
+  await tester.pumpAndSettle();
+}
+
 final _bob = ConsoleAccount(
   userId: 'u2',
   handle: 'bob_ouaga',
@@ -87,6 +99,7 @@ final _bob = ConsoleAccount(
   pushEnabled: true,
   directs: 4,
   groups: 2,
+  phoneE164: '+22670000002',
   reportsReceived90d: 1,
   support: [SupportRequest(id: 's1', createdAt: DateTime(2026, 11, 13, 9), details: 'Vocaux')],
 );
@@ -95,13 +108,10 @@ void main() {
   testWidgets('comptes : recherche, fiche sans numéro, avertissement avec motif', (tester) async {
     final deps = _deps(admin: true)..admin.accounts['u2'] = _bob;
     await _openConsoleTab(tester, deps, 'accounts');
-    await tester.enterText(find.byKey(const Key('accounts.query')), '7000');
+    await tester.enterText(find.byKey(const Key('accounts.query')), '700');
     await tester.tap(find.byKey(const Key('accounts.search')));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Saisissez le numéro complet (8 chiffres, ou avec l’indicatif).'),
-      findsOneWidget,
-    );
+    expect(find.text('Saisissez au moins 4 chiffres du numéro.'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('accounts.query')), '@bob');
     await tester.tap(find.byKey(const Key('accounts.search')));
@@ -109,11 +119,21 @@ void main() {
     expect(find.text('@bob_ouaga'), findsOneWidget);
     await tester.tap(find.byKey(const Key('account.u2')));
     await tester.pumpAndSettle();
-    expect(find.text('Actif'), findsOneWidget);
+    expect(find.text('Actif'), findsWidgets);
+    // Lot 5.6 : numéro visible dans la console ; chiffres en tuiles ; téléphones.
+    expect(find.text('+226 70 00 00 02'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byKey(const Key('account.directs')), matching: find.text('4')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: find.byKey(const Key('account.groups')), matching: find.text('2')),
+      findsOneWidget,
+    );
+    await _scrollTo(tester, 'account.device');
     expect(find.text('Android · version 0.1.0+30'), findsOneWidget);
-    expect(find.text('4 · groupes : 2'), findsOneWidget);
-    expect(find.textContaining('+226'), findsNothing);
 
+    await _scrollTo(tester, 'account.warn');
     await tester.tap(find.byKey(const Key('account.warn')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('decision.reason.spam')));
@@ -133,7 +153,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account.u2')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('account.disconnect')));
+    await _scrollTo(tester, 'account.disconnect');
     await tester.tap(find.byKey(const Key('account.disconnect')));
     await tester.pumpAndSettle();
     expect(find.text('Déconnecter le téléphone'), findsWidgets);
@@ -155,8 +175,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account.u2')));
     await tester.pumpAndSettle();
+    await _scrollTo(tester, 'account.two_step');
     expect(find.textContaining('code oublié, demande du'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('account.two_step_reset')));
+    await _scrollTo(tester, 'account.two_step_reset');
     await tester.tap(find.byKey(const Key('account.two_step_reset')));
     await tester.pumpAndSettle();
     expect(find.textContaining('vérifié l’identité'), findsOneWidget);
@@ -185,6 +206,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account.u1')));
     await tester.pumpAndSettle();
+    await _scrollTo(tester, 'account.protected');
     expect(find.byKey(const Key('account.protected')), findsOneWidget);
     expect(find.byKey(const Key('account.suspend')), findsNothing);
     expect(find.byKey(const Key('account.disconnect')), findsNothing);

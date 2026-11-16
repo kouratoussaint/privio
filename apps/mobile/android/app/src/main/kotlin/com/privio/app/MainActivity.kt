@@ -32,6 +32,8 @@ import io.flutter.plugin.common.MethodChannel
  *
  * Lot 9.2 : appel vidéo → petite fenêtre au-dessus des autres applications quand on quitte
  * Privio (« pip »), signalée à Flutter (« pipChanged ») qui n'y montre que l'image.
+ *
+ * Lot 5.6 : canal « privio/device » — modèle du téléphone et version d'Android.
  */
 class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +67,18 @@ class MainActivity : FlutterFragmentActivity() {
                         result.success(null)
                     }
                     else -> result.notImplemented()
+                }
+            }
+        // Lot 5.6 : modèle et version d'Android, pour l'assistance (console).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "privio/device")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "info") {
+                    val maker = Build.MANUFACTURER.orEmpty().replaceFirstChar { it.uppercase() }
+                    val model = Build.MODEL.orEmpty()
+                    val name = if (model.startsWith(maker, ignoreCase = true)) model else "$maker $model"
+                    result.success(mapOf("model" to name.trim().take(64), "os" to Build.VERSION.RELEASE))
+                } else {
+                    result.notImplemented()
                 }
             }
     }
