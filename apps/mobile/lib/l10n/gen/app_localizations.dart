@@ -7263,6 +7263,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Voir plus'**
   String get voirPlus;
+
+  /// Aide : licences (lot 8.5b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Licences'**
+  String get licences;
+
+  /// Aide : licences (lot 8.5b)
+  ///
+  /// In fr, this message translates to:
+  /// **'Logiciels libres et émojis animés utilisés par Privio'**
+  String get licencesSubtitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

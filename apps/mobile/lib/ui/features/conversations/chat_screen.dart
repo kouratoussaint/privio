@@ -51,6 +51,7 @@ import '../../../state/session_controller.dart';
 import '../groups/group_screens.dart';
 import '../calls/call_screen.dart';
 import '../../core/widgets/privio_menu.dart';
+import '../../core/emoji/big_emojis.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -2562,13 +2563,14 @@ class _Bubble extends StatelessWidget {
                     widthFactor: 1,
                     child:
                         content ??
-                        (mentions.isEmpty
+                        // Lot 8.5b : 1 à 3 émojis seuls → grands et animés.
+                        (jumbo
+                            ? BigEmojisText(text)
+                            : mentions.isEmpty
                             ? Text(
                                 text,
                                 style: theme.textTheme.bodyLarge?.copyWith(
                                   color: fg,
-                                  fontSize: jumbo ? 44 : null,
-                                  height: jumbo ? 1.15 : null,
                                   fontStyle: italic ? FontStyle.italic : FontStyle.normal,
                                 ),
                               )

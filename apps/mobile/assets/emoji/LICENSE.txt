@@ -1,0 +1,5 @@
+Noto Animated Emoji — Google, sous licence Creative Commons Attribution 4.0 International
+(CC BY 4.0) : https://creativecommons.org/licenses/by/4.0/
+Source : https://googlefonts.github.io/noto-emoji-animation/
+Privio intègre 150 de ces animations (fichiers Lottie, non modifiés à part la mise en forme
+du JSON) ; aucune n'est téléchargée pendant l'utilisation.

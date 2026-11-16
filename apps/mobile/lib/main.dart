@@ -35,6 +35,9 @@ import 'data/services/calls_api.dart';
 import 'data/services/call_background.dart';
 import 'data/services/call_system.dart';
 import 'state/call_controller.dart';
+import 'ui/core/emoji/big_emojis.dart';
+
+import 'package:flutter/foundation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +57,13 @@ Future<void> main() async {
     authOptions: FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
   );
   final client = Supabase.instance.client;
+
+  // Lot 8.5b : crédit des émojis animés intégrés (licence CC BY 4.0).
+  LicenseRegistry.addLicense(
+    () => Stream.value(
+      const LicenseEntryWithLineBreaks(['Noto Animated Emoji'], kNotoAnimatedEmojiCredit),
+    ),
+  );
 
   // Lot 9.1b : appels reçus Privio fermé (message de réveil, écran d'appel du téléphone).
   if (Platform.isAndroid) {

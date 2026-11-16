@@ -57,7 +57,7 @@ dependencies:
   share_plus: ^13.3.1
   flutter_webrtc: ^1.6.3
   flutter_callkit_incoming: ^3.1.6
-
+  lottie: ^3.8.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -81,6 +81,9 @@ flutter:
     - assets/brand/
     - assets/sounds/
     - assets/stickers/privio/
+    # Lot 8.5b : 150 émojis animés (Noto Animated Emoji, CC BY 4.0), intégrés : aucun
+    # téléchargement pendant l'utilisation.
+    - assets/emoji/
   fonts:
     - family: Inter
       fonts:

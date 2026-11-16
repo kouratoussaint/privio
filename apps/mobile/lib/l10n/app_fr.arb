@@ -5953,5 +5953,13 @@
   "voirPlus": "Voir plus",
   "@voirPlus": {
     "description": "Menus : afficher les autres actions (lot 8.5a)"
+  },
+  "licences": "Licences",
+  "@licences": {
+    "description": "Aide : licences (lot 8.5b)"
+  },
+  "licencesSubtitle": "Logiciels libres et émojis animés utilisés par Privio",
+  "@licencesSubtitle": {
+    "description": "Aide : licences (lot 8.5b)"
   }
 }

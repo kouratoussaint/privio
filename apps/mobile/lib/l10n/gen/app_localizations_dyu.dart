@@ -4295,4 +4295,10 @@ class AppLocalizationsDyu extends AppLocalizations {
 
   @override
   String get voirPlus => 'Voir plus';
+
+  @override
+  String get licences => 'Licences';
+
+  @override
+  String get licencesSubtitle => 'Logiciels libres et émojis animés utilisés par Privio';
 }

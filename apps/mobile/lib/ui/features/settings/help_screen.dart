@@ -101,6 +101,20 @@ class HelpScreen extends ConsumerWidget {
               ),
             ],
           ),
+          // Lot 8.5b : licences (dont le crédit des émojis animés, CC BY 4.0).
+          const SizedBox(height: PrivioSpacing.l),
+          SettingsCard(
+            children: [
+              ListTile(
+                key: const Key('help.licenses'),
+                leading: const Icon(Icons.description_outlined),
+                title: Text(L.t.licences),
+                subtitle: Text(L.t.licencesSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showLicensePage(context: context, applicationName: 'Privio'),
+              ),
+            ],
+          ),
         ],
       ),
     );

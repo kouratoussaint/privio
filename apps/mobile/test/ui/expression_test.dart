@@ -129,10 +129,11 @@ void main() {
 
   testWidgets('message fait seulement d’émojis : affiché en grand', (tester) async {
     await _openBob(tester, bodies: ['👍', 'Super 👍']);
-    final big = tester.widget<Text>(find.text('👍'));
-    expect(big.style?.fontSize, 44);
+    // Lot 8.5b : grand et animé (👍 fait partie des 150 émojis animés).
+    expect(find.byKey(const Key('bubble.big_emojis')), findsOneWidget);
+    expect(find.byKey(const Key('emoji.animated')), findsOneWidget);
     final normal = tester.widget<Text>(find.text('Super 👍'));
-    expect(normal.style?.fontSize, isNot(44));
+    expect(normal.style?.fontSize, isNot(greaterThan(30)));
   });
 
   testWidgets('réagir avec n’importe quel émoji', (tester) async {
