@@ -915,7 +915,11 @@ class MessagingRules {
     this.minTtlSeconds = 300,
     this.maxTtlSeconds = 72 * 3600,
     this.voiceMax = const Duration(seconds: 30),
+    this.features = const AppFeatures(),
   });
+
+  /// Lot 5.5 : fonctionnalités activées dans la console (le serveur vérifie aussi).
+  final AppFeatures features;
 
   /// Durée maximale d'un vocal (le serveur la mesure et refuse au-delà).
   final Duration voiceMax;
@@ -936,6 +940,7 @@ class MessagingRules {
     minTtlSeconds: ((v['message_ttl_min_minutes'] as num?)?.toInt() ?? 5) * 60,
     maxTtlSeconds: ((v['message_ttl_hours'] as num?)?.toInt() ?? 72) * 3600,
     voiceMax: Duration(seconds: (v['voice_max_seconds'] as num?)?.toInt() ?? 30),
+    features: AppFeatures.fromPolicies(v),
   );
 
   bool canEdit(ChatMessage m, DateTime now) =>
@@ -943,6 +948,53 @@ class MessagingRules {
   bool canDeleteForAll(ChatMessage m, DateTime now) =>
       !m.isDeleted && now.isBefore(m.sentAt.add(deleteForAllWindow));
 }
+
+/// Lot 5.5 — interrupteurs de la console (rubrique « Fonctionnalités »). Activés par
+/// défaut : sans réponse du serveur, rien n'est masqué (le serveur refuse s'il le faut).
+class AppFeatures {
+  const AppFeatures({
+    this.callsAudio = true,
+    this.callsVideo = true,
+    this.voice = true,
+    this.photo = true,
+    this.gif = true,
+    this.groupCreate = true,
+    this.groupInviteLinks = true,
+    this.announcement = '',
+  });
+
+  final bool callsAudio;
+  final bool callsVideo;
+  final bool voice;
+  final bool photo;
+  final bool gif;
+  final bool groupCreate;
+  final bool groupInviteLinks;
+
+  /// Message d'information affiché à tous (vide : aucun).
+  final String announcement;
+
+  /// Appel vidéo : il faut aussi les appels.
+  bool get video => callsAudio && callsVideo;
+
+  factory AppFeatures.fromPolicies(Map<String, Object?> v) {
+    bool on(String k) => v[k] is bool ? v[k]! as bool : true;
+    return AppFeatures(
+      callsAudio: on('calls_audio_enabled'),
+      callsVideo: on('calls_video_enabled'),
+      voice: on('voice_enabled'),
+      photo: on('photo_enabled'),
+      gif: on('gif_enabled'),
+      groupCreate: on('group_create_enabled'),
+      groupInviteLinks: on('group_invite_links_enabled'),
+      announcement: (v['announcement_text'] as String? ?? '').trim(),
+    );
+  }
+}
+
+final appFeaturesProvider = Provider<AppFeatures>(
+  (ref) => ref.watch(messagingRulesProvider).value?.features ?? const AppFeatures(),
+);
 
 final messagingRulesProvider = FutureProvider<MessagingRules>((ref) async {
   if (ref.watch(currentUserIdProvider) == null) return const MessagingRules();

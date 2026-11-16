@@ -7377,6 +7377,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Verrouillez Privio avec un code (Paramètres › Sécurité). Les captures d’écran sont bloquées. Dans Confidentialité, choisissez qui voit votre photo et qui peut vous joindre.'**
   String get discover6Body;
+
+  /// Erreur : fonctionnalité coupée dans la console (lot 5.5)
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette fonction est momentanément indisponible.'**
+  String get featureDisabledError;
+
+  /// Erreur : inscriptions fermées (lot 5.5)
+  ///
+  /// In fr, this message translates to:
+  /// **'Les inscriptions sont fermées pour le moment. Réessayez plus tard.'**
+  String get signupsClosedError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

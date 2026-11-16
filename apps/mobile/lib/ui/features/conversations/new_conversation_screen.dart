@@ -344,12 +344,13 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
               children: [
                 // Lot 8.3b : raccourcis, quand on ne cherche rien.
                 if (query.isEmpty) ...[
-                  _shortcut(
-                    'search.new_group',
-                    Icons.group_add_outlined,
-                    L.t.nouveauGroupe,
-                    () => context.pushReplacement(Routes.newGroup),
-                  ),
+                  if (ref.watch(appFeaturesProvider).groupCreate)
+                    _shortcut(
+                      'search.new_group',
+                      Icons.group_add_outlined,
+                      L.t.nouveauGroupe,
+                      () => context.pushReplacement(Routes.newGroup),
+                    ),
                   // Lot 8.1a : QR code d'un identifiant Privio → carte de la personne.
                   _shortcut(
                     'search.scan',

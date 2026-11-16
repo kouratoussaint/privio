@@ -2807,6 +2807,69 @@ class FakeAdminApi implements AdminApi {
   final replies = <(String, String)>[];
 
   @override
+  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25}) async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    _audit('account_list');
+    String key(String s) => s
+        .toUpperCase()
+        .replaceAll(RegExp('[ÀÂÄÁ]'), 'A')
+        .replaceAll(RegExp('[ÉÈÊË]'), 'E')
+        .replaceAll(RegExp('[ÎÏ]'), 'I')
+        .replaceAll(RegExp('[ÔÖ]'), 'O')
+        .replaceAll(RegExp('[ÛÜÙ]'), 'U')
+        .replaceAll('Ç', 'C');
+    final all = accounts.values.toList()
+      ..sort((a, b) => key(a.displayName).compareTo(key(b.displayName)));
+    final letters = <String, int>{};
+    for (final (i, a) in all.indexed) {
+      final c = key(a.displayName).isEmpty ? '#' : key(a.displayName)[0];
+      letters.putIfAbsent(RegExp('[A-Z]').hasMatch(c) ? c : '#', () => i);
+    }
+    return ConsolePage(
+      total: all.length,
+      page: page,
+      size: size,
+      letters: letters,
+      rows: [
+        for (final a in all.skip((page - 1) * size).take(size))
+          AccountHit(
+            userId: a.userId,
+            handle: a.handle,
+            displayName: a.displayName,
+            createdAt: a.createdAt,
+            suspended: a.suspended,
+          ),
+      ],
+    );
+  }
+
+  final journalQueries = <(String?, int?, int)>[];
+
+  @override
+  Future<ConsolePage<JournalEntry>> journalPage({
+    String? type,
+    int? days,
+    int page = 1,
+    int size = 30,
+  }) async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    journalQueries.add((type, days, page));
+    final since = days == null ? null : DateTime.now().subtract(Duration(days: days));
+    final all = [
+      for (final e in journalEntries)
+        if ((type == null || journalTypeOf(e.action) == type) &&
+            (since == null || e.at.isAfter(since)))
+          e,
+    ];
+    return ConsolePage(
+      total: all.length,
+      page: page,
+      size: size,
+      rows: all.skip((page - 1) * size).take(size).toList(),
+    );
+  }
+
+  @override
   Future<List<AccountHit>> searchAccounts(String query) async {
     searches.add(query);
     final q = query.trim();

@@ -88,13 +88,14 @@ class ListMenuButton extends ConsumerWidget {
             tint: MenuTint.blue,
           ),
         ] else ...[
-          item(
-            _Action.join,
-            'join',
-            Icons.qr_code_scanner_rounded,
-            L.t.rejoindreGroupe,
-            tint: MenuTint.teal,
-          ),
+          if (ref.watch(appFeaturesProvider).groupInviteLinks)
+            item(
+              _Action.join,
+              'join',
+              Icons.qr_code_scanner_rounded,
+              L.t.rejoindreGroupe,
+              tint: MenuTint.teal,
+            ),
           item(
             _Action.sent,
             'sent',

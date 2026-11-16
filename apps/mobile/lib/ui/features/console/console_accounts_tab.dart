@@ -9,6 +9,8 @@ import '../../../domain/models/moderation.dart';
 import '../../../state/console_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
+import '../../../domain/models/console.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import 'console_reports_tab.dart';
 
@@ -25,6 +27,7 @@ class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> {
   final _query = TextEditingController();
   String? _submitted;
   String? _open;
+  int _page = 1;
 
   @override
   void dispose() {
@@ -34,9 +37,15 @@ class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> {
 
   void _search() {
     final q = _query.text.trim();
-    if (q.isEmpty) return;
-    setState(() => _submitted = q);
+    setState(() => _submitted = q.isEmpty ? null : q);
   }
+
+  void _clear() {
+    _query.clear();
+    setState(() => _submitted = null);
+  }
+
+  Widget _row(AccountHit a) => _AccountRow(a: a, onTap: () => setState(() => _open = a.userId));
 
   @override
   Widget build(BuildContext context) {
@@ -44,12 +53,16 @@ class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> {
     if (open != null) {
       return AccountView(userId: open, onBack: () => setState(() => _open = null));
     }
-    final theme = Theme.of(context);
     final q = _submitted;
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(PrivioSpacing.m),
+          padding: const EdgeInsets.fromLTRB(
+            PrivioSpacing.m,
+            PrivioSpacing.m,
+            PrivioSpacing.m,
+            PrivioSpacing.s,
+          ),
           child: TextField(
             key: const Key('accounts.query'),
             controller: _query,
@@ -58,65 +71,281 @@ class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> {
             decoration: InputDecoration(
               hintText: '@identifiant, nom ou numéro complet',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                key: const Key('accounts.search'),
-                tooltip: 'Rechercher',
-                icon: const Icon(Icons.arrow_forward),
-                onPressed: _search,
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (q != null)
+                    IconButton(
+                      key: const Key('accounts.clear'),
+                      tooltip: 'Revenir à la liste',
+                      icon: const Icon(Icons.close),
+                      onPressed: _clear,
+                    ),
+                  IconButton(
+                    key: const Key('accounts.search'),
+                    tooltip: 'Rechercher',
+                    icon: const Icon(Icons.arrow_forward),
+                    onPressed: _search,
+                  ),
+                ],
               ),
             ),
           ),
         ),
         Expanded(
-          child: q == null
-              ? ListView(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(PrivioSpacing.l),
-                      child: Text(
-                        'Le numéro n’est jamais affiché : il sert seulement à retrouver un '
-                        'compte, s’il est saisi en entier. Chaque recherche est inscrite au journal.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                )
-              : switch (ref.watch(accountSearchProvider(q))) {
+          child: q != null
+              ? switch (ref.watch(accountSearchProvider(q))) {
                   AsyncData(:final value) when value.isEmpty => const EmptyView(
                     icon: Icons.person_search_outlined,
                     title: 'Aucun compte trouvé',
                     message: 'Vérifiez l’identifiant, le nom ou le numéro complet.',
                   ),
-                  AsyncData(:final value) => ListView.separated(
+                  AsyncData(:final value) => ListView(
                     key: const Key('accounts.results'),
-                    itemCount: value.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final a = value[i];
-                      return ListTile(
-                        key: Key('account.${a.userId}'),
-                        leading: const Icon(Icons.person_outline),
-                        title: Text('@${a.handle}'),
-                        subtitle: Text(
-                          [
-                            a.displayName,
-                            if (a.deleted) 'compte supprimé',
-                            if (a.suspended) 'suspendu',
-                          ].join(' · '),
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => setState(() => _open = a.userId),
-                      );
-                    },
+                    padding: const EdgeInsets.fromLTRB(
+                      PrivioSpacing.m,
+                      0,
+                      PrivioSpacing.m,
+                      PrivioSpacing.xl,
+                    ),
+                    children: [
+                      SettingsCard(
+                        children: [
+                          for (final (i, a) in value.indexed) ...[
+                            if (i > 0) const SettingsDivider(),
+                            _row(a),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                   AsyncError(:final error) => ErrorView(
                     message: toAppFailure(error).message,
                     onRetry: () => ref.invalidate(accountSearchProvider(q)),
                   ),
                   _ => const LoadingView(),
+                }
+              // Lot 5.5 : tous les comptes, A–Z, pages numérotées, lettres à droite.
+              : switch (ref.watch(consoleAccountsPageProvider(_page))) {
+                  AsyncData(:final value) => _AlphabetList(
+                    page: value,
+                    row: _row,
+                    onPage: (p) => setState(() => _page = p),
+                  ),
+                  AsyncError(:final error) => ErrorView(
+                    message: toAppFailure(error).message,
+                    onRetry: () => ref.invalidate(consoleAccountsPageProvider(_page)),
+                  ),
+                  _ => const LoadingView(),
                 },
         ),
       ],
+    );
+  }
+}
+
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.a, required this.onTap});
+
+  final AccountHit a;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const blue = Color(0xFF2A73C9);
+    final initial = a.displayName.trim().isEmpty ? '?' : a.displayName.trim()[0].toUpperCase();
+    return ListTile(
+      key: Key('account.${a.userId}'),
+      leading: CircleAvatar(
+        backgroundColor: (a.deleted || a.suspended ? theme.colorScheme.error : blue).withValues(
+          alpha: 0.14,
+        ),
+        foregroundColor: a.deleted || a.suspended ? theme.colorScheme.error : blue,
+        child: Text(initial, style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+      title: Text(a.displayName.isEmpty ? '@${a.handle}' : a.displayName),
+      subtitle: Text(
+        ['@${a.handle}', if (a.deleted) 'compte supprimé', if (a.suspended) 'suspendu'].join(' · '),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Lot 5.5 : liste A–Z d'une page, index des lettres à droite, pages numérotées en bas.
+class _AlphabetList extends StatelessWidget {
+  const _AlphabetList({required this.page, required this.row, required this.onPage});
+
+  final ConsolePage<AccountHit> page;
+  final Widget Function(AccountHit) row;
+  final ValueChanged<int> onPage;
+
+  static const _letters = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', //
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const blue = Color(0xFF2A73C9);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${page.total} comptes · page ${page.page} sur ${page.pages}',
+              key: const Key('accounts.count'),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ListView(
+                  key: const Key('accounts.list'),
+                  padding: const EdgeInsets.fromLTRB(PrivioSpacing.m, PrivioSpacing.s, 0, 16),
+                  children: [
+                    if (page.rows.isEmpty)
+                      const EmptyView(
+                        icon: Icons.people_outline,
+                        title: 'Aucun compte',
+                        message: 'Les comptes créés apparaîtront ici.',
+                      )
+                    else
+                      SettingsCard(
+                        children: [
+                          for (final (i, a) in page.rows.indexed) ...[
+                            if (i > 0) const SettingsDivider(),
+                            row(a),
+                          ],
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              // Index A–Z : toucher une lettre ouvre la page où elle commence.
+              SizedBox(
+                width: 28,
+                child: LayoutBuilder(
+                  builder: (context, c) {
+                    final h = (c.maxHeight / _letters.length).clamp(10.0, 22.0);
+                    return Column(
+                      key: const Key('accounts.index'),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (final l in _letters)
+                          SizedBox(
+                            height: h,
+                            child: InkWell(
+                              key: Key('accounts.letter.$l'),
+                              onTap: page.pageOf(l) == null ? null : () => onPage(page.pageOf(l)!),
+                              child: Center(
+                                child: Text(
+                                  l,
+                                  style: TextStyle(
+                                    fontSize: (h * 0.62).clamp(8.0, 12.0),
+                                    fontWeight: FontWeight.w700,
+                                    color: page.pageOf(l) == null
+                                        ? theme.colorScheme.outlineVariant
+                                        : blue,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        ConsolePager(page: page.page, pages: page.pages, onPage: onPage, color: blue),
+      ],
+    );
+  }
+}
+
+/// Lot 5.5 : pages numérotées ‹ 1 2 3 … › (comptes, journal).
+class ConsolePager extends StatelessWidget {
+  const ConsolePager({
+    super.key,
+    required this.page,
+    required this.pages,
+    required this.onPage,
+    required this.color,
+  });
+
+  final int page;
+  final int pages;
+  final ValueChanged<int> onPage;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (pages <= 1) return const SizedBox(height: PrivioSpacing.s);
+    // Au plus 5 numéros autour de la page courante.
+    final start = (page - 2).clamp(1, (pages - 4).clamp(1, pages));
+    final end = (start + 4).clamp(1, pages);
+    final theme = Theme.of(context);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.s),
+        child: Row(
+          key: const Key('pager'),
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              key: const Key('pager.previous'),
+              tooltip: 'Page précédente',
+              onPressed: page > 1 ? () => onPage(page - 1) : null,
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            for (var p = start; p <= end; p++)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: InkWell(
+                  key: Key('pager.$p'),
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: p == page ? null : () => onPage(p),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: p == page ? color : Colors.transparent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$p',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: p == page ? Colors.white : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            IconButton(
+              key: const Key('pager.next'),
+              tooltip: 'Page suivante',
+              onPressed: page < pages ? () => onPage(page + 1) : null,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

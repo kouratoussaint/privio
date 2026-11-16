@@ -6029,5 +6029,13 @@
   "discover6Body": "Verrouillez Privio avec un code (Paramètres › Sécurité). Les captures d’écran sont bloquées. Dans Confidentialité, choisissez qui voit votre photo et qui peut vous joindre.",
   "@discover6Body": {
     "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "featureDisabledError": "Cette fonction est momentanément indisponible.",
+  "@featureDisabledError": {
+    "description": "Erreur : fonctionnalité coupée dans la console (lot 5.5)"
+  },
+  "signupsClosedError": "Les inscriptions sont fermées pour le moment. Réessayez plus tard.",
+  "@signupsClosedError": {
+    "description": "Erreur : inscriptions fermées (lot 5.5)"
   }
 }

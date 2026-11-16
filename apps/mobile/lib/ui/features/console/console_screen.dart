@@ -11,9 +11,11 @@ import '../../../domain/models/console.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
+import '../../core/motion/motion.dart';
 import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
 import 'console_accounts_tab.dart';
+import 'console_features_tab.dart';
 import 'console_journal_tab.dart';
 import 'console_policies_tab.dart';
 import 'console_reports_tab.dart';
@@ -33,6 +35,7 @@ class ConsoleScreen extends ConsumerStatefulWidget {
 
 class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindingObserver {
   bool _verified = false;
+  ConsoleSection _section = ConsoleSection.home;
   String? _message;
   bool _error = false;
   Timer? _idle;
@@ -73,10 +76,13 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
     _idle = Timer(ConsoleScreen.idleTimeout, () => _close(idle: true));
   }
 
+  void _go(ConsoleSection s) => setState(() => _section = s);
+
   void _open() {
     ref.invalidate(consoleDashboardProvider);
     setState(() {
       _verified = true;
+      _section = ConsoleSection.home;
       _message = null;
       _error = false;
     });
@@ -114,11 +120,21 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
   Widget build(BuildContext context) {
     final lock = ref.watch(appLockProvider).value;
     final open = _verified && (lock?.enabled ?? false);
-    final onBar =
-        Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary;
     final scaffold = Scaffold(
+      drawer: open ? _ConsoleDrawer(current: _section, onSelect: _go) : null,
       appBar: AppBar(
-        title: const Text('Administration'),
+        title: Text(open ? _section.label : 'Administration'),
+        // Lot 5.5 : menu latéral (plus d'onglets à faire défiler).
+        leading: open
+            ? Builder(
+                builder: (context) => IconButton(
+                  key: const Key('console.menu'),
+                  tooltip: 'Menu de la console',
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              )
+            : null,
         actions: [
           if (open)
             IconButton(
@@ -128,42 +144,34 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
               onPressed: _close,
             ),
         ],
-        // Lots 5.2 à 5.4 : six onglets une fois la console ouverte.
-        bottom: open
-            ? TabBar(
-                key: const Key('console.tabs'),
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                // Lisible sur la barre violette : blanc, et blanc atténué pour les autres onglets.
-                labelColor: onBar,
-                unselectedLabelColor: onBar.withValues(alpha: 0.78),
-                indicatorColor: onBar,
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(key: Key('console.tab.dashboard'), text: 'Tableau de bord'),
-                  Tab(key: Key('console.tab.reports'), text: 'Signalements'),
-                  Tab(key: Key('console.tab.accounts'), text: 'Comptes'),
-                  Tab(key: Key('console.tab.policies'), text: 'Réglages'),
-                  Tab(key: Key('console.tab.stats'), text: 'Statistiques'),
-                  Tab(key: Key('console.tab.journal'), text: 'Journal'),
-                ],
-              )
-            : null,
       ),
       body: switch ((lock, _verified)) {
         (null, _) => const LoadingView(),
         (final l?, _) when !l.enabled => const _LockRequired(),
         (_, true) => Listener(
           onPointerDown: (_) => _touch(),
-          child: const TabBarView(
-            children: [
-              _Dashboard(),
-              ConsoleReportsTab(),
-              ConsoleAccountsTab(),
-              ConsolePoliciesTab(),
-              ConsoleStatsTab(),
-              ConsoleJournalTab(),
-            ],
+          child: AnimatedSwitcher(
+            duration: Motion.of(context, Motion.medium),
+            switchInCurve: Motion.enter,
+            transitionBuilder: (child, a) => FadeTransition(
+              opacity: a,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.03), end: Offset.zero).animate(a),
+                child: child,
+              ),
+            ),
+            child: KeyedSubtree(
+              key: ValueKey(_section),
+              child: switch (_section) {
+                ConsoleSection.home => _Dashboard(onOpen: _go),
+                ConsoleSection.reports => const ConsoleReportsTab(),
+                ConsoleSection.accounts => const ConsoleAccountsTab(),
+                ConsoleSection.features => const ConsoleFeaturesTab(),
+                ConsoleSection.policies => const ConsolePoliciesTab(),
+                ConsoleSection.stats => const ConsoleStatsTab(),
+                ConsoleSection.journal => const ConsoleJournalTab(),
+              },
+            ),
           ),
         ),
         (final l?, false) => Center(
@@ -189,7 +197,110 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
         ),
       },
     );
-    return open ? DefaultTabController(length: 6, child: scaffold) : scaffold;
+    return scaffold;
+  }
+}
+
+/// Lot 5.5 — rubriques de la console, chacune avec sa couleur.
+enum ConsoleSection {
+  home('dashboard', 'Accueil', Icons.space_dashboard_outlined, Color(0xFF6A3FD0)),
+  reports('reports', 'Signalements', Icons.flag_outlined, Color(0xFFD85A30)),
+  accounts('accounts', 'Comptes', Icons.people_outline, Color(0xFF2A73C9)),
+  features('features', 'Fonctionnalités', Icons.toggle_on_outlined, Color(0xFF8E44C9)),
+  policies('policies', 'Réglages', Icons.tune_rounded, Color(0xFF3E8B1A)),
+  stats('stats', 'Statistiques', Icons.insights_outlined, Color(0xFF138A6E)),
+  journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85));
+
+  const ConsoleSection(this.id, this.label, this.icon, this.color);
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color color;
+}
+
+class _ConsoleDrawer extends StatelessWidget {
+  const _ConsoleDrawer({required this.current, required this.onSelect});
+
+  final ConsoleSection current;
+  final ValueChanged<ConsoleSection> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Drawer(
+      key: const Key('console.drawer'),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.m),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, PrivioSpacing.s, 20, PrivioSpacing.l),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF6A3FD0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Console Privio', style: theme.textTheme.titleMedium),
+                        Text(
+                          'Administration',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            for (final s in ConsoleSection.values)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                child: Material(
+                  color: s == current ? s.color.withValues(alpha: 0.12) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  child: ListTile(
+                    key: Key('console.tab.${s.id}'),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: s.color.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(s.icon, color: s.color, size: 20),
+                    ),
+                    title: Text(
+                      s.label,
+                      style: TextStyle(
+                        fontWeight: s == current ? FontWeight.w700 : FontWeight.w500,
+                        color: s == current ? s.color : null,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelect(s);
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -239,7 +350,9 @@ class _LockRequired extends StatelessWidget {
 // Tableau de bord
 // ---------------------------------------------------------------------------
 class _Dashboard extends ConsumerWidget {
-  const _Dashboard();
+  const _Dashboard({required this.onOpen});
+
+  final ValueChanged<ConsoleSection> onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -248,7 +361,7 @@ class _Dashboard extends ConsumerWidget {
       AsyncData(:final value) => RefreshIndicator(
         key: const Key('console.refresh'),
         onRefresh: () => ref.refresh(consoleDashboardProvider.future),
-        child: _DashboardList(d: value),
+        child: _DashboardList(d: value, onOpen: onOpen),
       ),
       AsyncError(:final error) => ErrorView(
         message: toAppFailure(error).message,
@@ -260,9 +373,10 @@ class _Dashboard extends ConsumerWidget {
 }
 
 class _DashboardList extends StatelessWidget {
-  const _DashboardList({required this.d});
+  const _DashboardList({required this.d, required this.onOpen});
 
   final ConsoleDashboard d;
+  final ValueChanged<ConsoleSection> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +396,22 @@ class _DashboardList extends StatelessWidget {
         Text(
           'Mis à jour à ${_hm(d.generatedAt.toLocal())} · tirez vers le bas pour actualiser',
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        // Lot 5.5 : rubriques en tuiles colorées (ce qui attend une action en avant).
+        const SizedBox(height: PrivioSpacing.m),
+        _Tiles(
+          onOpen: onOpen,
+          badges: {
+            ConsoleSection.reports: d.reportsOpen > 0
+                ? '${d.reportsOpen} à traiter'
+                : 'Rien à traiter',
+            ConsoleSection.accounts: '${d.accountsTotal} comptes',
+            ConsoleSection.features: 'Activer, couper',
+            ConsoleSection.policies: 'Limites et délais',
+            ConsoleSection.stats: '30 derniers jours',
+            ConsoleSection.journal: 'Toutes les actions',
+          },
+          alert: {if (d.reportsOpen > 0) ConsoleSection.reports},
         ),
         _Section(
           title: 'Comptes',
@@ -348,7 +478,6 @@ class _DashboardList extends StatelessWidget {
           icon: Icons.flag_outlined,
           warn: d.reportsOpen > 0,
           stats: [_Stat('reports.open', 'En attente', d.reportsOpen, warn: d.reportsOpen > 0)],
-          footnote: 'Leur traitement arrive au lot 5.3.',
         ),
         const SizedBox(height: PrivioSpacing.l),
         Text(
@@ -377,6 +506,94 @@ class _DashboardList extends StatelessWidget {
         ? 'il y a ${ago.inHours} h'
         : 'le ${_dmy(r.at.toLocal())}';
     return '$when, ${r.ok ? 'réussi' : 'en échec'}';
+  }
+}
+
+/// Lot 5.5 : tuiles des rubriques (2 par ligne).
+class _Tiles extends StatelessWidget {
+  const _Tiles({required this.onOpen, required this.badges, this.alert = const {}});
+
+  final ValueChanged<ConsoleSection> onOpen;
+  final Map<ConsoleSection, String> badges;
+  final Set<ConsoleSection> alert;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = (c.maxWidth - PrivioSpacing.m) / 2;
+        return Wrap(
+          spacing: PrivioSpacing.m,
+          runSpacing: PrivioSpacing.m,
+          children: [
+            for (final (i, s) in ConsoleSection.values.skip(1).indexed)
+              AppearIn(
+                delay: Duration(milliseconds: 40 * i),
+                offset: const Offset(0, 0.15),
+                child: SizedBox(
+                  width: w,
+                  child: Material(
+                    color: s.color.withValues(alpha: dark ? 0.26 : 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      key: Key('console.tile.${s.id}'),
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => onOpen(s),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(color: s.color, shape: BoxShape.circle),
+                                  child: Icon(s.icon, color: Colors.white, size: 20),
+                                ),
+                                const Spacer(),
+                                if (alert.contains(s))
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.error,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              s.label,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              badges[s] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: alert.contains(s)
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 

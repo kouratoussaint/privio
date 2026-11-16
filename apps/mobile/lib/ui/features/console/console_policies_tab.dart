@@ -6,6 +6,7 @@ import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
 import '../../../state/console_providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 
 /// Onglet « Réglages » de la console (lot 5.2) : tous les réglages globaux, par thème.
@@ -30,6 +31,20 @@ class ConsolePoliciesTab extends ConsumerWidget {
   }
 }
 
+/// Lot 5.5 : icône et couleur de chaque thème.
+(IconData, Color) policyCategoryStyle(String c) => switch (c) {
+  'messages' => (Icons.chat_bubble_outline_rounded, const Color(0xFF6A3FD0)),
+  'media' => (Icons.perm_media_outlined, const Color(0xFF138A6E)),
+  'groups' => (Icons.groups_2_outlined, const Color(0xFF2A73C9)),
+  'requests' => (Icons.person_add_alt_1_outlined, const Color(0xFFB7700F)),
+  'abuse' => (Icons.shield_outlined, const Color(0xFFD85A30)),
+  'retention' => (Icons.inventory_2_outlined, const Color(0xFF5A6B85)),
+  'advanced' => (Icons.memory_rounded, const Color(0xFF6B6A66)),
+  _ => (Icons.tune_rounded, const Color(0xFF3E8B1A)),
+};
+
+/// Lot 5.5 : réglages sur fond blanc, en tuiles par thème, avec icônes. Les
+/// fonctionnalités, engagements et fonctions à venir sont dans « Fonctionnalités ».
 class _PolicyList extends StatelessWidget {
   const _PolicyList({required this.policies});
 
@@ -41,49 +56,58 @@ class _PolicyList extends StatelessWidget {
     List<ConsolePolicy> of(String c) =>
         policies.where((p) => p.category == c).toList()
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    const collapsed = {'advanced', 'locked', 'future'};
+    const elsewhere = {'features', 'locked', 'future'};
     return ListView(
       key: const Key('console.policies'),
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: PrivioSpacing.xxl),
+      padding: const EdgeInsets.fromLTRB(
+        PrivioSpacing.l,
+        PrivioSpacing.m,
+        PrivioSpacing.l,
+        PrivioSpacing.xxl,
+      ),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(PrivioSpacing.l, PrivioSpacing.m, PrivioSpacing.l, 0),
-          child: Text(
-            'Réglages appliqués à tous les comptes. Chaque changement est vérifié par le serveur '
-            'et inscrit au journal.',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
+        Text(
+          'Réglages appliqués à tous les comptes. Chaque changement est vérifié par le serveur '
+          'et inscrit au journal.',
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         for (final entry in kPolicyCategories.entries)
-          if (of(entry.key).isNotEmpty)
-            collapsed.contains(entry.key)
-                ? ExpansionTile(
-                    key: Key('console.category.${entry.key}'),
-                    title: Text(entry.value, style: theme.textTheme.titleSmall),
-                    subtitle: Text(switch (entry.key) {
-                      'advanced' => 'Tailles des fichiers, présence',
-                      'locked' => 'Promesses de Privio, non modifiables',
-                      _ => 'Affichés pour information',
-                    }),
-                    children: [for (final p in of(entry.key)) _PolicyTile(policy: p)],
-                  )
-                : Column(
-                    key: Key('console.category.${entry.key}'),
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          if (!elsewhere.contains(entry.key) && of(entry.key).isNotEmpty)
+            Column(
+              key: Key('console.category.${entry.key}'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, PrivioSpacing.l, 4, PrivioSpacing.s),
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          PrivioSpacing.l,
-                          PrivioSpacing.l,
-                          PrivioSpacing.l,
-                          PrivioSpacing.xs,
-                        ),
-                        child: Text(entry.value, style: theme.textTheme.titleSmall),
+                      Icon(
+                        policyCategoryStyle(entry.key).$1,
+                        size: 18,
+                        color: policyCategoryStyle(entry.key).$2,
                       ),
-                      for (final p in of(entry.key)) _PolicyTile(policy: p),
+                      const SizedBox(width: 8),
+                      Text(
+                        entry.value,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: policyCategoryStyle(entry.key).$2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
+                ),
+                SettingsCard(
+                  children: [
+                    for (final (i, p) in of(entry.key).indexed) ...[
+                      if (i > 0) const SettingsDivider(),
+                      _PolicyTile(policy: p),
+                    ],
+                  ],
+                ),
+              ],
+            ),
       ],
     );
   }
@@ -112,8 +136,15 @@ class _PolicyTile extends StatelessWidget {
             if (changed) 'par défaut : ${policy.format(policy.defaultValue)}',
             if (changed && policy.updatedAt != null) 'modifié le ${_date(policy.updatedAt!)}',
           ].join(' · ');
+    final (icon, color) = policyCategoryStyle(policy.category);
     return ListTile(
       key: Key('policy.${policy.key}'),
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+        child: Icon(icon, color: color, size: 18),
+      ),
       title: Text(policy.label),
       subtitle: Text(
         subtitle,

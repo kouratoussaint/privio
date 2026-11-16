@@ -4358,4 +4358,11 @@ class AppLocalizationsMos extends AppLocalizations {
   @override
   String get discover6Body =>
       'Verrouillez Privio avec un code (Paramètres › Sécurité). Les captures d’écran sont bloquées. Dans Confidentialité, choisissez qui voit votre photo et qui peut vous joindre.';
+
+  @override
+  String get featureDisabledError => 'Cette fonction est momentanément indisponible.';
+
+  @override
+  String get signupsClosedError =>
+      'Les inscriptions sont fermées pour le moment. Réessayez plus tard.';
 }

@@ -5,51 +5,170 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
 import '../../../state/console_providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
+import 'console_accounts_tab.dart' show ConsolePager;
 
-/// Onglet « Journal » (lot 5.2) : consultations et changements de réglages, du plus récent
-/// au plus ancien. Conservé `admin_audit_retention_days` jours (90 par défaut).
-class ConsoleJournalTab extends ConsumerWidget {
+/// Onglet « Journal » (lot 5.2) : consultations et changements, du plus récent au plus
+/// ancien. Conservé `admin_audit_retention_days` jours (90 par défaut).
+/// Lot 5.5 : filtres par type d'action et par période, pages numérotées.
+class ConsoleJournalTab extends ConsumerStatefulWidget {
   const ConsoleJournalTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final journal = ref.watch(consoleJournalProvider);
+  ConsumerState<ConsoleJournalTab> createState() => _ConsoleJournalTabState();
+}
+
+const _slate = Color(0xFF5A6B85);
+
+class _ConsoleJournalTabState extends ConsumerState<ConsoleJournalTab> {
+  String? _type;
+  int? _days;
+  int _page = 1;
+
+  static const _periods = <int?, String>{null: 'Tout', 1: '24 h', 7: '7 jours', 30: '30 jours'};
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final query = (_type, _days, _page);
+    final journal = ref.watch(consoleJournalPageProvider(query));
     // Unités des réglages, pour afficher « 5 → 3 » proprement.
     final units = {
       for (final p in ref.watch(consolePoliciesProvider).value ?? const <ConsolePolicy>[])
         p.key: p.unit,
     };
-    return switch (journal) {
-      AsyncData(:final value) => RefreshIndicator(
-        onRefresh: () => ref.refresh(consoleJournalProvider.future),
-        child: value.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 80),
-                  EmptyView(
-                    icon: Icons.history,
-                    title: 'Journal vide',
-                    message: 'Les consultations et les changements apparaîtront ici.',
-                  ),
-                ],
-              )
-            : ListView.separated(
-                key: const Key('console.journal'),
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: PrivioSpacing.xxl),
-                itemCount: value.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, i) => _EntryTile(e: value[i], unit: units[value[i].key] ?? 'nb'),
+    Widget chip(String key, String label, bool selected, VoidCallback onTap) => Padding(
+      padding: const EdgeInsets.only(right: PrivioSpacing.s),
+      child: ChoiceChip(
+        key: Key(key),
+        label: Text(label),
+        selected: selected,
+        selectedColor: _slate.withValues(alpha: 0.18),
+        onSelected: (_) => onTap(),
+      ),
+    );
+    return Column(
+      children: [
+        SizedBox(
+          height: 52,
+          child: ListView(
+            key: const Key('journal.types'),
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(
+              PrivioSpacing.m,
+              PrivioSpacing.s,
+              PrivioSpacing.m,
+              0,
+            ),
+            children: [
+              chip(
+                'journal.type.all',
+                'Tout',
+                _type == null,
+                () => setState(() {
+                  _type = null;
+                  _page = 1;
+                }),
               ),
-      ),
-      AsyncError(:final error) => ErrorView(
-        message: toAppFailure(error).message,
-        onRetry: () => ref.invalidate(consoleJournalProvider),
-      ),
-      _ => const LoadingView(),
-    };
+              for (final e in kJournalTypes.entries)
+                chip(
+                  'journal.type.${e.key}',
+                  e.value,
+                  _type == e.key,
+                  () => setState(() {
+                    _type = e.key;
+                    _page = 1;
+                  }),
+                ),
+            ],
+          ),
+        ),
+        // Période : défile si l'écran est étroit.
+        SingleChildScrollView(
+          key: const Key('journal.periods'),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(PrivioSpacing.m, 0, PrivioSpacing.m, 0),
+          child: Row(
+            children: [
+              Icon(Icons.date_range_outlined, size: 18, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              for (final e in _periods.entries)
+                chip(
+                  'journal.days.${e.key ?? 'all'}',
+                  e.value,
+                  _days == e.key,
+                  () => setState(() {
+                    _days = e.key;
+                    _page = 1;
+                  }),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: switch (journal) {
+            AsyncData(:final value) => RefreshIndicator(
+              onRefresh: () => ref.refresh(consoleJournalPageProvider(query).future),
+              child: value.rows.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 60),
+                        EmptyView(
+                          icon: Icons.history,
+                          title: 'Rien à afficher',
+                          message: 'Aucune action de ce type sur cette période.',
+                        ),
+                      ],
+                    )
+                  : ListView(
+                      key: const Key('console.journal'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(
+                        PrivioSpacing.m,
+                        PrivioSpacing.s,
+                        PrivioSpacing.m,
+                        PrivioSpacing.l,
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 0, 4, PrivioSpacing.s),
+                          child: Text(
+                            '${value.total} action${value.total > 1 ? 's' : ''}',
+                            key: const Key('journal.count'),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        SettingsCard(
+                          children: [
+                            for (final (i, e) in value.rows.indexed) ...[
+                              if (i > 0) const SettingsDivider(),
+                              _EntryTile(e: e, unit: units[e.key] ?? 'nb'),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+            AsyncError(:final error) => ErrorView(
+              message: toAppFailure(error).message,
+              onRetry: () => ref.invalidate(consoleJournalPageProvider(query)),
+            ),
+            _ => const LoadingView(),
+          },
+        ),
+        if (journal.value case final v?)
+          ConsolePager(
+            page: v.page,
+            pages: v.pages,
+            color: _slate,
+            onPage: (p) => setState(() => _page = p),
+          ),
+      ],
+    );
   }
 }
 
@@ -64,6 +183,7 @@ String _who(JournalEntry e) {
 String journalText(JournalEntry e, String unit) => switch (e.action) {
   'dashboard' => 'Consultation du tableau de bord',
   'stats' => 'Consultation des statistiques',
+  'account_list' => 'Liste des comptes consultée (page ${e.detail['page'] ?? 1})',
   'evidence' => 'Lecture d’une copie signalée (${_who(e)})',
   'account' => 'Fiche de ${_who(e)} consultée',
   'account_search' =>
@@ -113,7 +233,7 @@ class _EntryTile extends StatelessWidget {
         'stats' => Icons.bar_chart,
         'moderation' || 'lift' || 'appeal' => Icons.gavel_outlined,
         'evidence' => Icons.visibility,
-        'account' || 'account_search' => Icons.person_search_outlined,
+        'account' || 'account_search' || 'account_list' => Icons.person_search_outlined,
         'disconnect' => Icons.phonelink_erase,
         'two_step_reset' => Icons.lock_reset,
         'reply' => Icons.support_agent,

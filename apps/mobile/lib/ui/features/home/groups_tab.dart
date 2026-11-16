@@ -28,6 +28,7 @@ import '../../core/motion/illustrations.dart';
 import '../../../state/providers.dart';
 import 'list_menu.dart';
 import '../../core/motion/motion.dart';
+import '../../core/widgets/announcement_banner.dart';
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
@@ -100,6 +101,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final features = ref.watch(appFeaturesProvider);
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
     final myRequests = ref.watch(myJoinRequestsProvider).value ?? const <MyJoinRequest>[];
     final notices = ref.watch(groupDeletionNoticesProvider).value ?? const <GroupDeletionNotice>[];
@@ -126,29 +128,35 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
       title: Text(L.t.groupes),
       // Lot 7.1b : entrer dans un groupe avec un code ou un QR code.
       actions: [
-        IconButton(
-          key: const Key('groups.join'),
-          tooltip: L.t.rejoindreGroupe,
-          onPressed: () => context.push(Routes.joinGroup),
-          icon: const Icon(Icons.qr_code_scanner_rounded),
-        ),
+        if (features.groupInviteLinks)
+          IconButton(
+            key: const Key('groups.join'),
+            tooltip: L.t.rejoindreGroupe,
+            onPressed: () => context.push(Routes.joinGroup),
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+          ),
         // Lot 8.3a : menu ⋮ (rejoindre, demandes envoyées, archivés, tout marquer lu…).
         const ListMenuButton(kind: ListMenuKind.groups),
       ],
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('groups.new'),
-        // Chaque onglet garde son bouton : étiquettes Hero distinctes.
-        heroTag: 'fab.groups',
-        onPressed: () => context.push(Routes.newGroup),
-        icon: const Icon(Icons.group_add_outlined),
-        label: Text(L.t.nouveauGroupe),
-      ),
+      // Lot 5.5 : création de groupes coupée dans la console → pas de bouton.
+      floatingActionButton: !features.groupCreate
+          ? null
+          : FloatingActionButton.extended(
+              key: const Key('groups.new'),
+              // Chaque onglet garde son bouton : étiquettes Hero distinctes.
+              heroTag: 'fab.groups',
+              onPressed: () => context.push(Routes.newGroup),
+              icon: const Icon(Icons.group_add_outlined),
+              label: Text(L.t.nouveauGroupe),
+            ),
       // Lot 7.2a : fond blanc, comme la liste des discussions.
       // (Material : les lignes touchables y dessinent leur effet d'appui.)
       body: Material(
         color: PrivioPalette.of(context).sheet,
         child: Column(
           children: [
+            // Lot 5.5 : message d'information de la console.
+            const AnnouncementBanner(),
             // Lot 7.2c1 : recherche et filtres, comme dans Discussions.
             Padding(
               padding: const EdgeInsets.fromLTRB(

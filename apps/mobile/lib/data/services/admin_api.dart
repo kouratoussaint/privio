@@ -40,6 +40,17 @@ abstract interface class AdminApi {
   // Lot 5.4 : comptes et assistance
   /// @identifiant, nom, ou numéro COMPLET (jamais renvoyé).
   Future<List<AccountHit>> searchAccounts(String query);
+
+  /// Lot 5.5 : tous les comptes, par ordre alphabétique, page par page.
+  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25});
+
+  /// Lot 5.5 : journal filtré par type d'action et par période (jours), page par page.
+  Future<ConsolePage<JournalEntry>> journalPage({
+    String? type,
+    int? days,
+    int page = 1,
+    int size = 30,
+  });
   Future<ConsoleAccount> account(String userId);
 
   /// warn ou suspend (days : 1, 7, 30 ou null = sans limite), sans signalement.
@@ -176,6 +187,50 @@ class SupabaseAdminApi implements AdminApi {
           params: {'p_sanction_id': sanctionId, 'p_lift': lift, 'p_note': note},
         ),
       );
+
+  @override
+  Future<ConsolePage<AccountHit>> accountsPage(int page, {int size = 25}) => _guard(() async {
+    final j = Map<String, dynamic>.from(
+      await _client.rpc<dynamic>('console_accounts_page', params: {'p_page': page, 'p_size': size})
+          as Map,
+    );
+    return ConsolePage(
+      total: (j['total'] as num).toInt(),
+      page: (j['page'] as num).toInt(),
+      size: (j['size'] as num).toInt(),
+      rows: [
+        for (final r in j['rows'] as List) AccountHit.fromJson(Map<String, dynamic>.from(r as Map)),
+      ],
+      letters: {
+        for (final e in Map<String, dynamic>.from(j['letters'] as Map).entries)
+          e.key: (e.value as num).toInt(),
+      },
+    );
+  });
+
+  @override
+  Future<ConsolePage<JournalEntry>> journalPage({
+    String? type,
+    int? days,
+    int page = 1,
+    int size = 30,
+  }) => _guard(() async {
+    final j = Map<String, dynamic>.from(
+      await _client.rpc<dynamic>(
+        'console_journal_page',
+        params: {'p_type': type, 'p_days': days, 'p_page': page, 'p_size': size},
+      ) as Map,
+    );
+    return ConsolePage(
+      total: (j['total'] as num).toInt(),
+      page: (j['page'] as num).toInt(),
+      size: (j['size'] as num).toInt(),
+      rows: [
+        for (final r in j['rows'] as List)
+          JournalEntry.fromJson(Map<String, dynamic>.from(r as Map)),
+      ],
+    );
+  });
 
   @override
   Future<List<AccountHit>> searchAccounts(String query) async => (await _rows(

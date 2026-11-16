@@ -27,6 +27,7 @@ import '../conversations/expression_panel.dart';
 import 'list_menu.dart';
 import '../settings/two_step_screens.dart';
 import '../../core/widgets/privio_menu.dart';
+import '../../core/widgets/announcement_banner.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -109,6 +110,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
       ),
       body: Column(
         children: [
+          // Lot 5.5 : message d'information de la console.
+          const AnnouncementBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               PrivioSpacing.l,

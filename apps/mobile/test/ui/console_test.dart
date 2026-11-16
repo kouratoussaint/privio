@@ -15,6 +15,7 @@ import 'package:privio/state/session_controller.dart';
 import 'package:privio/ui/features/console/console_screen.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
+import '../helpers/console_nav.dart';
 import '../helpers/fakes.dart';
 
 /// Lot 5.1 — console d'administration dans l'application (amendement 6).
@@ -181,6 +182,9 @@ void main() {
     expect(deps.admin.dashboardCalls, 1);
     expect(find.text('42'), findsOneWidget); // comptes
     expect(find.text('Actifs (24\u00A0h)'), findsOneWidget);
+    // Lot 5.5 : tuiles des rubriques en haut de l'accueil.
+    expect(find.byKey(const Key('console.tile.reports')), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('860'), 200, scrollable: _dashScroll);
     expect(find.text('860'), findsOneWidget); // messages sur 7 jours
     await tester.scrollUntilVisible(
       find.byKey(const Key('console.health.voice')),
@@ -279,10 +283,7 @@ void main() {
     await _start(tester, deps, locked: true);
     await _openConsole(tester);
     await _type(tester, _pin);
-    await tester.ensureVisible(find.byKey(Key('console.tab.$tab')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('console.tab.$tab')));
-    await tester.pumpAndSettle();
+    await openConsoleSection(tester, tab);
     return deps;
   }
 
@@ -302,20 +303,20 @@ void main() {
     expect(find.text('Groupes'), findsOneWidget);
     expect(find.text('Photos par compte et par jour'), findsOneWidget);
     expect(find.text('Membres au plus par groupe'), findsOneWidget);
-    // « Avancé » et « Fixés » sont repliés.
-    expect(find.text('Taille maximale d’une photo'), findsNothing);
-    await tester.tap(find.text('Fixés (sécurité)'));
+    // Lot 5.5 : invariants dans « Fonctionnalités » (cadenas), plus dans Réglages.
+    expect(find.byKey(const Key('policy.message_ttl_hours')), findsNothing);
+    await openConsoleSection(tester, 'features');
+    expect(find.byKey(const Key('console.features')), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.byKey(const Key('feature.message_ttl_hours')),
+      find.byKey(const Key('console.features')),
+      const Offset(0, -200),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Durée de vie maximale d’un message : 72 h'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('policy.message_ttl_hours')));
+    await tester.tap(find.byKey(const Key('feature.message_ttl_hours')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('policy.message_ttl_hours')), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('policy.editor.message_ttl_hours')),
-      findsNothing,
-      reason: 'un invariant ne s’ouvre pas',
-    );
+    expect(find.byKey(const Key('feature.confirm')), findsNothing, reason: 'non modifiable');
   });
 
   testWidgets('modifier un réglage : limites, confirmation avant → après, journal', (tester) async {
@@ -349,10 +350,7 @@ void main() {
     expect(find.textContaining('3 · par défaut : 5'), findsOneWidget);
 
     // Journal.
-    await tester.ensureVisible(find.byKey(const Key('console.tab.journal')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('console.tab.journal')));
-    await tester.pumpAndSettle();
+    await openConsoleSection(tester, 'journal');
     expect(find.text('Réglage « Photos par compte et par jour » : défaut → 3'), findsOneWidget);
     expect(find.text('Consultation du tableau de bord'), findsOneWidget);
   });

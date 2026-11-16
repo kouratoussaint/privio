@@ -12,6 +12,7 @@ import '../../../state/console_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
 import '../../../state/providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 
 /// Onglet « Signalements » de la console (lot 5.3) : files, dossiers, décisions,
@@ -202,7 +203,6 @@ class _DossierList extends ConsumerWidget {
   }
 
   Widget _list(BuildContext context, List<List<ModerationReport>> dossiers) {
-    final theme = Theme.of(context);
     if (dossiers.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -220,47 +220,66 @@ class _DossierList extends ConsumerWidget {
         ],
       );
     }
+    // Lot 5.5 : dossiers en tuiles blanches.
     return ListView.separated(
       key: Key('reports.list.$status'),
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        PrivioSpacing.m,
+        PrivioSpacing.s,
+        PrivioSpacing.m,
+        PrivioSpacing.xl,
+      ),
       itemCount: dossiers.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (_, i) {
-        final d = dossiers[i];
-        final first = d.first;
-        final reasons = {for (final r in d) reasonLabel(r.reason)}.join(', ');
-        final people = {for (final r in d) r.reporterHandle}.length;
-        return ListTile(
-          key: Key('dossier.${first.target}'),
-          leading: Icon(switch (first.kind) {
+      separatorBuilder: (_, _) => const SizedBox(height: PrivioSpacing.s),
+      itemBuilder: (_, i) => SettingsCard(children: [_dossierTile(context, dossiers[i])]),
+    );
+  }
+
+  Widget _dossierTile(BuildContext context, List<ModerationReport> d) {
+    final theme = Theme.of(context);
+    const coral = Color(0xFFD85A30);
+    final first = d.first;
+    final reasons = {for (final r in d) reasonLabel(r.reason)}.join(', ');
+    final people = {for (final r in d) r.reporterHandle}.length;
+    return ListTile(
+      key: Key('dossier.${first.target}'),
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(color: coral.withValues(alpha: 0.12), shape: BoxShape.circle),
+        child: Icon(
+          switch (first.kind) {
             'support' => Icons.support_agent,
             'group' => Icons.groups_outlined,
             'message' => Icons.chat_bubble_outline,
             _ => Icons.person_outline,
-          }),
-          title: Text(_target(first)),
-          subtitle: Text(
-            [
-              if (first.kind != 'support')
-                '${d.length} signalement${d.length > 1 ? 's' : ''} · $people personne${people > 1 ? 's' : ''}',
-              reasons,
-              if (status == 'closed' && first.decision != null)
-                kDecisionLabels[first.decision] ?? first.decision!
-              else
-                'depuis le ${_date(first.createdAt)}',
-              if (first.suspended) _suspension(first),
-            ].join('\n'),
-          ),
-          isThreeLine: true,
-          trailing: first.protected
-              ? Tooltip(
-                  message: 'Compte de l’administration',
-                  child: Icon(Icons.shield_outlined, color: theme.colorScheme.primary),
-                )
-              : const Icon(Icons.chevron_right),
-          onTap: () => onOpen(d),
-        );
-      },
+          },
+          color: coral,
+          size: 20,
+        ),
+      ),
+      title: Text(_target(first)),
+      subtitle: Text(
+        [
+          if (first.kind != 'support')
+            '${d.length} signalement${d.length > 1 ? 's' : ''} · $people personne${people > 1 ? 's' : ''}',
+          reasons,
+          if (status == 'closed' && first.decision != null)
+            kDecisionLabels[first.decision] ?? first.decision!
+          else
+            'depuis le ${_date(first.createdAt)}',
+          if (first.suspended) _suspension(first),
+        ].join('\n'),
+      ),
+      isThreeLine: true,
+      trailing: first.protected
+          ? Tooltip(
+              message: 'Compte de l’administration',
+              child: Icon(Icons.shield_outlined, color: theme.colorScheme.primary),
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: () => onOpen(d),
     );
   }
 }

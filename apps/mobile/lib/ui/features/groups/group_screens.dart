@@ -1064,7 +1064,8 @@ class GroupInfoScreen extends ConsumerWidget {
           ),
           SettingsCard(
             children: [
-              if (admin) ...[
+              // Lot 5.5 : code et QR code seulement si la console autorise les liens.
+              if (admin && ref.watch(appFeaturesProvider).groupInviteLinks) ...[
                 ListTile(
                   key: const Key('group.code'),
                   leading: Icon(Icons.qr_code_2_rounded, color: p.accentText),

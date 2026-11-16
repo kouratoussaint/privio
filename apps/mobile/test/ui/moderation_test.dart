@@ -11,6 +11,7 @@ import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/moderation.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
+import '../helpers/console_nav.dart';
 import '../helpers/fakes.dart';
 
 /// Lot 5.3 — modération : écran « Compte suspendu » et contestation, avertissement, groupe
@@ -107,8 +108,7 @@ Future<void> _openReports(WidgetTester tester, TestDeps deps) async {
   await tester.tap(find.byKey(const Key('settings.console')));
   await tester.pumpAndSettle();
   await _type(tester, _pin);
-  await tester.tap(find.byKey(const Key('console.tab.reports')));
-  await tester.pumpAndSettle();
+  await openConsoleSection(tester, 'reports');
 }
 
 void main() {

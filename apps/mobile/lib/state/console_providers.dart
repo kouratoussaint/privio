@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/services/admin_api.dart';
 import '../domain/models/console.dart';
 import 'messaging_providers.dart';
+import '../domain/models/moderation.dart';
 
 final adminApiProvider = Provider<AdminApi>(
   (ref) => throw UnimplementedError('adminApiProvider doit être surchargé'),
@@ -14,6 +15,17 @@ final consoleAccessProvider = FutureProvider<bool>((ref) async {
   if (ref.watch(currentUserIdProvider) == null) return false;
   return ref.watch(adminApiProvider).consoleAccess();
 });
+
+/// Lot 5.5 : page [page] de la liste des comptes (A–Z).
+final consoleAccountsPageProvider = FutureProvider.autoDispose.family<ConsolePage<AccountHit>, int>(
+  (ref, page) => ref.watch(adminApiProvider).accountsPage(page),
+);
+
+/// Lot 5.5 : journal (type d'action, période en jours, page).
+final consoleJournalPageProvider = FutureProvider.autoDispose
+    .family<ConsolePage<JournalEntry>, (String?, int?, int)>(
+      (ref, f) => ref.watch(adminApiProvider).journalPage(type: f.$1, days: f.$2, page: f.$3),
+    );
 
 final consoleDashboardProvider = FutureProvider.autoDispose<ConsoleDashboard>(
   (ref) => ref.watch(adminApiProvider).dashboard(),

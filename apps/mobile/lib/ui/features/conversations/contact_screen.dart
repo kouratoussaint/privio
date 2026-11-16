@@ -157,8 +157,10 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                           );
                   },
                 ),
-              // Lot 9.1a : appeler ce contact.
-              if (!summary.blocked && !summary.peerDeleted)
+              // Lot 9.1a : appeler ce contact (lot 5.5 : sauf si la console coupe les appels).
+              if (!summary.blocked &&
+                  !summary.peerDeleted &&
+                  ref.watch(appFeaturesProvider).callsAudio)
                 Padding(
                   padding: const EdgeInsets.only(top: PrivioSpacing.m),
                   child: Wrap(
@@ -173,12 +175,13 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                         label: Text(L.t.appeler),
                       ),
                       // Lot 9.2 : appel vidéo.
-                      FilledButton.tonalIcon(
-                        key: const Key('contact.video'),
-                        onPressed: () => startCallFrom(context, ref, summary.id, video: true),
-                        icon: const Icon(Icons.videocam_outlined),
-                        label: Text(L.t.callVideoButton),
-                      ),
+                      if (ref.watch(appFeaturesProvider).video)
+                        FilledButton.tonalIcon(
+                          key: const Key('contact.video'),
+                          onPressed: () => startCallFrom(context, ref, summary.id, video: true),
+                          icon: const Icon(Icons.videocam_outlined),
+                          label: Text(L.t.callVideoButton),
+                        ),
                     ],
                   ),
                 ),

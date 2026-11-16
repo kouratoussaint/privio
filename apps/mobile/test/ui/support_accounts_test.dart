@@ -12,6 +12,7 @@ import 'package:privio/domain/models/moderation.dart';
 import 'package:privio/state/session_controller.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
+import '../helpers/console_nav.dart';
 import '../helpers/fakes.dart';
 
 /// Lot 5.4 — comptes et assistance : recherche, fiche, actions, réponses, « Mes demandes »,
@@ -72,10 +73,7 @@ Future<void> _openConsoleTab(WidgetTester tester, TestDeps deps, String tab) asy
   await tester.tap(find.byKey(const Key('settings.console')));
   await tester.pumpAndSettle();
   await _type(tester, _pin);
-  await tester.ensureVisible(find.byKey(Key('console.tab.$tab')));
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(Key('console.tab.$tab')));
-  await tester.pumpAndSettle();
+  await openConsoleSection(tester, tab);
 }
 
 final _bob = ConsoleAccount(

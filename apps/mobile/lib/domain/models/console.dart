@@ -419,3 +419,54 @@ class JournalEntry {
     detail: j['detail'] is Map ? Map<String, dynamic>.from(j['detail'] as Map) : const {},
   );
 }
+
+// ---------------------------------------------------------------------------
+// Lot 5.5 : comptes A–Z paginés, journal filtrable
+// ---------------------------------------------------------------------------
+
+/// Types d'action du journal (filtre), dans l'ordre d'affichage.
+const kJournalTypes = <String, String>{
+  'accounts': 'Comptes',
+  'reports': 'Signalements',
+  'settings': 'Fonctionnalités et réglages',
+  'security': 'Sécurité',
+  'support': 'Assistance',
+  'views': 'Consultations',
+};
+
+/// Même classement que le serveur (`private.journal_type`).
+String journalTypeOf(String action) => switch (action) {
+  'account' || 'account_search' || 'account_list' || 'lift' => 'accounts',
+  'moderation' || 'evidence' || 'appeal' => 'reports',
+  'policy' => 'settings',
+  'two_step_reset' || 'disconnect' => 'security',
+  'reply' => 'support',
+  _ => 'views',
+};
+
+/// Page d'une liste paginée.
+class ConsolePage<T> {
+  const ConsolePage({
+    required this.total,
+    required this.page,
+    required this.size,
+    required this.rows,
+    this.letters = const {},
+  });
+
+  final int total;
+  final int page;
+  final int size;
+  final List<T> rows;
+
+  /// Comptes : première position (0…) de chaque initiale (A–Z, « # » pour le reste).
+  final Map<String, int> letters;
+
+  int get pages => total == 0 ? 1 : (total + size - 1) ~/ size;
+
+  /// Page où commence l'initiale [letter].
+  int? pageOf(String letter) {
+    final pos = letters[letter];
+    return pos == null ? null : pos ~/ size + 1;
+  }
+}

@@ -800,11 +800,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// enregistrement maintenu, pour ne pas interrompre le geste.
   String _trailingKind(TextEditingValue value, VoiceRecState rec) {
     if (rec is VoiceRecording && rec.locked) return 'stop';
-    if (rec is VoiceRecording || (value.text.trim().isEmpty && _editing == null)) return 'mic';
+    if (rec is VoiceRecording ||
+        (ref.read(appFeaturesProvider).voice && value.text.trim().isEmpty && _editing == null)) {
+      return 'mic';
+    }
     return _editing != null ? 'edit' : 'send';
   }
 
   Widget _trailing(TextEditingValue value, VoiceRecState rec, bool dark) {
+    // Lot 5.5 : vocaux désactivés dans la console → bouton d'envoi (inactif sans texte).
+    final voiceOn = ref.watch(appFeaturesProvider).voice;
     if (rec is VoiceRecording && rec.locked) {
       return SizedBox(
         width: 50,
@@ -821,9 +826,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       );
     }
-    if (rec is VoiceRecording || (value.text.trim().isEmpty && _editing == null)) {
+    if (rec is VoiceRecording || (voiceOn && value.text.trim().isEmpty && _editing == null)) {
       return MicButton(onStart: _startVoice, onRelease: _releaseVoice);
     }
+    final empty = value.text.trim().isEmpty && _editing == null;
     return SizedBox(
       width: 50,
       height: 50,
@@ -834,7 +840,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           backgroundColor: dark ? PrivioColors.lilac : PrivioColors.purple,
           foregroundColor: dark ? PrivioColors.navy : Colors.white,
         ),
-        onPressed: _submit,
+        onPressed: empty ? null : _submit,
         icon: Icon(_editing != null ? Icons.check : Icons.send),
       ),
     );
@@ -1306,6 +1312,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Lot 5.5 : fonctionnalités activées dans la console.
+    final features = ref.watch(appFeaturesProvider);
     final summary = ref.watch(conversationSummaryProvider(widget.conversationId));
     final chat = ref.watch(chatProvider(widget.conversationId));
     ref.watch(messagingRulesProvider);
@@ -1421,11 +1429,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 toolbarHeight: 64,
                 actions: [
                   // Lot 9.1a / 9.2 : appel audio et vidéo (discussion à deux, contact non bloqué).
+                  // Lot 5.5 : masqués quand la console les désactive.
                   if (summary != null &&
                       !summary.isGroup &&
                       !summary.blocked &&
                       !summary.peerDeleted &&
-                      !_searching)
+                      !_searching &&
+                      features.video)
                     IconButton(
                       key: const Key('chat.video'),
                       tooltip: L.t.callVideoButton,
@@ -1436,7 +1446,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       !summary.isGroup &&
                       !summary.blocked &&
                       !summary.peerDeleted &&
-                      !_searching)
+                      !_searching &&
+                      features.callsAudio)
                     IconButton(
                       key: const Key('chat.call'),
                       tooltip: L.t.appeler,
@@ -1757,7 +1768,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     onTtlTap: _editing != null || voice is VoiceRecording
                         ? null
                         : () => _chooseMessageTtl(summary),
-                    onPhotoTap: _editing != null || voice is VoiceRecording || _preparingPhoto
+                    onPhotoTap:
+                        _editing != null ||
+                            voice is VoiceRecording ||
+                            _preparingPhoto ||
+                            !features.photo
                         ? null
                         : _pickPhoto,
                     busy: _preparingPhoto,
@@ -1797,7 +1812,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ExpressionPanel(
                     controller: _composer,
                     onSticker: (s) => unawaited(_sendSticker(s)),
-                    onGif: (g) => unawaited(_sendGif(g)),
+                    onGif: features.gif ? (g) => unawaited(_sendGif(g)) : null,
                     height: _panelHeight(context),
                   ),
               ],

@@ -105,6 +105,25 @@ try:
     raw = json.dumps(st) + json.dumps(journal)
     check("+226" not in raw and "2267" not in raw and "Bonjour" not in raw,
           "statistiques et journal : aucun numéro ni contenu")
+
+    # Lot 5.5 : fonctionnalités, comptes A–Z, journal filtré.
+    status, page = rpc("console_accounts_page", {"p_page": 1, "p_size": 25}, TA)
+    check(status == 200 and page["total"] >= 2 and len(page["rows"]) >= 2 and page["letters"],
+          "lot 5.5 : comptes par ordre alphabétique, index A–Z", {k: page.get(k) for k in ("total", "letters")})
+    check("+226" not in json.dumps(page), "liste des comptes : aucun numéro")
+    status, data = rpc("console_accounts_page", {"p_page": 1}, TB)
+    check(isinstance(data, dict) and data.get("message") == "ADMIN_REQUIRED", "liste refusée à un autre compte", data)
+    status, val = rpc("console_set_policy", {"p_key": "gif_enabled", "p_value": False}, TA)
+    check(status == 200 and val is False, "GIF coupés depuis la console", val)
+    status, data = rpc("gif_customer_id", {}, TB)
+    check(isinstance(data, dict) and data.get("message") == "FEATURE_DISABLED",
+          "le serveur refuse aussitôt la recherche de GIF", data)
+    _, pol = rpc("get_client_policies", {}, TB)
+    check(pol["values"].get("gif_enabled") is False, "les téléphones voient l'interrupteur coupé", pol["values"].get("gif_enabled"))
+    rpc("console_set_policy", {"p_key": "gif_enabled", "p_value": True}, TA)
+    status, jp = rpc("console_journal_page", {"p_type": "settings", "p_days": 1, "p_page": 1, "p_size": 10}, TA)
+    check(status == 200 and jp["total"] >= 2 and all(r["type"] == "settings" for r in jp["rows"]),
+          "journal filtré : fonctionnalités et réglages du jour", jp.get("total"))
 finally:
     sql(f"update private.runtime_settings set value = '{before}' where key = 'admin_phone_e164'")
-print("Console d'administration : OK")
+print("Console d'administration (dont lot 5.5) : OK")
