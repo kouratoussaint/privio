@@ -7275,6 +7275,108 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Logiciels libres et émojis animés utilisés par Privio'**
   String get licencesSubtitle;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrir Privio'**
+  String get discoverTitle;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fonctions principales en 6 écrans'**
+  String get discoverEntrySubtitle;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer'**
+  String get discoverSkip;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get discoverNext;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'C’est parti'**
+  String get discoverStart;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Bienvenue sur Privio'**
+  String get discover1Title;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Une messagerie privée où les messages s’effacent d’eux-mêmes. Voici l’essentiel en quelques écrans.'**
+  String get discover1Body;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Démarrer une discussion'**
+  String get discover2Title;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Touchez le crayon : vos contacts s’affichent, et vous pouvez chercher un identifiant. Scannez aussi le QR code d’un proche, ou retrouvez vos demandes de connexion dans le menu ⋮.'**
+  String get discover2Body;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos messages s’effacent'**
+  String get discover3Title;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque discussion a sa durée, 72 h au départ. Touchez ⏱ en haut d’une discussion pour la changer : passé ce délai, les messages disparaissent chez tout le monde.'**
+  String get discover3Body;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Les groupes'**
+  String get discover4Title;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Créez un groupe dans l’onglet Groupes, invitez avec un lien ou un QR code et nommez des administrateurs pour vous aider.'**
+  String get discover4Body;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels audio et vidéo'**
+  String get discover5Title;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appelez un contact depuis la discussion avec 📞 ou 🎥. Ni la voix ni l’image ne sont enregistrées.'**
+  String get discover5Body;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre protection'**
+  String get discover6Title;
+
+  /// Guide Découvrir Privio (lot 8.5c)
+  ///
+  /// In fr, this message translates to:
+  /// **'Verrouillez Privio avec un code (Paramètres › Sécurité). Les captures d’écran sont bloquées. Dans Confidentialité, choisissez qui voit votre photo et qui peut vous joindre.'**
+  String get discover6Body;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

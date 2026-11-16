@@ -23,6 +23,7 @@ abstract final class Routes {
   /// groupes sont séparés des discussions.
   static String archivedOf(String kind) => '$archived?kind=$kind';
   static const help = '/help';
+  static const discover = '/discover';
   static const deleteAccount = '/delete-account';
   static const appLock = '/app-lock';
   static const appLockNew = '/app-lock/new';

@@ -51,6 +51,16 @@ class HelpScreen extends ConsumerWidget {
           const SizedBox(height: PrivioSpacing.l),
           SettingsCard(
             children: [
+              // Lot 8.5c : guide « Découvrir Privio ».
+              ListTile(
+                key: const Key('help.discover'),
+                leading: const Icon(Icons.auto_awesome_outlined),
+                title: Text(L.t.discoverTitle),
+                subtitle: Text(L.t.discoverEntrySubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.discover),
+              ),
+              const SettingsDivider(),
               ListTile(
                 key: const Key('help.keeps'),
                 leading: const Icon(Icons.inventory_2_outlined),

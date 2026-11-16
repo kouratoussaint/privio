@@ -34,6 +34,7 @@ import '../ui/features/settings/help_screen.dart';
 import '../ui/features/settings/settings_tab.dart';
 import '../ui/features/splash/splash_screen.dart';
 import 'routes.dart';
+import '../ui/features/settings/discover_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -73,6 +74,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.joinGroup, builder: (_, _) => const JoinGroupScreen()),
       GoRoute(path: Routes.myProfile, builder: (_, _) => const MyProfileScreen()),
       GoRoute(path: Routes.help, builder: (_, _) => const HelpScreen()),
+      // Lot 8.5c : guide « Découvrir Privio ».
+      GoRoute(path: Routes.discover, builder: (_, _) => const DiscoverScreen()),
       GoRoute(path: Routes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(path: Routes.appLock, builder: (_, _) => const AppLockSettingsScreen()),
       GoRoute(

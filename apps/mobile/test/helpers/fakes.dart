@@ -416,6 +416,13 @@ class FakeLocalFlags implements LocalFlags {
   Future<void> setTwoStepPromptDismissed() async => twoStepPromptClosed = true;
 
   bool fullScreenAsked = false;
+
+  /// Vrai par défaut : le guide ne s'ouvre pas dans les tests qui ne le concernent pas.
+  bool discover = true;
+  @override
+  Future<bool> discoverSeen() async => discover;
+  @override
+  Future<void> setDiscoverSeen() async => discover = true;
   @override
   Future<bool> fullScreenCallsAsked() async => fullScreenAsked;
   @override

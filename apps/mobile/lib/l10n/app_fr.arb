@@ -5961,5 +5961,73 @@
   "licencesSubtitle": "Logiciels libres et émojis animés utilisés par Privio",
   "@licencesSubtitle": {
     "description": "Aide : licences (lot 8.5b)"
+  },
+  "discoverTitle": "Découvrir Privio",
+  "@discoverTitle": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discoverEntrySubtitle": "Les fonctions principales en 6 écrans",
+  "@discoverEntrySubtitle": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discoverSkip": "Passer",
+  "@discoverSkip": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discoverNext": "Suivant",
+  "@discoverNext": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discoverStart": "C’est parti",
+  "@discoverStart": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover1Title": "Bienvenue sur Privio",
+  "@discover1Title": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover1Body": "Une messagerie privée où les messages s’effacent d’eux-mêmes. Voici l’essentiel en quelques écrans.",
+  "@discover1Body": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover2Title": "Démarrer une discussion",
+  "@discover2Title": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover2Body": "Touchez le crayon : vos contacts s’affichent, et vous pouvez chercher un identifiant. Scannez aussi le QR code d’un proche, ou retrouvez vos demandes de connexion dans le menu ⋮.",
+  "@discover2Body": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover3Title": "Vos messages s’effacent",
+  "@discover3Title": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover3Body": "Chaque discussion a sa durée, 72 h au départ. Touchez ⏱ en haut d’une discussion pour la changer : passé ce délai, les messages disparaissent chez tout le monde.",
+  "@discover3Body": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover4Title": "Les groupes",
+  "@discover4Title": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover4Body": "Créez un groupe dans l’onglet Groupes, invitez avec un lien ou un QR code et nommez des administrateurs pour vous aider.",
+  "@discover4Body": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover5Title": "Appels audio et vidéo",
+  "@discover5Title": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover5Body": "Appelez un contact depuis la discussion avec 📞 ou 🎥. Ni la voix ni l’image ne sont enregistrées.",
+  "@discover5Body": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover6Title": "Votre protection",
+  "@discover6Title": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
+  },
+  "discover6Body": "Verrouillez Privio avec un code (Paramètres › Sécurité). Les captures d’écran sont bloquées. Dans Confidentialité, choisissez qui voit votre photo et qui peut vous joindre.",
+  "@discover6Body": {
+    "description": "Guide Découvrir Privio (lot 8.5c)"
   }
 }

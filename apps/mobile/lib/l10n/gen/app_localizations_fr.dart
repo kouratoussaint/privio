@@ -4301,4 +4301,61 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get licencesSubtitle => 'Logiciels libres et émojis animés utilisés par Privio';
+
+  @override
+  String get discoverTitle => 'Découvrir Privio';
+
+  @override
+  String get discoverEntrySubtitle => 'Les fonctions principales en 6 écrans';
+
+  @override
+  String get discoverSkip => 'Passer';
+
+  @override
+  String get discoverNext => 'Suivant';
+
+  @override
+  String get discoverStart => 'C’est parti';
+
+  @override
+  String get discover1Title => 'Bienvenue sur Privio';
+
+  @override
+  String get discover1Body =>
+      'Une messagerie privée où les messages s’effacent d’eux-mêmes. Voici l’essentiel en quelques écrans.';
+
+  @override
+  String get discover2Title => 'Démarrer une discussion';
+
+  @override
+  String get discover2Body =>
+      'Touchez le crayon : vos contacts s’affichent, et vous pouvez chercher un identifiant. Scannez aussi le QR code d’un proche, ou retrouvez vos demandes de connexion dans le menu ⋮.';
+
+  @override
+  String get discover3Title => 'Vos messages s’effacent';
+
+  @override
+  String get discover3Body =>
+      'Chaque discussion a sa durée, 72 h au départ. Touchez ⏱ en haut d’une discussion pour la changer : passé ce délai, les messages disparaissent chez tout le monde.';
+
+  @override
+  String get discover4Title => 'Les groupes';
+
+  @override
+  String get discover4Body =>
+      'Créez un groupe dans l’onglet Groupes, invitez avec un lien ou un QR code et nommez des administrateurs pour vous aider.';
+
+  @override
+  String get discover5Title => 'Appels audio et vidéo';
+
+  @override
+  String get discover5Body =>
+      'Appelez un contact depuis la discussion avec 📞 ou 🎥. Ni la voix ni l’image ne sont enregistrées.';
+
+  @override
+  String get discover6Title => 'Votre protection';
+
+  @override
+  String get discover6Body =>
+      'Verrouillez Privio avec un code (Paramètres › Sécurité). Les captures d’écran sont bloquées. Dans Confidentialité, choisissez qui voit votre photo et qui peut vous joindre.';
 }

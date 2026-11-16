@@ -17,6 +17,7 @@ import '../../../state/push_providers.dart';
 import '../../../domain/models/messaging.dart';
 import '../../core/motion/motion.dart';
 import '../calls/call_screen.dart' show offerFullScreenCalls;
+import '../../../state/providers.dart';
 
 /// Navigation MVP validée : Discussions / Groupes / Paramètres, et rien d'autre.
 /// Active aussi les notifications (lot 4.1) et ouvre la discussion d'une notification touchée.
@@ -45,7 +46,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void initState() {
     super.initState();
     // Lot 9.1b : appels visibles téléphone verrouillé (Android 14+), proposé une fois.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Lot 8.5c : guide « Découvrir Privio » une fois (nouveaux comptes et comptes
+    // existants), avant les autres propositions.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (!await ref.read(localFlagsProvider).discoverSeen() && mounted) {
+        await context.push(Routes.discover);
+      }
       if (mounted) unawaited(offerFullScreenCalls(context, ref));
     });
   }

@@ -135,3 +135,35 @@ class _BigEmojiState extends State<_BigEmoji> with SingleTickerProviderStateMixi
     );
   }
 }
+
+/// Lot 8.5c : émoji animé en boucle (illustrations du guide). Image fixe si l'émoji n'est
+/// pas animé ou si les animations sont réduites.
+class LoopingEmoji extends StatelessWidget {
+  const LoopingEmoji(this.emoji, {super.key, this.size = 72});
+
+  final String emoji;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = BigEmojis.assetFor(emoji);
+    final still = Text(emoji, style: TextStyle(fontSize: size * 0.82, height: 1.15));
+    if (asset == null) {
+      return SizedBox(
+        height: size,
+        child: Center(child: still),
+      );
+    }
+    return SizedBox.square(
+      dimension: size,
+      child: Lottie.asset(
+        asset,
+        width: size,
+        height: size,
+        animate: Motion.loops(context),
+        frameBuilder: (context, child, composition) => composition == null ? still : child,
+        errorBuilder: (_, _, _) => still,
+      ),
+    );
+  }
+}
