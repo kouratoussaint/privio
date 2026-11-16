@@ -6089,5 +6089,17 @@
   "discussionMasquee": "Discussion masquée. Appui long sur le logo Privio pour la retrouver.",
   "discussionReaffichee": "La discussion est de retour dans la liste.",
   "codePrivioCree": "Code Privio créé.",
-  "codePrivioPourDiscussionsCachees": "Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture."
+  "codePrivioPourDiscussionsCachees": "Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture.",
+  "messagesVocaux": "Messages vocaux",
+  "appels": "Appels",
+  "autres": "Autres",
+  "modeEco": "Mode éco",
+  "modeEcoActif": "Activé : Privio consomme moins de données.",
+  "modeEcoInactif": "Désactivé",
+  "modeEcoDetail": "Photos et vocaux envoyés allégés ; photos, vocaux et GIF reçus téléchargés seulement au toucher ; GIF et aperçus des liens coupés ; vidéo réduite pendant les appels. Il ne s’active qu’à la main.",
+  "modeEcoPhotosAuToucher": "Mode éco activé : les photos reçues se téléchargent seulement au toucher.",
+  "economiseCeMois": "Économisé ce mois-ci",
+  "estimationModeEco": "Estimation, grâce au Mode éco",
+  "gifToucherPourAfficher": "GIF · toucher pour afficher",
+  "modeEcoActiveTooltip": "Mode éco activé"
 }

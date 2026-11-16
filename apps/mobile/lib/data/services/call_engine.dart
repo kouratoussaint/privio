@@ -54,6 +54,11 @@ abstract interface class CallEngine {
   Future<void> addCandidate(Map<String, dynamic> candidate);
   Future<void> setMuted(bool muted);
   Future<void> setSpeaker(bool on);
+
+  /// Lot 10.3 : octets échangés depuis le début de l'appel (envoyés + reçus), pour le
+  /// compteur de données ; 0 si inconnu.
+  Future<int> trafficBytes();
+
   Future<void> close();
 }
 
@@ -389,6 +394,19 @@ class WebRtcCallEngine implements CallEngine {
 
   @override
   Future<void> setSpeaker(bool on) => Helper.setSpeakerphoneOn(on);
+
+  @override
+  Future<int> trafficBytes() async {
+    final pc = _pc;
+    if (pc == null) return 0;
+    var total = 0;
+    for (final r in await pc.getStats()) {
+      if (r.type != 'transport') continue;
+      total += ((r.values['bytesSent'] as num?) ?? 0).toInt();
+      total += ((r.values['bytesReceived'] as num?) ?? 0).toInt();
+    }
+    return total;
+  }
 
   @override
   Future<void> close() async {

@@ -18,6 +18,7 @@ import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/join_providers.dart';
+import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/privacy_providers.dart';
 import '../../../state/providers.dart';
@@ -674,7 +675,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (raws.isEmpty || !mounted) return;
       setState(() => _preparingPhoto = true);
       final prepare = ref.read(photoPreparerProvider);
-      final photos = [for (final raw in raws) await prepare(raw)];
+      // Lot 10.3 : Mode éco → photos allégées (1 024 px, qualité 65).
+      final eco = ref.read(ecoOnProvider);
+      final photos = [for (final raw in raws) await prepare(raw, eco: eco)];
       if (!mounted) return;
       setState(() => _preparingPhoto = false);
       final drafts = await Navigator.of(context).push<List<PhotoDraft>>(
@@ -1664,6 +1667,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Positioned.fill(
                       child: switch (chat) {
                         AsyncData(:final value) => _MessageList(
+                          eco: ref.watch(ecoOnProvider),
                           messages: visible!,
                           unreadMarker: marker,
                           pinnedIds: pinnedIds,
@@ -1876,7 +1880,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ExpressionPanel(
                     controller: _composer,
                     onSticker: (s) => unawaited(_sendSticker(s)),
-                    onGif: features.gif ? (g) => unawaited(_sendGif(g)) : null,
+                    // Lot 10.3 : Mode éco → onglet GIF masqué.
+                    onGif: features.gif && !ref.watch(ecoOnProvider)
+                        ? (g) => unawaited(_sendGif(g))
+                        : null,
                     height: _panelHeight(context),
                   ),
               ],
@@ -1912,6 +1919,7 @@ String dayLabel(DateTime at, DateTime now) {
 
 class _MessageList extends StatelessWidget {
   const _MessageList({
+    this.eco = false,
     this.pinnedIds = const {},
     this.favoriteIds = const {},
     this.selectedIds = const {},
@@ -2012,6 +2020,9 @@ class _MessageList extends StatelessWidget {
   final void Function(String messageId) onQuoteTap;
   final void Function(ChatMessage, String) onReactionTap;
 
+  /// Lot 10.3 : Mode éco (aperçus des liens masqués).
+  final bool eco;
+
   @override
   Widget build(BuildContext context) {
     if (searching && messages.isEmpty) {
@@ -2106,7 +2117,8 @@ class _MessageList extends StatelessWidget {
             !m.isDeleted && (m.isSticker || m.isGif || (m.kind == 'text' && isJumboEmoji(m.body))),
         jumbo: !m.isDeleted && m.kind == 'text' && m.mentions.isEmpty && isJumboEmoji(m.body),
         // Lot 7.3b : aperçu du lien au-dessus du texte.
-        attachment: m.linkPreview != null && !m.isDeleted
+        // Lot 10.3 : Mode éco → pas d'aperçu (le lien reste cliquable dans le texte).
+        attachment: m.linkPreview != null && !m.isDeleted && !eco
             ? LinkPreviewCard(preview: m.linkPreview!, outgoing: outgoing)
             : null,
         content: m.isSticker && !m.isDeleted

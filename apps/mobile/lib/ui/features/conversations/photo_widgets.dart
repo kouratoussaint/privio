@@ -68,6 +68,17 @@ class PhotoMessageContent extends ConsumerWidget {
         ? ref.watch(photoBytesProvider(photo))
         : ref.watch(photoLocalProvider(photo));
 
+    // Lot 10.3 : resté au toucher grâce au Mode éco → compté comme économisé (estimation).
+    if (!outgoing &&
+        bytes is AsyncData<Uint8List?> &&
+        bytes.value == null &&
+        ref.watch(ecoOnProvider)) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref
+            .read(dataUsageProvider.notifier)
+            .noteSkipped(photo.key, estimatePhotoBytes(width, height)),
+      );
+    }
     final Widget frame = switch (bytes) {
       AsyncData(value: null) => InkWell(
         key: Key('photo.download.${photo.key}'),

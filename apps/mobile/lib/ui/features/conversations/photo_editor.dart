@@ -32,30 +32,42 @@ class PenStroke {
   final List<Offset> points = [];
 }
 
-PreparedPhoto _encode(img.Image image) => PreparedPhoto(
-  bytes: Uint8List.fromList(img.encodeJpg(image, quality: kPhotoQuality)),
+PreparedPhoto _encode(img.Image image, int quality) => PreparedPhoto(
+  bytes: Uint8List.fromList(img.encodeJpg(image, quality: quality)),
   width: image.width,
   height: image.height,
+  quality: quality,
 );
 
 img.Image _decode(Uint8List bytes) => img.decodeImage(bytes)!;
 
 /// Pivote d'un quart de tour vers la gauche.
-PreparedPhoto rotatePhotoLeft(Uint8List bytes) =>
-    _encode(img.copyRotate(_decode(bytes), angle: -90));
+PreparedPhoto rotatePhotoLeft(Uint8List bytes, [int quality = kPhotoQuality]) =>
+    _encode(img.copyRotate(_decode(bytes), angle: -90), quality);
 
 /// Recadre selon un rectangle relatif (0 à 1).
-PreparedPhoto cropPhoto(Uint8List bytes, double l, double t, double r, double b) {
+PreparedPhoto cropPhoto(
+  Uint8List bytes,
+  double l,
+  double t,
+  double r,
+  double b, [
+  int quality = kPhotoQuality,
+]) {
   final image = _decode(bytes);
   final x = (l * image.width).round().clamp(0, image.width - 1);
   final y = (t * image.height).round().clamp(0, image.height - 1);
   final w = ((r - l) * image.width).round().clamp(1, image.width - x);
   final h = ((b - t) * image.height).round().clamp(1, image.height - y);
-  return _encode(img.copyCrop(image, x: x, y: y, width: w, height: h));
+  return _encode(img.copyCrop(image, x: x, y: y, width: w, height: h), quality);
 }
 
 /// Trace les traits dans l'image : (couleur ARGB, épaisseur relative, points relatifs).
-PreparedPhoto drawOnPhoto(Uint8List bytes, List<(int, double, List<(double, double)>)> strokes) {
+PreparedPhoto drawOnPhoto(
+  Uint8List bytes,
+  List<(int, double, List<(double, double)>)> strokes, [
+  int quality = kPhotoQuality,
+]) {
   final image = _decode(bytes);
   for (final (argb, width, points) in strokes) {
     final c = img.ColorRgb8((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
@@ -79,17 +91,30 @@ PreparedPhoto drawOnPhoto(Uint8List bytes, List<(int, double, List<(double, doub
       }
     }
   }
-  return _encode(image);
+  return _encode(image, quality);
 }
 
 /// Une retouche à faire hors du fil de l'interface. Uniquement des données simples : un
 /// isolat ne peut recevoir ni l'écran ni ses objets (cause du blocage de la 1re version,
 /// où l'opération était une fonction anonyme liée à l'écran).
 class PhotoEdit {
-  const PhotoEdit.rotate(this.bytes) : kind = 'rotate', rect = const [], strokes = const [];
-  const PhotoEdit.crop(this.bytes, this.rect) : kind = 'crop', strokes = const [];
-  const PhotoEdit.draw(this.bytes, this.strokes) : kind = 'draw', rect = const [];
+  const PhotoEdit.rotate(this.bytes, {this.quality = kPhotoQuality})
+    : kind = 'rotate',
+      rect = const [],
+      strokes = const [];
+  const PhotoEdit.crop(this.bytes, this.rect, {this.quality = kPhotoQuality})
+    : kind = 'crop',
+      strokes = const [];
+  const PhotoEdit.draw(this.bytes, this.strokes, {this.quality = kPhotoQuality})
+    : kind = 'draw',
+      rect = const [];
 
+  const PhotoEdit._(this.kind, this.bytes, this.rect, this.strokes, this.quality);
+
+  /// Lot 10.3 : même qualité JPEG que la photo retouchée (Mode éco).
+  PhotoEdit withQuality(int q) => PhotoEdit._(kind, bytes, rect, strokes, q);
+
+  final int quality;
   final String kind;
   final Uint8List bytes;
 
@@ -102,9 +127,9 @@ class PhotoEdit {
 
 /// Point d'entrée de l'isolat (fonction de premier niveau).
 PreparedPhoto applyPhotoEdit(PhotoEdit e) => switch (e.kind) {
-  'rotate' => rotatePhotoLeft(e.bytes),
-  'crop' => cropPhoto(e.bytes, e.rect[0], e.rect[1], e.rect[2], e.rect[3]),
-  _ => drawOnPhoto(e.bytes, e.strokes),
+  'rotate' => rotatePhotoLeft(e.bytes, e.quality),
+  'crop' => cropPhoto(e.bytes, e.rect[0], e.rect[1], e.rect[2], e.rect[3], e.quality),
+  _ => drawOnPhoto(e.bytes, e.strokes, e.quality),
 };
 
 enum _Tool { none, crop, draw }
@@ -132,8 +157,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   /// Coin ou bord saisi pendant le recadrage (null : on déplace le cadre).
   Alignment? _handle;
 
-  Future<PreparedPhoto> _run(PhotoEdit edit) =>
-      PhotoEditorScreen.inline ? Future.value(applyPhotoEdit(edit)) : compute(applyPhotoEdit, edit);
+  Future<PreparedPhoto> _run(PhotoEdit edit) {
+    final e = edit.withQuality(_photo.quality);
+    return PhotoEditorScreen.inline ? Future.value(applyPhotoEdit(e)) : compute(applyPhotoEdit, e);
+  }
 
   void _failed() {
     if (!mounted) return;
@@ -401,7 +428,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                           key: const Key('editor.rotate'),
                           icon: Icons.rotate_left_rounded,
                           label: L.t.pivoter,
-                          onTap: _busy ? null : () => _apply(PhotoEdit.rotate),
+                          onTap: _busy ? null : () => _apply((b) => PhotoEdit.rotate(b)),
                         ),
                         _ToolButton(
                           key: const Key('editor.crop'),

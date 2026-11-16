@@ -72,6 +72,10 @@ abstract interface class LocalFlags {
   /// Octets de médias reçus / envoyés, par mois : {'2026-11:in': 1234, '2026-11:out': 56}.
   Future<Map<String, int>> dataUsage();
   Future<void> saveDataUsage(Map<String, int> usage);
+
+  /// Lot 10.3 : Mode éco (un seul interrupteur ; activé à la main seulement).
+  Future<bool> ecoMode();
+  Future<void> setEcoMode(bool on);
 }
 
 class SharedPrefsLocalFlags implements LocalFlags {
@@ -83,6 +87,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _push = 'privio.push_enabled';
   static const _quick = 'privio.quick_reaction';
   static const _autoPhoto = 'privio.photo_auto_download';
+  static const _eco = 'privio.eco_mode';
   static const _usage = 'privio.data_usage';
   static const _groupsInDiscussions = 'privio.groups_in_discussions';
   static const _sounds = 'privio.sounds_enabled';
@@ -211,6 +216,12 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setPhotoAutoDownload(String value) => _prefs.setString(_autoPhoto, value);
+
+  @override
+  Future<bool> ecoMode() async => (await _prefs.getBool(_eco)) ?? false;
+
+  @override
+  Future<void> setEcoMode(bool on) => _prefs.setBool(_eco, on);
 
   @override
   Future<Map<String, int>> dataUsage() async {

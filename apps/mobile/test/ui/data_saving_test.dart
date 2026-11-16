@@ -106,10 +106,17 @@ void main() {
 
     await _openStorage(tester);
     final month = monthKey(DateTime.now());
+    expect(find.textContaining('Reçu ${formatBytes(testJpeg().length)}'), findsOneWidget);
+    // Lot 10.3 : la consommation est en haut ; le choix du téléchargement plus bas.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('storage.auto.never')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('storage.auto.never')));
     await tester.pumpAndSettle();
     expect(deps.flags.autoPhoto, 'never');
-    expect(find.textContaining('Reçu ${formatBytes(testJpeg().length)}'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('storage.space')),
@@ -136,6 +143,13 @@ void main() {
     // Compteurs enregistrés (après le court délai d'écriture), puis remis à zéro.
     await tester.pump(const Duration(seconds: 3));
     expect(deps.flags.usage['$month:in'], testJpeg().length);
+    expect(deps.flags.usage['$month:in:photo'], testJpeg().length, reason: 'lot 10.3 : par type');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('storage.usage.reset')),
+      -200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('storage.usage.reset')));
     await tester.pumpAndSettle();
     expect(deps.flags.usage, isEmpty);

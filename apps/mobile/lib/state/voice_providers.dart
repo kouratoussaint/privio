@@ -106,7 +106,7 @@ class VoicePlayerController extends Notifier<VoicePlayback> {
       var audio = await cache.readMedia(key);
       if (audio == null) {
         audio = await ref.read(messagingApiProvider).downloadVoice(m.mediaPath!);
-        countData(ref, received: audio.length);
+        countData(ref, received: audio.length, kind: 'voice');
         await cache.putMedia(key, audio, m.expiresAt);
         if (ref.mounted) ref.read(offlineProvider.notifier).report(offline: false);
       }
@@ -277,7 +277,7 @@ class VoiceRecorderController extends Notifier<VoiceRecState> {
       if (permission != MicPermission.granted || !ref.mounted) return permission;
       if (_releasedWhileStarting && !locked) return MicPermission.granted; // doigt déjà levé
       await ref.read(voicePlayerProvider.notifier).stop();
-      await _recorder.start();
+      await _recorder.start(eco: ref.read(ecoOnProvider));
       if (!ref.mounted) return MicPermission.granted;
       _samples.clear();
       _recent.clear();

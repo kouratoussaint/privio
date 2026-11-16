@@ -476,6 +476,13 @@ class FakeLocalFlags implements LocalFlags {
   Future<Map<String, int>> dataUsage() async => Map.of(usage);
   @override
   Future<void> saveDataUsage(Map<String, int> value) async => usage = Map.of(value);
+
+  /// Lot 10.3 : Mode éco.
+  bool eco = false;
+  @override
+  Future<bool> ecoMode() async => eco;
+  @override
+  Future<void> setEcoMode(bool on) async => eco = on;
 }
 
 /// Empreinte rapide pour les tests (même interface, une seule itération, sans isolat).
@@ -2457,8 +2464,12 @@ class FakeVoiceRecorder implements VoiceRecorder {
   @override
   Future<MicPermission> ensurePermission() async => permission;
 
+  /// Lot 10.3 : dernier enregistrement en Mode éco.
+  bool lastEco = false;
+
   @override
-  Future<void> start() async {
+  Future<void> start({bool eco = false}) async {
+    lastEco = eco;
     starts++;
     recording = true;
     paused = false;
@@ -3205,8 +3216,13 @@ class TestDeps {
     ),
     // Préparation synchrone (pas d'isolat dans les tests de widgets).
     photoPreparerProvider.overrideWithValue(
-      (raw, {avatar = false}) async =>
-          processPhotoSync(raw, square: avatar, maxSide: avatar ? kAvatarSide : kPhotoMaxSide) ??
+      (raw, {avatar = false, eco = false}) async =>
+          processPhotoSync(
+            raw,
+            square: avatar,
+            maxSide: avatar ? kAvatarSide : (eco ? kEcoPhotoMaxSide : kPhotoMaxSide),
+            quality: eco ? kEcoPhotoQuality : kPhotoQuality,
+          ) ??
           (throw const AppFailure(FailureCode.mediaInvalid)),
     ),
   ];
@@ -3380,6 +3396,11 @@ class FakeCallEngine implements CallEngine {
 
   @override
   Future<void> setEconomy(bool economy) async => this.economy = economy;
+
+  /// Lot 10.3 : octets de l'appel (compteur de données).
+  int traffic = 0;
+  @override
+  Future<int> trafficBytes() async => traffic;
 
   @override
   Widget localView({bool mirror = true}) => SizedBox(key: Key('fake.local.$mirror'));

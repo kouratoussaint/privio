@@ -193,7 +193,15 @@ class OutboxController extends Notifier<List<OutboxItem>> {
                 ttlSeconds: item.ttlSeconds,
                 viewOnce: item.viewOnce,
               );
-        countData(ref, sent: media.length);
+        // Lot 10.3 : par type ; en Mode éco, ce que l'envoi allégé a évité (photo ≈ 2,5 fois,
+        // vocal 2 fois plus lourds sans lui).
+        final eco = ref.read(ecoOnProvider);
+        countData(
+          ref,
+          sent: media.length,
+          kind: item.isVoice ? 'voice' : 'photo',
+          saved: !eco ? 0 : (item.isVoice ? media.length : (media.length * 1.5).round()),
+        );
         // L'expéditeur revoit / réécoute son envoi sans le retélécharger (sauf vue unique :
         // personne ne le revoit, pas même l'expéditeur).
         if (!item.viewOnce) {
@@ -665,7 +673,7 @@ class ChatController extends AsyncNotifier<ChatState> {
     final path = fresh?.mediaPath;
     if (path == null) throw const AppFailure(FailureCode.mediaNotFound);
     final bytes = m.kind == 'voice' ? await api.downloadVoice(path) : await api.downloadPhoto(path);
-    countData(ref, received: bytes.length);
+    countData(ref, received: bytes.length, kind: m.kind == 'voice' ? 'voice' : 'photo');
     return bytes;
   }
 
@@ -745,7 +753,10 @@ class ChatController extends AsyncNotifier<ChatState> {
     if (sent == null) return;
     await _showSent(sent, item.replyToId);
     // Lot 7.3b : un lien → le serveur prépare son aperçu (si le réglage le permet).
-    if (_hasLink(body) && await ref.read(localFlagsProvider).linkPreviews()) {
+    // Lot 10.3 : Mode éco → aucun aperçu demandé.
+    if (_hasLink(body) &&
+        !ref.read(ecoOnProvider) &&
+        await ref.read(localFlagsProvider).linkPreviews()) {
       unawaited(
         ref
             .read(messagingApiProvider)
@@ -1117,7 +1128,7 @@ final photoBytesProvider = FutureProvider.autoDispose.family<Uint8List, PhotoRef
   if (!until.isAfter(DateTime.now())) throw const AppFailure(FailureCode.messageExpired);
   try {
     final bytes = await ref.read(messagingApiProvider).downloadPhoto(path);
-    countData(ref, received: bytes.length);
+    countData(ref, received: bytes.length, kind: 'photo');
     await cache.putMedia(photo.key, bytes, until);
     return bytes;
   } on Object catch (e) {

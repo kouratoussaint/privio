@@ -12,6 +12,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../core/util/time_format.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
+import '../../../state/data_providers.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/avatar.dart';
@@ -102,7 +103,17 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
     return BrandScaffold(
       title: BrandTitle(onLongPress: () => unawaited(openHiddenConversations(context, ref))),
       // Lot 8.3a : menu ⋮ (nouveau groupe, QR code, demandes, archivées, favoris…).
-      actions: const [ListMenuButton(kind: ListMenuKind.discussions)],
+      actions: [
+        // Lot 10.3 : feuille verte tant que le Mode éco est actif.
+        if (ref.watch(ecoOnProvider))
+          IconButton(
+            key: const Key('eco.badge'),
+            tooltip: L.t.modeEcoActiveTooltip,
+            icon: const Icon(Icons.eco, color: Color(0xFF7BD88F)),
+            onPressed: () => context.push(Routes.storage),
+          ),
+        const ListMenuButton(kind: ListMenuKind.discussions),
+      ],
       floatingActionButton: FloatingActionButton(
         key: const Key('discussions.new'),
         tooltip: L.t.nouvelleDiscussion,

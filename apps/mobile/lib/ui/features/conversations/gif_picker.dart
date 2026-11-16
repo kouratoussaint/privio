@@ -1,4 +1,5 @@
 import '../../../l10n/l10n.dart';
+import '../../../state/data_providers.dart';
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -189,9 +190,11 @@ class _GifPickerState extends ConsumerState<GifPicker> {
 }
 
 /// Lot 7.3b : image d'un GIF reçu ou envoyé (stockage privé, téléchargée avec le jeton).
-final gifBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>(
-  (ref, path) => ref.watch(messagingApiProvider).downloadGif(path),
-);
+final gifBytesProvider = FutureProvider.autoDispose.family<Uint8List, String>((ref, path) async {
+  final bytes = await ref.watch(messagingApiProvider).downloadGif(path);
+  countData(ref, received: bytes.length, kind: 'gif');
+  return bytes;
+});
 
 class GifImage extends ConsumerWidget {
   const GifImage({super.key, required this.message, this.maxWidth = 240});
@@ -206,6 +209,38 @@ class GifImage extends ConsumerWidget {
     final width = maxWidth;
     final height = (width * h / w).clamp(80.0, 320.0);
     final path = message.mediaPath;
+    // Lot 10.3 : Mode éco → GIF reçu affiché au toucher.
+    final key = 'gif-${message.id}';
+    final hold =
+        path != null && ref.watch(ecoOnProvider) && !ref.watch(photoRequestsProvider).contains(key);
+    if (hold) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref.read(dataUsageProvider.notifier).noteSkipped(key, kEstimatedGifBytes),
+      );
+      return ClipRRect(
+        key: Key('gif.bubble.${message.id}'),
+        borderRadius: BorderRadius.circular(PrivioRadius.medium),
+        child: Material(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: InkWell(
+            key: Key('gif.download.${message.id}'),
+            onTap: () => ref.read(photoRequestsProvider.notifier).request(key),
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.gif_box_outlined, size: 40),
+                  const SizedBox(height: 4),
+                  Text(L.t.gifToucherPourAfficher, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final bytes = path == null ? null : ref.watch(gifBytesProvider(path));
     return Semantics(
       label: 'GIF',

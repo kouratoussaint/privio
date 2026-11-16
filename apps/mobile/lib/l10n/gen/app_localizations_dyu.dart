@@ -4461,4 +4461,42 @@ class AppLocalizationsDyu extends AppLocalizations {
   @override
   String get codePrivioPourDiscussionsCachees =>
       'Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture.';
+
+  @override
+  String get messagesVocaux => 'Messages vocaux';
+
+  @override
+  String get appels => 'Appels';
+
+  @override
+  String get autres => 'Autres';
+
+  @override
+  String get modeEco => 'Mode éco';
+
+  @override
+  String get modeEcoActif => 'Activé : Privio consomme moins de données.';
+
+  @override
+  String get modeEcoInactif => 'Désactivé';
+
+  @override
+  String get modeEcoDetail =>
+      'Photos et vocaux envoyés allégés ; photos, vocaux et GIF reçus téléchargés seulement au toucher ; GIF et aperçus des liens coupés ; vidéo réduite pendant les appels. Il ne s’active qu’à la main.';
+
+  @override
+  String get modeEcoPhotosAuToucher =>
+      'Mode éco activé : les photos reçues se téléchargent seulement au toucher.';
+
+  @override
+  String get economiseCeMois => 'Économisé ce mois-ci';
+
+  @override
+  String get estimationModeEco => 'Estimation, grâce au Mode éco';
+
+  @override
+  String get gifToucherPourAfficher => 'GIF · toucher pour afficher';
+
+  @override
+  String get modeEcoActiveTooltip => 'Mode éco activé';
 }

@@ -58,8 +58,38 @@ class PhotoAutoDownloadController extends AsyncNotifier<PhotoAutoDownload> {
   }
 }
 
+// ------------------------------------------------------------------------
+// Lot 10.3 : Mode éco (un seul interrupteur, réglé à la main, gardé sur le téléphone)
+// ------------------------------------------------------------------------
+final ecoModeProvider = AsyncNotifierProvider<EcoModeController, bool>(EcoModeController.new);
+
+class EcoModeController extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() => ref.read(localFlagsProvider).ecoMode();
+
+  Future<void> set(bool on) async {
+    state = AsyncData(on);
+    await ref.read(localFlagsProvider).setEcoMode(on);
+  }
+}
+
+/// Mode éco actif (faux tant que le réglage n'est pas lu).
+final ecoOnProvider = Provider<bool>((ref) => ref.watch(ecoModeProvider).value ?? false);
+
+/// Lot 10.3 : estimation de ce qu'une photo reçue aurait coûté (JPEG ≈ 0,16 octet par
+/// pixel à la qualité normale), pour le compteur « économisé ».
+int estimatePhotoBytes(int? width, int? height) {
+  if (width == null || height == null || width <= 0 || height <= 0) return 250 * 1024;
+  return (width * height * 0.16).round().clamp(40 * 1024, 600 * 1024);
+}
+
+/// GIF reçu : taille moyenne constatée (aucune dimension fiable du fichier).
+const kEstimatedGifBytes = 300 * 1024;
+
 /// Les photos reçues peuvent-elles se télécharger seules, maintenant ?
 final photoAutoAllowedProvider = Provider<bool>((ref) {
+  // Lot 10.3 : Mode éco → au toucher seulement.
+  if (ref.watch(ecoOnProvider)) return false;
   // Réglage pas encore lu : on attend (sinon une photo partirait avant de savoir).
   final mode = ref.watch(photoAutoDownloadProvider).value;
   if (mode == null) return false;
@@ -77,7 +107,15 @@ class PhotoRequests extends Notifier<Set<String>> {
   @override
   Set<String> build() => const {};
 
-  void request(String key) => state = {...state, key};
+  void request(String key) {
+    state = {...state, key};
+    // Lot 10.3 : téléchargé à la demande → plus compté comme économisé.
+    try {
+      ref.read(dataUsageProvider.notifier).noteFetched(key);
+    } on Object {
+      // Compteur indicatif seulement.
+    }
+  }
 }
 
 /// Photo déjà sur le téléphone (sans téléchargement), ou null.
@@ -99,7 +137,16 @@ class DataUsage {
 
   int received(String m) => raw['$m:in'] ?? 0;
   int sent(String m) => raw['$m:out'] ?? 0;
+
+  /// Lot 10.3 : reçu + envoyé pour un type (photo, voice, gif, call, other).
+  int ofKind(String m, String kind) => (raw['$m:in:$kind'] ?? 0) + (raw['$m:out:$kind'] ?? 0);
+
+  /// Lot 10.3 : estimation de ce que le Mode éco a évité ce mois-là.
+  int saved(String m) => raw['$m:saved'] ?? 0;
 }
+
+/// Lot 10.3 : types détaillés dans « Stockage et données ».
+const kUsageKinds = ['photo', 'voice', 'gif', 'call', 'other'];
 
 String monthKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}';
 
@@ -121,14 +168,45 @@ class DataUsageController extends AsyncNotifier<DataUsage> {
     return _wrap(await ref.read(localFlagsProvider).dataUsage());
   }
 
+  /// Lot 10.3 : téléchargements évités par le Mode éco (clé → estimation), cette session.
+  final Map<String, int> _skipped = {};
+
+  /// Un média reçu reste au toucher grâce au Mode éco : compté une fois comme économisé.
+  void noteSkipped(String key, int estimate) {
+    if (_skipped.containsKey(key)) return;
+    _skipped[key] = estimate;
+    unawaited(add(saved: estimate));
+  }
+
+  /// Téléchargé finalement : l'estimation est retirée.
+  void noteFetched(String key) {
+    final e = _skipped.remove(key);
+    if (e != null) unawaited(add(saved: -e));
+  }
+
   /// Compte des octets de médias reçus et/ou envoyés (texte non compté : négligeable).
-  Future<void> add({int received = 0, int sent = 0}) async {
-    if (received <= 0 && sent <= 0) return;
+  /// Lot 10.3 : par type ([kind]) et estimation économisée ([saved], peut être négative).
+  Future<void> add({int received = 0, int sent = 0, String kind = 'other', int saved = 0}) async {
+    if (received <= 0 && sent <= 0 && saved == 0) return;
     final current = state.value ?? await future;
     final m = monthKey(ref.read(usageClockProvider)());
     final raw = Map<String, int>.of(current.raw);
-    if (received > 0) raw['$m:in'] = (raw['$m:in'] ?? 0) + received;
-    if (sent > 0) raw['$m:out'] = (raw['$m:out'] ?? 0) + sent;
+    if (received > 0) {
+      raw['$m:in'] = (raw['$m:in'] ?? 0) + received;
+      raw['$m:in:$kind'] = (raw['$m:in:$kind'] ?? 0) + received;
+    }
+    if (sent > 0) {
+      raw['$m:out'] = (raw['$m:out'] ?? 0) + sent;
+      raw['$m:out:$kind'] = (raw['$m:out:$kind'] ?? 0) + sent;
+    }
+    if (saved != 0) {
+      final v = (raw['$m:saved'] ?? 0) + saved;
+      if (v > 0) {
+        raw['$m:saved'] = v;
+      } else {
+        raw.remove('$m:saved');
+      }
+    }
     // Seuls le mois en cours et le précédent sont gardés.
     final keep = {current.month, current.previousMonth, m};
     raw.removeWhere((k, _) => !keep.contains(k.split(':').first));
@@ -147,9 +225,13 @@ class DataUsageController extends AsyncNotifier<DataUsage> {
 }
 
 /// Compte sans jamais faire échouer l'opération principale.
-void countData(Ref ref, {int received = 0, int sent = 0}) {
+void countData(Ref ref, {int received = 0, int sent = 0, String kind = 'other', int saved = 0}) {
   try {
-    unawaited(ref.read(dataUsageProvider.notifier).add(received: received, sent: sent));
+    unawaited(
+      ref
+          .read(dataUsageProvider.notifier)
+          .add(received: received, sent: sent, kind: kind, saved: saved),
+    );
   } on Object {
     // Compteur indicatif seulement.
   }

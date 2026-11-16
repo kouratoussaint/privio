@@ -14,7 +14,18 @@ final mediaUsageProvider = FutureProvider.autoDispose<({int files, int bytes})>(
   (ref) => ref.read(localCacheProvider).mediaUsage(),
 );
 
+const _ecoGreen = Color(0xFF2E9D5B);
+
+String _kindLabel(String k) => switch (k) {
+  'photo' => L.t.photos,
+  'voice' => L.t.messagesVocaux,
+  'gif' => 'GIF',
+  'call' => L.t.appels,
+  _ => L.t.autres,
+};
+
 /// Écran 25 — stockage et économie de données (DATA-001, 003, 008, 009).
+/// Lot 10.3 : Mode éco et consommation détaillée.
 class StorageScreen extends ConsumerWidget {
   const StorageScreen({super.key});
 
@@ -49,33 +60,28 @@ class StorageScreen extends ConsumerWidget {
     final mode = ref.watch(photoAutoDownloadProvider).value ?? PhotoAutoDownload.always;
     final usage = ref.watch(dataUsageProvider).value;
     final space = ref.watch(mediaUsageProvider);
+    final eco = ref.watch(ecoOnProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(L.t.stockageDonnees)),
       body: SettingsListView(
         children: [
-          SettingsSectionTitle(L.t.telechargementAutomatiquePhotos, first: true),
+          // Lot 10.3 : Mode éco, tout en haut.
+          SettingsSectionTitle(L.t.modeEco, first: true),
           SettingsCard(
             children: [
-              RadioGroup<PhotoAutoDownload>(
-                groupValue: mode,
-                onChanged: (v) {
-                  if (v != null) ref.read(photoAutoDownloadProvider.notifier).set(v);
-                },
-                child: Column(
-                  children: [
-                    for (final m in PhotoAutoDownload.values)
-                      RadioListTile<PhotoAutoDownload>(
-                        key: Key('storage.auto.${m.id}'),
-                        value: m,
-                        title: Text(m.label),
-                      ),
-                  ],
-                ),
+              SwitchListTile(
+                key: const Key('storage.eco'),
+                secondary: Icon(Icons.eco_outlined, color: eco ? _ecoGreen : p.accentText),
+                title: Text(L.t.modeEco),
+                subtitle: Text(eco ? L.t.modeEcoActif : L.t.modeEcoInactif),
+                value: eco,
+                onChanged: (v) => ref.read(ecoModeProvider.notifier).set(v),
               ),
             ],
           ),
-          SettingsNote(L.t.sansTelechargementAutomatiquePhotoRecue),
+          SettingsNote(L.t.modeEcoDetail),
+          // Lot 10.3 : consommation du mois en haut, par type, et ce que le Mode éco a évité.
           SettingsSectionTitle(L.t.donneesUtiliseesParPhotosVocaux),
           SettingsCard(
             children: [
@@ -91,6 +97,26 @@ class StorageScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                for (final k in kUsageKinds)
+                  if (usage.ofKind(usage.month, k) > 0)
+                    ListTile(
+                      key: Key('storage.usage.kind.$k'),
+                      dense: true,
+                      contentPadding: const EdgeInsets.only(left: 72, right: PrivioSpacing.l),
+                      title: Text(_kindLabel(k)),
+                      trailing: Text(formatBytes(usage.ofKind(usage.month, k))),
+                    ),
+                if (usage.saved(usage.month) > 0)
+                  ListTile(
+                    key: const Key('storage.usage.saved'),
+                    leading: const Icon(Icons.eco, color: _ecoGreen),
+                    title: Text(L.t.economiseCeMois),
+                    subtitle: Text(L.t.estimationModeEco),
+                    trailing: Text(
+                      formatBytes(usage.saved(usage.month)),
+                      style: const TextStyle(color: _ecoGreen, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ListTile(
                   key: const Key('storage.usage.previous'),
                   leading: Icon(Icons.history, color: p.accentText),
@@ -118,6 +144,31 @@ class StorageScreen extends ConsumerWidget {
             ],
           ),
           SettingsNote(L.t.photosVocauxPhotosProfilEchanges),
+          SettingsSectionTitle(L.t.telechargementAutomatiquePhotos),
+          SettingsCard(
+            children: [
+              RadioGroup<PhotoAutoDownload>(
+                groupValue: mode,
+                onChanged: (v) {
+                  if (v != null) ref.read(photoAutoDownloadProvider.notifier).set(v);
+                },
+                child: Column(
+                  children: [
+                    for (final m in PhotoAutoDownload.values)
+                      RadioListTile<PhotoAutoDownload>(
+                        key: Key('storage.auto.${m.id}'),
+                        value: m,
+                        title: Text(m.label),
+                        enabled: !eco,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SettingsNote(
+            eco ? L.t.modeEcoPhotosAuToucher : L.t.sansTelechargementAutomatiquePhotoRecue,
+          ),
           SettingsSectionTitle(L.t.espaceSurCeTelephone),
           SettingsCard(
             children: [

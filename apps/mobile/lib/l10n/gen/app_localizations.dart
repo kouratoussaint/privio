@@ -7557,6 +7557,78 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture.'**
   String get codePrivioPourDiscussionsCachees;
+
+  /// No description provided for @messagesVocaux.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages vocaux'**
+  String get messagesVocaux;
+
+  /// No description provided for @appels.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels'**
+  String get appels;
+
+  /// No description provided for @autres.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autres'**
+  String get autres;
+
+  /// No description provided for @modeEco.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode éco'**
+  String get modeEco;
+
+  /// No description provided for @modeEcoActif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activé : Privio consomme moins de données.'**
+  String get modeEcoActif;
+
+  /// No description provided for @modeEcoInactif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactivé'**
+  String get modeEcoInactif;
+
+  /// No description provided for @modeEcoDetail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photos et vocaux envoyés allégés ; photos, vocaux et GIF reçus téléchargés seulement au toucher ; GIF et aperçus des liens coupés ; vidéo réduite pendant les appels. Il ne s’active qu’à la main.'**
+  String get modeEcoDetail;
+
+  /// No description provided for @modeEcoPhotosAuToucher.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode éco activé : les photos reçues se téléchargent seulement au toucher.'**
+  String get modeEcoPhotosAuToucher;
+
+  /// No description provided for @economiseCeMois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Économisé ce mois-ci'**
+  String get economiseCeMois;
+
+  /// No description provided for @estimationModeEco.
+  ///
+  /// In fr, this message translates to:
+  /// **'Estimation, grâce au Mode éco'**
+  String get estimationModeEco;
+
+  /// No description provided for @gifToucherPourAfficher.
+  ///
+  /// In fr, this message translates to:
+  /// **'GIF · toucher pour afficher'**
+  String get gifToucherPourAfficher;
+
+  /// No description provided for @modeEcoActiveTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode éco activé'**
+  String get modeEcoActiveTooltip;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -5,23 +5,39 @@ import '../errors/app_failure.dart';
 
 /// Photo prête à partir : JPEG sans aucune métadonnée, orientation appliquée.
 class PreparedPhoto {
-  const PreparedPhoto({required this.bytes, required this.width, required this.height});
+  const PreparedPhoto({
+    required this.bytes,
+    required this.width,
+    required this.height,
+    this.quality = kPhotoQuality,
+  });
 
   final Uint8List bytes;
   final int width;
   final int height;
+
+  /// Qualité JPEG utilisée (lot 10.3 : les retouches gardent celle du Mode éco).
+  final int quality;
 }
 
 /// Plus grand côté d'une photo envoyée, et qualité JPEG (≈ 150 à 400 Kio).
 const kPhotoMaxSide = 1600;
 const kPhotoQuality = 80;
 
+/// Lot 10.3 : Mode éco (≈ 2 à 3 fois plus léger, toujours net sur un téléphone).
+const kEcoPhotoMaxSide = 1024;
+const kEcoPhotoQuality = 65;
+
 /// Photo de profil : carré de 512 pixels.
 const kAvatarSide = 512;
 
 /// Prépare une photo de discussion (hors du fil de l'interface).
-Future<PreparedPhoto> preparePhoto(Uint8List raw) =>
-    _run(raw, square: false, maxSide: kPhotoMaxSide, quality: kPhotoQuality);
+Future<PreparedPhoto> preparePhoto(Uint8List raw, {bool eco = false}) => _run(
+  raw,
+  square: false,
+  maxSide: eco ? kEcoPhotoMaxSide : kPhotoMaxSide,
+  quality: eco ? kEcoPhotoQuality : kPhotoQuality,
+);
 
 /// Prépare une photo de profil : recadrée au centre, carrée.
 Future<PreparedPhoto> prepareAvatar(Uint8List raw) =>
@@ -73,5 +89,5 @@ PreparedPhoto? _process((Uint8List, bool, int, int) args) {
   }
   image.exif = img.ExifData();
   final bytes = img.encodeJpg(image, quality: quality);
-  return PreparedPhoto(bytes: bytes, width: image.width, height: image.height);
+  return PreparedPhoto(bytes: bytes, width: image.width, height: image.height, quality: quality);
 }

@@ -56,8 +56,10 @@ final photoPickerProvider = Provider<PhotoPicker>(
 
 /// Préparation d'une photo (rotation, taille, JPEG sans métadonnées), hors du fil de
 /// l'interface ; remplaçable dans les tests.
-typedef PhotoPreparer = Future<PreparedPhoto> Function(Uint8List raw, {bool avatar});
+/// Lot 10.3 : [eco] → photo allégée (Mode éco).
+typedef PhotoPreparer = Future<PreparedPhoto> Function(Uint8List raw, {bool avatar, bool eco});
 final photoPreparerProvider = Provider<PhotoPreparer>(
   (ref) =>
-      (raw, {avatar = false}) => avatar ? prepareAvatar(raw) : preparePhoto(raw),
+      (raw, {avatar = false, eco = false}) =>
+          avatar ? prepareAvatar(raw) : preparePhoto(raw, eco: eco),
 );

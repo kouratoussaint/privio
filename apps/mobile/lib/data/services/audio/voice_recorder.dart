@@ -17,7 +17,8 @@ abstract interface class VoiceRecorder {
   /// Demande l'accès au micro si nécessaire (jamais bloquant pour le reste de l'app).
   Future<MicPermission> ensurePermission();
 
-  Future<void> start();
+  /// Lot 10.3 : [eco] → son allégé (16 kb/s au lieu de 32).
+  Future<void> start({bool eco = false});
 
   /// Pause et reprise de l'enregistrement (lot 4.5) : un seul fichier au final.
   Future<void> pause();
@@ -47,6 +48,17 @@ class DeviceVoiceRecorder implements VoiceRecorder {
   static const config = RecordConfig(
     encoder: AudioEncoder.aacLc,
     bitRate: 32000,
+    sampleRate: 16000,
+    numChannels: 1,
+    autoGain: true,
+    echoCancel: true,
+    noiseSuppress: true,
+  );
+
+  /// Lot 10.3 : Mode éco (voix toujours claire, 2 fois plus léger).
+  static const ecoConfig = RecordConfig(
+    encoder: AudioEncoder.aacLc,
+    bitRate: 16000,
     sampleRate: 16000,
     numChannels: 1,
     autoGain: true,
@@ -92,11 +104,11 @@ class DeviceVoiceRecorder implements VoiceRecorder {
   }
 
   @override
-  Future<void> start() async {
+  Future<void> start({bool eco = false}) async {
     try {
       final dir = await getTemporaryDirectory();
       _path = '${dir.path}/privio_rec_${uuidV4()}.m4a';
-      await _recorder.start(config, path: _path!);
+      await _recorder.start(eco ? ecoConfig : config, path: _path!);
     } on Object {
       await _deleteFile();
       throw const AppFailure(FailureCode.microphoneUnavailable);

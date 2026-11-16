@@ -199,6 +199,21 @@ void main() {
     await _hangUp(tester);
   });
 
+  testWidgets('Mode éco (lot 10.3) : image réduite même en Wi-Fi ; données de l’appel comptées', (
+    tester,
+  ) async {
+    final d = _deps()..flags.eco = true;
+    final deps = await _start(tester, deps: d, openBob: true);
+    await _audioCall(tester, deps);
+    deps.network.set(NetKind.wifi);
+    await _tick(tester, 800);
+    expect(deps.callEngine.economy, isTrue);
+    deps.callEngine.traffic = 512 * 1024;
+    await _hangUp(tester);
+    await _tick(tester, 2500);
+    expect(deps.flags.usage.keys.any((k) => k.endsWith(':in:call')), isTrue);
+  });
+
   testWidgets('petite fenêtre (Privio quitté) : l’image seule, même réduit', (tester) async {
     final deps = await _start(tester, openBob: true);
     await _audioCall(tester, deps);

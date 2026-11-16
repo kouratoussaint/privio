@@ -532,7 +532,8 @@ class CallController extends Notifier<CallState?> {
     try {
       final kind = await ref.read(networkMonitorProvider).current();
       _net ??= kind;
-      await engine.setEconomy(kind != NetKind.wifi);
+      // Lot 10.3 : Mode éco → toujours l'image réduite, même en Wi-Fi.
+      await engine.setEconomy(ref.read(ecoOnProvider) || kind != NetKind.wifi);
     } on Object {
       // Réseau inconnu : image réduite.
     }
@@ -581,7 +582,11 @@ class CallController extends Notifier<CallState?> {
     final previous = _net;
     _net = kind;
     if (_engineOpen && kind != NetKind.none) {
-      unawaited(_engine?.setEconomy(kind != NetKind.wifi).catchError((Object _) {}));
+      unawaited(
+        _engine
+            ?.setEconomy(ref.read(ecoOnProvider) || kind != NetKind.wifi)
+            .catchError((Object _) {}),
+      );
     }
     final s = state;
     if (s == null || kind == NetKind.none || previous == kind) return;
@@ -759,7 +764,22 @@ class CallController extends Notifier<CallState?> {
     _pendingOffer = null;
     _pendingIce.clear();
     _after = 0;
-    if (engine != null) unawaited(engine.close().catchError((Object _) {}));
+    if (engine != null) unawaited(_closeEngine(engine));
+  }
+
+  /// Lot 10.3 : données de l'appel comptées (type « appels »), puis fermeture.
+  Future<void> _closeEngine(CallEngine engine) async {
+    try {
+      final bytes = await engine.trafficBytes();
+      if (bytes > 0) countData(ref, received: bytes, kind: 'call');
+    } on Object {
+      // Compteur indicatif seulement.
+    }
+    try {
+      await engine.close();
+    } on Object {
+      // Déjà fermé.
+    }
   }
 
   void _reset() {
