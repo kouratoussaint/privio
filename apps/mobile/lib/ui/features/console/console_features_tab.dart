@@ -113,7 +113,9 @@ class _FeatureList extends StatelessWidget {
                 leading: Icon(_featureIcon(p.key), color: theme.colorScheme.onSurfaceVariant),
                 title: Text(p.label),
                 subtitle: Text(
-                  p.isBool ? 'Promis à l’inscription\u202F: non modifiable' : 'Fixé\u202F: non modifiable',
+                  p.isBool
+                      ? 'Promis à l’inscription\u202F: non modifiable'
+                      : 'Fixé\u202F: non modifiable',
                 ),
                 trailing: const Icon(Icons.lock_outline),
               ),
