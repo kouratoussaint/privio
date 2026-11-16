@@ -8,6 +8,7 @@ import 'package:privio/ui/features/conversations/chat_motion.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 
 /// Lot 8.1b — bulles à queue, coches « lu », menu ⋮, liste des réactions.
 TestDeps _deps() =>
@@ -52,7 +53,7 @@ Finder _tailOf(String id) => find.descendant(
 Future<void> _menu(WidgetTester tester, String item) async {
   await tester.tap(find.byKey(const Key('chat.menu')));
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(Key(item)));
+  await tapMenuItem(tester, Key(item));
   await tester.pumpAndSettle();
 }
 
@@ -88,6 +89,10 @@ void main() {
     testWidgets('discussion à deux : toutes les entrées', (tester) async {
       await _openBob(tester, bodies: ['Salut']);
       await tester.tap(find.byKey(const Key('chat.menu')));
+      await tester.pumpAndSettle();
+      // Lot 8.5a : 5 actions, puis « Voir plus ».
+      expect(find.byKey(const Key('chat.menu.wallpaper')), findsNothing);
+      await tester.tap(find.byKey(const Key('menu.more')));
       await tester.pumpAndSettle();
       for (final k in [
         'chat.menu.info',
@@ -149,6 +154,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('chat.menu')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('menu.more')));
+      await tester.pumpAndSettle();
       for (final k in [
         'chat.menu.info',
         'chat.menu.notifications',
@@ -158,7 +165,7 @@ void main() {
         expect(find.byKey(Key(k)), findsOneWidget, reason: k);
       }
       expect(find.byKey(const Key('chat.menu.block')), findsNothing);
-      await tester.tap(find.byKey(const Key('chat.menu.notifications')));
+      await tapMenuItem(tester, const Key('chat.menu.notifications'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('chat.menu.mute')), findsOneWidget);
     });

@@ -123,7 +123,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         if (!didPop) _onBack();
       },
       child: Scaffold(
-        body: shell,
+        // Lot 8.5a : changement d'onglet en fondu et léger glissement.
+        body: TabSwitchMotion(index: shell.currentIndex, child: shell),
         bottomNavigationBar: PrivioNavBar(
           currentIndex: shell.currentIndex,
           onSelect: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),

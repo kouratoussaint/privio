@@ -243,3 +243,98 @@ mixin LoopingAnimation<T extends StatefulWidget> on State<T>, SingleTickerProvid
     super.dispose();
   }
 }
+
+/// Lot 8.5a : arrivée en cascade des lignes d'une liste quand l'écran s'ouvre (fondu et
+/// léger glissement, décalé ligne après ligne). Les lignes construites plus tard (défilement,
+/// nouveau message) n'animent pas.
+class EntranceScope extends StatefulWidget {
+  const EntranceScope({super.key, required this.child});
+
+  final Widget child;
+
+  /// Délai de la ligne [index], ou null si la liste n'est plus « à l'ouverture ».
+  static Duration? delayFor(BuildContext context, int index) {
+    final s = context.findAncestorStateOfType<_EntranceScopeState>();
+    if (s == null || DateTime.now().difference(s._born) > const Duration(milliseconds: 700)) {
+      return null;
+    }
+    return Duration(milliseconds: math.min(index, 10) * 35);
+  }
+
+  @override
+  State<EntranceScope> createState() => _EntranceScopeState();
+}
+
+class _EntranceScopeState extends State<EntranceScope> {
+  final DateTime _born = DateTime.now();
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// Ligne [index] d'une liste placée dans un [EntranceScope].
+class Entrance extends StatelessWidget {
+  const Entrance({super.key, required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // Structure constante (l'enveloppe reste même sans animation) : sinon les lignes
+    // seraient recréées à la reconstruction suivante.
+    final delay = EntranceScope.delayFor(context, index);
+    return AppearIn(
+      animate: delay != null,
+      delay: delay ?? Duration.zero,
+      offset: const Offset(0, 0.18),
+      child: child,
+    );
+  }
+}
+
+/// Lot 8.5a : changement d'onglet (Discussions, Groupes, Paramètres) : le contenu réapparaît
+/// en fondu avec un léger glissement vers le haut. Un seul enfant (l'état des onglets est
+/// gardé).
+class TabSwitchMotion extends StatefulWidget {
+  const TabSwitchMotion({super.key, required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<TabSwitchMotion> createState() => _TabSwitchMotionState();
+}
+
+class _TabSwitchMotionState extends State<TabSwitchMotion> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: Motion.medium, value: 1);
+
+  @override
+  void didUpdateWidget(TabSwitchMotion old) {
+    super.didUpdateWidget(old);
+    if (old.index != widget.index && !Motion.reduced(context)) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = CurvedAnimation(parent: _c, curve: Motion.enter);
+    return FadeTransition(
+      opacity: Tween(begin: 0.25, end: 1.0).animate(a),
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(a),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Enveloppe chaque élément d'une liste fixe dans une [Entrance].
+List<Widget> cascade(List<Widget> children) => [
+  for (final (i, w) in children.indexed) Entrance(index: i, child: w),
+];

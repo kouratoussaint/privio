@@ -10,6 +10,7 @@ import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 import '../helpers/settings_nav.dart';
 
 /// Lot 8.3a — Paramètres réorganisés, menus ⋮ des listes, favoris de toutes les discussions.
@@ -38,7 +39,7 @@ Future<void> _menu(WidgetTester tester, String menu, [String? item]) async {
   await tester.tap(find.byKey(Key(menu)));
   await tester.pumpAndSettle();
   if (item != null) {
-    await tester.tap(find.byKey(Key(item)));
+    await tapMenuItem(tester, Key(item));
     await tester.pumpAndSettle();
   }
 }
@@ -142,7 +143,7 @@ void main() {
       expect(find.byKey(Key('discussions.menu.$k')), findsOneWidget, reason: k);
     }
     expect(find.byKey(const Key('discussions.menu.lock')), findsNothing, reason: 'pas de code');
-    await tester.tap(find.byKey(const Key('discussions.menu.read_all')));
+    await tapMenuItem(tester, const Key('discussions.menu.read_all'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Si vos accusés de lecture sont activés'), findsOneWidget);
     await tester.tap(find.byKey(const Key('menu.read_all.confirm')));
@@ -153,10 +154,8 @@ void main() {
 
     // Plus rien à lire : l'entrée est grisée.
     await _menu(tester, 'discussions.menu');
-    final item = tester.widget<PopupMenuItem<Object>>(
-      find.byKey(const Key('discussions.menu.read_all')),
-    );
-    expect(item.enabled, isFalse);
+    final item = tester.widget<InkWell>(find.byKey(const Key('discussions.menu.read_all')));
+    expect(item.onTap, isNull);
   });
 
   testWidgets('Discussions ⋮ : nouvelle discussion, demandes, archivées', (tester) async {
@@ -211,7 +210,7 @@ void main() {
     expect(find.byKey(const Key('groups.menu.join')), findsOneWidget);
     expect(find.byKey(const Key('groups.menu.archived')), findsOneWidget);
     expect(find.byKey(const Key('groups.menu.read_all')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('groups.menu.sent')));
+    await tapMenuItem(tester, const Key('groups.menu.sent'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sent.g9')), findsOneWidget);
     await tester.tap(find.byKey(const Key('sent.cancel.g9')));

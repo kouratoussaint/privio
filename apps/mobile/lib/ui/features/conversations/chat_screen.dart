@@ -50,6 +50,7 @@ import 'package:flutter/semantics.dart';
 import '../../../state/session_controller.dart';
 import '../groups/group_screens.dart';
 import '../calls/call_screen.dart';
+import '../../core/widgets/privio_menu.dart';
 
 /// État d'un message envoyé, déduit des pointeurs d'accusés du correspondant.
 enum Delivery { sent, delivered, read }
@@ -902,37 +903,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// de l'autre ; groupe : administrateurs).
   /// Lot 7.2a : même parcours que depuis la fiche (choix, confirmation, vidage).
   /// Lot 8.1b : menu ⋮ d'une discussion ou d'un groupe.
-  List<PopupMenuEntry<String>> _menuItems(ConversationSummary s, bool canSetTtl) {
+  List<PrivioMenuItem<String>> _menuItems(ConversationSummary s, bool canSetTtl) {
     final now = DateTime.now();
-    final error = Theme.of(context).colorScheme.error;
-    PopupMenuItem<String> item(String v, IconData icon, String label, {bool danger = false}) =>
-        PopupMenuItem<String>(
-          key: Key(v == 'clear' ? 'chat.clear' : 'chat.menu.$v'),
-          value: v,
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(icon, color: danger ? error : null),
-            title: Text(label, style: danger ? TextStyle(color: error) : null),
-          ),
-        );
+    PrivioMenuItem<String> item(
+      String v,
+      IconData icon,
+      String label, {
+      Color? tint,
+      bool danger = false,
+    }) => PrivioMenuItem<String>(
+      key: Key(v == 'clear' ? 'chat.clear' : 'chat.menu.$v'),
+      value: v,
+      icon: icon,
+      label: label,
+      tint: tint,
+      danger: danger,
+    );
+    // Lot 8.5a : carte flottante ; au-delà de 6 actions, « Voir plus ».
     return [
-      item('info', Icons.info_outline, s.isGroup ? L.t.infosGroupe : L.t.voirFiche),
-      item('search', Icons.search, L.t.rechercher),
-      item('media', Icons.perm_media_outlined, L.t.medias),
-      item('favorites', Icons.star_outline_rounded, L.t.messagesFavoris),
-      if (!s.isGroup && canSetTtl) item('ttl', Icons.timer_outlined, L.t.dureeMessages),
+      item(
+        'info',
+        Icons.info_outline,
+        s.isGroup ? L.t.infosGroupe : L.t.voirFiche,
+        tint: MenuTint.violet,
+      ),
+      item('search', Icons.search, L.t.rechercher, tint: MenuTint.blue),
+      item('media', Icons.perm_media_outlined, L.t.medias, tint: MenuTint.teal),
+      item('favorites', Icons.star_outline_rounded, L.t.messagesFavoris, tint: MenuTint.pink),
+      if (!s.isGroup && canSetTtl)
+        item('ttl', Icons.timer_outlined, L.t.dureeMessages, tint: MenuTint.amber),
       if (s.isGroup)
-        item('notifications', Icons.notifications_outlined, L.t.notifications)
+        item('notifications', Icons.notifications_outlined, L.t.notifications, tint: MenuTint.blue)
       else
         item(
           'mute',
           s.isMuted(now) ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
           s.isMuted(now) ? L.t.reactiverNotifications : L.t.sourdine,
+          tint: MenuTint.blue,
         ),
-      item('wallpaper', Icons.wallpaper_outlined, L.t.fondEcran),
-      if (s.isGroup && s.isAdmin) item('invite', Icons.person_add_alt_1_outlined, L.t.inviter),
-      const PopupMenuDivider(),
-      item('clear', Icons.cleaning_services_outlined, L.t.viderDiscussion),
+      item('wallpaper', Icons.wallpaper_outlined, L.t.fondEcran, tint: MenuTint.green),
+      if (s.isGroup && s.isAdmin)
+        item('invite', Icons.person_add_alt_1_outlined, L.t.inviter, tint: MenuTint.violet),
+      item('clear', Icons.cleaning_services_outlined, L.t.viderDiscussion, tint: MenuTint.gray),
       if (s.isGroup)
         item('leave', Icons.logout_rounded, L.t.quitterGroupe, danger: true)
       else if (!s.blocked && s.peerId != null)
@@ -1430,26 +1442,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       onPressed: () => startCallFrom(context, ref, summary.id),
                       icon: const Icon(Icons.call_outlined),
                     ),
-                  IconButton(
-                    key: const Key('chat.search'),
-                    tooltip: _searching ? L.t.fermerRecherche : L.t.rechercherDansDiscussion,
-                    onPressed: () => setState(() {
-                      _searching = !_searching;
-                      _searchCtrl.clear();
-                    }),
-                    icon: Icon(_searching ? Icons.close : Icons.search),
-                  ),
+                  // Lot 8.5a : la loupe a quitté la barre (« Rechercher » est dans ⋮) ; seul
+                  // le bouton pour fermer la recherche reste.
+                  if (_searching)
+                    IconButton(
+                      key: const Key('chat.search'),
+                      tooltip: L.t.fermerRecherche,
+                      onPressed: () => setState(() {
+                        _searching = false;
+                        _searchCtrl.clear();
+                      }),
+                      icon: const Icon(Icons.close),
+                    ),
                   if (canSetTtl && !_searching)
                     _TtlPill(
                       ttlSeconds: summary?.ttlSeconds ?? 259200,
                       onTap: () => _chooseConversationTtl(summary),
                     ),
                   if (summary != null && !_searching)
-                    PopupMenuButton<String>(
+                    PrivioMenuButton<String>(
                       key: const Key('chat.menu'),
-                      tooltip: L.t.plusOptions,
                       onSelected: (v) => unawaited(_menu(v, summary, canSetTtl)),
-                      itemBuilder: (_) => _menuItems(summary, canSetTtl),
+                      items: () => _menuItems(summary, canSetTtl),
                     ),
                 ],
                 title: _searching

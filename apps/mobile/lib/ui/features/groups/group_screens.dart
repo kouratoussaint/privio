@@ -33,6 +33,7 @@ import '../../../state/feedback_providers.dart';
 import '../conversations/message_extras.dart';
 import '../settings/wallpaper.dart';
 import '../conversations/person_card.dart';
+import '../../core/widgets/privio_menu.dart';
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -632,48 +633,44 @@ class GroupInfoScreen extends ConsumerWidget {
     ConversationSummary s,
     GroupMember m,
   ) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(title: Text(m.displayName), subtitle: Text(m.roleLabel)),
-            if (m.role == 'member')
-              ListTile(
-                key: const Key('member.make_admin'),
-                leading: const Icon(Icons.shield_outlined),
-                title: Text(L.t.nommerAdministrateur),
-                onTap: () => Navigator.pop(ctx, 'admin'),
-              ),
-            if (m.role == 'admin' && s.isOwner)
-              ListTile(
-                key: const Key('member.remove_admin'),
-                leading: const Icon(Icons.remove_moderator_outlined),
-                title: Text(L.t.retirerRoleAdministrateur),
-                onTap: () => Navigator.pop(ctx, 'member'),
-              ),
-            if (s.isOwner)
-              ListTile(
-                key: const Key('member.transfer'),
-                leading: const Icon(Icons.workspace_premium_outlined),
-                title: Text(L.t.nommerProprietaire),
-                onTap: () => Navigator.pop(ctx, 'transfer'),
-              ),
-            if (m.role == 'member' || (m.role == 'admin' && s.isOwner))
-              ListTile(
-                key: const Key('member.remove'),
-                leading: Icon(Icons.person_remove_outlined, color: Theme.of(ctx).colorScheme.error),
-                title: Text(
-                  L.t.retirerGroupe,
-                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-                ),
-                onTap: () => Navigator.pop(ctx, 'remove'),
-              ),
-          ],
-        ),
-      ),
+    // Lot 8.5a : carte flottante près du membre appuyé.
+    final action = await PrivioMenu.show<String>(
+      context,
+      title: '${m.displayName} · ${m.roleLabel}',
+      items: [
+        if (m.role == 'member')
+          PrivioMenuItem(
+            key: const Key('member.make_admin'),
+            value: 'admin',
+            icon: Icons.shield_outlined,
+            label: L.t.nommerAdministrateur,
+            tint: MenuTint.violet,
+          ),
+        if (m.role == 'admin' && s.isOwner)
+          PrivioMenuItem(
+            key: const Key('member.remove_admin'),
+            value: 'member',
+            icon: Icons.remove_moderator_outlined,
+            label: L.t.retirerRoleAdministrateur,
+            tint: MenuTint.amber,
+          ),
+        if (s.isOwner)
+          PrivioMenuItem(
+            key: const Key('member.transfer'),
+            value: 'transfer',
+            icon: Icons.workspace_premium_outlined,
+            label: L.t.nommerProprietaire,
+            tint: MenuTint.blue,
+          ),
+        if (m.role == 'member' || (m.role == 'admin' && s.isOwner))
+          PrivioMenuItem(
+            key: const Key('member.remove'),
+            value: 'remove',
+            icon: Icons.person_remove_outlined,
+            label: L.t.retirerGroupe,
+            danger: true,
+          ),
+      ],
     );
     if (action == null || !context.mounted) return;
     if (action == 'remove' || action == 'transfer') {

@@ -8,6 +8,7 @@ import 'package:privio/state/privacy_providers.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 import '../helpers/settings_nav.dart';
 
 /// Lot 4.3 — confidentialité avancée, présence, « vider la discussion », via les écrans réels.
@@ -59,7 +60,7 @@ Future<void> _openBob(WidgetTester tester) async {
 Future<void> _clear(WidgetTester tester, String option) async {
   await tester.tap(find.byKey(const Key('chat.menu')));
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const Key('chat.clear')));
+  await tapMenuItem(tester, const Key('chat.clear'));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(Key('clear.$option')));
   await tester.pumpAndSettle();
@@ -288,7 +289,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('chat.menu')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('chat.clear')));
+      await tapMenuItem(tester, const Key('chat.clear'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('clear.everyone')), findsNothing, reason: 'membre simple');
       expect(find.byKey(const Key('clear.me')), findsOneWidget);

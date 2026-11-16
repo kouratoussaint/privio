@@ -17,6 +17,7 @@ import '../../core/widgets/state_views.dart';
 import '../../core/widgets/success_snack.dart';
 import '../../../state/feedback_providers.dart';
 import 'impersonation.dart';
+import '../../core/widgets/privio_menu.dart';
 
 /// Demandes de connexion (lot 4.7) : reçues (accepter, refuser, bloquer) et envoyées
 /// (en attente, refusées, expirées).
@@ -197,16 +198,16 @@ class _IncomingTileState extends ConsumerState<_IncomingTile> {
                     ],
                   ),
                 ),
-                PopupMenuButton<String>(
+                PrivioMenuButton<String>(
                   key: Key('request.${r.id}.menu'),
-                  tooltip: L.t.plusOptions,
-                  enabled: !_busy,
-                  onSelected: (_) => _act(ConnectionAction.block),
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
+                  onSelected: (_) => _busy ? null : _act(ConnectionAction.block),
+                  items: () => [
+                    PrivioMenuItem(
                       key: const Key('request.block'),
                       value: 'block',
-                      child: Text(L.t.bloquer),
+                      icon: Icons.block,
+                      label: L.t.bloquer,
+                      danger: true,
                     ),
                   ],
                 ),

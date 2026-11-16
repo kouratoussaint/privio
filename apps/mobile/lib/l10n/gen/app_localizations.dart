@@ -7257,6 +7257,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Appel vidéo annulé'**
   String get callTraceVideoCancelled;
+
+  /// Menus : afficher les autres actions (lot 8.5a)
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir plus'**
+  String get voirPlus;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

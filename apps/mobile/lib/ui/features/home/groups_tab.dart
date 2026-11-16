@@ -27,6 +27,7 @@ import 'discussions_tab.dart'
 import '../../core/motion/illustrations.dart';
 import '../../../state/providers.dart';
 import 'list_menu.dart';
+import '../../core/motion/motion.dart';
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
@@ -280,62 +281,72 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                 ),
               ),
             )
-          : ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(top: PrivioSpacing.s, bottom: 96),
-              children: [
-                // Lot 7.2b1 : groupes supprimés par un administrateur (avis à fermer).
-                for (final n in notices)
-                  ListTile(
-                    key: Key('notice.${n.id}'),
-                    leading: Icon(Icons.delete_outline, color: theme.colorScheme.onSurfaceVariant),
-                    title: Text(L.t.groupeTitleEteSupprime(n.title)),
-                    subtitle: Text(L.t.parAdministrateurGroupe),
-                    trailing: IconButton(
-                      key: Key('notice.dismiss.${n.id}'),
-                      tooltip: L.t.fermer,
-                      icon: const Icon(Icons.close),
-                      onPressed: () async {
-                        try {
-                          await ref.read(messagingApiProvider).dismissGroupDeletionNotice(n.id);
-                        } on Object catch (_) {
-                          // Hors connexion : l'avis reviendra et pourra être fermé plus tard.
-                        }
-                        ref.invalidate(groupDeletionNoticesProvider);
-                      },
-                    ),
-                  ),
-                if (invitations.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                    child: Text(L.t.invitations, style: theme.textTheme.titleSmall),
-                  ),
-                  for (final i in invitations) _InvitationCard(invitation: i, onRespond: _respond),
-                  const SizedBox(height: PrivioSpacing.m),
-                ],
-                // Lot 7.1b : mes demandes pour rejoindre un groupe, en attente.
-                if (myRequests.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
-                    child: Text(L.t.demandesEnvoyees, style: theme.textTheme.titleSmall),
-                  ),
-                  for (final r in myRequests)
+          : EntranceScope(
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: PrivioSpacing.s, bottom: 96),
+                children: [
+                  // Lot 7.2b1 : groupes supprimés par un administrateur (avis à fermer).
+                  for (final n in notices)
                     ListTile(
-                      key: Key('my_join.${r.conversationId}'),
-                      leading: const Icon(Icons.hourglass_top_rounded),
-                      title: Text(r.title),
-                      subtitle: Text(L.t.attenteAdministrateur),
-                      trailing: TextButton(
-                        key: Key('my_join.cancel.${r.conversationId}'),
-                        onPressed: () => _cancelRequest(context, ref, r),
-                        child: Text(L.t.annuler),
+                      key: Key('notice.${n.id}'),
+                      leading: Icon(
+                        Icons.delete_outline,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(L.t.groupeTitleEteSupprime(n.title)),
+                      subtitle: Text(L.t.parAdministrateurGroupe),
+                      trailing: IconButton(
+                        key: Key('notice.dismiss.${n.id}'),
+                        tooltip: L.t.fermer,
+                        icon: const Icon(Icons.close),
+                        onPressed: () async {
+                          try {
+                            await ref.read(messagingApiProvider).dismissGroupDeletionNotice(n.id);
+                          } on Object catch (_) {
+                            // Hors connexion : l'avis reviendra et pourra être fermé plus tard.
+                          }
+                          ref.invalidate(groupDeletionNoticesProvider);
+                        },
                       ),
                     ),
-                  const SizedBox(height: PrivioSpacing.m),
+                  if (invitations.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                      child: Text(L.t.invitations, style: theme.textTheme.titleSmall),
+                    ),
+                    for (final i in invitations)
+                      _InvitationCard(invitation: i, onRespond: _respond),
+                    const SizedBox(height: PrivioSpacing.m),
+                  ],
+                  // Lot 7.1b : mes demandes pour rejoindre un groupe, en attente.
+                  if (myRequests.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l),
+                      child: Text(L.t.demandesEnvoyees, style: theme.textTheme.titleSmall),
+                    ),
+                    for (final r in myRequests)
+                      ListTile(
+                        key: Key('my_join.${r.conversationId}'),
+                        leading: const Icon(Icons.hourglass_top_rounded),
+                        title: Text(r.title),
+                        subtitle: Text(L.t.attenteAdministrateur),
+                        trailing: TextButton(
+                          key: Key('my_join.cancel.${r.conversationId}'),
+                          onPressed: () => _cancelRequest(context, ref, r),
+                          child: Text(L.t.annuler),
+                        ),
+                      ),
+                    const SizedBox(height: PrivioSpacing.m),
+                  ],
+                  // Lot 7.2c1 : glisser pour épingler ou archiver, appui long pour plus.
+                  for (final (i, g) in groups.indexed)
+                    Entrance(
+                      index: i,
+                      child: SwipeableConversationTile(summary: g),
+                    ),
                 ],
-                // Lot 7.2c1 : glisser pour épingler ou archiver, appui long pour plus.
-                for (final g in groups) SwipeableConversationTile(summary: g),
-              ],
+              ),
             ),
     );
   }

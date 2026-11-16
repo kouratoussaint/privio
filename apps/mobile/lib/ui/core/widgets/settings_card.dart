@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../motion/motion.dart';
 
 /// Lot 7.2a : présentation commune des écrans de réglages et des fiches (comme
 /// Paramètres) : fond clair, une carte blanche arrondie par section.
@@ -68,18 +69,24 @@ class SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = PrivioPalette.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? p.field : p.sheet,
-        borderRadius: BorderRadius.circular(PrivioRadius.large),
-        border: Border.all(color: p.divider),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        type: MaterialType.transparency,
-        child: Padding(
-          padding: padding ?? EdgeInsets.zero,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    // Lot 8.5a : la carte apparaît en fondu (sauf dans une liste déjà en cascade).
+    final inCascade = context.findAncestorWidgetOfExactType<EntranceScope>() != null;
+    return AppearIn(
+      animate: !inCascade,
+      offset: const Offset(0, 0.06),
+      child: Container(
+        decoration: BoxDecoration(
+          color: dark ? p.field : p.sheet,
+          borderRadius: BorderRadius.circular(PrivioRadius.large),
+          border: Border.all(color: p.divider),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Padding(
+            padding: padding ?? EdgeInsets.zero,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+          ),
         ),
       ),
     );

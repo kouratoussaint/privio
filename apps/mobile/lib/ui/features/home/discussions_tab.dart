@@ -26,6 +26,7 @@ import '../groups/group_screens.dart';
 import '../conversations/expression_panel.dart';
 import 'list_menu.dart';
 import '../settings/two_step_screens.dart';
+import '../../core/widgets/privio_menu.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -398,10 +399,16 @@ class _List extends StatelessWidget {
     }
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 96),
-        itemCount: items.length,
-        itemBuilder: (_, i) => SwipeableConversationTile(summary: items[i]),
+      // Lot 8.5a : lignes en cascade à l'ouverture.
+      child: EntranceScope(
+        child: ListView.builder(
+          padding: const EdgeInsets.only(bottom: 96),
+          itemCount: items.length,
+          itemBuilder: (_, i) => Entrance(
+            index: i,
+            child: SwipeableConversationTile(summary: items[i]),
+          ),
+        ),
       ),
     );
   }
@@ -519,62 +526,54 @@ Future<void> showConversationActions(
   WidgetRef ref,
   ConversationSummary summary,
 ) async {
-  final action = await showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            key: const Key('conv.pin'),
-            leading: Icon(summary.pinned ? Icons.push_pin : Icons.push_pin_outlined),
-            title: Text(summary.pinned ? L.t.desepingler : L.t.epinglerHautListe),
-            onTap: () => Navigator.pop(ctx, 'pin'),
-          ),
-          ListTile(
-            key: const Key('conv.archive'),
-            leading: Icon(summary.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-            title: Text(summary.archived ? L.t.desarchiver : L.t.archiver),
-            subtitle: summary.archived ? null : Text(L.t.nouveauMessageFeraReapparaitreDans),
-            onTap: () => Navigator.pop(ctx, 'archive'),
-          ),
-          // Lot 7.2c1 : un groupe se quitte (et disparaît de la liste) ; le créateur et les
-          // administrateurs peuvent aussi le supprimer pour tous.
-          if (summary.isGroup)
-            ListTile(
-              key: const Key('conv.leave'),
-              leading: Icon(Icons.logout, color: Theme.of(ctx).colorScheme.error),
-              title: Text(
-                L.t.quitterSupprimer,
-                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-              ),
-              onTap: () => Navigator.pop(ctx, 'leave'),
-            ),
-          if (summary.isGroup && summary.isAdmin && !summary.isClosed)
-            ListTile(
-              key: const Key('conv.delete_group'),
-              leading: Icon(Icons.delete_forever_outlined, color: Theme.of(ctx).colorScheme.error),
-              title: Text(
-                L.t.supprimerGroupePourTous,
-                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-              ),
-              onTap: () => Navigator.pop(ctx, 'delete'),
-            ),
-          // Lot 7.2b1 : supprimer une discussion à deux.
-          if (!summary.isGroup)
-            ListTile(
-              key: const Key('conv.delete'),
-              leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
-              title: Text(
-                L.t.supprimerDiscussion,
-                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-              ),
-              onTap: () => Navigator.pop(ctx, 'delete'),
-            ),
-        ],
+  // Lot 8.5a : carte flottante près de la discussion appuyée.
+  final action = await PrivioMenu.show<String>(
+    context,
+    title: summary.title,
+    items: [
+      PrivioMenuItem(
+        key: const Key('conv.pin'),
+        value: 'pin',
+        icon: summary.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+        label: summary.pinned ? L.t.desepingler : L.t.epinglerHautListe,
+        tint: MenuTint.violet,
       ),
-    ),
+      PrivioMenuItem(
+        key: const Key('conv.archive'),
+        value: 'archive',
+        icon: summary.archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+        label: summary.archived ? L.t.desarchiver : L.t.archiver,
+        subtitle: summary.archived ? null : L.t.nouveauMessageFeraReapparaitreDans,
+        tint: MenuTint.amber,
+      ),
+      // Lot 7.2c1 : un groupe se quitte (et disparaît de la liste) ; le créateur et les
+      // administrateurs peuvent aussi le supprimer pour tous.
+      if (summary.isGroup)
+        PrivioMenuItem(
+          key: const Key('conv.leave'),
+          value: 'leave',
+          icon: Icons.logout,
+          label: L.t.quitterSupprimer,
+          danger: true,
+        ),
+      if (summary.isGroup && summary.isAdmin && !summary.isClosed)
+        PrivioMenuItem(
+          key: const Key('conv.delete_group'),
+          value: 'delete',
+          icon: Icons.delete_forever_outlined,
+          label: L.t.supprimerGroupePourTous,
+          danger: true,
+        ),
+      // Lot 7.2b1 : supprimer une discussion à deux.
+      if (!summary.isGroup)
+        PrivioMenuItem(
+          key: const Key('conv.delete'),
+          value: 'delete',
+          icon: Icons.delete_outline,
+          label: L.t.supprimerDiscussion,
+          danger: true,
+        ),
+    ],
   );
   if (action == null || !context.mounted) return;
   if (action == 'delete') {
@@ -671,7 +670,8 @@ class ConversationTile extends ConsumerWidget {
       onTap: () => context.push(Routes.chat(summary.id)),
       onLongPress: () => showConversationActions(context, ref, summary),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l, vertical: 10),
+        // Lot 8.5a : lignes plus aérées (photo inchangée).
+        padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.l, vertical: 15),
         child: Row(
           children: [
             // Lot 8.1a : toucher la photo ouvre la fiche du contact ou du groupe.
@@ -719,7 +719,7 @@ class ConversationTile extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
                           if (read) ...[

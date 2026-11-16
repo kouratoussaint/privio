@@ -5949,5 +5949,9 @@
   "callTraceVideoCancelled": "Appel vidéo annulé",
   "@callTraceVideoCancelled": {
     "description": "Appels vidéo (lot 9.2)"
+  },
+  "voirPlus": "Voir plus",
+  "@voirPlus": {
+    "description": "Menus : afficher les autres actions (lot 8.5a)"
   }
 }

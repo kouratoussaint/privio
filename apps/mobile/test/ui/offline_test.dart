@@ -5,6 +5,7 @@ import 'package:privio/app.dart';
 import 'package:privio/domain/models/account.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 
 /// Lot 2.4 — stockage local, hors connexion, saisie, épinglage, archivage, recherche.
 TestDeps _deps() =>
@@ -133,14 +134,14 @@ void main() {
 
     await tester.longPress(find.byKey(const Key('conversation.conv-bob')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('conv.pin')));
+    await tapMenuItem(tester, const Key('conv.pin'));
     await tester.pumpAndSettle();
     expect(deps.messaging.pinned, isTrue);
     expect(find.byIcon(Icons.push_pin), findsOneWidget);
 
     await tester.longPress(find.byKey(const Key('conversation.conv-bob')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('conv.archive')));
+    await tapMenuItem(tester, const Key('conv.archive'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('conversation.conv-bob')), findsNothing);
     expect(find.text('Archivées (1)'), findsOneWidget);
@@ -149,7 +150,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.longPress(find.byKey(const Key('conversation.conv-bob')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('conv.archive')));
+    await tapMenuItem(tester, const Key('conv.archive'));
     await tester.pumpAndSettle();
     expect(deps.messaging.archived, isFalse);
     await tester.tap(find.byType(BackButton));
@@ -167,7 +168,10 @@ void main() {
     await _launch(tester, deps);
     await _openBob(tester);
 
-    await tester.tap(find.byKey(const Key('chat.search')));
+    // Lot 8.5a : « Rechercher » est dans le menu ⋮.
+    await tester.tap(find.byKey(const Key('chat.menu')));
+    await tester.pumpAndSettle();
+    await tapMenuItem(tester, const Key('chat.menu.search'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('chat.search_input')), 'DOSSIER');
     await tester.pumpAndSettle();

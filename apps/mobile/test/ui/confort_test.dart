@@ -6,6 +6,7 @@ import 'package:privio/domain/models/account.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 
 /// Lot 7.2c1 — photo du groupe, recherche / filtres / actions rapides dans Groupes,
 /// bouton « descendre », repère « X messages non lus ».
@@ -162,7 +163,7 @@ void main() {
       await tester.longPress(find.byKey(const Key('conversation.g-famille')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('conv.delete_group')), findsNothing, reason: 'simple membre');
-      await tester.tap(find.byKey(const Key('conv.leave')));
+      await tapMenuItem(tester, const Key('conv.leave'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('group.leave.confirm')));
       await tester.pumpAndSettle();
@@ -171,7 +172,7 @@ void main() {
       await tester.longPress(find.byKey(const Key('conversation.g-voisins')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('conv.leave')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('conv.delete_group')));
+      await tapMenuItem(tester, const Key('conv.delete_group'));
       await tester.pumpAndSettle();
       expect(
         find.descendant(

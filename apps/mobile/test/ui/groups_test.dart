@@ -10,6 +10,7 @@ import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/ui/features/home/home_shell.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 
 /// Lot 3.3 — groupes, via les écrans réels : création, invitations, rôles, réglages, départ.
 TestDeps _deps() =>
@@ -242,7 +243,7 @@ void main() {
       expect(find.byKey(const Key('person.card')), findsOneWidget);
       await tester.tap(find.byKey(const Key('card.manage')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('member.make_admin')));
+      await tapMenuItem(tester, const Key('member.make_admin'));
       await tester.pumpAndSettle();
       expect(g.roles['u2'], 'admin');
 
@@ -251,10 +252,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('card.manage')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('member.remove')));
+      await tapMenuItem(tester, const Key('member.remove'));
       await tester.pumpAndSettle();
       expect(find.text('Retirer Awa\u202F?'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('member.confirm')));
+      await tapMenuItem(tester, const Key('member.confirm'));
       await tester.pumpAndSettle();
       expect(g.roles.containsKey('u3'), isFalse);
       expect(find.byKey(const Key('member.u3')), findsNothing);

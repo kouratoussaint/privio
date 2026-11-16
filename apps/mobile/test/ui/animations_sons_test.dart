@@ -7,6 +7,7 @@ import 'package:privio/state/feedback_providers.dart';
 import 'package:privio/ui/core/motion/motion.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/menu.dart';
 import '../helpers/settings_nav.dart';
 
 /// Lot 7.2b2 — animations, sons, illustrations ; photo de l'auteur à côté des messages.
@@ -124,7 +125,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('chat.menu')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('chat.clear')));
+    await tapMenuItem(tester, const Key('chat.clear'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('clear.me')));
     await tester.pumpAndSettle();

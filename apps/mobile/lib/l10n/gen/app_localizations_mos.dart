@@ -4292,4 +4292,7 @@ class AppLocalizationsMos extends AppLocalizations {
 
   @override
   String get callTraceVideoCancelled => 'Appel vidéo annulé';
+
+  @override
+  String get voirPlus => 'Voir plus';
 }

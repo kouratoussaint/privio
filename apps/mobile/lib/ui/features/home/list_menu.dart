@@ -5,12 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_failure.dart';
-import '../../../core/theme/privio_palette.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/join_providers.dart';
 import '../../../state/messaging_providers.dart';
+import '../../core/widgets/privio_menu.dart';
 import '../conversations/person_card.dart';
 import '../../../ui/features/groups/join_group_screen.dart';
 
@@ -43,34 +43,27 @@ class ListMenuButton extends ConsumerWidget {
     final sent = _groups ? (ref.watch(myJoinRequestsProvider).value?.length ?? 0) : 0;
     final lockOn = ref.watch(appLockProvider).value?.enabled ?? false;
     final prefix = _groups ? 'groups' : 'discussions';
-    // Couleur explicite : le menu hérite sinon des icônes blanches de la barre du haut.
-    final iconColor = PrivioPalette.of(context).accentText;
-
-    PopupMenuItem<_Action> item(
+    PrivioMenuItem<_Action> item(
       _Action a,
       String key,
       IconData icon,
       String label, {
+      Color? tint,
       bool enabled = true,
-    }) => PopupMenuItem(
+    }) => PrivioMenuItem(
       key: Key('$prefix.menu.$key'),
       value: a,
+      icon: icon,
+      label: label,
+      tint: tint,
       enabled: enabled,
-      child: Row(
-        children: [
-          Icon(icon, size: 22, color: iconColor),
-          const SizedBox(width: 14),
-          Flexible(child: Text(label)),
-        ],
-      ),
     );
 
-    return PopupMenuButton<_Action>(
+    // Lot 8.5a : carte flottante (décision A.1).
+    return PrivioMenuButton<_Action>(
       key: Key('$prefix.menu'),
-      tooltip: L.t.plusOptions,
-      icon: const Icon(Icons.more_vert),
       onSelected: (a) => _run(context, ref, a, together: together, unread: unread),
-      itemBuilder: (_) => [
+      items: () => [
         if (!_groups) ...[
           // Correction du 15/11/2026 : « Nouvelle discussion » (le groupe a son onglet).
           item(
@@ -78,21 +71,36 @@ class ListMenuButton extends ConsumerWidget {
             'new_conversation',
             Icons.edit_outlined,
             L.t.nouvelleDiscussion,
+            tint: MenuTint.violet,
           ),
-          item(_Action.scan, 'scan', Icons.qr_code_scanner_rounded, L.t.scannerQrCode),
+          item(
+            _Action.scan,
+            'scan',
+            Icons.qr_code_scanner_rounded,
+            L.t.scannerQrCode,
+            tint: MenuTint.teal,
+          ),
           item(
             _Action.requests,
             'requests',
             Icons.person_add_alt_1_outlined,
             requests > 0 ? L.t.demandesConnexionCount(requests) : L.t.demandesConnexion,
+            tint: MenuTint.blue,
           ),
         ] else ...[
-          item(_Action.join, 'join', Icons.qr_code_scanner_rounded, L.t.rejoindreGroupe),
+          item(
+            _Action.join,
+            'join',
+            Icons.qr_code_scanner_rounded,
+            L.t.rejoindreGroupe,
+            tint: MenuTint.teal,
+          ),
           item(
             _Action.sent,
             'sent',
             Icons.hourglass_top_rounded,
             sent > 0 ? L.t.demandesEnvoyeesCount(sent) : L.t.demandesEnvoyees,
+            tint: MenuTint.blue,
           ),
         ],
         item(
@@ -102,17 +110,32 @@ class ListMenuButton extends ConsumerWidget {
           _groups
               ? (archived > 0 ? L.t.archivesArchivedcount(archived) : L.t.archivesTitle)
               : (archived > 0 ? L.t.archiveesArchivedcount(archived) : L.t.archivees),
+          tint: MenuTint.amber,
         ),
         if (!_groups)
-          item(_Action.favorites, 'favorites', Icons.star_outline_rounded, L.t.messagesFavoris),
+          item(
+            _Action.favorites,
+            'favorites',
+            Icons.star_outline_rounded,
+            L.t.messagesFavoris,
+            tint: MenuTint.pink,
+          ),
         item(
           _Action.readAll,
           'read_all',
           Icons.mark_chat_read_outlined,
           L.t.toutMarquerCommeLu,
+          tint: MenuTint.green,
           enabled: unread > 0,
         ),
-        if (lockOn) item(_Action.lock, 'lock', Icons.lock_outline, L.t.verrouillerMaintenant),
+        if (lockOn)
+          item(
+            _Action.lock,
+            'lock',
+            Icons.lock_outline,
+            L.t.verrouillerMaintenant,
+            tint: MenuTint.gray,
+          ),
       ],
     );
   }
