@@ -63,9 +63,13 @@ class ConversationSummary {
     this.clearRequestExpiresAt,
     this.clearRequestDelete = false,
     this.readEraseSeconds,
+    this.secret = false,
   });
 
   final String id;
+
+  /// Lot 10.2 : discussion cachée (rangée à part, ouverte avec le code Privio).
+  final bool secret;
 
   /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s) ; null : désactivé.
   final int? readEraseSeconds;
@@ -186,6 +190,7 @@ class ConversationSummary {
     'clear_request_expires_at': clearRequestExpiresAt?.toUtc().toIso8601String(),
     'clear_request_delete': clearRequestDelete,
     'read_erase_seconds': readEraseSeconds,
+    'secret': secret,
   };
 
   /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
@@ -199,6 +204,7 @@ class ConversationSummary {
     bool? archived,
     int? unreadCount,
     bool clearLast = false,
+    bool? secret,
   }) => ConversationSummary(
     id: id,
     kind: kind,
@@ -236,6 +242,7 @@ class ConversationSummary {
     clearRequestExpiresAt: clearRequestExpiresAt,
     clearRequestDelete: clearRequestDelete,
     readEraseSeconds: readEraseSeconds,
+    secret: secret ?? this.secret,
   );
 
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
@@ -277,6 +284,7 @@ class ConversationSummary {
     clearRequestExpiresAt: _date(j['clear_request_expires_at']),
     clearRequestDelete: j['clear_request_delete'] as bool? ?? false,
     readEraseSeconds: (j['read_erase_seconds'] as num?)?.toInt(),
+    secret: j['secret'] as bool? ?? false,
   );
 }
 

@@ -18,7 +18,7 @@ class ArchivedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = kind == 'groupes';
-    final archived = (ref.watch(conversationsProvider).value ?? const [])
+    final archived = (ref.watch(listedConversationsProvider).value ?? const [])
         .where((c) => c.archived && (kind == null || c.isGroup == groups))
         .toList();
     return Scaffold(

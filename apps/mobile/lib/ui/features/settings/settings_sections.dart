@@ -210,7 +210,7 @@ class ChatSettingsScreen extends ConsumerWidget {
     final p = PrivioPalette.of(context);
     final secondary = theme.colorScheme.onSurfaceVariant;
     final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
-    final archived = (ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+    final archived = (ref.watch(listedConversationsProvider).value ?? const <ConversationSummary>[])
         .where((c) => c.archived)
         .length;
     return Scaffold(

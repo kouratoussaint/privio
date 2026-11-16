@@ -41,13 +41,16 @@ class BrandScaffold extends StatelessWidget {
 }
 
 /// Titre de l'écran Discussions : symbole du logo n° 1 + nom.
+/// Lot 10.2 : appui long sur le logo → discussions cachées (aucune indication visible).
 class BrandTitle extends StatelessWidget {
-  const BrandTitle({super.key});
+  const BrandTitle({super.key, this.onLongPress});
+
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final p = PrivioPalette.of(context);
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
@@ -63,6 +66,13 @@ class BrandTitle extends StatelessWidget {
               ?.copyWith(color: p.onHeader, letterSpacing: -0.3),
         ),
       ],
+    );
+    if (onLongPress == null) return row;
+    return GestureDetector(
+      key: const Key('brand.logo'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: onLongPress,
+      child: row,
     );
   }
 }

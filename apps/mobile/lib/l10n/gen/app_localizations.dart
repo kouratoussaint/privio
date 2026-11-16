@@ -7503,6 +7503,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce délai n’est pas proposé.'**
   String get readEraseInvalidError;
+
+  /// No description provided for @masquerDiscussion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Masquer la discussion'**
+  String get masquerDiscussion;
+
+  /// No description provided for @nePlusMasquer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus masquer'**
+  String get nePlusMasquer;
+
+  /// No description provided for @discussionsCachees.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussions cachées'**
+  String get discussionsCachees;
+
+  /// No description provided for @aucuneDiscussionCachee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune discussion cachée'**
+  String get aucuneDiscussionCachee;
+
+  /// No description provided for @aucuneDiscussionCacheeMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appui long sur une discussion, puis « Masquer la discussion ».'**
+  String get aucuneDiscussionCacheeMessage;
+
+  /// No description provided for @discussionMasquee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion masquée. Appui long sur le logo Privio pour la retrouver.'**
+  String get discussionMasquee;
+
+  /// No description provided for @discussionReaffichee.
+  ///
+  /// In fr, this message translates to:
+  /// **'La discussion est de retour dans la liste.'**
+  String get discussionReaffichee;
+
+  /// No description provided for @codePrivioCree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code Privio créé.'**
+  String get codePrivioCree;
+
+  /// No description provided for @codePrivioPourDiscussionsCachees.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture.'**
+  String get codePrivioPourDiscussionsCachees;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

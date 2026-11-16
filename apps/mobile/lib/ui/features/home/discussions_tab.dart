@@ -24,6 +24,7 @@ import '../../core/motion/motion.dart';
 import '../../core/motion/illustrations.dart';
 import '../groups/group_screens.dart';
 import '../conversations/expression_panel.dart';
+import 'hidden_conversations.dart';
 import 'list_menu.dart';
 import '../settings/two_step_screens.dart';
 import '../../core/widgets/privio_menu.dart';
@@ -85,7 +86,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final conversations = ref.watch(conversationsProvider);
+    final conversations = ref.watch(listedConversationsProvider);
     final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
     if (!together && _filter == ConversationFilter.groups) _filter = ConversationFilter.all;
     final unreadTotal =
@@ -99,7 +100,7 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
     final offline = ref.watch(offlineProvider);
 
     return BrandScaffold(
-      title: const BrandTitle(),
+      title: BrandTitle(onLongPress: () => unawaited(openHiddenConversations(context, ref))),
       // Lot 8.3a : menu ⋮ (nouveau groupe, QR code, demandes, archivées, favoris…).
       actions: const [ListMenuButton(kind: ListMenuKind.discussions)],
       floatingActionButton: FloatingActionButton(
@@ -549,6 +550,14 @@ Future<void> showConversationActions(
         subtitle: summary.archived ? null : L.t.nouveauMessageFeraReapparaitreDans,
         tint: MenuTint.amber,
       ),
+      // Lot 10.2 : discussion cachée (appui long sur le logo Privio pour la retrouver).
+      PrivioMenuItem(
+        key: const Key('conv.secret'),
+        value: 'secret',
+        icon: summary.secret ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        label: summary.secret ? L.t.nePlusMasquer : L.t.masquerDiscussion,
+        tint: MenuTint.gray,
+      ),
       // Lot 7.2c1 : un groupe se quitte (et disparaît de la liste) ; le créateur et les
       // administrateurs peuvent aussi le supprimer pour tous.
       if (summary.isGroup)
@@ -585,6 +594,10 @@ Future<void> showConversationActions(
   }
   if (action == 'leave') {
     await confirmLeaveGroup(context, ref, summary);
+    return;
+  }
+  if (action == 'secret') {
+    await setConversationHidden(context, ref, summary, !summary.secret);
     return;
   }
   try {

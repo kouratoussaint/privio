@@ -117,7 +117,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Lot 7.2b1 : séparés (par défaut), les groupes non lus comptent dans l'onglet Groupes.
     final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
     final unreadList =
-        ref.watch(conversationsProvider).value?.where((c) => !c.archived && c.unreadCount > 0) ??
+        ref
+            .watch(listedConversationsProvider)
+            .value
+            ?.where((c) => !c.archived && c.unreadCount > 0) ??
         const <ConversationSummary>[];
     final unread = unreadList.where((c) => together || !c.isGroup).length;
     final unreadGroups = together ? 0 : unreadList.where((c) => c.isGroup).length;

@@ -269,7 +269,10 @@ class _CallViewState extends ConsumerState<_CallView> {
     if (call.pip) return _PipView(call: call, remote: ctrl.remoteView());
     // Privio verrouillé : pas de nom tant que le code n'est pas saisi (décision C).
     final locked = ref.watch(appLockProvider).value?.locked ?? false;
-    final hideName = locked && call.phase == CallPhase.incomingRinging;
+    // Lot 10.2 : discussion cachée : sonnerie neutre, le nom une fois l'appel décroché.
+    final secret =
+        ref.watch(conversationSummaryProvider(call.info.conversationId))?.secret ?? false;
+    final hideName = (locked || secret) && call.phase == CallPhase.incomingRinging;
     final white = theme.textTheme.bodyLarge?.copyWith(color: Colors.white70);
     // Lot 9.2 : image du correspondant en plein écran, la mienne en petit.
     final remote = live && call.peerCamera ? ctrl.remoteView() : null;

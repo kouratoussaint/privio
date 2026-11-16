@@ -33,6 +33,7 @@ import '../ui/features/settings/my_support_screen.dart';
 import '../ui/features/settings/help_screen.dart';
 import '../ui/features/settings/settings_tab.dart';
 import '../ui/features/splash/splash_screen.dart';
+import '../ui/features/home/hidden_conversations.dart';
 import 'routes.dart';
 import '../ui/features/settings/discover_screen.dart';
 
@@ -69,6 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => ArchivedScreen(kind: state.uri.queryParameters['kind']),
       ),
       GoRoute(path: Routes.requests, builder: (_, _) => const ConnectionRequestsScreen()),
+      GoRoute(path: Routes.hidden, builder: (_, _) => const HiddenConversationsScreen()),
       GoRoute(path: Routes.console, builder: (_, _) => const ConsoleScreen()),
       GoRoute(path: Routes.mySupport, builder: (_, _) => const MySupportScreen()),
       GoRoute(path: Routes.joinGroup, builder: (_, _) => const JoinGroupScreen()),

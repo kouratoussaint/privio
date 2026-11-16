@@ -117,7 +117,7 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final contacts = [
-      for (final c in ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+      for (final c in ref.watch(listedConversationsProvider).value ?? const <ConversationSummary>[])
         if (!c.isGroup &&
             !c.blocked &&
             !c.peerDeleted &&

@@ -19,6 +19,9 @@ abstract final class Routes {
   static const blockedUsers = '/blocked-users';
   static const archived = '/archived';
 
+  /// Lot 10.2 : discussions cachées (après le code Privio).
+  static const hidden = '/hidden';
+
   /// Lot 7.2c1 : archives d'une seule liste (« discussions » ou « groupes ») quand les
   /// groupes sont séparés des discussions.
   static String archivedOf(String kind) => '$archived?kind=$kind';

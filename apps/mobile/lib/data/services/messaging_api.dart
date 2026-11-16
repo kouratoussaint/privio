@@ -128,6 +128,9 @@ abstract interface class MessagingApi {
   Future<void> setGroupAvatar(String conversationId, Uint8List jpeg);
   Future<void> removeGroupAvatar(String conversationId);
 
+  /// Lot 10.2 : cacher (ou ne plus cacher) une discussion, pour moi seulement.
+  Future<void> setConversationSecret(String conversationId, bool secret);
+
   /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s ; null : couper).
   Future<void> setReadErase(String conversationId, int? seconds);
 
@@ -663,6 +666,10 @@ class SupabaseMessagingApi implements MessagingApi {
       },
     ),
   );
+
+  @override
+  Future<void> setConversationSecret(String conversationId, bool secret) =>
+      _call('set_conversation_secret', {'p_conversation_id': conversationId, 'p_secret': secret});
 
   @override
   Future<void> setReadErase(String conversationId, int? seconds) =>

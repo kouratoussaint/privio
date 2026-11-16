@@ -635,6 +635,15 @@ class FakeMessagingApi implements MessagingApi {
   final Map<String, int?> readErase = {};
   final List<(String, int?)> readEraseSets = [];
 
+  /// Lot 10.2 : discussions cachées (pour moi).
+  final Set<String> secret = {};
+
+  @override
+  Future<void> setConversationSecret(String conversationId, bool secret) async {
+    _net();
+    secret ? this.secret.add(conversationId) : this.secret.remove(conversationId);
+  }
+
   @override
   Future<void> setReadErase(String conversationId, int? seconds) async {
     _net();
@@ -845,6 +854,7 @@ class FakeMessagingApi implements MessagingApi {
       lastKind: last?.kind ?? 'text',
       ttlSeconds: conversationTtl,
       readEraseSeconds: readErase[id],
+      secret: secret.contains(id),
       pinned: pinned,
       archived: archived,
       peerReadUpTo: peerReadUpTo,
@@ -2032,6 +2042,7 @@ class FakeMessagingApi implements MessagingApi {
       lastKind: last?.kind ?? 'text',
       ttlSeconds: conversationTtl,
       readEraseSeconds: readErase[g.id],
+      secret: secret.contains(g.id),
       pinned: groupPinned.contains(g.id),
       archived: groupArchived.contains(g.id),
       mutedUntil: muted[g.id],

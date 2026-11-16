@@ -6080,5 +6080,14 @@
     }
   },
   "bubbleErase": "S’efface après lecture",
-  "readEraseInvalidError": "Ce délai n’est pas proposé."
+  "readEraseInvalidError": "Ce délai n’est pas proposé.",
+  "masquerDiscussion": "Masquer la discussion",
+  "nePlusMasquer": "Ne plus masquer",
+  "discussionsCachees": "Discussions cachées",
+  "aucuneDiscussionCachee": "Aucune discussion cachée",
+  "aucuneDiscussionCacheeMessage": "Appui long sur une discussion, puis « Masquer la discussion ».",
+  "discussionMasquee": "Discussion masquée. Appui long sur le logo Privio pour la retrouver.",
+  "discussionReaffichee": "La discussion est de retour dans la liste.",
+  "codePrivioCree": "Code Privio créé.",
+  "codePrivioPourDiscussionsCachees": "Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture."
 }

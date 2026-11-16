@@ -26,6 +26,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/swipe_actions.dart';
 import '../../core/widgets/state_views.dart';
 import '../home/discussions_tab.dart' show OfflineBanner;
+import '../home/hidden_conversations.dart' show setConversationHidden;
 import '../../../data/services/photo_picker.dart' show PhotoSource;
 import '../../core/widgets/ttl_picker.dart';
 import '../groups/mentions.dart';
@@ -994,6 +995,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           tint: MenuTint.blue,
         ),
       item('wallpaper', Icons.wallpaper_outlined, L.t.fondEcran, tint: MenuTint.green),
+      // Lot 10.2
+      item(
+        'secret',
+        s.secret ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        s.secret ? L.t.nePlusMasquer : L.t.masquerDiscussion,
+        tint: MenuTint.gray,
+      ),
       if (s.isGroup && s.isAdmin)
         item('invite', Icons.person_add_alt_1_outlined, L.t.inviter, tint: MenuTint.violet),
       item('clear', Icons.cleaning_services_outlined, L.t.viderDiscussion, tint: MenuTint.gray),
@@ -1031,6 +1039,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         await _chooseConversationTtl(s);
       case 'erase':
         await _chooseReadErase(s);
+      case 'secret':
+        await setConversationHidden(context, ref, s, !s.secret);
       case 'mute':
         await chooseMute(context, ref, s);
       case 'notifications':

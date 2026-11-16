@@ -120,6 +120,9 @@ class AppLockController extends AsyncNotifier<AppLockState> {
     state = AsyncData(s.copyWith(locked: true));
   }
 
+  /// Lot 10.2 : sortie voulue en cours (appareil photo, galerie, empreinte).
+  bool get leavingOnPurpose => _externalDepth > 0 || _authenticating;
+
   /// Appareil photo ou galerie : sortie voulue, sans reverrouillage au retour.
   Future<T> runExternal<T>(Future<T> Function() action) async {
     _externalDepth++;

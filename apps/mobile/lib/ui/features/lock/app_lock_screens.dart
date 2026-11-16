@@ -596,8 +596,9 @@ class AppLockSettingsScreen extends ConsumerWidget {
 }
 
 /// Création, changement ou désactivation du code ; lot 8.1c : confirmation d'une action
-/// sensible (renvoie vrai si le code est juste).
-enum PinFlow { create, change, disable, confirm }
+/// sensible (renvoie vrai si le code est juste) ; lot 10.2 : créer le code Privio sans
+/// activer le verrouillage à l'ouverture (discussions cachées ; renvoie vrai).
+enum PinFlow { create, change, disable, confirm, codeOnly }
 
 class PinFlowScreen extends ConsumerStatefulWidget {
   const PinFlowScreen({super.key, required this.flow});
@@ -610,7 +611,9 @@ class PinFlowScreen extends ConsumerStatefulWidget {
 
 class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   /// Étapes : 'current' (code actuel), 'new', 'confirm'.
-  late String _step = widget.flow == PinFlow.create ? 'new' : 'current';
+  late String _step = widget.flow == PinFlow.create || widget.flow == PinFlow.codeOnly
+      ? 'new'
+      : 'current';
   String? _first;
   String? _message;
   bool _error = false;
@@ -697,6 +700,11 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
         }
         if (!mounted) return;
         ref.read(feedbackProvider).sound(PrivioSound.success);
+        if (widget.flow == PinFlow.codeOnly) {
+          ScaffoldMessenger.of(context).showSnackBar(successSnack(L.t.codePrivioCree));
+          Navigator.of(context).pop(true);
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           successSnack(widget.flow == PinFlow.create ? L.t.verrouillageActive : L.t.codeModifie),
         );
@@ -712,6 +720,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
         PinFlow.change => L.t.changerCode2,
         PinFlow.disable => L.t.desactiverVerrouillage,
         PinFlow.confirm => L.t.codePrivio,
+        PinFlow.codeOnly => L.t.creerCode,
       }),
     ),
     body: Center(
@@ -720,7 +729,13 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
         child: PinEntry(
           key: ValueKey(_step),
           title: _title,
-          message: _message ?? (_step == 'new' ? L.t.evitezVotreDateNaissanceOu : null),
+          message:
+              _message ??
+              (_step == 'new'
+                  ? (widget.flow == PinFlow.codeOnly
+                        ? L.t.codePrivioPourDiscussionsCachees
+                        : L.t.evitezVotreDateNaissanceOu)
+                  : null),
           error: _error,
           onComplete: _done,
         ),

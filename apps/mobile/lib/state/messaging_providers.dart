@@ -434,6 +434,21 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     return targets.length;
   }
 
+  /// Lot 10.2 : cacher / ne plus cacher (état personnel), affiché aussitôt puis confirmé.
+  Future<void> setSecret(String conversationId, bool secret) async {
+    final before = state.value ?? const [];
+    state = AsyncData([
+      for (final c in before) c.id == conversationId ? c.copyWith(secret: secret) : c,
+    ]);
+    try {
+      await ref.read(messagingApiProvider).setConversationSecret(conversationId, secret);
+      await refresh();
+    } on Object {
+      state = AsyncData(before);
+      rethrow;
+    }
+  }
+
   /// Épingler / archiver (état personnel), affiché aussitôt puis confirmé.
   Future<void> setFlags(String conversationId, {bool? pinned, bool? archived}) async {
     final before = state.value ?? const [];
@@ -452,6 +467,31 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     }
   }
 }
+
+/// Lot 10.2 : discussions affichées dans les listes (Discussions, Groupes, Archivées,
+/// contacts, non-lus) : jamais les discussions cachées.
+final listedConversationsProvider = Provider<AsyncValue<List<ConversationSummary>>>(
+  (ref) => ref
+      .watch(conversationsProvider)
+      .whenData(
+        (list) => [
+          for (final c in list)
+            if (!c.secret) c,
+        ],
+      ),
+);
+
+/// Lot 10.2 : liste des discussions cachées ouverte (code Privio saisi) ; refermée dès
+/// qu'on la quitte.
+class HiddenUnlock extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void open() => state = true;
+  void close() => state = false;
+}
+
+final hiddenUnlockedProvider = NotifierProvider<HiddenUnlock, bool>(HiddenUnlock.new);
 
 /// Résumé d'une discussion (en-tête de l'écran de conversation).
 final conversationSummaryProvider = Provider.family<ConversationSummary?, String>((ref, id) {

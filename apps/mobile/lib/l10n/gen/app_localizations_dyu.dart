@@ -4431,4 +4431,34 @@ class AppLocalizationsDyu extends AppLocalizations {
 
   @override
   String get readEraseInvalidError => 'Ce délai n’est pas proposé.';
+
+  @override
+  String get masquerDiscussion => 'Masquer la discussion';
+
+  @override
+  String get nePlusMasquer => 'Ne plus masquer';
+
+  @override
+  String get discussionsCachees => 'Discussions cachées';
+
+  @override
+  String get aucuneDiscussionCachee => 'Aucune discussion cachée';
+
+  @override
+  String get aucuneDiscussionCacheeMessage =>
+      'Appui long sur une discussion, puis « Masquer la discussion ».';
+
+  @override
+  String get discussionMasquee =>
+      'Discussion masquée. Appui long sur le logo Privio pour la retrouver.';
+
+  @override
+  String get discussionReaffichee => 'La discussion est de retour dans la liste.';
+
+  @override
+  String get codePrivioCree => 'Code Privio créé.';
+
+  @override
+  String get codePrivioPourDiscussionsCachees =>
+      'Ce code ouvrira vos discussions cachées. Il ne verrouille pas Privio à l’ouverture.';
 }

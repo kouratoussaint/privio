@@ -29,6 +29,7 @@ interface Target {
   conversation_id: string;
   is_group: boolean;
   mentioned?: boolean;
+  secret?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -118,14 +119,16 @@ Deno.serve(async (req) => {
     return await dispatchTargets(
       token,
       callId,
-      () => rpc<{ token: string; conversation_id: string; created_at: string; kind: string }[]>(
+      () => rpc<
+        { token: string; conversation_id: string; created_at: string; kind: string; secret?: boolean }[]
+      >(
         "push_call_targets",
         { p_token: token, p_call_id: callId, p_event: callEvent },
         serviceHeaders(),
       ),
       (sa, t) => callEvent === "ring"
         ? sendCallRing(sa, t.token, callId, t.conversation_id, t.created_at, t.kind)
-        : sendCallMissed(sa, t.token, callId, t.conversation_id, muted),
+        : sendCallMissed(sa, t.token, callId, t.conversation_id, muted, t.secret === true),
     );
   }
   // Lot 8.4b : des messages non lus vont bientôt s'effacer.
@@ -185,7 +188,9 @@ Deno.serve(async (req) => {
     const invalid: string[] = [];
     for (const t of targets) {
       try {
-        const r = await sendGeneric(sa, t.token, t.conversation_id, t.is_group, t.mentioned === true);
+        const r = await sendGeneric(
+          sa, t.token, t.conversation_id, t.is_group, t.mentioned === true, t.secret === true,
+        );
         if (r === "sent") sent++;
         else {
           failed++;

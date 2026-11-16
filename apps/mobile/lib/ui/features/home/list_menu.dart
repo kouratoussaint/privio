@@ -34,7 +34,7 @@ class ListMenuButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final together = ref.watch(groupsInDiscussionsProvider).value ?? false;
     final belongs = _belongs(together);
-    final list = (ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+    final list = (ref.watch(listedConversationsProvider).value ?? const <ConversationSummary>[])
         .where(belongs)
         .toList();
     final archived = list.where((c) => c.archived).length;

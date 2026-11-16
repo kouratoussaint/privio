@@ -70,7 +70,17 @@ export function sendGeneric(
   conversationId: string,
   isGroup: boolean,
   mentioned = false,
+  secret = false,
 ): Promise<SendResult> {
+  // Lot 10.2 : discussion cachée → texte neutre, aucune discussion à ouvrir (Privio s'ouvre
+  // normalement), une seule notification pour toutes les discussions cachées.
+  if (secret) {
+    return sendNotification(sa, token, {
+      body: "Nouveau message",
+      data: { type: "message" },
+      tag: "privio-secret",
+    });
+  }
   return sendNotification(sa, token, {
     body: mentioned ? MENTION_BODY : isGroup ? "Nouveau message dans un groupe" : "Nouveau message",
     data: { type: "message", conversation_id: conversationId },
@@ -201,13 +211,15 @@ export async function sendCallMissed(
   callId: string,
   conversationId: string,
   muted: boolean,
+  secret = false,
 ): Promise<SendResult> {
   const stop = await sendData(sa, token, { type: "call_end", call_id: callId }, "60s");
   if (stop === "invalid_token" || muted) return stop;
+  // Lot 10.2 : discussion cachée → « Appel manqué » sans discussion à ouvrir.
   return await sendNotification(sa, token, {
     body: MISSED_CALL_BODY,
-    data: { type: "message", conversation_id: conversationId },
-    tag: `privio-call-${conversationId}`,
+    data: secret ? { type: "message" } : { type: "message", conversation_id: conversationId },
+    tag: secret ? "privio-secret-call" : `privio-call-${conversationId}`,
   });
 }
 

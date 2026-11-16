@@ -276,8 +276,20 @@ class FavoritesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final id = conversationId;
+    // Lot 10.2 : les favoris de toutes les discussions taisent les discussions cachées.
+    final secretIds = {
+      for (final c in ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+        if (c.secret) c.id,
+    };
     final favorites = id == null
-        ? ref.watch(allFavoritesProvider)
+        ? ref
+              .watch(allFavoritesProvider)
+              .whenData(
+                (l) => [
+                  for (final r in l)
+                    if (!secretIds.contains(r.conversationId)) r,
+                ],
+              )
         : ref.watch(favoriteMessagesProvider(id));
     final titles = id != null
         ? const <String, String>{}

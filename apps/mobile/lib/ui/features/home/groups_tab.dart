@@ -105,7 +105,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     final invitations = ref.watch(invitationsProvider).value ?? const <GroupInvitation>[];
     final myRequests = ref.watch(myJoinRequestsProvider).value ?? const <MyJoinRequest>[];
     final notices = ref.watch(groupDeletionNoticesProvider).value ?? const <GroupDeletionNotice>[];
-    final conversations = ref.watch(conversationsProvider);
+    final conversations = ref.watch(listedConversationsProvider);
     final all = (conversations.value ?? const <ConversationSummary>[])
         .where((c) => c.isGroup)
         .toList();

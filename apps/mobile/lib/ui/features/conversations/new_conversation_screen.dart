@@ -260,7 +260,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     };
     final seen = <String>{};
     final list = [
-      for (final c in ref.watch(conversationsProvider).value ?? const <ConversationSummary>[])
+      for (final c in ref.watch(listedConversationsProvider).value ?? const <ConversationSummary>[])
         if (!c.isGroup &&
             c.peerId != null &&
             !c.peerDeleted &&
