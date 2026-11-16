@@ -13,6 +13,7 @@ import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/settings_card.dart';
+import 'console_screen.dart' show ConsoleBackHandler;
 import '../../core/widgets/state_views.dart';
 
 /// Onglet « Signalements » de la console (lot 5.3) : files, dossiers, décisions,
@@ -24,7 +25,14 @@ class ConsoleReportsTab extends ConsumerStatefulWidget {
   ConsumerState<ConsoleReportsTab> createState() => _ConsoleReportsTabState();
 }
 
-class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> {
+class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> with ConsoleBackHandler {
+  @override
+  bool handleBack() {
+    if (_dossier == null) return false;
+    setState(() => _dossier = null);
+    return true;
+  }
+
   /// open, reviewing, closed, appeals.
   String _queue = 'open';
   String? _kind;

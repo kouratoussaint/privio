@@ -37,6 +37,12 @@ et signalements filtrables).
   fonctionnalités sont passés dans « Fonctionnalités ». **Signalements** : dossiers en tuiles
   blanches ; filtres par file, type et motif inchangés.
 
+## Correction du 16/11/2026 : bouton retour
+Le bouton retour du téléphone refermait la console d'un coup. Il suit maintenant le chemin
+parcouru : il ferme le menu latéral, puis la fiche ouverte (compte, dossier), puis revient
+à la rubrique précédente jusqu'à l'Accueil ; la console ne se quitte que depuis l'Accueil
+(`ConsoleBackScope`, `test/ui/console_back_test.dart`).
+
 ## Preuves
 `supabase/tests/database/36_console_complete.test.sql` (28 tests) ; `scripts/ci/console_e2e.py`
 (comptes A–Z, GIF coupés refusés aussitôt, journal filtré) ; `test/ui/console_complete_test.dart`

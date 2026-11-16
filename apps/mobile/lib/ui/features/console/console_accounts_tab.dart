@@ -13,6 +13,7 @@ import '../../../domain/models/console.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import 'console_reports_tab.dart';
+import 'console_screen.dart' show ConsoleBackHandler;
 
 /// Onglet « Comptes » de la console (lot 5.4) : recherche par @identifiant, nom ou numéro
 /// complet (jamais affiché) ; fiche sans numéro, contact, discussion ni message.
@@ -23,7 +24,14 @@ class ConsoleAccountsTab extends ConsumerStatefulWidget {
   ConsumerState<ConsoleAccountsTab> createState() => _ConsoleAccountsTabState();
 }
 
-class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> {
+class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> with ConsoleBackHandler {
+  @override
+  bool handleBack() {
+    if (_open == null) return false;
+    setState(() => _open = null);
+    return true;
+  }
+
   final _query = TextEditingController();
   String? _submitted;
   String? _open;

@@ -76,13 +76,44 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
     _idle = Timer(ConsoleScreen.idleTimeout, () => _close(idle: true));
   }
 
-  void _go(ConsoleSection s) => setState(() => _section = s);
+  /// Rubriques visitées (bouton retour du téléphone : on y revient une à une).
+  final List<ConsoleSection> _history = [];
+
+  /// Fiches ouvertes dans une rubrique (compte, dossier) : le retour les referme d'abord.
+  final List<bool Function()> _backHandlers = [];
+
+  void _go(ConsoleSection s) {
+    if (s == _section) return;
+    setState(() {
+      _history.add(_section);
+      _section = s;
+    });
+  }
+
+  /// Lot 5.5 (correction du 16/11/2026) : retour dans la console. Menu latéral (fermé par
+  /// Flutter), puis fiche ouverte, puis rubrique précédente, puis Accueil ; on ne quitte la
+  /// console que depuis l'Accueil.
+  void _back() {
+    for (final h in _backHandlers.reversed.toList()) {
+      if (h()) return;
+    }
+    if (_history.isNotEmpty) {
+      setState(() => _section = _history.removeLast());
+      return;
+    }
+    if (_section != ConsoleSection.home) {
+      setState(() => _section = ConsoleSection.home);
+      return;
+    }
+    Navigator.of(context).pop();
+  }
 
   void _open() {
     ref.invalidate(consoleDashboardProvider);
     setState(() {
       _verified = true;
       _section = ConsoleSection.home;
+      _history.clear();
       _message = null;
       _error = false;
     });
@@ -197,7 +228,13 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
         ),
       },
     );
-    return scaffold;
+    return PopScope(
+      canPop: !open,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: ConsoleBackScope(handlers: _backHandlers, child: scaffold),
+    );
   }
 }
 
@@ -691,5 +728,39 @@ class _Section extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Lot 5.5 : une rubrique qui ouvre une fiche (compte, dossier) s'inscrit ici pour que le
+/// bouton retour la referme avant de changer de rubrique.
+class ConsoleBackScope extends InheritedWidget {
+  const ConsoleBackScope({super.key, required this.handlers, required super.child});
+
+  final List<bool Function()> handlers;
+
+  static List<bool Function()>? of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<ConsoleBackScope>()?.handlers;
+
+  @override
+  bool updateShouldNotify(ConsoleBackScope oldWidget) => false;
+}
+
+/// Inscrit [handler] auprès de la console tant que la rubrique est affichée.
+mixin ConsoleBackHandler<T extends StatefulWidget> on State<T> {
+  List<bool Function()>? _handlers;
+
+  /// Vrai si le retour a été traité (fiche refermée).
+  bool handleBack();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _handlers ??= ConsoleBackScope.of(context)?..add(handleBack);
+  }
+
+  @override
+  void dispose() {
+    _handlers?.remove(handleBack);
+    super.dispose();
   }
 }
