@@ -127,6 +127,10 @@ abstract interface class MessagingApi {
   Future<void> setMute(String conversationId, DateTime? until);
   Future<void> setGroupAvatar(String conversationId, Uint8List jpeg);
   Future<void> removeGroupAvatar(String conversationId);
+
+  /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s ; null : couper).
+  Future<void> setReadErase(String conversationId, int? seconds);
+
   Future<int> setConversationTtl(String conversationId, int seconds);
   Future<void> setConversationFlags(String conversationId, {bool? pinned, bool? archived});
   Future<void> signalTyping(String conversationId);
@@ -659,6 +663,10 @@ class SupabaseMessagingApi implements MessagingApi {
       },
     ),
   );
+
+  @override
+  Future<void> setReadErase(String conversationId, int? seconds) =>
+      _call('set_read_erase', {'p_conversation_id': conversationId, 'p_seconds': seconds});
 
   @override
   Future<int> setConversationTtl(String conversationId, int seconds) => _guard(

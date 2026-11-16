@@ -118,7 +118,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 10 — Propre à Privio (avant le pilote : le pilote vient après toutes les intégrations, décision du 15/11/2026)
 | Lot | Contenu | Statut |
 |---|---|---|
-| 10.1 | Effacer après lecture (texte compris), réglable par discussion | ⏳ |
+| 10.1 | Effacer après lecture (ADR-044, décisions A–E du 16/11/2026) : réglable par discussion — **30 s, 5 min ou 1 h** après la lecture, ou désactivé ; dans une discussion à deux, l'une ou l'autre personne ; dans un groupe, les administrateurs (⋮ → « Effacer après lecture », ou le bandeau rose sous l'en-tête) ; annonce dans la discussion ; seuls les messages envoyés après l'activation sont concernés (petite flamme à côté de l'heure) ; à la lecture, le message disparaît chez le lecteur au délai choisi ; la copie de l'expéditeur disparaît quand le message a été lu (dans un groupe : par tous) plus le délai ; un message jamais lu s'efface comme avant (72 h au plus). Tous types de messages (texte, vocal, photo, GIF, autocollant). Migration `20261116000300`. **Tests (deux téléphones)** : activer 30 s, envoyer un texte puis une photo ; ouvrir la discussion sur le 2ᵉ téléphone et attendre 30 s : les messages disparaissent des deux côtés ; dans un groupe de 3, vérifier qu'un membre ne voit pas l'option et que le message reste chez celui qui ne l'a pas lu ; désactiver puis vérifier qu'un nouveau message n'a plus la flamme | 🧪 16/11/2026 |
 | 10.2 | Discussions cachées (ouvertes avec le code Privio, téléphones partagés) | ⏳ |
 | 10.3 | Mode éco (un interrupteur : photos et vocaux allégés, GIF et aperçus coupés, consommation du mois) | ⏳ |
 | 10.4 | « Vérifié en personne » (QR code scanné face à face) et surnom privé d'un contact | ⏳ |

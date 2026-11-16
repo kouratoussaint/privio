@@ -875,6 +875,12 @@ class ChatController extends AsyncNotifier<ChatState> {
     ref.invalidate(conversationsProvider);
   }
 
+  /// Lot 10.1 : effacer après lecture (annoncé dans la discussion).
+  Future<void> setReadErase(int? seconds) async {
+    await _act((api) => api.setReadErase(conversationId, seconds));
+    ref.invalidate(conversationsProvider);
+  }
+
   Future<void> edit(String messageId, String body) =>
       _act((api) => api.editMessage(messageId, body.trim()));
 

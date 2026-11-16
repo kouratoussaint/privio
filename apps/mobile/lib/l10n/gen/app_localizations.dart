@@ -7431,6 +7431,78 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas.'**
   String get equipePrivioRemplaceIdentifiant;
+
+  /// No description provided for @effacerApresLecture.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer après lecture'**
+  String get effacerApresLecture;
+
+  /// No description provided for @effacerApresLectureAide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les messages envoyés à partir de maintenant disparaissent après avoir été lus, chez vous comme chez la personne qui les lit. Dans un groupe, chacun les voit disparaître à son rythme ; ils sont supprimés pour tous quand tout le monde les a lus.'**
+  String get effacerApresLectureAide;
+
+  /// No description provided for @effacerApresLectureGroupeAdmins.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans un groupe, seuls les administrateurs peuvent le régler.'**
+  String get effacerApresLectureGroupeAdmins;
+
+  /// No description provided for @eraseOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactivé'**
+  String get eraseOff;
+
+  /// No description provided for @erase30s.
+  ///
+  /// In fr, this message translates to:
+  /// **'30 secondes'**
+  String get erase30s;
+
+  /// No description provided for @erase5min.
+  ///
+  /// In fr, this message translates to:
+  /// **'5 minutes'**
+  String get erase5min;
+
+  /// No description provided for @erase1h.
+  ///
+  /// In fr, this message translates to:
+  /// **'1 heure'**
+  String get erase1h;
+
+  /// No description provided for @eraseBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacement après lecture : {delay}'**
+  String eraseBanner(Object delay);
+
+  /// No description provided for @systemEraseOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{who} activé l’effacement après lecture ({delay}).'**
+  String systemEraseOn(Object who, Object delay);
+
+  /// No description provided for @systemEraseOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{who} désactivé l’effacement après lecture.'**
+  String systemEraseOff(Object who);
+
+  /// No description provided for @bubbleErase.
+  ///
+  /// In fr, this message translates to:
+  /// **'S’efface après lecture'**
+  String get bubbleErase;
+
+  /// No description provided for @readEraseInvalidError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce délai n’est pas proposé.'**
+  String get readEraseInvalidError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

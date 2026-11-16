@@ -4387,4 +4387,48 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get equipePrivioRemplaceIdentifiant =>
       'L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas.';
+
+  @override
+  String get effacerApresLecture => 'Effacer après lecture';
+
+  @override
+  String get effacerApresLectureAide =>
+      'Les messages envoyés à partir de maintenant disparaissent après avoir été lus, chez vous comme chez la personne qui les lit. Dans un groupe, chacun les voit disparaître à son rythme ; ils sont supprimés pour tous quand tout le monde les a lus.';
+
+  @override
+  String get effacerApresLectureGroupeAdmins =>
+      'Dans un groupe, seuls les administrateurs peuvent le régler.';
+
+  @override
+  String get eraseOff => 'Désactivé';
+
+  @override
+  String get erase30s => '30 secondes';
+
+  @override
+  String get erase5min => '5 minutes';
+
+  @override
+  String get erase1h => '1 heure';
+
+  @override
+  String eraseBanner(Object delay) {
+    return 'Effacement après lecture : $delay';
+  }
+
+  @override
+  String systemEraseOn(Object who, Object delay) {
+    return '$who activé l’effacement après lecture ($delay).';
+  }
+
+  @override
+  String systemEraseOff(Object who) {
+    return '$who désactivé l’effacement après lecture.';
+  }
+
+  @override
+  String get bubbleErase => 'S’efface après lecture';
+
+  @override
+  String get readEraseInvalidError => 'Ce délai n’est pas proposé.';
 }

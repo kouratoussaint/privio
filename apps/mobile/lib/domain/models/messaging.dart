@@ -62,9 +62,17 @@ class ConversationSummary {
     this.clearRequestBy,
     this.clearRequestExpiresAt,
     this.clearRequestDelete = false,
+    this.readEraseSeconds,
   });
 
   final String id;
+
+  /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s) ; null : désactivé.
+  final int? readEraseSeconds;
+
+  /// Lot 10.1 : l'une ou l'autre personne d'une discussion à deux ; les administrateurs
+  /// d'un groupe.
+  bool get canSetReadErase => isGroup ? (isAdmin && !isClosed) : !blocked;
 
   /// « direct » (1:1) ou « group ».
   final String kind;
@@ -177,6 +185,7 @@ class ConversationSummary {
     'clear_request_by': clearRequestBy,
     'clear_request_expires_at': clearRequestExpiresAt?.toUtc().toIso8601String(),
     'clear_request_delete': clearRequestDelete,
+    'read_erase_seconds': readEraseSeconds,
   };
 
   /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
@@ -226,6 +235,7 @@ class ConversationSummary {
     clearRequestBy: clearRequestBy,
     clearRequestExpiresAt: clearRequestExpiresAt,
     clearRequestDelete: clearRequestDelete,
+    readEraseSeconds: readEraseSeconds,
   );
 
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
@@ -266,6 +276,7 @@ class ConversationSummary {
     clearRequestBy: j['clear_request_by'] as String?,
     clearRequestExpiresAt: _date(j['clear_request_expires_at']),
     clearRequestDelete: j['clear_request_delete'] as bool? ?? false,
+    readEraseSeconds: (j['read_erase_seconds'] as num?)?.toInt(),
   );
 }
 
@@ -376,10 +387,15 @@ class ChatMessage {
     this.opened = false,
     this.openedCount,
     this.linkPreview,
+    this.readEraseSeconds,
   });
 
   final String id;
   final String kind;
+
+  /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s), réglage de la discussion au
+  /// moment de l'envoi ; null sinon. Une fois lu, [expiresAt] devient l'échéance.
+  final int? readEraseSeconds;
 
   /// Lot 7.3b : photo ou vocal en vue unique ; ouvert par moi ; nombre d'ouvertures (mes
   /// envois seulement).
@@ -437,6 +453,11 @@ class ChatMessage {
   /// Vocal encore écoutable (ni supprimé, ni sans fichier).
   bool get hasPlayableVoice => isVoice && !viewOnce && !isDeleted && mediaPath != null;
 
+  /// Lot 10.1 : message système « effacer après lecture » : délai en secondes (0 : coupé),
+  /// sinon null.
+  int? get systemEraseSeconds =>
+      isSystem && (body ?? '').startsWith('erase:') ? int.tryParse(body!.substring(6)) : null;
+
   /// Message système « durée réglée » : nouvelle durée en secondes, sinon null.
   int? get systemTtlSeconds =>
       isSystem && (body ?? '').startsWith('ttl:') ? int.tryParse(body!.substring(4)) : null;
@@ -468,6 +489,7 @@ class ChatMessage {
     'opened': opened,
     'opened_count': openedCount,
     'link_preview': linkPreview?.toJson(),
+    'read_erase_seconds': readEraseSeconds,
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -505,6 +527,7 @@ class ChatMessage {
       linkPreview: j['link_preview'] == null
           ? null
           : LinkPreview.fromJson(Map<String, dynamic>.from(j['link_preview'] as Map)),
+      readEraseSeconds: (j['read_erase_seconds'] as num?)?.toInt(),
     );
   }
 }

@@ -618,6 +618,7 @@ class FakeMessagingApi implements MessagingApi {
     opened: m.opened,
     openedCount: m.openedCount,
     linkPreview: clearBody ? null : m.linkPreview,
+    readEraseSeconds: m.readEraseSeconds,
   );
 
   @override
@@ -629,6 +630,53 @@ class FakeMessagingApi implements MessagingApi {
     messageId,
     (m) => _copy(m, clearBody: true, deletedAt: DateTime.now(), reactions: const []),
   );
+
+  /// Lot 10.1 : effacer après lecture par discussion, et réglages demandés.
+  final Map<String, int?> readErase = {};
+  final List<(String, int?)> readEraseSets = [];
+
+  @override
+  Future<void> setReadErase(String conversationId, int? seconds) async {
+    _net();
+    if (seconds != null && ![30, 300, 3600].contains(seconds)) {
+      throw const AppFailure(FailureCode.readEraseInvalid);
+    }
+    final g = groups[conversationId];
+    if (g != null && !g.isAdmin(me)) throw const AppFailure(FailureCode.notAdmin);
+    readEraseSets.add((conversationId, seconds));
+    readErase[conversationId] = seconds;
+    final now = DateTime.now();
+    (messages[conversationId] ??= []).add(
+      ChatMessage(
+        id: 'sys-${_seq++}',
+        kind: 'system',
+        senderId: me,
+        body: 'erase:${seconds ?? 0}',
+        sentAt: now,
+        expiresAt: now.add(Duration(seconds: conversationTtl)),
+        updatedAt: now,
+      ),
+    );
+  }
+
+  /// Lot 10.1 : comme le serveur à la lecture : l'échéance d'un message reçu devient
+  /// lecture + délai.
+  void _applyReadErase(String conversationId, DateTime readUpTo) {
+    final list = messages[conversationId];
+    if (list == null) return;
+    final now = DateTime.now();
+    for (final (i, m) in list.indexed) {
+      final secs = m.readEraseSeconds;
+      if (secs == null || m.senderId == me || m.sentAt.isAfter(readUpTo)) continue;
+      final at = now.add(Duration(seconds: secs));
+      if (!m.expiresAt.isAfter(at)) continue;
+      list[i] = ChatMessage.fromJson({
+        ...m.toJson(),
+        'expires_at': at.toUtc().toIso8601String(),
+        'updated_at': now.toUtc().toIso8601String(),
+      });
+    }
+  }
 
   @override
   Future<int> setConversationTtl(String conversationId, int seconds) async {
@@ -796,6 +844,7 @@ class FakeMessagingApi implements MessagingApi {
       lastExpiresAt: last?.expiresAt,
       lastKind: last?.kind ?? 'text',
       ttlSeconds: conversationTtl,
+      readEraseSeconds: readErase[id],
       pinned: pinned,
       archived: archived,
       peerReadUpTo: peerReadUpTo,
@@ -1128,6 +1177,7 @@ class FakeMessagingApi implements MessagingApi {
       sentAt: sentAt ?? now,
       expiresAt: expiresAt ?? now.add(const Duration(hours: 72)),
       updatedAt: now,
+      readEraseSeconds: readErase[conversationId],
     );
     (messages[conversationId] ??= []).add(m);
     return m;
@@ -1415,6 +1465,7 @@ class FakeMessagingApi implements MessagingApi {
       ),
       updatedAt: now,
       mentions: g == null ? const [] : mentions.where(g.roles.containsKey).toList(),
+      readEraseSeconds: readErase[conversationId],
     );
     final list = messages[conversationId] ??= [];
     if (!list.any((x) => x.id == m.id)) list.add(m);
@@ -1844,6 +1895,7 @@ class FakeMessagingApi implements MessagingApi {
     DateTime? readUpTo,
   }) async {
     marks.add((conversationId, deliveredUpTo, readUpTo));
+    if (readUpTo != null) _applyReadErase(conversationId, readUpTo);
   }
 
   /// Lot 7.2b1 : accusés envoyés (discussion, distribué jusqu'à, lu jusqu'à).
@@ -1979,6 +2031,7 @@ class FakeMessagingApi implements MessagingApi {
       lastExpiresAt: last?.expiresAt,
       lastKind: last?.kind ?? 'text',
       ttlSeconds: conversationTtl,
+      readEraseSeconds: readErase[g.id],
       pinned: groupPinned.contains(g.id),
       archived: groupArchived.contains(g.id),
       mutedUntil: muted[g.id],

@@ -82,6 +82,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _focus = FocusNode();
   Timer? _tick;
   Timer? _poll;
+
+  /// Lot 10.1 : réveil à la seconde près quand un message « effacer après lecture » arrive
+  /// à échéance (le réveil régulier ne passe que toutes les 15 s).
+  Timer? _eraseTimer;
+  DateTime? _eraseAt;
+
+  void _scheduleErase(List<ChatMessage> messages, DateTime now) {
+    DateTime? next;
+    for (final m in messages) {
+      if (m.readEraseSeconds == null || !m.expiresAt.isAfter(now)) continue;
+      if (m.expiresAt.difference(now) > const Duration(minutes: 2)) continue;
+      if (next == null || m.expiresAt.isBefore(next)) next = m.expiresAt;
+    }
+    if (next == null || next == _eraseAt) return;
+    _eraseAt = next;
+    _eraseTimer?.cancel();
+    _eraseTimer = Timer(next.difference(now) + const Duration(milliseconds: 50), () {
+      _eraseAt = null;
+      if (mounted) setState(() {});
+    });
+  }
+
   ChatMessage? _replyTo;
   ChatMessage? _editing;
   int? _nextTtl;
@@ -513,6 +535,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _lifecycle.dispose();
     _tick?.cancel();
     _poll?.cancel();
+    _eraseTimer?.cancel();
     _composer.dispose();
     _searchCtrl.dispose();
     _listScroll.dispose();
@@ -590,6 +613,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
     if (picked == null || picked == current || !mounted) return;
     await _guard(() => _chat.setTtl(picked));
+  }
+
+  /// Lot 10.1 : effacer après lecture (30 s, 5 min, 1 h ou désactivé).
+  Future<void> _chooseReadErase(ConversationSummary s) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => _ReadEraseSheet(current: s.readEraseSeconds, isGroup: s.isGroup),
+    );
+    if (picked == null || !mounted) return;
+    final seconds = picked == 0 ? null : picked;
+    if (seconds == s.readEraseSeconds) return;
+    await _guard(() => _chat.setReadErase(seconds));
   }
 
   Future<void> _chooseMessageTtl(ConversationSummary? summary) async {
@@ -939,6 +976,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       item('favorites', Icons.star_outline_rounded, L.t.messagesFavoris, tint: MenuTint.pink),
       if (!s.isGroup && canSetTtl)
         item('ttl', Icons.timer_outlined, L.t.dureeMessages, tint: MenuTint.amber),
+      // Lot 10.1
+      if (s.canSetReadErase)
+        item(
+          'erase',
+          Icons.local_fire_department_outlined,
+          L.t.effacerApresLecture,
+          tint: MenuTint.pink,
+        ),
       if (s.isGroup)
         item('notifications', Icons.notifications_outlined, L.t.notifications, tint: MenuTint.blue)
       else
@@ -984,6 +1029,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       case 'ttl':
         await _chooseConversationTtl(s);
+      case 'erase':
+        await _chooseReadErase(s);
       case 'mute':
         await chooseMute(context, ref, s);
       case 'notifications':
@@ -1364,6 +1411,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   (m.body ?? '').toLowerCase().contains(query)),
         )
         .toList();
+    if (visible != null) _scheduleErase(visible, now);
     final appearing = visible == null ? const <String>{} : _track(visible, query, me);
     // Lot 7.2c1 : nombre de non lus à l'ouverture (avant que la discussion soit marquée lue).
     _unreadAtOpen ??= summary?.unreadCount;
@@ -1591,6 +1639,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               if (summary?.clearRequestBy != null && !isGroup)
                 _ClearRequestBanner(summary: summary!, me: me, onRespond: _respondClear),
+              // Lot 10.1 : effacement après lecture actif.
+              if (summary?.readEraseSeconds case final erase? when query.isEmpty)
+                _EraseBanner(
+                  seconds: erase,
+                  onTap: summary!.canSetReadErase ? () => _chooseReadErase(summary) : null,
+                ),
               // Lot 7.2c2 : messages épinglés.
               if (pins.isNotEmpty && query.isEmpty && !_selecting)
                 PinnedBanner(pins: pins, index: _pinIndex, onTap: () => _openPinned(pins)),
@@ -1985,7 +2039,19 @@ class _MessageList extends StatelessWidget {
       if (m.isSystem) {
         if (ghost != null) continue;
         final ttl = m.systemTtlSeconds;
-        if (ttl != null) {
+        final erase = m.systemEraseSeconds;
+        if (erase != null) {
+          final who = m.senderId == me ? L.t.vousAvez : '${m.senderName ?? peerName} a';
+          items.add(
+            _SystemNotice(
+              key: Key('system.${m.id}'),
+              text: erase == 0
+                  ? L.t.systemEraseOff(who)
+                  : L.t.systemEraseOn(who, formatErase(erase)),
+              icon: Icons.local_fire_department_outlined,
+            ),
+          );
+        } else if (ttl != null) {
           final who = m.senderId == me ? L.t.vousAvez : '${m.senderName ?? peerName} a';
           items.add(
             _SystemNotice(
@@ -2062,6 +2128,7 @@ class _MessageList extends StatelessWidget {
         time: DateFormat.Hm('fr').format(m.sentAt.toLocal()),
         edited: m.editedAt != null && !m.isDeleted,
         remaining: formatRemaining(m.expiresAt, now: now),
+        erase: m.readEraseSeconds != null && !m.isDeleted,
         // Lot 8.4b : 4 h avant l'effacement d'un message de 12 h ou plus.
         expiringSoon: expiringSoon(m.sentAt, m.expiresAt, now: now) && !m.isDeleted,
         delivery: outgoing && !m.isDeleted ? deliveryOf(m, summary) : null,
@@ -2284,6 +2351,118 @@ class _ExpiryNotice extends StatelessWidget {
   }
 }
 
+/// Lot 10.1 : délai d'effacement après lecture, en toutes lettres.
+String formatErase(int seconds) => switch (seconds) {
+  30 => L.t.erase30s,
+  300 => L.t.erase5min,
+  3600 => L.t.erase1h,
+  _ => formatTtl(seconds),
+};
+
+/// Lot 10.1 : bandeau « Effacement après lecture : 5 minutes » sous l'en-tête.
+class _EraseBanner extends StatelessWidget {
+  const _EraseBanner({required this.seconds, this.onTap});
+
+  final int seconds;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = PrivioPalette.of(context);
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(PrivioSpacing.l, PrivioSpacing.s, PrivioSpacing.l, 0),
+      child: Material(
+        color: MenuTint.pink.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(PrivioRadius.medium),
+        child: InkWell(
+          key: const Key('chat.erase_banner'),
+          borderRadius: BorderRadius.circular(PrivioRadius.medium),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.m, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.local_fire_department_rounded, size: 18, color: MenuTint.pink),
+                const SizedBox(width: PrivioSpacing.s),
+                Expanded(
+                  child: Text(
+                    L.t.eraseBanner(formatErase(seconds)),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: p.accentText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (onTap != null) Icon(Icons.tune_rounded, size: 16, color: p.accentText),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lot 10.1 : choix du délai (0 : désactivé).
+class _ReadEraseSheet extends StatelessWidget {
+  const _ReadEraseSheet({required this.current, required this.isGroup});
+
+  final int? current;
+  final bool isGroup;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Widget option(int value, String label, IconData icon) {
+      final selected = (current ?? 0) == value;
+      return ListTile(
+        key: Key('erase.option.$value'),
+        leading: Icon(icon, color: selected ? MenuTint.pink : null),
+        title: Text(label),
+        trailing: selected ? const Icon(Icons.check_rounded, color: MenuTint.pink) : null,
+        selected: selected,
+        onTap: () => Navigator.of(context).pop(value),
+      );
+    }
+
+    return SafeArea(
+      child: Column(
+        key: const Key('erase.sheet'),
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              PrivioSpacing.l,
+              0,
+              PrivioSpacing.l,
+              PrivioSpacing.s,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(L.t.effacerApresLecture, style: theme.textTheme.titleLarge),
+                const SizedBox(height: PrivioSpacing.xs),
+                Text(L.t.effacerApresLectureAide, style: theme.textTheme.bodySmall),
+                if (isGroup) ...[
+                  const SizedBox(height: PrivioSpacing.xs),
+                  Text(L.t.effacerApresLectureGroupeAdmins, style: theme.textTheme.bodySmall),
+                ],
+              ],
+            ),
+          ),
+          option(0, L.t.eraseOff, Icons.block_outlined),
+          option(30, L.t.erase30s, Icons.local_fire_department_outlined),
+          option(300, L.t.erase5min, Icons.local_fire_department_outlined),
+          option(3600, L.t.erase1h, Icons.local_fire_department_outlined),
+          const SizedBox(height: PrivioSpacing.s),
+        ],
+      ),
+    );
+  }
+}
+
 /// Durée des messages dans l'en-tête (lot 4.6) : « ⏱ 24 h », touchable pour la régler.
 class _TtlPill extends StatelessWidget {
   const _TtlPill({required this.ttlSeconds, required this.onTap});
@@ -2401,6 +2580,7 @@ class _Bubble extends StatelessWidget {
     this.edited = false,
     this.remaining,
     this.expiringSoon = false,
+    this.erase = false,
     this.status,
     this.italic = false,
     this.failed = false,
@@ -2466,6 +2646,9 @@ class _Bubble extends StatelessWidget {
 
   /// Lot 8.4b : s'efface bientôt (compte à rebours mis en valeur).
   final bool expiringSoon;
+
+  /// Lot 10.1 : effacé après lecture (petite flamme à côté de l'heure).
+  final bool erase;
   final String? status;
   final bool italic;
   final bool failed;
@@ -2639,6 +2822,16 @@ class _Bubble extends StatelessWidget {
                               size: 12,
                               color: meta,
                               semanticLabel: L.t.semFavorite,
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          if (erase) ...[
+                            Icon(
+                              Icons.local_fire_department_rounded,
+                              key: const Key('bubble.erase'),
+                              size: 12,
+                              color: meta,
+                              semanticLabel: L.t.bubbleErase,
                             ),
                             const SizedBox(width: 3),
                           ],

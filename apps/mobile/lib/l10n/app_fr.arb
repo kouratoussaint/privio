@@ -6044,5 +6044,41 @@
   "avatarNotFoundError": "Ce compte n’a plus de photo de profil.",
   "deviceNotFoundError": "Cet appareil est déjà déconnecté.",
   "choisissezUnNouvelIdentifiant": "Choisissez un nouvel identifiant",
-  "equipePrivioRemplaceIdentifiant": "L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas."
+  "equipePrivioRemplaceIdentifiant": "L’équipe Privio a remplacé votre identifiant, qui ne respectait pas les règles de Privio. Choisissez-en un nouveau pour continuer. Vos discussions et vos groupes ne changent pas.",
+  "effacerApresLecture": "Effacer après lecture",
+  "effacerApresLectureAide": "Les messages envoyés à partir de maintenant disparaissent après avoir été lus, chez vous comme chez la personne qui les lit. Dans un groupe, chacun les voit disparaître à son rythme ; ils sont supprimés pour tous quand tout le monde les a lus.",
+  "effacerApresLectureGroupeAdmins": "Dans un groupe, seuls les administrateurs peuvent le régler.",
+  "eraseOff": "Désactivé",
+  "erase30s": "30 secondes",
+  "erase5min": "5 minutes",
+  "erase1h": "1 heure",
+  "eraseBanner": "Effacement après lecture : {delay}",
+  "@eraseBanner": {
+    "placeholders": {
+      "delay": {
+        "type": "Object"
+      }
+    }
+  },
+  "systemEraseOn": "{who} activé l’effacement après lecture ({delay}).",
+  "@systemEraseOn": {
+    "placeholders": {
+      "who": {
+        "type": "Object"
+      },
+      "delay": {
+        "type": "Object"
+      }
+    }
+  },
+  "systemEraseOff": "{who} désactivé l’effacement après lecture.",
+  "@systemEraseOff": {
+    "placeholders": {
+      "who": {
+        "type": "Object"
+      }
+    }
+  },
+  "bubbleErase": "S’efface après lecture",
+  "readEraseInvalidError": "Ce délai n’est pas proposé."
 }

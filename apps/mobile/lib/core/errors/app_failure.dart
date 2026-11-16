@@ -104,6 +104,8 @@ enum FailureCode {
   handleAlwaysReserved,
   avatarNotFound,
   deviceNotFound,
+  // Lot 10.1
+  readEraseInvalid,
   aboutTooLong,
   joinRequestNotFound,
   otpInvalidOrExpired,
@@ -212,6 +214,7 @@ class AppFailure implements Exception {
     FailureCode.handleAlwaysReserved => L.t.handleAlwaysReservedError,
     FailureCode.avatarNotFound => L.t.avatarNotFoundError,
     FailureCode.deviceNotFound => L.t.deviceNotFoundError,
+    FailureCode.readEraseInvalid => L.t.readEraseInvalidError,
     FailureCode.aboutTooLong => L.t.propos140CaracteresPlus,
     FailureCode.joinRequestNotFound => L.t.cetteDemandeDejaEteTraitee,
     FailureCode.otpInvalidOrExpired => L.t.ceCodeNeFonctionnePas,
@@ -319,6 +322,7 @@ const _serverCodes = <String, FailureCode>{
   'HANDLE_ALWAYS_RESERVED': FailureCode.handleAlwaysReserved,
   'AVATAR_NOT_FOUND': FailureCode.avatarNotFound,
   'DEVICE_NOT_FOUND': FailureCode.deviceNotFound,
+  'READ_ERASE_INVALID': FailureCode.readEraseInvalid,
   'ABOUT_TOO_LONG': FailureCode.aboutTooLong,
   'JOIN_REQUEST_NOT_FOUND': FailureCode.joinRequestNotFound,
 };
