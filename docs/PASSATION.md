@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 17/11/2026, après la livraison du lot 10.4 (version 0.1.0+75).*
+*Mise à jour : 17/11/2026, après la livraison du lot 10.5 (version 0.1.0+77).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -119,24 +119,28 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
     - QR code de 2 minutes créé pour un contact, scanné face à face ; un scan vérifie les
       deux téléphones ;
     - badge retiré quand le contact se reconnecte ou change de numéro, avis « Revérifier » ;
-    - surnom privé partout, « Surnom · vrai nom » dans la fiche, gardé sur le serveur.
-- **Dernier commit de code** : `f34f3c0` sur `main`. CI verte (run 75), staging déployé.
-- Les branches `lot-5.7` et `lot-10.4` (identiques à des commits de `main`) restent sur
-  GitHub. Toussaint peut les supprimer.
+    - surnom privé partout, « Surnom · vrai nom » dans la fiche, gardé sur le serveur ;
+  - **10.5 Groupes « Annonces » et sondages éphémères** (version 77, ADR-049, migration
+    `20261118000100`) :
+    - type « Annonces » choisi à la création, définitif : seuls les admins écrivent, les
+      membres réagissent et votent sans voir les autres membres ; 500 membres (console) ;
+    - sondages dans les groupes : 2 à 10 choix, une ou plusieurs réponses, anonyme par
+      défaut ou votes visibles, vote modifiable, fermeture par le créateur.
+- **Dernier commit de code** : `ffcdb40` sur `main`. CI verte (run 77), staging déployé.
+- Les branches `lot-5.7`, `lot-10.4` et `lot-10.5` (identiques à des commits de `main`)
+  restent sur GitHub. Toussaint peut les supprimer.
 
 ## 7. Suite prévue
-1. **10.5** : groupes « Annonces » (seuls les administrateurs écrivent) et sondages
-   éphémères.
-2. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
+1. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
    des groupes, réponses types, statistiques de modération, sites bloqués pour les
    aperçus).
-3. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
+2. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
    préréglages, message programmé, export des statistiques).
-4. **Étape 6 en dernier**, juste avant le pilote :
+3. **Étape 6 en dernier**, juste avant le pilote :
    - 6.1 : version optimisée et non-régression ;
    - 6.2 : production, fournisseur SMS +226 (B7), retrait des numéros de test ;
    - 6.3 : documents légaux (B10), numéros recyclés (B9).
-5. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
+4. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
 
 **Décisions encore ouvertes** :
 - B6/B7 : sauvegardes, budget, fournisseur SMS ;
@@ -145,4 +149,4 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 
 ## 8. Phrase de reprise conseillée
 > « Lis docs/PASSATION.md et docs/SUIVI_LIVRAISONS.md du dépôt kouratoussaint/privio,
-> vérifie l'état de GitHub et de la CI, puis propose les décisions du lot 10.5. Voici le jeton GitHub : … »
+> vérifie l'état de GitHub et de la CI, puis propose les décisions du lot 5.8 (console : équipe et modération). Voici le jeton GitHub : … »
