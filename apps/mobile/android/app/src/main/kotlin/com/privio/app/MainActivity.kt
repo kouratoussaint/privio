@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.res.Configuration
 import android.content.Context
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
@@ -34,6 +35,8 @@ import io.flutter.plugin.common.MethodChannel
  * Privio (« pip »), signalée à Flutter (« pipChanged ») qui n'y montre que l'image.
  *
  * Lot 5.6 : canal « privio/device » — modèle du téléphone et version d'Android.
+ *
+ * Lot 9.3 : « callAudio » — pendant un appel, touches de volume sur le flux d'appel.
  */
 class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +67,10 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "proximity" -> {
                         setProximity(call.arguments == true)
+                        result.success(null)
+                    }
+                    "callAudio" -> {
+                        setCallAudio(call.arguments == true)
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -133,6 +140,28 @@ class MainActivity : FlutterFragmentActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    /**
+     * Lot 9.3 : pendant un appel, les touches de volume règlent le flux d'appel (et non
+     * celui des médias) ; un volume d'appel très bas (moins de 40 %) est remonté à 60 %.
+     */
+    private fun setCallAudio(on: Boolean) {
+        if (!on) {
+            volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE
+            return
+        }
+        volumeControlStream = AudioManager.STREAM_VOICE_CALL
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+            val current = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+            if (max > 0 && current * 10 < max * 4) {
+                am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, (max * 6 + 9) / 10, 0)
+            }
+        } catch (_: Exception) {
+            // Volume non modifiable sur ce téléphone : l'appel continue.
         }
     }
 

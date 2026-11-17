@@ -295,3 +295,20 @@ Lot 10.5 (ADR-049).
   modifiable tant que le sondage est ouvert ; fermeture par son créateur ; effacé avec les
   messages, jamais par « Effacer après lecture ».
 
+## Amendement 21 — Retours de tests : son des appels, vocaux, autocollants, appels de groupe (17 novembre 2026)
+- **Ordre** : 9.3 (son des appels, écouteurs, envoi des vocaux), puis 7.4 (autocollants
+  personnels), puis 9.4 (appels de groupe).
+- **9.3** (ADR-050) : flux d'appel pendant un appel (touches de volume, volume très bas
+  remonté) ; écouteurs et Bluetooth choisis d'office et **bascule automatique** quand on les
+  branche ou les retire ; réglage « Écouter les vocaux avant de les envoyer », **désactivé
+  par défaut** (le vocal part dès qu'on lève le doigt).
+- **7.4** : autocollants créés depuis une photo, **détourage automatique** sur le
+  téléphone (Google ML Kit), recadrage manuel en secours, texte facultatif ; collection
+  **gardée sur le serveur** pour mon compte (60 au plus) ; option **« Partageable »** à la
+  création, qui permet au destinataire de l'ajouter à ses autocollants. Un autocollant
+  envoyé reste un message : il s'efface en 72 h au plus.
+- **9.4** : appels de groupe audio et vidéo par **Cloudflare Realtime SFU**, **8
+  participants** ; lancés par tout membre qui peut écrire (administrateurs seulement dans un
+  groupe « Annonces ») ; **sonnerie** chez tous si le groupe a 16 membres au plus, sinon
+  notification et bandeau « Appel en cours — Rejoindre ».
+

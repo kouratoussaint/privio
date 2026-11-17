@@ -484,6 +484,13 @@ class FakeLocalFlags implements LocalFlags {
   Future<bool> ecoMode() async => eco;
   @override
   Future<void> setEcoMode(bool on) async => eco = on;
+
+  /// Lot 9.3 : vocaux — écouter avant d'envoyer (faux par défaut, comme l'application).
+  bool listenFirst = false;
+  @override
+  Future<bool> voiceListenFirst() async => listenFirst;
+  @override
+  Future<void> setVoiceListenFirst(bool on) async => listenFirst = on;
 }
 
 /// Empreinte rapide pour les tests (même interface, une seule itération, sans isolat).
@@ -3641,6 +3648,13 @@ class FakeCallEngine implements CallEngine {
   List<AudioRoute> routes = const [AudioRoute.earpiece, AudioRoute.speaker];
   AudioRoute? selected;
 
+  /// Lot 9.3 : accessoire branché ou retiré pendant l'appel.
+  void Function()? onAudioDevicesChanged;
+  void plug(List<AudioRoute> next) {
+    routes = next;
+    onAudioDevicesChanged?.call();
+  }
+
   @override
   Future<void> open({
     required List<Map<String, dynamic>> iceServers,
@@ -3648,11 +3662,13 @@ class FakeCallEngine implements CallEngine {
     required void Function(CallMediaState state) onState,
     void Function(bool weak)? onQuality,
     void Function(bool on)? onPeerCamera,
+    void Function()? onAudioDevicesChanged,
   }) async {
     log.add('open');
     this.onState = onState;
     this.onQuality = onQuality;
     this.onPeerCamera = onPeerCamera;
+    this.onAudioDevicesChanged = onAudioDevicesChanged;
     onCandidate({'candidate': 'local-1'});
   }
 
@@ -3757,6 +3773,9 @@ class FakeCallSystem implements CallSystem {
   Future<void> setOverLock(bool on) async => log.add('overLock:$on');
   @override
   Future<void> setProximity(bool on) async => log.add('proximity:$on');
+
+  @override
+  Future<void> setCallAudio(bool on) async => log.add('audio:$on');
   @override
   Future<bool> fullScreenAllowed() async => allowed;
   @override

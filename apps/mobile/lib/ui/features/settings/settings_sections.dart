@@ -13,6 +13,7 @@ import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/feedback_providers.dart';
 import '../../../state/messaging_providers.dart';
+import '../../../state/voice_providers.dart';
 import '../../../state/push_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../core/widgets/settings_card.dart';
@@ -242,6 +243,20 @@ class ChatSettingsScreen extends ConsumerWidget {
                   style: theme.textTheme.titleLarge,
                 ),
                 onTap: () => _chooseQuickReaction(context, ref),
+              ),
+              const SettingsDivider(),
+              // Lot 9.3 : envoi des vocaux (direct par défaut, ou préécoute).
+              SwitchListTile(
+                key: const Key('settings.voice_listen_first'),
+                value: ref.watch(voiceListenFirstProvider).value ?? false,
+                secondary: Icon(Icons.mic_none_rounded, color: p.accentText),
+                title: Text(L.t.vocalEcouterAvant),
+                subtitle: Text(
+                  ref.watch(voiceListenFirstProvider).value ?? false
+                      ? L.t.vocalEcouterAvantOui
+                      : L.t.vocalEcouterAvantNon,
+                ),
+                onChanged: (v) => ref.read(voiceListenFirstProvider.notifier).set(v),
               ),
               const SettingsDivider(),
               // Lot 7.2b1 : groupes séparés des discussions (par défaut) ou ensemble.

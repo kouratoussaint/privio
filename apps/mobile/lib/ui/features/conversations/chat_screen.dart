@@ -785,9 +785,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _releaseVoice() async => _afterVoiceStop(await _voice.release());
 
-  void _afterVoiceStop(VoiceStopResult result) {
+  /// Lot 9.3 : envoi direct (réglage par défaut) ou préécoute.
+  bool get _listenFirst => ref.read(voiceListenFirstProvider).value ?? false;
+
+  void _afterVoiceStop(VoiceStopResult result, {bool? send}) {
     if (!mounted) return;
     ref.read(feedbackProvider).sound(PrivioSound.voiceStop);
+    // Lot 9.3 : réglage « Envoyer tout de suite » : pas de préécoute.
+    if (result == VoiceStopResult.preview && (send ?? !_listenFirst)) {
+      unawaited(_sendVoice());
+      return;
+    }
     if (result == VoiceStopResult.tooShort) {
       _toast(const AppFailure(FailureCode.voiceTooShort).message);
     } else if (result == VoiceStopResult.failed) {
@@ -857,19 +865,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Lot 5.5 : vocaux désactivés dans la console → bouton d'envoi (inactif sans texte).
     final voiceOn = ref.watch(appFeaturesProvider).voice;
     if (rec is VoiceRecording && rec.locked) {
+      // Lot 9.3 : envoi direct → bouton d'envoi (l'écoute reste possible dans le bandeau).
+      final direct = !(ref.watch(voiceListenFirstProvider).value ?? false);
       return SizedBox(
         width: 50,
         height: 50,
-        child: IconButton.filled(
-          key: const Key('voice.stop'),
-          tooltip: L.t.arreterEcouter,
-          style: IconButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
-            foregroundColor: Colors.white,
-          ),
-          onPressed: () => unawaited(_voice.stop().then(_afterVoiceStop)),
-          icon: const Icon(Icons.stop_rounded),
-        ),
+        child: direct
+            ? IconButton.filled(
+                key: const Key('voice.send_now'),
+                tooltip: L.t.envoyerVocal,
+                onPressed: () =>
+                    unawaited(_voice.stop().then((r) => _afterVoiceStop(r, send: true))),
+                icon: const Icon(Icons.send_rounded),
+              )
+            : IconButton.filled(
+                key: const Key('voice.stop'),
+                tooltip: L.t.arreterEcouter,
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () =>
+                    unawaited(_voice.stop().then((r) => _afterVoiceStop(r, send: false))),
+                icon: const Icon(Icons.stop_rounded),
+              ),
       );
     }
     if (rec is VoiceRecording || (voiceOn && value.text.trim().isEmpty && _editing == null)) {
@@ -1908,7 +1927,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     panelOpen: _panel,
                     photosLeft: ref.watch(photoQuotaProvider).value?.remaining,
                     ttlActive: _nextTtl != null,
-                    strip: voice is VoiceRecording ? VoiceRecordingStrip(recording: voice) : null,
+                    strip: voice is VoiceRecording
+                        ? VoiceRecordingStrip(
+                            recording: voice,
+                            onListen: ref.watch(voiceListenFirstProvider).value ?? false
+                                ? null
+                                : () => unawaited(
+                                    _voice.stop().then((r) => _afterVoiceStop(r, send: false)),
+                                  ),
+                          )
+                        : null,
                     trailing: ValueListenableBuilder<TextEditingValue>(
                       valueListenable: _composer,
                       // Lot 7.2b2 : le micro se change en bouton d'envoi (et inversement).

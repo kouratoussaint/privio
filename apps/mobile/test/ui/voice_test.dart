@@ -11,12 +11,16 @@ import 'package:privio/domain/models/account.dart';
 import '../helpers/fakes.dart';
 
 /// Lot 3.1 — messages vocaux, via l'écran réel de conversation.
-Future<TestDeps> _openChatWithBob(WidgetTester tester, {TestDeps? deps}) async {
+Future<TestDeps> _openChatWithBob(
+  WidgetTester tester, {
+  TestDeps? deps,
+  bool listenFirst = false,
+}) async {
   final d =
       deps ??
       (TestDeps(
           auth: FakeAuthService(signedIn: true),
-          flags: FakeLocalFlags(onboarding: true, permissions: true),
+          flags: FakeLocalFlags(onboarding: true, permissions: true)..listenFirst = listenFirst,
         )
         ..api.account = const Account(
           userId: 'u1',
@@ -130,7 +134,8 @@ void main() {
   });
 
   testWidgets('arrêt automatique à la limite de 30 s, puis préécoute', (tester) async {
-    final deps = await _openChatWithBob(tester);
+    // Lot 9.3 : réglage « Écouter avant d'envoyer ».
+    final deps = await _openChatWithBob(tester, listenFirst: true);
     final haptics = <Object?>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
       c,
@@ -170,7 +175,8 @@ void main() {
   });
 
   testWidgets('maintenir pour parler, relâcher pour préécouter', (tester) async {
-    final deps = await _openChatWithBob(tester);
+    // Lot 9.3 : réglage « Écouter avant d'envoyer ».
+    final deps = await _openChatWithBob(tester, listenFirst: true);
     final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('chat.mic'))));
     await tester.pump(const Duration(milliseconds: 600)); // appui long reconnu
     expect(deps.recorder.recording, isTrue);
@@ -178,6 +184,34 @@ void main() {
     await _advance(tester, const Duration(seconds: 2));
     await gesture.up();
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('voice.preview')), findsOneWidget);
+  });
+
+  // Lot 9.3 : par défaut, le vocal part dès qu'on lève le doigt.
+  testWidgets('envoi direct (par défaut) : relâcher envoie, sans préécoute', (tester) async {
+    final deps = await _openChatWithBob(tester);
+    final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('chat.mic'))));
+    await tester.pump(const Duration(milliseconds: 600));
+    await _advance(tester, const Duration(seconds: 2));
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('voice.preview')), findsNothing);
+    expect(deps.messaging.messages['conv-bob']!.where((m) => m.isVoice), hasLength(1));
+  });
+
+  testWidgets('envoi direct, enregistrement verrouillé : « Envoyer » ou « Écouter »', (
+    tester,
+  ) async {
+    final deps = await _openChatWithBob(tester);
+    await tester.tap(find.byKey(const Key('chat.mic')));
+    await tester.pump();
+    await _advance(tester, const Duration(seconds: 2));
+    expect(find.byKey(const Key('voice.send_now')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('voice.send_now')));
+    await tester.pumpAndSettle();
+    expect(deps.messaging.messages['conv-bob']!.where((m) => m.isVoice), hasLength(1));
+    // Écouter d'abord reste possible.
+    await _recordLocked(tester, const Duration(seconds: 2));
     expect(find.byKey(const Key('voice.preview')), findsOneWidget);
   });
 

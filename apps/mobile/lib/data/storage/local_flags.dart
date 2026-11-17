@@ -76,6 +76,11 @@ abstract interface class LocalFlags {
   /// Lot 10.3 : Mode éco (un seul interrupteur ; activé à la main seulement).
   Future<bool> ecoMode();
   Future<void> setEcoMode(bool on);
+
+  /// Lot 9.3 : vocaux — vrai : écouter avant d'envoyer ; faux (par défaut) : envoi dès
+  /// qu'on lève le doigt.
+  Future<bool> voiceListenFirst();
+  Future<void> setVoiceListenFirst(bool on);
 }
 
 class SharedPrefsLocalFlags implements LocalFlags {
@@ -88,6 +93,7 @@ class SharedPrefsLocalFlags implements LocalFlags {
   static const _quick = 'privio.quick_reaction';
   static const _autoPhoto = 'privio.photo_auto_download';
   static const _eco = 'privio.eco_mode';
+  static const _voiceListen = 'privio.voice_listen_first';
   static const _usage = 'privio.data_usage';
   static const _groupsInDiscussions = 'privio.groups_in_discussions';
   static const _sounds = 'privio.sounds_enabled';
@@ -222,6 +228,12 @@ class SharedPrefsLocalFlags implements LocalFlags {
 
   @override
   Future<void> setEcoMode(bool on) => _prefs.setBool(_eco, on);
+
+  @override
+  Future<bool> voiceListenFirst() async => (await _prefs.getBool(_voiceListen)) ?? false;
+
+  @override
+  Future<void> setVoiceListenFirst(bool on) => _prefs.setBool(_voiceListen, on);
 
   @override
   Future<Map<String, int>> dataUsage() async {

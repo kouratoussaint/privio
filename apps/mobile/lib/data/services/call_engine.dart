@@ -19,6 +19,7 @@ abstract interface class CallEngine {
     required void Function(CallMediaState state) onState,
     void Function(bool weak)? onQuality,
     void Function(bool on)? onPeerCamera,
+    void Function()? onAudioDevicesChanged,
   });
 
   /// Lot 9.2 : caméra allumée ou coupée à tout moment, sans nouvelle négociation (la place
@@ -89,10 +90,16 @@ class WebRtcCallEngine implements CallEngine {
     required void Function(CallMediaState state) onState,
     void Function(bool weak)? onQuality,
     void Function(bool on)? onPeerCamera,
+    void Function()? onAudioDevicesChanged,
   }) async {
     await _localR.initialize();
     await _remoteR.initialize();
     _onPeerCamera = onPeerCamera;
+    // Lot 9.3 : Android en mode « communication » (flux d'appel : les touches de volume
+    // règlent le son de l'appel, et non celui des médias).
+    await Helper.setAndroidAudioConfiguration(AndroidAudioConfiguration.communication);
+    // Lot 9.3 : écouteurs branchés ou retirés, Bluetooth connecté ou coupé.
+    navigator.mediaDevices.ondevicechange = (_) => onAudioDevicesChanged?.call();
     final pc = await createPeerConnection({
       'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
@@ -154,8 +161,8 @@ class WebRtcCallEngine implements CallEngine {
           break;
       }
     };
-    // Appel audio : écouteur par défaut (haut-parleur sur demande).
-    await Helper.setSpeakerphoneOn(false);
+    // Lot 9.3 : la sortie (écouteurs, Bluetooth, écouteur, haut-parleur) est choisie par
+    // le contrôleur d'appel, qui suit aussi les accessoires branchés en cours d'appel.
     if (onQuality != null) {
       _quality = Timer.periodic(const Duration(seconds: 3), (_) async {
         try {
@@ -433,6 +440,7 @@ class WebRtcCallEngine implements CallEngine {
   Future<void> close() async {
     _quality?.cancel();
     _quality = null;
+    navigator.mediaDevices.ondevicechange = null;
     for (final t in _mic?.getTracks() ?? const <MediaStreamTrack>[]) {
       await t.stop();
     }

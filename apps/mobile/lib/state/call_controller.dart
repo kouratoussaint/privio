@@ -168,6 +168,7 @@ class CallController extends Notifier<CallState?> {
   bool _systemRinging = false;
   bool _overLock = false;
   bool _proximity = false;
+  bool _callAudio = false;
   bool _pipAllowed = false;
   Timer? _deniedClear;
 
@@ -238,10 +239,10 @@ class CallController extends Notifier<CallState?> {
       await hangUp(reason: 'failed');
       return;
     }
-    if (info.kind == 'video') {
-      await selectRoute(AudioRoute.speaker);
-      await toggleCamera();
-    }
+    // Lot 9.3 : écouteurs ou Bluetooth s'ils sont là ; sinon écouteur (audio) ou
+    // haut-parleur (vidéo).
+    await _applyPreferredRoute(video: info.kind == 'video');
+    if (info.kind == 'video') await toggleCamera();
   }
 
   // ---------------------------------------------------------------------------
@@ -360,7 +361,8 @@ class CallController extends Notifier<CallState?> {
       return;
     }
     // Lot 9.2 : on décroche toujours caméra coupée ; appel vidéo → haut-parleur.
-    if (s.info.kind == 'video') await selectRoute(AudioRoute.speaker);
+    // Lot 9.3 : sauf écouteurs ou Bluetooth connectés, qui passent en premier.
+    await _applyPreferredRoute(video: s.info.kind == 'video');
   }
 
   Future<void> decline() async {
@@ -474,6 +476,45 @@ class CallController extends Notifier<CallState?> {
     }
   }
 
+  /// Lot 9.3 : sorties connues (pour reconnaître un accessoire qui arrive).
+  Set<AudioRoute> _knownRoutes = const {};
+
+  static AudioRoute _preferred(List<AudioRoute> routes, {required bool video}) {
+    if (routes.contains(AudioRoute.bluetooth)) return AudioRoute.bluetooth;
+    if (routes.contains(AudioRoute.wired)) return AudioRoute.wired;
+    return video ? AudioRoute.speaker : AudioRoute.earpiece;
+  }
+
+  Future<void> _applyPreferredRoute({required bool video}) async {
+    final routes = await audioRoutes();
+    _knownRoutes = routes.toSet();
+    await selectRoute(_preferred(routes, video: video));
+  }
+
+  /// Lot 9.3 : accessoire branché → le son y passe aussitôt ; sortie choisie retirée →
+  /// écouteur du téléphone (haut-parleur avec l'image).
+  Future<void> _onAudioDevices() async {
+    final s = state;
+    if (s == null || s.phase == CallPhase.ended) return;
+    final routes = await audioRoutes();
+    final added = routes.toSet().difference(_knownRoutes);
+    _knownRoutes = routes.toSet();
+    final now = state;
+    if (now == null) return;
+    final video = now.hasVideo || now.videoCall;
+    final AudioRoute? next;
+    if (added.contains(AudioRoute.bluetooth)) {
+      next = AudioRoute.bluetooth;
+    } else if (added.contains(AudioRoute.wired)) {
+      next = AudioRoute.wired;
+    } else if (!routes.contains(now.route)) {
+      next = _preferred(routes, video: video);
+    } else {
+      next = null;
+    }
+    if (next != null && next != now.route) await selectRoute(next);
+  }
+
   Future<void> selectRoute(AudioRoute route) async {
     final s = state;
     if (s == null) return;
@@ -520,6 +561,7 @@ class CallController extends Notifier<CallState?> {
       onCandidate: (c) => unawaited(_api.signal(id, 'ice', c).catchError((Object _) {})),
       onState: _onMedia,
       onPeerCamera: _onPeerCamera,
+      onAudioDevicesChanged: () => unawaited(_onAudioDevices()),
       onQuality: (weak) {
         final s = state;
         if (s != null && s.phase == CallPhase.connected && s.weak != weak) {
@@ -631,6 +673,14 @@ class CallController extends Notifier<CallState?> {
     if (active != _overLock) {
       _overLock = active;
       unawaited(_system.setOverLock(active));
+    }
+    // Lot 9.3 : flux d'appel (touches de volume, volume remonté s'il est très bas) tant
+    // qu'un appel est en cours, même réduit.
+    final audio =
+        next != null && next.phase != CallPhase.ended && next.phase != CallPhase.incomingRinging;
+    if (audio != _callAudio) {
+      _callAudio = audio;
+      unawaited(_system.setCallAudio(audio));
     }
     final proximity = active && next.route == AudioRoute.earpiece && !next.hasVideo;
     if (proximity != _proximity) {

@@ -41,6 +41,10 @@ abstract interface class CallSystem {
   Future<void> setOverLock(bool on);
 
   /// Écran éteint à l'oreille (écouteur seulement).
+  /// Lot 9.3 : appel en cours → les touches de volume règlent le flux d'appel, et un
+  /// volume d'appel très bas (moins de 40 %) est remonté à 60 %.
+  Future<void> setCallAudio(bool on);
+
   Future<void> setProximity(bool on);
 
   /// Lot 9.2 : petite fenêtre au-dessus des autres applications quand on quitte Privio
@@ -79,6 +83,9 @@ class NoCallSystem implements CallSystem {
   Future<void> setOverLock(bool on) async {}
   @override
   Future<void> setProximity(bool on) async {}
+
+  @override
+  Future<void> setCallAudio(bool on) async {}
   @override
   Future<bool> fullScreenAllowed() async => true;
   @override
@@ -209,6 +216,9 @@ class DeviceCallSystem implements CallSystem {
 
   @override
   Future<void> setProximity(bool on) => _safe(() => _channel.invokeMethod<void>('proximity', on));
+
+  @override
+  Future<void> setCallAudio(bool on) => _safe(() => _channel.invokeMethod<void>('callAudio', on));
 
   @override
   Future<bool> fullScreenAllowed() async {

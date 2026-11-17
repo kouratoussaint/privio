@@ -6521,5 +6521,21 @@
   "unMembre": "Un membre",
   "@unMembre": {
     "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "vocalEcouterAvant": "Écouter les vocaux avant de les envoyer",
+  "@vocalEcouterAvant": {
+    "description": "Lot 9.3 : vocaux et son des appels"
+  },
+  "vocalEcouterAvantOui": "En levant le doigt, vous écoutez le vocal, puis vous l’envoyez ou le supprimez.",
+  "@vocalEcouterAvantOui": {
+    "description": "Lot 9.3 : vocaux et son des appels"
+  },
+  "vocalEcouterAvantNon": "En levant le doigt, le vocal part tout de suite.",
+  "@vocalEcouterAvantNon": {
+    "description": "Lot 9.3 : vocaux et son des appels"
+  },
+  "envoyerVocal": "Envoyer le vocal",
+  "@envoyerVocal": {
+    "description": "Lot 9.3 : vocaux et son des appels"
   }
 }

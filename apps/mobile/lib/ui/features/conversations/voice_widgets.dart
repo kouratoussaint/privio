@@ -340,9 +340,13 @@ class _RecordingDotState extends State<_RecordingDot> with SingleTickerProviderS
 
 /// Bandeau d'enregistrement (à la place du champ de saisie).
 class VoiceRecordingStrip extends ConsumerWidget {
-  const VoiceRecordingStrip({super.key, required this.recording});
+  const VoiceRecordingStrip({super.key, required this.recording, this.onListen});
 
   final VoiceRecording recording;
+
+  /// Lot 9.3 : envoi direct → « Arrêter et écouter » dans le bandeau (enregistrement
+  /// verrouillé), le bouton de droite envoyant le vocal.
+  final VoidCallback? onListen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -429,6 +433,13 @@ class VoiceRecordingStrip extends ConsumerWidget {
                     ),
             ),
           ),
+          if (recording.locked && onListen != null)
+            IconButton(
+              key: const Key('voice.stop'),
+              tooltip: L.t.arreterEcouter,
+              onPressed: onListen,
+              icon: Icon(Icons.hearing_rounded, color: p.accentText),
+            ),
           if (recording.locked)
             IconButton(
               key: const Key('voice.pause'),

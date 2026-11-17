@@ -4801,4 +4801,17 @@ class AppLocalizationsDyu extends AppLocalizations {
 
   @override
   String get unMembre => 'Un membre';
+
+  @override
+  String get vocalEcouterAvant => 'Écouter les vocaux avant de les envoyer';
+
+  @override
+  String get vocalEcouterAvantOui =>
+      'En levant le doigt, vous écoutez le vocal, puis vous l’envoyez ou le supprimez.';
+
+  @override
+  String get vocalEcouterAvantNon => 'En levant le doigt, le vocal part tout de suite.';
+
+  @override
+  String get envoyerVocal => 'Envoyer le vocal';
 }

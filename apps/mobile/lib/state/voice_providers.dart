@@ -221,6 +221,22 @@ class VoicePreview extends VoiceRecState {
 /// Résultat de l'arrêt d'un enregistrement.
 enum VoiceStopResult { preview, tooShort, failed, none }
 
+/// Lot 9.3 : envoi des vocaux — vrai : écouter avant d'envoyer ; faux (par défaut) : le
+/// vocal part dès qu'on lève le doigt. Réglage gardé sur ce téléphone.
+final voiceListenFirstProvider = AsyncNotifierProvider<VoiceListenFirstController, bool>(
+  VoiceListenFirstController.new,
+);
+
+class VoiceListenFirstController extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() => ref.read(localFlagsProvider).voiceListenFirst();
+
+  Future<void> set(bool on) async {
+    state = AsyncData(on);
+    await ref.read(localFlagsProvider).setVoiceListenFirst(on);
+  }
+}
+
 final voiceRecorderControllerProvider =
     NotifierProvider.autoDispose<VoiceRecorderController, VoiceRecState>(
       VoiceRecorderController.new,

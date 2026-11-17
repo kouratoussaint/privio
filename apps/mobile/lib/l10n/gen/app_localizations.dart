@@ -8115,6 +8115,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Un membre'**
   String get unMembre;
+
+  /// Lot 9.3 : vocaux et son des appels
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter les vocaux avant de les envoyer'**
+  String get vocalEcouterAvant;
+
+  /// Lot 9.3 : vocaux et son des appels
+  ///
+  /// In fr, this message translates to:
+  /// **'En levant le doigt, vous écoutez le vocal, puis vous l’envoyez ou le supprimez.'**
+  String get vocalEcouterAvantOui;
+
+  /// Lot 9.3 : vocaux et son des appels
+  ///
+  /// In fr, this message translates to:
+  /// **'En levant le doigt, le vocal part tout de suite.'**
+  String get vocalEcouterAvantNon;
+
+  /// Lot 9.3 : vocaux et son des appels
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le vocal'**
+  String get envoyerVocal;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
