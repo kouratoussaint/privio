@@ -171,16 +171,20 @@ class _PolicyTile extends StatelessWidget {
 /// Modification d'un réglage : valeur, limites, effet, confirmation « avant → après »,
 /// valeur par défaut et historique (« Rétablir »).
 class PolicyEditorSheet extends ConsumerStatefulWidget {
-  const PolicyEditorSheet({super.key, required this.policy});
+  const PolicyEditorSheet({super.key, required this.policy, this.initialValue});
 
   final ConsolePolicy policy;
+
+  /// Lot 5.7 : valeur proposée à l'ouverture (version choisie dans la liste, interrupteur
+  /// basculé) ; toujours confirmée « avant → après ».
+  final Object? initialValue;
 
   @override
   ConsumerState<PolicyEditorSheet> createState() => _PolicyEditorSheetState();
 }
 
 class _PolicyEditorSheetState extends ConsumerState<PolicyEditorSheet> {
-  late Object? _value = widget.policy.value;
+  late Object? _value = widget.initialValue ?? widget.policy.value;
   bool _saving = false;
 
   ConsolePolicy get _p => widget.policy;

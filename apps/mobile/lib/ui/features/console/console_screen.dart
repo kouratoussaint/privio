@@ -16,6 +16,7 @@ import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
 import 'console_accounts_tab.dart';
 import 'console_features_tab.dart';
+import 'console_health_tab.dart';
 import 'console_journal_tab.dart';
 import 'console_policies_tab.dart';
 import 'console_reports_tab.dart';
@@ -200,6 +201,7 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
                 ConsoleSection.features => const ConsoleFeaturesTab(),
                 ConsoleSection.policies => const ConsolePoliciesTab(),
                 ConsoleSection.stats => const ConsoleStatsTab(),
+                ConsoleSection.health => const ConsoleHealthTab(),
                 ConsoleSection.journal => const ConsoleJournalTab(),
               },
             ),
@@ -246,6 +248,8 @@ enum ConsoleSection {
   features('features', 'Fonctionnalités', Icons.toggle_on_outlined, Color(0xFF8E44C9)),
   policies('policies', 'Réglages', Icons.tune_rounded, Color(0xFF3E8B1A)),
   stats('stats', 'Statistiques', Icons.insights_outlined, Color(0xFF138A6E)),
+  // Lot 5.7 : versions, appels, inscriptions et SMS, diagnostics, alertes.
+  health('health', 'Santé du service', Icons.monitor_heart_outlined, Color(0xFFC2185B)),
   journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85));
 
   const ConsoleSection(this.id, this.label, this.icon, this.color);
@@ -446,6 +450,7 @@ class _DashboardList extends StatelessWidget {
             ConsoleSection.features: 'Activer, couper',
             ConsoleSection.policies: 'Limites et délais',
             ConsoleSection.stats: '30 derniers jours',
+            ConsoleSection.health: 'Versions, appels, SMS',
             ConsoleSection.journal: 'Toutes les actions',
           },
           alert: {if (d.reportsOpen > 0) ConsoleSection.reports},

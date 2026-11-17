@@ -7629,6 +7629,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Mode éco activé'**
   String get modeEcoActiveTooltip;
+
+  /// Écran : ui/core/widgets/update_banner.dart
+  ///
+  /// In fr, this message translates to:
+  /// **'Une nouvelle version de Privio est disponible.'**
+  String get majDisponible;
+
+  /// Écran : ui/core/widgets/update_banner.dart
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour'**
+  String get mettreAJour;
+
+  /// Écran : ui/core/widgets/update_banner.dart
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettez Privio à jour'**
+  String get majRequiseTitre;
+
+  /// Écran : ui/core/widgets/update_banner.dart
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette version de Privio n’est plus prise en charge. Installez la nouvelle version pour continuer à échanger.'**
+  String get majRequiseTexte;
+
+  /// Écran : ui/core/widgets/update_banner.dart
+  ///
+  /// In fr, this message translates to:
+  /// **'Le lien de la nouvelle version n’est pas encore disponible. Réessayez un peu plus tard.'**
+  String get majLienAbsent;
+
+  /// Écran : ui/core/widgets/update_banner.dart
+  ///
+  /// In fr, this message translates to:
+  /// **'Version installée : {version}'**
+  String majVersionInstallee(String version);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

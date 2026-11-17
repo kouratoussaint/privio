@@ -145,6 +145,12 @@ export const ADMIN_BODIES: Record<string, string> = {
   report: "Nouveau signalement à traiter",
   support: "Nouvelle demande d’assistance",
   appeal: "Nouvelle contestation à examiner",
+  // Lot 5.7 : alertes de la santé du service et notification de test (aucun contenu).
+  alert_purge: "Alerte : l’effacement automatique est en retard",
+  alert_sms: "Alerte : beaucoup de codes SMS demandés",
+  alert_failures: "Alerte : des notifications ou des appels échouent",
+  alert_relay: "Alerte : relais des appels à 80 % du volume gratuit",
+  test: "Notification de test de la console Privio",
 };
 
 export function sendAdminEvent(sa: ServiceAccount, token: string, event: string): Promise<SendResult> {

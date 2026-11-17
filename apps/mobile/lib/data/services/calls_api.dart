@@ -22,6 +22,9 @@ abstract interface class CallsApi {
   /// Réglage « Recevoir des appels » (activé par défaut).
   Future<bool> acceptCalls();
   Future<bool> setAcceptCalls(bool on);
+
+  /// Lot 5.7 : fin d'un appel décroché — relais ou non, octets échangés (santé du service).
+  Future<void> reportQuality(String callId, {required bool relayed, required int bytes});
 }
 
 class SupabaseCallsApi implements CallsApi {
@@ -93,4 +96,8 @@ class SupabaseCallsApi implements CallsApi {
   @override
   Future<bool> setAcceptCalls(bool on) async =>
       await _rpc('set_accept_calls', {'p_on': on}) as bool;
+
+  @override
+  Future<void> reportQuality(String callId, {required bool relayed, required int bytes}) =>
+      _rpc('report_call_quality', {'p_call_id': callId, 'p_relayed': relayed, 'p_bytes': bytes});
 }

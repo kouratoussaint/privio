@@ -30,6 +30,7 @@ import 'list_menu.dart';
 import '../settings/two_step_screens.dart';
 import '../../core/widgets/privio_menu.dart';
 import '../../core/widgets/announcement_banner.dart';
+import '../../core/widgets/update_banner.dart';
 
 enum ConversationFilter { all, unread, pinned, groups }
 
@@ -124,6 +125,8 @@ class _DiscussionsTabState extends ConsumerState<DiscussionsTab> {
         children: [
           // Lot 5.5 : message d'information de la console.
           const AnnouncementBanner(),
+          // Lot 5.7 : nouvelle version conseillée.
+          const UpdateBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               PrivioSpacing.l,

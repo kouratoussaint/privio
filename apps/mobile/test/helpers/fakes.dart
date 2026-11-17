@@ -2770,6 +2770,35 @@ class FakeAdminApi implements AdminApi {
   Future<List<PolicyChange>> policyHistory(String key) async =>
       policyChanges.where((c) => c.key == key).toList();
 
+  /// Lot 5.7 : santé du service.
+  ConsoleHealth healthData = ConsoleHealth(generatedAt: DateTime(2026, 11, 17, 10));
+  int healthCalls = 0;
+  int pushTests = 0;
+  RelayTestResult relayResult = const RelayTestResult('not_configured');
+
+  @override
+  Future<ConsoleHealth> health() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    healthCalls++;
+    _audit('health');
+    return healthData;
+  }
+
+  @override
+  Future<String> testPush() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    pushTests++;
+    _audit('health_push');
+    return 'test-$pushTests';
+  }
+
+  @override
+  Future<RelayTestResult> testRelay() async {
+    if (!admin) return const RelayTestResult('error');
+    _audit('health_relay');
+    return relayResult;
+  }
+
   @override
   Future<ConsoleStats> stats() async {
     if (!admin) throw const AppFailure(FailureCode.adminRequired);
@@ -3180,6 +3209,11 @@ class TestDeps {
   bool foreground = true;
   DateTime Function() clock = DateTime.now;
 
+  /// Lot 5.7 : version installée (sans « + » : version de développement, jamais bloquée)
+  /// et liens ouverts dans le navigateur.
+  String appVersion = '0.1.0-test';
+  final List<Uri> openedUrls = [];
+
   List<Override> get overrides => [
     appLockStoreProvider.overrideWithValue(lockStore),
     biometricGateProvider.overrideWithValue(biometrics),
@@ -3191,7 +3225,11 @@ class TestDeps {
     deviceInfoProvider.overrideWithValue(const FakeDeviceInfo()),
     localFlagsProvider.overrideWithValue(flags),
     permissionGatewayProvider.overrideWithValue(permissions),
-    appVersionProvider.overrideWithValue('0.1.0-test'),
+    appVersionProvider.overrideWithValue(appVersion),
+    openExternalUrlProvider.overrideWithValue((uri) async {
+      openedUrls.add(uri);
+      return true;
+    }),
     messagingApiProvider.overrideWithValue(messaging),
     adminApiProvider.overrideWithValue(admin),
     localStoreProvider.overrideWithValue(store),
@@ -3257,6 +3295,13 @@ class FakeCallsApi implements CallsApi {
   int _sig = 0;
   final List<String> ended = [];
   final List<String> declined = [];
+
+  /// Lot 5.7 : comptes rendus de fin d'appel (id, relais, octets).
+  final List<(String, bool, int)> reports = [];
+
+  @override
+  Future<void> reportQuality(String callId, {required bool relayed, required int bytes}) async =>
+      reports.add((callId, relayed, bytes));
 
   CallInfo _with(CallInfo c, String status, {DateTime? answeredAt, String? endReason}) => CallInfo(
     id: c.id,
@@ -3401,6 +3446,11 @@ class FakeCallEngine implements CallEngine {
   int traffic = 0;
   @override
   Future<int> trafficBytes() async => traffic;
+
+  /// Lot 5.7 : liaison par le relais.
+  bool relay = false;
+  @override
+  Future<bool> usesRelay() async => relay;
 
   @override
   Widget localView({bool mirror = true}) => SizedBox(key: Key('fake.local.$mirror'));

@@ -247,3 +247,21 @@ Demandés par le commanditaire après test sur téléphone :
 - Vue unique : photos et vocaux.
 - Découpage : 7.3a (émojis, autocollants, retouche photo, fond d'écran), puis 7.3b (vue
   unique, GIF, aperçus des liens).
+
+## Amendement 18 — Santé du service et lot 10.4 (17 novembre 2026)
+- **Lot 5.7 avant 10.4** (choix du 17/11/2026). Rubrique « Santé du service » de la
+  console (ADR-047).
+- **A** : version **conseillée** (bandeau, fermable) et version **minimale** (écran
+  bloquant), comparées au numéro de compilation ; lien de téléchargement réglable dans la
+  console.
+- **B** : alertes de l'administration par notification sans contenu, au plus une par type
+  toutes les 6 h : effacements automatiques en retard, pic de codes SMS, échecs de
+  notifications ou d'appels, relais des appels au-delà de 80 % du volume gratuit.
+- **C** : parcours d'inscription compté **par le serveur** (codes envoyés, vérifiés, profils
+  créés, changements de numéro compris) ; coût estimé avec un prix unitaire saisi dans la
+  console. Aucun numéro conservé pour ces chiffres.
+- **Lot 10.4 (décisions prises, à développer)** : « Vérifié en personne » par QR code
+  temporaire (2 min) scanné face à face, visible sur les deux téléphones ; badge retiré
+  quand le contact change de téléphone ou de numéro, avec un avis pour revérifier ; surnom
+  privé visible par moi seul, partout dans l'application, vrai nom rappelé dans la fiche,
+  gardé sur le serveur pour mon compte.

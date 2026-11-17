@@ -747,6 +747,7 @@ class CallController extends Notifier<CallState?> {
   }
 
   void _stopMedia() {
+    final callId = state?.info.id;
     _poll?.cancel();
     _poll = null;
     _deniedClear?.cancel();
@@ -764,16 +765,22 @@ class CallController extends Notifier<CallState?> {
     _pendingOffer = null;
     _pendingIce.clear();
     _after = 0;
-    if (engine != null) unawaited(_closeEngine(engine));
+    if (engine != null) unawaited(_closeEngine(engine, callId));
   }
 
   /// Lot 10.3 : données de l'appel comptées (type « appels »), puis fermeture.
-  Future<void> _closeEngine(CallEngine engine) async {
+  /// Lot 5.7 : compte rendu à la console (relais ou non, volume) ; le serveur ne le
+  /// garde que pour un appel décroché. Aucun contenu.
+  Future<void> _closeEngine(CallEngine engine, String? callId) async {
     try {
       final bytes = await engine.trafficBytes();
       if (bytes > 0) countData(ref, received: bytes, kind: 'call');
+      if (callId != null && bytes > 0) {
+        final relayed = await engine.usesRelay();
+        await _api.reportQuality(callId, relayed: relayed, bytes: bytes);
+      }
     } on Object {
-      // Compteur indicatif seulement.
+      // Compteur et compte rendu indicatifs seulement.
     }
     try {
       await engine.close();

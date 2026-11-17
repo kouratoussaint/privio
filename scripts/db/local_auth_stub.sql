@@ -14,7 +14,13 @@ create table auth.users (
   phone text unique,
   phone_confirmed_at timestamptz,
   email text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  -- Lot 5.7 : heures d'envoi des codes et de connexion (colonnes réelles d'Auth).
+  confirmation_sent_at timestamptz,
+  recovery_sent_at timestamptz,
+  phone_change text,
+  phone_change_sent_at timestamptz,
+  last_sign_in_at timestamptz
 );
 create table auth.sessions (
   id uuid primary key default gen_random_uuid(),

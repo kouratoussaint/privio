@@ -29,6 +29,7 @@ import '../../../state/providers.dart';
 import 'list_menu.dart';
 import '../../core/motion/motion.dart';
 import '../../core/widgets/announcement_banner.dart';
+import '../../core/widgets/update_banner.dart';
 
 /// Écran 17 — groupes : invitations reçues (à accepter ou refuser), puis ses groupes.
 /// Un groupe est simplement une discussion à plusieurs, rien de plus.
@@ -157,6 +158,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           children: [
             // Lot 5.5 : message d'information de la console.
             const AnnouncementBanner(),
+            // Lot 5.7 : nouvelle version conseillée.
+            const UpdateBanner(),
             // Lot 7.2c1 : recherche et filtres, comme dans Discussions.
             Padding(
               padding: const EdgeInsets.fromLTRB(

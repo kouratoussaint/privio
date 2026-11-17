@@ -59,6 +59,9 @@ abstract interface class CallEngine {
   /// compteur de données ; 0 si inconnu.
   Future<int> trafficBytes();
 
+  /// Lot 5.7 : la liaison passe-t-elle par le relais (candidat « relay » d'un côté) ?
+  Future<bool> usesRelay();
+
   Future<void> close();
 }
 
@@ -406,6 +409,24 @@ class WebRtcCallEngine implements CallEngine {
       total += ((r.values['bytesReceived'] as num?) ?? 0).toInt();
     }
     return total;
+  }
+
+  @override
+  Future<bool> usesRelay() async {
+    final pc = _pc;
+    if (pc == null) return false;
+    final reports = await pc.getStats();
+    final byId = {for (final r in reports) r.id: r};
+    for (final r in reports) {
+      final v = r.values;
+      if (r.type != 'candidate-pair' || v['state'] != 'succeeded' || v['nominated'] != true) {
+        continue;
+      }
+      for (final side in ['localCandidateId', 'remoteCandidateId']) {
+        if (byId[v[side]]?.values['candidateType'] == 'relay') return true;
+      }
+    }
+    return false;
   }
 
   @override

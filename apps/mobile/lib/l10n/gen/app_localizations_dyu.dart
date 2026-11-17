@@ -4499,4 +4499,26 @@ class AppLocalizationsDyu extends AppLocalizations {
 
   @override
   String get modeEcoActiveTooltip => 'Mode éco activé';
+
+  @override
+  String get majDisponible => 'Une nouvelle version de Privio est disponible.';
+
+  @override
+  String get mettreAJour => 'Mettre à jour';
+
+  @override
+  String get majRequiseTitre => 'Mettez Privio à jour';
+
+  @override
+  String get majRequiseTexte =>
+      'Cette version de Privio n’est plus prise en charge. Installez la nouvelle version pour continuer à échanger.';
+
+  @override
+  String get majLienAbsent =>
+      'Le lien de la nouvelle version n’est pas encore disponible. Réessayez un peu plus tard.';
+
+  @override
+  String majVersionInstallee(String version) {
+    return 'Version installée : $version';
+  }
 }

@@ -23,6 +23,15 @@ abstract interface class AdminApi {
 
   Future<ConsoleStats> stats();
 
+  /// Lot 5.7 : santé du service (versions, appels, inscriptions et SMS, diagnostics, alertes).
+  Future<ConsoleHealth> health();
+
+  /// Lot 5.7 : notification de test vers les téléphones de l'administration (id du test).
+  Future<String> testPush();
+
+  /// Lot 5.7 : le relais des appels répond-il ? (aucun accès au relais n'est renvoyé).
+  Future<RelayTestResult> testRelay();
+
   Future<List<JournalEntry>> journal();
 
   // Lot 5.3 : modération
@@ -141,6 +150,34 @@ class SupabaseAdminApi implements AdminApi {
     final res = await _client.rpc<dynamic>('console_stats', params: {'p_days': 30});
     return ConsoleStats.fromJson(Map<String, dynamic>.from(res as Map));
   });
+
+  @override
+  Future<ConsoleHealth> health() => _guard(() async {
+    final res = await _client.rpc<dynamic>('console_health');
+    return ConsoleHealth.fromJson(Map<String, dynamic>.from(res as Map));
+  });
+
+  @override
+  Future<String> testPush() =>
+      _guard(() async => await _client.rpc<dynamic>('console_test_push') as String);
+
+  @override
+  Future<RelayTestResult> testRelay() async {
+    try {
+      final res = await _client.functions.invoke(
+        'call-ice',
+        method: HttpMethod.post,
+        body: const {'test': true},
+      );
+      final data = Map<String, dynamic>.from(res.data as Map);
+      return RelayTestResult(
+        data['relay'] as String? ?? 'error',
+        ms: (data['ms'] as num?)?.toInt(),
+      );
+    } on Object {
+      return const RelayTestResult('error');
+    }
+  }
 
   @override
   Future<List<JournalEntry>> journal() async =>

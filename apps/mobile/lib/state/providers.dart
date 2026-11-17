@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config/env.dart';
 import '../core/media/photo_processing.dart';
@@ -29,6 +30,12 @@ final permissionGatewayProvider = Provider<PermissionGateway>(
   (ref) => const DevicePermissionGateway(),
 );
 final appVersionProvider = Provider<String>((ref) => Env.appVersion);
+
+/// Lot 5.7 : ouvre un lien dans le navigateur du téléphone (remplacé dans les tests).
+final openExternalUrlProvider = Provider<Future<bool> Function(Uri uri)>(
+  (ref) =>
+      (uri) => launchUrl(uri, mode: LaunchMode.externalApplication).catchError((Object _) => false),
+);
 
 /// Stockage local chiffré (fichier AES-GCM en production, mémoire dans les tests).
 final localStoreProvider = Provider<LocalStore>((ref) => MemoryLocalStore());

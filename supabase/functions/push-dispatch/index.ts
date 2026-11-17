@@ -1,7 +1,7 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
 // invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4 ;
 // demandes d'adhésion et @mentions : lot 7.1b ; rappel avant effacement : lot 8.4b ;
-// appels entrants et manqués : lot 9.1b).
+// appels entrants et manqués : lot 9.1b ; alertes de la santé du service et test : lot 5.7).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que

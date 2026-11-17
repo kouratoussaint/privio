@@ -190,6 +190,10 @@ String _filter(JournalEntry e) {
 String journalText(JournalEntry e, String unit) => switch (e.action) {
   'dashboard' => 'Consultation du tableau de bord',
   'stats' => 'Consultation des statistiques',
+  // Lot 5.7
+  'health' => 'Consultation de la santé du service',
+  'health_push' => 'Notification de test envoyée',
+  'health_relay' => 'Test du relais des appels',
   'account_list' => 'Liste des comptes consultée (page ${e.detail['page'] ?? 1}${_filter(e)})',
   'evidence' => 'Lecture d’une copie signalée (${_who(e)})',
   'account' => 'Fiche de ${_who(e)} consultée',

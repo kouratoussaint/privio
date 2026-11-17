@@ -62,3 +62,8 @@ Future<void> savePolicy(WidgetRef ref, ConsolePolicy policy, Object value) async
     ..invalidate(policyHistoryProvider(policy.key))
     ..invalidate(consoleJournalProvider);
 }
+
+/// Lot 5.7 : santé du service.
+final consoleHealthProvider = FutureProvider.autoDispose<ConsoleHealth>(
+  (ref) => ref.watch(adminApiProvider).health(),
+);

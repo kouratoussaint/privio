@@ -15,6 +15,7 @@ import 'state/feedback_providers.dart';
 import 'state/appearance_providers.dart';
 import 'l10n/l10n.dart';
 import 'ui/features/calls/call_screen.dart';
+import 'ui/core/widgets/update_banner.dart';
 
 class PrivioApp extends ConsumerWidget {
   const PrivioApp({super.key});
@@ -68,7 +69,12 @@ class PrivioApp extends ConsumerWidget {
           // Lot 9.1a : l'écran d'appel passe au-dessus de tout, verrouillage compris.
           child: CallOverlay(
             child: AppLockGate(
-              child: ModerationGate(child: PresenceBeacon(child: child ?? const SizedBox.shrink())),
+              // Lot 5.7 : version sous la minimale → seule la mise à jour reste possible.
+              child: UpdateGate(
+                child: ModerationGate(
+                  child: PresenceBeacon(child: child ?? const SizedBox.shrink()),
+                ),
+              ),
             ),
           ),
         );

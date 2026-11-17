@@ -973,7 +973,16 @@ class MessagingRules {
     this.maxTtlSeconds = 72 * 3600,
     this.voiceMax = const Duration(seconds: 30),
     this.features = const AppFeatures(),
+    this.minBuild = 0,
+    this.recommendedBuild = 0,
+    this.updateUrl = '',
   });
+
+  /// Lot 5.7 : version minimale (blocage) et conseillée (bandeau), en numéro de
+  /// compilation ; 0 : aucune. Lien de téléchargement réglé dans la console.
+  final int minBuild;
+  final int recommendedBuild;
+  final String updateUrl;
 
   /// Lot 5.5 : fonctionnalités activées dans la console (le serveur vérifie aussi).
   final AppFeatures features;
@@ -998,6 +1007,9 @@ class MessagingRules {
     maxTtlSeconds: ((v['message_ttl_hours'] as num?)?.toInt() ?? 72) * 3600,
     voiceMax: Duration(seconds: (v['voice_max_seconds'] as num?)?.toInt() ?? 30),
     features: AppFeatures.fromPolicies(v),
+    minBuild: (v['app_min_build'] as num?)?.toInt() ?? 0,
+    recommendedBuild: (v['app_recommended_build'] as num?)?.toInt() ?? 0,
+    updateUrl: (v['app_update_url'] as String? ?? '').trim(),
   );
 
   bool canEdit(ChatMessage m, DateTime now) =>
@@ -1048,6 +1060,39 @@ class AppFeatures {
     );
   }
 }
+
+/// Lot 5.7 — mise à jour de l'application : aucune, conseillée (bandeau) ou obligatoire
+/// (écran bloquant).
+enum UpdateLevel { none, recommended, required }
+
+class AppUpdate {
+  const AppUpdate({this.level = UpdateLevel.none, this.url = ''});
+
+  final UpdateLevel level;
+
+  /// Lien de téléchargement (https) ; vide : pas encore communiqué.
+  final String url;
+}
+
+/// Numéro de compilation d'une version « 0.1.0+69 » (null : version de développement).
+int? buildNumberOf(String version) {
+  final i = version.indexOf('+');
+  return i < 0 ? null : int.tryParse(version.substring(i + 1));
+}
+
+/// Comparaison faite sur le téléphone avec les réglages lus au retour dans l'app. Une
+/// version de développement (sans numéro) n'est jamais bloquée.
+final appUpdateProvider = Provider<AppUpdate>((ref) {
+  final rules = ref.watch(messagingRulesProvider).value;
+  final build = buildNumberOf(ref.watch(appVersionProvider));
+  if (rules == null || build == null) return const AppUpdate();
+  final level = build < rules.minBuild
+      ? UpdateLevel.required
+      : build < rules.recommendedBuild
+      ? UpdateLevel.recommended
+      : UpdateLevel.none;
+  return AppUpdate(level: level, url: rules.updateUrl);
+});
 
 final appFeaturesProvider = Provider<AppFeatures>(
   (ref) => ref.watch(messagingRulesProvider).value?.features ?? const AppFeatures(),

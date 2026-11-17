@@ -276,6 +276,9 @@ String formatPolicyValue(String unit, Object? v) {
     'o' => formatBytes(n),
     'px' => '${formatThousands(n)} px',
     'car' => '${formatThousands(n)} caractères',
+    // Lot 5.7 : numéro de compilation (0 : aucune) et prix en FCFA.
+    'build' => n == 0 ? 'Aucune' : 'n° $n',
+    'fcfa' => '${formatThousands(n)} FCFA',
     _ => formatThousands(n),
   };
 }
@@ -519,5 +522,301 @@ class ConsolePage<T> {
   int? pageOf(String letter) {
     final pos = letters[letter];
     return pos == null ? null : pos ~/ size + 1;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lot 5.7 : santé du service
+// ---------------------------------------------------------------------------
+
+int _i(Object? v) => (v as num?)?.toInt() ?? 0;
+
+Map<String, dynamic> _m(Object? v) => v is Map ? Map<String, dynamic>.from(v) : const {};
+
+/// Une version installée sur les téléphones actifs (30 jours).
+class InstalledVersion {
+  const InstalledVersion({required this.version, required this.devices, this.build});
+
+  final String version;
+  final int? build;
+  final int devices;
+}
+
+/// Une tâche automatique du serveur (pg_cron) : effacements, rappels, alertes…
+class CronJob {
+  const CronJob({required this.job, required this.schedule, this.lastRun, this.active = true});
+
+  final String job;
+  final String schedule;
+  final CronRun? lastRun;
+  final bool active;
+
+  /// Libellé lisible (« privio_purge_expired » → « Effacement des messages »).
+  String get label => kCronLabels[job] ?? job.replaceFirst('privio_', '').replaceAll('_', ' ');
+
+  /// En retard : une tâche de chaque minute ou toutes les 10 minutes qui n'a pas tourné
+  /// depuis plus de 15 minutes, ou dont le dernier passage a échoué.
+  bool late(DateTime now) {
+    if (lastRun case final r? when !r.ok) return true;
+    final frequent = schedule.startsWith('* ') || schedule.startsWith('*/');
+    if (!frequent || !active) return false;
+    final r = lastRun;
+    return r == null || now.difference(r.at) > const Duration(minutes: 15);
+  }
+}
+
+const kCronLabels = <String, String>{
+  'privio_purge_expired': 'Effacement des messages',
+  'privio_media_purge': 'Effacement des fichiers',
+  'privio_read_erasures': 'Effacer après lecture',
+  'privio_expire_calls': 'Fin des appels sans réponse',
+  'privio_expiry_reminders': 'Rappels avant effacement',
+  'privio_health_alerts': 'Alertes de l’administration',
+  'privio_purge_connection_requests': 'Demandes de connexion expirées',
+  'privio_purge_push_log': 'Journal des notifications',
+  'privio_purge_console': 'Journal de la console',
+  'privio_purge_health': 'Alertes et codes anciens',
+  'privio_snapshot_active_users': 'Relevé des comptes actifs',
+  'privio_purge_join_requests': 'Demandes d’adhésion',
+  'privio_purge_group_notices': 'Avis de groupes supprimés',
+  'privio_purge_receipt_marks': 'Accusés anciens',
+};
+
+/// Une alerte envoyée à l'administration.
+class HealthAlert {
+  const HealthAlert({required this.kind, required this.at, this.detail = const {}});
+
+  final String kind;
+  final DateTime at;
+  final Map<String, dynamic> detail;
+
+  String get title => switch (kind) {
+    'purge' => 'Effacement automatique en retard',
+    'sms' => 'Pic de codes SMS',
+    'failures' => 'Échecs de notifications ou d’appels',
+    'relay' => 'Relais des appels à 80 %',
+    _ => kind,
+  };
+
+  String get text => switch (kind) {
+    'purge' =>
+      '${_i(detail['expired_waiting'])} message(s) expiré(s) en attente'
+          '${detail['late_minutes'] == null ? '' : ' · dernier passage il y a ${_i(detail['late_minutes'])} min'}',
+    'sms' => '${_i(detail['codes_hour'])} codes en une heure (seuil ${_i(detail['threshold'])})',
+    'failures' =>
+      'Notifications\u202F: ${_i(detail['push_failed'])} échecs sur ${_i(detail['push_total'])} (1 h) · '
+          'appels\u202F: ${_i(detail['calls_failed'])} sur ${_i(detail['calls_total'])} (24 h)',
+    'relay' => '${formatBytes(_i(detail['bytes']))} ce mois-ci',
+    _ => '',
+  };
+}
+
+/// Résultat de la dernière notification de test.
+class PushTestResult {
+  const PushTestResult({required this.at, this.status, this.sent = 0, this.failed = 0});
+
+  final DateTime at;
+
+  /// null : pas encore traité ; « sent », « partial », « no_targets », « not_configured »…
+  final String? status;
+  final int sent;
+  final int failed;
+
+  String get text => switch (status) {
+    null => 'en cours d’envoi…',
+    'sent' => 'reçue par $sent téléphone${sent > 1 ? 's' : ''}',
+    'partial' => '$sent envoyée(s), $failed en échec',
+    'no_targets' => 'aucun téléphone de l’administration n’accepte les notifications',
+    'not_configured' => 'notifications non configurées sur ce serveur',
+    _ => 'en échec',
+  };
+
+  bool get ok => status == 'sent';
+}
+
+/// Résultat du test du relais des appels (fonction call-ice).
+class RelayTestResult {
+  const RelayTestResult(this.relay, {this.ms});
+
+  /// « ok », « not_configured », « failed » ou « error » (fonction injoignable).
+  final String relay;
+  final int? ms;
+
+  String get text => switch (relay) {
+    'ok' => 'Relais disponible${ms == null ? '' : ' (réponse en $ms ms)'}',
+    'not_configured' => 'Relais non configuré\u202F: seuls les appels directs passent (STUN)',
+    'failed' => 'Le relais ne répond pas\u202F: les appels sur réseau difficile peuvent échouer',
+    _ => 'Test impossible pour le moment',
+  };
+
+  bool get ok => relay == 'ok';
+}
+
+class ConsoleHealth {
+  const ConsoleHealth({
+    required this.generatedAt,
+    this.minBuild = 0,
+    this.recommendedBuild = 0,
+    this.updateUrl = '',
+    this.devices = 0,
+    this.belowMin = 0,
+    this.belowRecommended = 0,
+    this.installed = const [],
+    this.callsAudio30d = 0,
+    this.callsVideo30d = 0,
+    this.callsOk30d = 0,
+    this.callsFailed30d = 0,
+    this.callsUnanswered30d = 0,
+    this.callSeconds30d = 0,
+    this.callsReported30d = 0,
+    this.callsRelayed30d = 0,
+    this.relayBytesMonth = 0,
+    this.relayFreeBytes = 1000 * 1000 * 1000 * 1000,
+    this.codes30d = 0,
+    this.codesMonth = 0,
+    this.codes24h = 0,
+    this.codes1h = 0,
+    this.phoneChange30d = 0,
+    this.verified30d = 0,
+    this.profiles30d = 0,
+    this.unitCost = 0,
+    this.costMonth = 0,
+    this.cost30d = 0,
+    this.jobs = const [],
+    this.expiredWaiting = 0,
+    this.filesWaiting = 0,
+    this.adminPushTargets = 0,
+    this.lastTest,
+    this.alertsEnabled = true,
+    this.smsAlertPerHour = 30,
+    this.alerts = const [],
+  });
+
+  final DateTime generatedAt;
+  final int minBuild;
+  final int recommendedBuild;
+  final String updateUrl;
+  final int devices;
+  final int belowMin;
+  final int belowRecommended;
+  final List<InstalledVersion> installed;
+  final int callsAudio30d;
+  final int callsVideo30d;
+  final int callsOk30d;
+  final int callsFailed30d;
+  final int callsUnanswered30d;
+  final int callSeconds30d;
+  final int callsReported30d;
+  final int callsRelayed30d;
+  final int relayBytesMonth;
+  final int relayFreeBytes;
+  final int codes30d;
+  final int codesMonth;
+  final int codes24h;
+  final int codes1h;
+  final int phoneChange30d;
+  final int verified30d;
+  final int profiles30d;
+  final int unitCost;
+  final int costMonth;
+  final int cost30d;
+  final List<CronJob> jobs;
+  final int expiredWaiting;
+  final int filesWaiting;
+  final int adminPushTargets;
+  final PushTestResult? lastTest;
+  final bool alertsEnabled;
+  final int smsAlertPerHour;
+  final List<HealthAlert> alerts;
+
+  int get callsTotal30d => callsAudio30d + callsVideo30d;
+
+  /// Part des appels décrochés passés par le relais (null : aucun compte rendu).
+  double? get relayShare => callsReported30d == 0 ? null : callsRelayed30d / callsReported30d;
+
+  /// Durée moyenne d'un appel réussi.
+  Duration? get averageCall =>
+      callsOk30d == 0 ? null : Duration(seconds: callSeconds30d ~/ callsOk30d);
+
+  double get relayUse => relayFreeBytes == 0 ? 0 : relayBytesMonth / relayFreeBytes;
+
+  /// Part des codes envoyés qui ont été vérifiés (connexion et changement de numéro).
+  double? get verifiedShare => codes30d == 0 ? null : (verified30d / codes30d).clamp(0, 1);
+
+  factory ConsoleHealth.fromJson(Map<String, dynamic> j) {
+    final v = _m(j['versions']);
+    final c = _m(j['calls']);
+    final s = _m(j['signup']);
+    final d = _m(j['diagnostics']);
+    final a = _m(j['alerts']);
+    final test = _m(d['last_test']);
+    final result = _m(test['result']);
+    return ConsoleHealth(
+      generatedAt: DateTime.tryParse(j['generated_at'] as String? ?? '') ?? DateTime.now(),
+      minBuild: _i(v['min_build']),
+      recommendedBuild: _i(v['recommended_build']),
+      updateUrl: v['update_url'] as String? ?? '',
+      devices: _i(v['devices']),
+      belowMin: _i(v['below_min']),
+      belowRecommended: _i(v['below_recommended']),
+      installed: [
+        for (final x in (v['installed'] as List? ?? const []))
+          InstalledVersion(
+            version: _m(x)['version'] as String? ?? '?',
+            build: (_m(x)['build'] as num?)?.toInt(),
+            devices: _i(_m(x)['devices']),
+          ),
+      ],
+      callsAudio30d: _i(c['audio_30d']),
+      callsVideo30d: _i(c['video_30d']),
+      callsOk30d: _i(c['ok_30d']),
+      callsFailed30d: _i(c['failed_30d']),
+      callsUnanswered30d: _i(c['unanswered_30d']),
+      callSeconds30d: _i(c['seconds_30d']),
+      callsReported30d: _i(c['reported_30d']),
+      callsRelayed30d: _i(c['relayed_30d']),
+      relayBytesMonth: _i(c['relay_bytes_month']),
+      relayFreeBytes: c['relay_free_bytes'] == null ? 1000000000000 : _i(c['relay_free_bytes']),
+      codes30d: _i(s['codes_30d']),
+      codesMonth: _i(s['codes_month']),
+      codes24h: _i(s['codes_24h']),
+      codes1h: _i(s['codes_1h']),
+      phoneChange30d: _i(s['phone_change_30d']),
+      verified30d: _i(s['verified_30d']),
+      profiles30d: _i(s['profiles_30d']),
+      unitCost: _i(s['unit_cost']),
+      costMonth: _i(s['cost_month']),
+      cost30d: _i(s['cost_30d']),
+      jobs: [
+        for (final x in (d['jobs'] as List? ?? const []))
+          CronJob(
+            job: _m(x)['job'] as String? ?? '?',
+            schedule: _m(x)['schedule'] as String? ?? '',
+            active: _m(x)['active'] as bool? ?? true,
+            lastRun: CronRun.fromJson(_m(x)['at'] == null ? null : _m(x)),
+          ),
+      ],
+      expiredWaiting: _i(d['expired_waiting']),
+      filesWaiting: _i(d['files_waiting']),
+      adminPushTargets: _i(d['push_targets']),
+      lastTest: test.isEmpty
+          ? null
+          : PushTestResult(
+              at: DateTime.tryParse(test['at'] as String? ?? '') ?? DateTime.now(),
+              status: result['status'] as String?,
+              sent: _i(result['sent']),
+              failed: _i(result['failed']),
+            ),
+      alertsEnabled: a['enabled'] as bool? ?? true,
+      smsAlertPerHour: a['sms_per_hour'] == null ? 30 : _i(a['sms_per_hour']),
+      alerts: [
+        for (final x in (a['recent'] as List? ?? const []))
+          HealthAlert(
+            kind: _m(x)['kind'] as String? ?? '?',
+            at: DateTime.tryParse(_m(x)['at'] as String? ?? '') ?? DateTime.now(),
+            detail: _m(_m(x)['detail']),
+          ),
+      ],
+    );
   }
 }
