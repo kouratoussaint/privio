@@ -1,4 +1,5 @@
 import 'privacy_providers.dart';
+import 'contact_labels_providers.dart';
 import 'data_providers.dart';
 
 import 'dart:async';
@@ -339,6 +340,11 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
       if (e == 'typing' || e == 'call') return;
       unawaited(refresh());
     });
+    // Lot 10.4 : un surnom ou une vérification change : les noms affichés suivent.
+    ref.listen(contactLabelsProvider, (_, _) {
+      final now = state.value;
+      if (now != null) state = AsyncData(List.of(now));
+    });
     // Effacement local des messages expirés, même sans réseau.
     final purge = Timer.periodic(purgeEvery, (_) => unawaited(cache.purgeExpired()));
     ref.onDispose(purge.cancel);
@@ -350,6 +356,8 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
   /// Synchronise avec le serveur ; hors connexion, la liste locale reste affichée.
   Future<void> refresh() async {
     final api = ref.read(messagingApiProvider);
+    // Lot 10.4 : surnoms et vérifications, synchronisés en même temps.
+    unawaited(ref.read(contactLabelsProvider.notifier).refresh());
     try {
       final list = await api.listConversations();
       state = AsyncData(list);

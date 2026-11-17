@@ -9,7 +9,9 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../core/util/time_format.dart';
+import '../../../domain/models/contact_labels.dart';
 import '../../../domain/models/messaging.dart';
+import '../../core/widgets/privio_menu.dart' show MenuTint;
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/privacy_providers.dart';
@@ -23,6 +25,8 @@ import '../../core/widgets/settings_card.dart';
 import 'message_extras.dart';
 import '../settings/wallpaper.dart';
 import '../calls/call_screen.dart';
+import '../../../state/contact_labels_providers.dart';
+import 'verify_in_person.dart';
 
 /// Fiche contact (depuis une discussion) : photo en grand, « À propos », durée, sourdine,
 /// « Vider », médias, groupes en commun, blocage et signalement (lot 7.1a).
@@ -113,6 +117,10 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     final groups = ref.watch(commonGroupsProvider(peerId)).value ?? const <CommonGroup>[];
     final iBlocked = blockedList.value?.any((b) => b.id == peerId) ?? false;
     final about = profile?.about;
+    // Lot 10.4 : surnom privé et vérification en personne.
+    final label = ref.watch(contactLabelsProvider)[peerId];
+    final nickname = label?.nickname;
+    final canVerify = !summary.blocked && !summary.peerDeleted;
     // Lot 7.2a : une carte blanche par partie, comme Paramètres.
     return Scaffold(
       appBar: AppBar(title: Text(L.t.infos)),
@@ -127,8 +135,12 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 seed: peerId,
               ),
               const SizedBox(height: PrivioSpacing.l),
+              // Lot 10.4 : « Surnom · vrai nom » quand j'ai donné un surnom.
               Text(
-                summary.title,
+                nickname != null && !summary.peerDeleted
+                    ? L.t.surnomEtVraiNom(nickname, summary.realTitle)
+                    : summary.title,
+                key: const Key('contact.name'),
                 style: theme.textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
@@ -137,6 +149,22 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                   '@${summary.peerHandle}',
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
+                ),
+              if ((label?.verified ?? false) && !summary.peerDeleted)
+                Padding(
+                  padding: const EdgeInsets.only(top: PrivioSpacing.xs),
+                  child: Row(
+                    key: const Key('contact.verified_badge'),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const VerifiedMark(),
+                      const SizedBox(width: 4),
+                      Text(
+                        L.t.verifieEnPersonne,
+                        style: theme.textTheme.labelLarge?.copyWith(color: verifiedColor),
+                      ),
+                    ],
+                  ),
                 ),
               if (!summary.blocked)
                 Builder(
@@ -252,6 +280,50 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
               ),
             ],
           ),
+          // Lot 10.4 : surnom privé et vérification en personne (sous « Discussion »).
+          if (!summary.peerDeleted)
+            SettingsCard(
+              children: [
+                ListTile(
+                  key: const Key('contact.nickname'),
+                  leading: Icon(Icons.badge_outlined, color: p.accentText),
+                  title: Text(L.t.surnomPrive),
+                  subtitle: Text(nickname ?? L.t.ajouterSurnom),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () =>
+                      editNickname(context, ref, userId: peerId, realName: summary.realTitle),
+                ),
+                const SettingsDivider(),
+                ListTile(
+                  key: const Key('contact.verify'),
+                  enabled: canVerify,
+                  leading: Icon(
+                    switch (label?.verification) {
+                      'verified' => Icons.verified_user,
+                      'lapsed' => Icons.gpp_maybe_outlined,
+                      _ => Icons.verified_user_outlined,
+                    },
+                    color: switch (label?.verification) {
+                      'verified' => verifiedColor,
+                      'lapsed' => MenuTint.amber,
+                      _ => p.accentText,
+                    },
+                  ),
+                  title: Text(switch (label?.verification) {
+                    'verified' => L.t.verifieEnPersonne,
+                    'lapsed' => L.t.verifyToRedo,
+                    _ => L.t.verifierEnPersonne,
+                  }),
+                  subtitle: Text(switch (label) {
+                    ContactLabel(verified: true, :final verifiedAt?) => verifiedOnText(verifiedAt),
+                    ContactLabel(lapsed: true) => lapseText(label, summary.title),
+                    _ => L.t.verifyRowHelp,
+                  }),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openVerifyInPerson(context, peerId, summary.title),
+                ),
+              ],
+            ),
           SettingsSectionTitle(L.t.medias),
           SettingsCard(
             children: [

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
+import '../../domain/models/contact_labels.dart';
 import '../../domain/models/messaging.dart';
 import '../../domain/models/moderation.dart';
 
@@ -130,6 +131,24 @@ abstract interface class MessagingApi {
 
   /// Lot 10.2 : cacher (ou ne plus cacher) une discussion, pour moi seulement.
   Future<void> setConversationSecret(String conversationId, bool secret);
+
+  /// Lot 10.4 : mes surnoms privés et vérifications en personne.
+  Future<List<ContactLabel>> listContactLabels();
+
+  /// Lot 10.4 : surnom privé (null ou vide : retiré). Renvoie le surnom enregistré.
+  Future<String?> setContactNickname(String userId, String? nickname);
+
+  /// Lot 10.4 : code à montrer à [userId] (QR), valable 2 minutes.
+  Future<VerificationCode> createVerificationCode(String userId);
+
+  /// Lot 10.4 : scanner le code de [userId] ; vérifie les deux personnes.
+  Future<void> confirmVerificationCode(String code, String userId);
+
+  /// Lot 10.4 : « pending », « verified » ou « expired ».
+  Future<String> verificationCodeStatus(String code);
+
+  /// Lot 10.4 : fermer l'avis « vérification à refaire ».
+  Future<void> dismissVerificationNotice(String userId);
 
   /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s ; null : couper).
   Future<void> setReadErase(String conversationId, int? seconds);
@@ -670,6 +689,42 @@ class SupabaseMessagingApi implements MessagingApi {
   @override
   Future<void> setConversationSecret(String conversationId, bool secret) =>
       _call('set_conversation_secret', {'p_conversation_id': conversationId, 'p_secret': secret});
+
+  @override
+  Future<List<ContactLabel>> listContactLabels() async =>
+      (await _rows('my_contact_labels')).map(ContactLabel.fromJson).toList();
+
+  @override
+  Future<String?> setContactNickname(String userId, String? nickname) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'set_contact_nickname',
+      params: {'p_user_id': userId, 'p_nickname': nickname ?? ''},
+    ) as String?,
+  );
+
+  @override
+  Future<VerificationCode> createVerificationCode(String userId) => _guard(
+    () async => VerificationCode.fromJson(
+      Map<String, dynamic>.from(
+        await _client.rpc<dynamic>('create_verification_code', params: {'p_user_id': userId})
+            as Map,
+      ),
+    ),
+  );
+
+  @override
+  Future<void> confirmVerificationCode(String code, String userId) =>
+      _call('confirm_verification_code', {'p_code': code, 'p_user_id': userId});
+
+  @override
+  Future<String> verificationCodeStatus(String code) => _guard(
+    () async =>
+        await _client.rpc<dynamic>('verification_code_status', params: {'p_code': code}) as String,
+  );
+
+  @override
+  Future<void> dismissVerificationNotice(String userId) =>
+      _call('dismiss_verification_notice', {'p_user_id': userId});
 
   @override
   Future<void> setReadErase(String conversationId, int? seconds) =>

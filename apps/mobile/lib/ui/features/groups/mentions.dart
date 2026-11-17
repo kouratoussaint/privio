@@ -74,14 +74,17 @@ List<GroupMember> mentionCandidates(List<GroupMember> members, String query, {St
   final q = foldName(query);
   bool fits(GroupMember m) {
     if (q.isEmpty) return true;
-    final name = foldName(m.displayName);
-    return name.startsWith(q) ||
-        name.split(' ').any((w) => w.startsWith(q)) ||
-        foldName(m.handle ?? '').startsWith(q);
+    // Lot 10.4 : le surnom privé comme le vrai nom.
+    bool starts(String raw) {
+      final name = foldName(raw);
+      return name.startsWith(q) || name.split(' ').any((w) => w.startsWith(q));
+    }
+
+    return starts(m.displayName) || starts(m.shownName) || foldName(m.handle ?? '').startsWith(q);
   }
 
   final list = members.where((m) => !m.invited && m.userId != me && fits(m)).toList()
-    ..sort((a, b) => foldName(a.displayName).compareTo(foldName(b.displayName)));
+    ..sort((a, b) => foldName(a.shownName).compareTo(foldName(b.shownName)));
   return list.take(6).toList();
 }
 
@@ -154,12 +157,13 @@ class MentionSuggestions extends StatelessWidget {
                   key: Key('mention.option.${m.userId}'),
                   dense: true,
                   leading: UserAvatar(
-                    name: m.displayName,
+                    name: m.shownName,
                     avatarPath: m.avatarPath,
                     seed: m.userId,
                     radius: 16,
                   ),
-                  title: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  // Lot 10.4 : surnom privé ; la mention insère le vrai nom.
+                  title: Text(m.shownName, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: m.handle == null
                       ? null
                       : Text(

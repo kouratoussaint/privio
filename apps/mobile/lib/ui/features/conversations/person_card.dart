@@ -18,6 +18,8 @@ import '../../core/widgets/success_snack.dart';
 import 'new_conversation_screen.dart' show ConnectionRequestSheet;
 import 'report_sheet.dart';
 import 'impersonation.dart';
+import '../../../state/contact_labels_providers.dart';
+import 'verify_in_person.dart';
 
 /// Lot 8.1a : toucher le nom ou la photo d'une personne.
 /// - moi : « Ma fiche » ;
@@ -329,6 +331,11 @@ class _PersonCardState extends ConsumerState<PersonCard> {
     final p = PrivioPalette.of(context);
     final about = _profile?.about;
     final error = theme.colorScheme.error;
+    // Lot 10.4 : mon surnom privé en grand, le vrai nom juste dessous.
+    final label = ref.watch(contactLabelsProvider)[widget.userId];
+    final nickname = label?.nickname;
+    final shown = nickname ?? _name;
+    final canNickname = widget.groupId != null || _groups.isNotEmpty;
     return SafeArea(
       child: SingleChildScrollView(
         key: const Key('person.card'),
@@ -340,19 +347,33 @@ class _PersonCardState extends ConsumerState<PersonCard> {
             Center(
               child: UserAvatar(
                 key: const Key('card.avatar'),
-                name: _name,
+                name: shown,
                 avatarPath: _profile?.avatarPath ?? widget.avatarPath,
                 seed: widget.userId,
                 radius: 48,
               ),
             ),
             const SizedBox(height: PrivioSpacing.m),
+            // Lot 10.4 : « Surnom · vrai nom » quand j'ai donné un surnom.
             Text(
-              _name,
+              nickname == null ? _name : L.t.surnomEtVraiNom(nickname, _name),
               key: const Key('card.name'),
               textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
+            if (label?.verified ?? false)
+              Row(
+                key: const Key('card.verified'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const VerifiedMark(),
+                  const SizedBox(width: 4),
+                  Text(
+                    L.t.verifieEnPersonne,
+                    style: theme.textTheme.labelLarge?.copyWith(color: verifiedColor),
+                  ),
+                ],
+              ),
             if ((_handle ?? '').isNotEmpty)
               Text(
                 '@$_handle',
@@ -406,6 +427,16 @@ class _PersonCardState extends ConsumerState<PersonCard> {
             ],
             const SizedBox(height: PrivioSpacing.s),
             const Divider(),
+            // Lot 10.4 : surnom privé, visible par moi seul.
+            if (canNickname)
+              ListTile(
+                key: const Key('card.nickname'),
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.badge_outlined, color: p.accentText),
+                title: Text(L.t.surnomPrive),
+                subtitle: Text(nickname ?? L.t.ajouterSurnom),
+                onTap: () => editNickname(context, ref, userId: widget.userId, realName: _name),
+              ),
             if (widget.canManage)
               ListTile(
                 key: const Key('card.manage'),

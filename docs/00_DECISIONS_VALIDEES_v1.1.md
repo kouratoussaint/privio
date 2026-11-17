@@ -265,3 +265,16 @@ Demandés par le commanditaire après test sur téléphone :
   quand le contact change de téléphone ou de numéro, avec un avis pour revérifier ; surnom
   privé visible par moi seul, partout dans l'application, vrai nom rappelé dans la fiche,
   gardé sur le serveur pour mon compte.
+
+## Amendement 19 — « Vérifié en personne » et surnom privé (17 novembre 2026)
+Lot 10.4 développé selon les décisions de l'amendement 18 (ADR-048).
+- **Vérification** : QR code créé pour un contact précis, valable 2 minutes, à usage
+  unique (seule son empreinte est gardée) ; un seul scan, face à face, vérifie les deux
+  personnes. Elle atteste une rencontre, sans chiffrement de bout en bout.
+- **Badge retiré** quand le contact se connecte à nouveau (Privio ne reconnaît pas un
+  téléphone d'une connexion à l'autre : une reconnexion compte comme un nouveau
+  téléphone) ou change de numéro ; avis fermable dans la discussion, qui revient si la
+  situation change encore.
+- **Surnom privé** : 40 caractères, pour une personne avec qui je partage une discussion
+  (à deux ou de groupe) ; il remplace le nom partout pour moi ; la fiche montre
+  « Surnom · vrai nom » ; une @mention insère toujours le vrai nom.

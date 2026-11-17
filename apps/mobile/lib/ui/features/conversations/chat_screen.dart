@@ -52,6 +52,8 @@ import 'package:flutter/semantics.dart';
 import '../../../state/session_controller.dart';
 import '../groups/group_screens.dart';
 import '../calls/call_screen.dart';
+import '../../../state/contact_labels_providers.dart';
+import 'verify_in_person.dart';
 import '../../core/widgets/privio_menu.dart';
 import '../../core/emoji/big_emojis.dart';
 
@@ -453,7 +455,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return (name: summary.title, path: summary.peerAvatarPath, seed: summary.peerId ?? senderId);
     }
     final m = members.where((x) => x.userId == senderId).firstOrNull;
-    return (name: m?.displayName ?? '?', path: m?.avatarPath, seed: senderId);
+    return (name: m?.shownName ?? '?', path: m?.avatarPath, seed: senderId);
   }
 
   /// Lot 8.1b : nom et photo d'une personne qui a réagi.
@@ -1384,6 +1386,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final now = DateTime.now();
     final title = summary?.title ?? L.t.discussion;
     final isGroup = summary?.isGroup ?? false;
+    // Lot 10.4 : vérification en personne du correspondant (badge, avis à revérifier).
+    final label = isGroup ? null : ref.watch(contactLabelsProvider)[summary?.peerId];
     // Statut « en ligne » / « vu à » du correspondant, s'il le montre (lot 4.3).
     final peerId = summary?.peerId;
     final presence = isGroup || peerId == null || (summary?.blocked ?? false)
@@ -1587,7 +1591,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(title, overflow: TextOverflow.ellipsis),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(title, overflow: TextOverflow.ellipsis),
+                                          ),
+                                          if (label?.verified ?? false) ...[
+                                            const SizedBox(width: 4),
+                                            Tooltip(
+                                              message: L.t.verifieEnPersonne,
+                                              child: Icon(
+                                                Icons.verified_user,
+                                                key: const Key('chat.verified'),
+                                                size: 16,
+                                                color: p.onHeader,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                       if (typing)
                                         // Lot 7.2b2 : trois points qui sautillent.
                                         Row(
@@ -1657,6 +1680,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _EraseBanner(
                   seconds: erase,
                   onTap: summary!.canSetReadErase ? () => _chooseReadErase(summary) : null,
+                ),
+              // Lot 10.4 : le contact vérifié a changé de téléphone ou de numéro.
+              if (label != null && label.notice && summary != null && query.isEmpty)
+                VerificationNoticeBanner(
+                  label: label,
+                  name: summary.title,
+                  onVerify: () => openVerifyInPerson(context, summary.peerId!, summary.title),
+                  onClose: () => unawaited(
+                    ref.read(contactLabelsProvider.notifier).dismissNotice(label.userId),
+                  ),
                 ),
               // Lot 7.2c2 : messages épinglés.
               if (pins.isNotEmpty && query.isEmpty && !_selecting)

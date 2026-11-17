@@ -7665,6 +7665,240 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Version installée : {version}'**
   String majVersionInstallee(String version);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifié en personne'**
+  String get verifieEnPersonne;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier en personne'**
+  String get verifierEnPersonne;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Placez le code de vérification de votre contact dans le cadre'**
+  String get verifyScanHint;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce QR code n’est pas un code de vérification Privio.'**
+  String get verifyScanInvalid;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} utilise maintenant un nouveau téléphone.'**
+  String verifyLapsedDevice(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a changé de numéro.'**
+  String verifyLapsedPhone(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a changé de téléphone et de numéro.'**
+  String verifyLapsedBoth(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Revérifiez en personne dès que possible.'**
+  String get verifyAgainHint;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Revérifier'**
+  String get verifyAgain;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Le {date}'**
+  String verifiedOn(String date);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Est-ce bien {name} ?'**
+  String verifyIntroTitle(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrouvez-vous face à face. L’un montre son code, l’autre le scanne : les deux téléphones verront « Vérifié en personne ».'**
+  String get verifyIntroText;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Montrer mon code'**
+  String get verifyShowMyCode;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner son code'**
+  String get verifyScanTheirCode;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Le badge disparaît si {name} se connecte sur un nouveau téléphone ou change de numéro.'**
+  String verifyBadgeNote(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Montrez ce code à {name}'**
+  String verifyShowTitle(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de vérification Privio'**
+  String get verifyQrLabel;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Valable encore {time}'**
+  String verifyValidFor(String time);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Sur le téléphone de {name} : votre fiche → Vérifier en personne → Scanner son code.'**
+  String verifyShowHelp(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a expiré.'**
+  String get verifyExpired;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau code'**
+  String get verifyNewCode;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous et {name} êtes vérifiés en personne'**
+  String verifyDone(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Le badge « Vérifié en personne » apparaît sur vos deux téléphones.'**
+  String get verifyDoneText;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé'**
+  String get verifyFinished;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Face à face, avec un QR code'**
+  String get verifyRowHelp;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification à refaire'**
+  String get verifyToRedo;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Surnom privé'**
+  String get surnomPrive;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par vous seul, partout dans Privio. {name} ne le saura pas.'**
+  String surnomPriveAide(String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un surnom, visible par vous seul'**
+  String get ajouterSurnom;
+
+  /// Fiche d’un contact ou d’un membre : surnom privé, puis vrai nom (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'{nickname} · {name}'**
+  String surnomEtVraiNom(String nickname, String name);
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get retirer;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Surnom enregistré'**
+  String get surnomEnregistre;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Surnom retiré'**
+  String get surnomRetire;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'La vérification en personne se fait avec un contact.'**
+  String get verifyNotContactError;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a été créé pour une autre personne.'**
+  String get verifyWrongPersonError;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code n’est pas valable.'**
+  String get verifyCodeInvalidError;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code a expiré. Demandez-en un nouveau.'**
+  String get verifyCodeExpiredError;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Un surnom fait 40 caractères au plus.'**
+  String get nicknameInvalidError;
+
+  /// Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous ne pouvez pas donner de surnom à cette personne.'**
+  String get nicknameNotAllowedError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

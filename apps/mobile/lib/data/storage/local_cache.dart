@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import '../../domain/models/contact_labels.dart';
 import '../../domain/models/messaging.dart';
 import 'local_store.dart';
 import 'media_vault.dart';
@@ -144,6 +145,9 @@ class LocalCache {
   final Map<String, List<ChatMessage>> _messages = {};
   List<OutboxItem> _outbox = [];
 
+  /// Lot 10.4 : surnoms et vérifications (affichage hors connexion).
+  List<ContactLabel> _labels = [];
+
   /// Index des sons du coffre : clé → expiration.
   final Map<String, DateTime> _media = {};
   Future<void>? _loading;
@@ -171,6 +175,10 @@ class LocalCache {
         for (final o in (raw['outbox'] as List<dynamic>? ?? const []))
           OutboxItem.fromJson(Map<String, dynamic>.from(o as Map)),
       ];
+      _labels = [
+        for (final l in (raw['labels'] as List<dynamic>? ?? const []))
+          ContactLabel.fromJson(Map<String, dynamic>.from(l as Map)),
+      ];
       final media = Map<String, dynamic>.from(raw['media'] as Map? ?? const {});
       for (final e in media.entries) {
         _media[e.key] = DateTime.parse(e.value as String);
@@ -183,6 +191,12 @@ class LocalCache {
   List<ChatMessage> messages(String conversationId) =>
       List.unmodifiable(_messages[conversationId] ?? const []);
   List<OutboxItem> get outbox => List.unmodifiable(_outbox);
+  List<ContactLabel> get labels => List.unmodifiable(_labels);
+
+  Future<void> putLabels(List<ContactLabel> list) {
+    _labels = List.of(list);
+    return _persist();
+  }
 
   /// Tous les messages en clair conservés (recherche locale).
   Map<String, List<ChatMessage>> get allMessages => Map.unmodifiable(_messages);
@@ -340,6 +354,7 @@ class LocalCache {
     _conversations = [];
     _messages.clear();
     _outbox = [];
+    _labels = [];
     _media.clear();
     _loading = Future.value();
     await _writing;
@@ -356,6 +371,7 @@ class LocalCache {
         for (final e in _messages.entries) e.key: [for (final m in e.value) m.toJson()],
       },
       'outbox': [for (final o in _outbox) o.toJson()],
+      'labels': [for (final l in _labels) l.toJson()],
       'media': {for (final e in _media.entries) e.key: e.value.toUtc().toIso8601String()},
     };
     // Écritures sérialisées : jamais deux écritures concurrentes du fichier.

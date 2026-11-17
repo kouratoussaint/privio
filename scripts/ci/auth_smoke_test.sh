@@ -106,6 +106,8 @@ python3 "$(dirname "$0")/numero_e2e.py" "$API" "$KEY" "$DB_URL"
 python3 "$(dirname "$0")/deux_etapes_e2e.py" "$API" "$KEY" "$DB_URL"
 # Lot 5.7 : santé du service (après les connexions, les appels et le changement de numéro).
 python3 "$(dirname "$0")/sante_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
+# Lot 10.4 : vérification en personne et surnom privé (rétablit l'état de B à la fin).
+python3 "$(dirname "$0")/verification_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Dernier : déconnecte le téléphone de B.
 python3 "$(dirname "$0")/support_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/codes et mentions/finitions/suppression/console/modération/assistance/santé du service : OK"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/codes et mentions/finitions/suppression/console/modération/assistance/santé du service/vérification en personne : OK"

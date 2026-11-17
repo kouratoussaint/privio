@@ -34,6 +34,9 @@ import '../conversations/message_extras.dart';
 import '../settings/wallpaper.dart';
 import '../conversations/person_card.dart';
 import '../../core/widgets/privio_menu.dart';
+import '../../../domain/models/contact_labels.dart';
+import '../../../state/contact_labels_providers.dart';
+import '../conversations/verify_in_person.dart' show VerifiedMark;
 
 void _toast(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -170,12 +173,12 @@ class _MemberPickerState extends ConsumerState<MemberPicker> {
             onChanged: (_) => _toggle(u),
             contentPadding: EdgeInsets.zero,
             secondary: UserAvatar(
-              name: u.displayName,
+              name: ContactLabels.nameOf(u.id, u.displayName),
               avatarPath: u.avatarPath,
               seed: u.id,
               radius: 20,
             ),
-            title: Text(u.displayName),
+            title: Text(ContactLabels.nameOf(u.id, u.displayName)),
             subtitle: u.handle.isEmpty ? null : Text('@${u.handle}'),
           ),
         Padding(
@@ -636,7 +639,7 @@ class GroupInfoScreen extends ConsumerWidget {
     // Lot 8.5a : carte flottante près du membre appuyé.
     final action = await PrivioMenu.show<String>(
       context,
-      title: '${m.displayName} · ${m.roleLabel}',
+      title: '${m.shownName} · ${m.roleLabel}',
       items: [
         if (m.role == 'member')
           PrivioMenuItem(
@@ -679,12 +682,12 @@ class GroupInfoScreen extends ConsumerWidget {
         builder: (ctx) => AlertDialog(
           title: Text(
             action == 'remove'
-                ? L.t.retirerDisplayname(m.displayName)
-                : L.t.confierGroupeDisplayname(m.displayName),
+                ? L.t.retirerDisplayname(m.shownName)
+                : L.t.confierGroupeDisplayname(m.shownName),
           ),
           content: Text(
             action == 'remove'
-                ? L.t.displaynameNeVerraPlusMessages(m.displayName)
+                ? L.t.displaynameNeVerraPlusMessages(m.shownName)
                 : L.t.vousResterezAdministrateur,
           ),
           actions: [
@@ -808,6 +811,8 @@ class GroupInfoScreen extends ConsumerWidget {
     final p = PrivioPalette.of(context);
     final s = ref.watch(conversationSummaryProvider(conversationId));
     final members = ref.watch(groupMembersProvider(conversationId));
+    // Lot 10.4 : surnoms privés et badges « Vérifié en personne » des membres.
+    final labels = ref.watch(contactLabelsProvider);
     final me = ref.watch(currentUserIdProvider);
     if (s == null) return Scaffold(appBar: AppBar(), body: const LoadingView());
     final now = DateTime.now();
@@ -1081,12 +1086,25 @@ class GroupInfoScreen extends ConsumerWidget {
                 ListTile(
                   key: Key('member.${m.userId}'),
                   leading: UserAvatar(
-                    name: m.displayName,
+                    name: m.shownName,
                     avatarPath: m.avatarPath,
                     seed: m.userId,
                     radius: 20,
                   ),
-                  title: Text(m.userId == me ? L.t.nameYou(m.displayName) : m.displayName),
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          m.userId == me ? L.t.nameYou(m.displayName) : m.shownName,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (labels[m.userId]?.verified ?? false) ...[
+                        const SizedBox(width: 4),
+                        VerifiedMark(key: Key('member.verified.${m.userId}')),
+                      ],
+                    ],
+                  ),
                   subtitle: m.handle == null ? null : Text('@${m.handle}'),
                   trailing: m.role == 'member'
                       ? null

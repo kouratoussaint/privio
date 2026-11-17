@@ -1,3 +1,5 @@
+import 'contact_labels.dart';
+
 /// Lot 9.1a — appel audio à deux, tel que vu par l'utilisateur (ADR-036).
 class CallInfo {
   const CallInfo({
@@ -6,7 +8,7 @@ class CallInfo {
     required this.status,
     required this.outgoing,
     required this.peerId,
-    required this.peerName,
+    required this._peerName,
     this.peerAvatar,
     this.kind = 'audio',
     this.answeredAt,
@@ -20,7 +22,10 @@ class CallInfo {
   final String status;
   final bool outgoing;
   final String peerId;
-  final String peerName;
+
+  /// Lot 10.4 : surnom privé du correspondant s'il en a un.
+  String get peerName => ContactLabels.nameOf(peerId, _peerName);
+  final String _peerName;
   final String? peerAvatar;
   final String kind;
   final DateTime? answeredAt;

@@ -838,6 +838,8 @@ bool matchesSearch(ConversationSummary c, String q, Map<String, List<ChatMessage
       );
   return inMessages ||
       c.title.toLowerCase().contains(q) ||
+      // Lot 10.4 : le surnom privé et le vrai nom.
+      c.realTitle.toLowerCase().contains(q) ||
       (c.peerHandle ?? '').toLowerCase().contains(q) ||
       (!c.blocked && c.lastKind != 'sticker' && (c.lastBody ?? '').toLowerCase().contains(q));
 }

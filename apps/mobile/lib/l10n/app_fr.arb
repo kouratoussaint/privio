@@ -6130,5 +6130,224 @@
         "type": "String"
       }
     }
+  },
+  "verifieEnPersonne": "Vérifié en personne",
+  "@verifieEnPersonne": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifierEnPersonne": "Vérifier en personne",
+  "@verifierEnPersonne": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyScanHint": "Placez le code de vérification de votre contact dans le cadre",
+  "@verifyScanHint": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyScanInvalid": "Ce QR code n’est pas un code de vérification Privio.",
+  "@verifyScanInvalid": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyLapsedDevice": "{name} utilise maintenant un nouveau téléphone.",
+  "@verifyLapsedDevice": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyLapsedPhone": "{name} a changé de numéro.",
+  "@verifyLapsedPhone": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyLapsedBoth": "{name} a changé de téléphone et de numéro.",
+  "@verifyLapsedBoth": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyAgainHint": "Revérifiez en personne dès que possible.",
+  "@verifyAgainHint": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyAgain": "Revérifier",
+  "@verifyAgain": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifiedOn": "Le {date}",
+  "@verifiedOn": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyIntroTitle": "Est-ce bien {name} ?",
+  "@verifyIntroTitle": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyIntroText": "Retrouvez-vous face à face. L’un montre son code, l’autre le scanne : les deux téléphones verront « Vérifié en personne ».",
+  "@verifyIntroText": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyShowMyCode": "Montrer mon code",
+  "@verifyShowMyCode": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyScanTheirCode": "Scanner son code",
+  "@verifyScanTheirCode": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyBadgeNote": "Le badge disparaît si {name} se connecte sur un nouveau téléphone ou change de numéro.",
+  "@verifyBadgeNote": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyShowTitle": "Montrez ce code à {name}",
+  "@verifyShowTitle": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyQrLabel": "Code de vérification Privio",
+  "@verifyQrLabel": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyValidFor": "Valable encore {time}",
+  "@verifyValidFor": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyShowHelp": "Sur le téléphone de {name} : votre fiche → Vérifier en personne → Scanner son code.",
+  "@verifyShowHelp": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyExpired": "Ce code a expiré.",
+  "@verifyExpired": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyNewCode": "Nouveau code",
+  "@verifyNewCode": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyDone": "Vous et {name} êtes vérifiés en personne",
+  "@verifyDone": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyDoneText": "Le badge « Vérifié en personne » apparaît sur vos deux téléphones.",
+  "@verifyDoneText": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyFinished": "Terminé",
+  "@verifyFinished": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyRowHelp": "Face à face, avec un QR code",
+  "@verifyRowHelp": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyToRedo": "Vérification à refaire",
+  "@verifyToRedo": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "surnomPrive": "Surnom privé",
+  "@surnomPrive": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "surnomPriveAide": "Visible par vous seul, partout dans Privio. {name} ne le saura pas.",
+  "@surnomPriveAide": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ajouterSurnom": "Ajouter un surnom, visible par vous seul",
+  "@ajouterSurnom": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "surnomEtVraiNom": "{nickname} · {name}",
+  "@surnomEtVraiNom": {
+    "description": "Fiche d’un contact ou d’un membre : surnom privé, puis vrai nom (lot 10.4)",
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "retirer": "Retirer",
+  "@retirer": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "surnomEnregistre": "Surnom enregistré",
+  "@surnomEnregistre": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "surnomRetire": "Surnom retiré",
+  "@surnomRetire": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyNotContactError": "La vérification en personne se fait avec un contact.",
+  "@verifyNotContactError": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyWrongPersonError": "Ce code a été créé pour une autre personne.",
+  "@verifyWrongPersonError": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyCodeInvalidError": "Ce code n’est pas valable.",
+  "@verifyCodeInvalidError": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "verifyCodeExpiredError": "Ce code a expiré. Demandez-en un nouveau.",
+  "@verifyCodeExpiredError": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "nicknameInvalidError": "Un surnom fait 40 caractères au plus.",
+  "@nicknameInvalidError": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "nicknameNotAllowedError": "Vous ne pouvez pas donner de surnom à cette personne.",
+  "@nicknameNotAllowedError": {
+    "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
   }
 }

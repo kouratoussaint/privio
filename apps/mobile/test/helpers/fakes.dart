@@ -32,6 +32,7 @@ import 'package:privio/data/services/photo_picker.dart';
 import 'package:privio/data/storage/local_flags.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
+import 'package:privio/domain/models/contact_labels.dart';
 import 'package:privio/state/messaging_providers.dart';
 import 'package:privio/state/providers.dart';
 import 'package:privio/state/push_providers.dart';
@@ -644,6 +645,89 @@ class FakeMessagingApi implements MessagingApi {
 
   /// Lot 10.2 : discussions cachées (pour moi).
   final Set<String> secret = {};
+
+  // --- Lot 10.4 : surnoms privés et vérification en personne ------------------------
+  /// Étiquettes renvoyées par `my_contact_labels` (modifiables par les tests).
+  final Map<String, ContactLabel> labels = {};
+
+  /// Codes créés : code → (pour qui, état « pending », « verified » ou « expired »).
+  final Map<String, (String, String)> verifyCodes = {};
+  final List<String> dismissedVerifyNotices = [];
+  final List<(String, String)> confirmedCodes = [];
+  int _verifySeq = 0;
+
+  /// Le correspondant scanne le code montré (comme `confirm_verification_code` côté Bob).
+  void peerScans(String code) {
+    final c = verifyCodes[code]!;
+    verifyCodes[code] = (c.$1, 'verified');
+    _verify(c.$1);
+  }
+
+  void _verify(String userId) {
+    final old = labels[userId];
+    labels[userId] = ContactLabel(
+      userId: userId,
+      nickname: old?.nickname,
+      verification: 'verified',
+      verifiedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<ContactLabel>> listContactLabels() async {
+    _net();
+    return labels.values.toList();
+  }
+
+  @override
+  Future<String?> setContactNickname(String userId, String? nickname) async {
+    _net();
+    final name = (nickname ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (name.length > 40) throw const AppFailure(FailureCode.nicknameInvalid);
+    final old = labels[userId];
+    if (name.isEmpty) {
+      if (old != null) {
+        old.verification == null
+            ? labels.remove(userId)
+            : labels[userId] = old.copyWith(clearNickname: true);
+      }
+      return null;
+    }
+    labels[userId] = (old ?? ContactLabel(userId: userId)).copyWith(nickname: name);
+    return name;
+  }
+
+  @override
+  Future<VerificationCode> createVerificationCode(String userId) async {
+    _net();
+    if (blocked.contains(userId)) throw const AppFailure(FailureCode.blocked);
+    final code = (++_verifySeq).toRadixString(16).padLeft(32, 'a');
+    verifyCodes[code] = (userId, 'pending');
+    return VerificationCode(code: code, expiresAt: DateTime.now().add(const Duration(minutes: 2)));
+  }
+
+  @override
+  Future<void> confirmVerificationCode(String code, String userId) async {
+    _net();
+    confirmedCodes.add((code, userId));
+    if (code == 'f' * 32) throw const AppFailure(FailureCode.verifyCodeExpired);
+    if (code == 'e' * 32) throw const AppFailure(FailureCode.verifyWrongPerson);
+    _verify(userId);
+  }
+
+  @override
+  Future<String> verificationCodeStatus(String code) async {
+    _net();
+    return verifyCodes[code]?.$2 ?? 'expired';
+  }
+
+  @override
+  Future<void> dismissVerificationNotice(String userId) async {
+    _net();
+    dismissedVerifyNotices.add(userId);
+    final old = labels[userId];
+    if (old != null) labels[userId] = old.copyWith(notice: false);
+  }
 
   @override
   Future<void> setConversationSecret(String conversationId, bool secret) async {
@@ -3177,6 +3261,8 @@ class TestDeps {
        api = api ?? FakeAccountApi(),
        flags = flags ?? FakeLocalFlags(),
        messaging = messaging ?? FakeMessagingApi() {
+    // Lot 10.4 : rien ne passe d'un test à l'autre (étiquettes lues par les modèles).
+    ContactLabels.reset();
     // Une photo de profil déposée est ensuite téléchargeable, comme sur le serveur.
     this.api.avatars = this.messaging.storedAvatars;
   }

@@ -10,6 +10,7 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/handle/handle_rules.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../domain/models/contact_labels.dart';
 import '../../../domain/models/messaging.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
@@ -418,12 +419,13 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
                           children: [
                             ListTile(
                               key: const Key('search.result'),
+                              // Lot 10.4 : mon surnom privé s'il y en a un.
                               leading: UserAvatar(
-                                name: found.displayName,
+                                name: ContactLabels.nameOf(found.id, found.displayName),
                                 avatarPath: found.avatarPath,
                                 seed: found.id,
                               ),
-                              title: Text(found.displayName),
+                              title: Text(ContactLabels.nameOf(found.id, found.displayName)),
                               subtitle: Text('@${found.handle}'),
                             ),
                             // Lot 8.4c : alerte anti-usurpation.

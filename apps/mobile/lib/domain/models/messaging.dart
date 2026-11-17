@@ -1,4 +1,5 @@
 import '../../l10n/l10n.dart';
+import 'contact_labels.dart';
 
 import 'dart:convert';
 
@@ -40,7 +41,7 @@ class ConversationSummary {
     this.kind = 'direct',
     this.lastMessageId,
     this.lastSenderId,
-    this.lastSenderName,
+    this._lastSenderName,
     this.lastBody,
     this.lastDeleted = false,
     this.lastSentAt,
@@ -95,8 +96,11 @@ class ConversationSummary {
   final String? lastMessageId;
   final String? lastSenderId;
 
-  /// Nom de l'expéditeur du dernier message (groupes ; null si c'est soi).
-  final String? lastSenderName;
+  /// Nom de l'expéditeur du dernier message (groupes ; null si c'est soi) ; lot 10.4 : son
+  /// surnom privé s'il en a un.
+  String? get lastSenderName =>
+      _lastSenderName == null ? null : ContactLabels.nameOf(lastSenderId, _lastSenderName);
+  final String? _lastSenderName;
   final String? lastBody;
   final bool lastDeleted;
   final DateTime? lastSentAt;
@@ -146,9 +150,16 @@ class ConversationSummary {
   bool get canEditInfo => isGroup ? (infoEditing == 'all' || isAdmin) : !blocked;
   bool isMuted(DateTime now) => mutedUntil != null && mutedUntil!.isAfter(now);
 
-  String get title => isGroup
+  /// Nom affiché : lot 10.4, le surnom privé du correspondant s'il en a un.
+  String get title => isGroup || peerDeleted ? realTitle : ContactLabels.nameOf(peerId, realTitle);
+
+  /// Nom choisi par la personne elle-même (ou titre du groupe), sans surnom.
+  String get realTitle => isGroup
       ? (groupTitle ?? L.t.groupe)
       : (peerDeleted ? L.t.compteSupprime : (peerDisplayName ?? L.t.inconnu));
+
+  /// Lot 10.4 : surnom privé du correspondant (discussion à deux), ou null.
+  String? get nickname => isGroup || peerDeleted ? null : ContactLabels.nicknameOf(peerId);
 
   /// Photo à afficher : celle du groupe, ou du correspondant.
   String? get avatarPath => isGroup ? groupAvatarPath : peerAvatarPath;
@@ -167,7 +178,7 @@ class ConversationSummary {
     'sort_at': sortAt.toUtc().toIso8601String(),
     'last_message_id': lastMessageId,
     'last_sender_id': lastSenderId,
-    'last_sender_name': lastSenderName,
+    'last_sender_name': _lastSenderName,
     'last_body': lastBody,
     'last_deleted': lastDeleted,
     'last_sent_at': lastSentAt?.toUtc().toIso8601String(),
@@ -219,7 +230,7 @@ class ConversationSummary {
     sortAt: sortAt,
     lastMessageId: clearLast ? null : lastMessageId,
     lastSenderId: clearLast ? null : lastSenderId,
-    lastSenderName: clearLast ? null : lastSenderName,
+    lastSenderName: clearLast ? null : _lastSenderName,
     lastBody: clearLast ? null : lastBody,
     lastDeleted: clearLast ? false : lastDeleted,
     lastSentAt: clearLast ? null : lastSentAt,
@@ -310,6 +321,10 @@ class GroupMember {
 
   bool get isAdmin => role == 'owner' || role == 'admin';
 
+  /// Lot 10.4 : nom affiché (surnom privé s'il y en a un). [displayName] reste le vrai nom,
+  /// celui qu'insère une @mention (le surnom ne quitte jamais ce téléphone).
+  String get shownName => ContactLabels.nameOf(userId, displayName);
+
   String get roleLabel => switch (role) {
     'owner' => L.t.proprietaire,
     'admin' => L.t.administrateur,
@@ -388,7 +403,7 @@ class ChatMessage {
     this.durationMs,
     this.width,
     this.height,
-    this.senderName,
+    this._senderName,
     this.waveform,
     this.mentions = const [],
     this.viewOnce = false,
@@ -414,8 +429,11 @@ class ChatMessage {
   /// Lot 7.3b : aperçu du premier lien (préparé par le serveur).
   final LinkPreview? linkPreview;
 
-  /// Nom de l'expéditeur (groupes) ; null pour un compte supprimé.
-  final String? senderName;
+  /// Nom de l'expéditeur (groupes) ; null pour un compte supprimé. Lot 10.4 : son surnom
+  /// privé s'il en a un.
+  String? get senderName =>
+      _senderName == null ? null : ContactLabels.nameOf(senderId, _senderName);
+  final String? _senderName;
   final String? senderId;
   final String? body;
   final String? replyToId;
@@ -490,7 +508,7 @@ class ChatMessage {
     'media_duration_ms': durationMs,
     'media_width': width,
     'media_height': height,
-    'sender_name': senderName,
+    'sender_name': _senderName,
     'media_waveform': waveform,
     'mentions': mentions,
     'view_once': viewOnce,
@@ -649,7 +667,8 @@ String? groupEventText(ChatMessage m, {required String? me}) {
     return null;
   }
   final mine = m.senderId != null && m.senderId == me;
-  final a = j['a'] as String? ?? L.t.quelqu;
+  // Lot 10.4 : l'auteur (expéditeur du message système) sous son surnom privé.
+  final a = j['a'] == null ? L.t.quelqu : ContactLabels.nameOf(m.senderId, j['a'] as String);
   final t = j['t'] as String? ?? L.t.membre2;
   final v = j['v'] as String?;
   // Lot 8.2a : une phrase complète par événement (moi / un membre), pour la traduction.
@@ -1191,7 +1210,7 @@ class MessageRef {
   const MessageRef({
     required this.id,
     required this.senderId,
-    required this.senderName,
+    required this._senderName,
     required this.kind,
     required this.body,
     required this.sentAt,
@@ -1205,7 +1224,11 @@ class MessageRef {
   /// Lot 8.3a : discussion du message (favoris de toutes les discussions).
   final String? conversationId;
   final String? senderId;
-  final String? senderName;
+
+  /// Lot 10.4 : surnom privé de l'expéditeur s'il en a un.
+  String? get senderName =>
+      _senderName == null ? null : ContactLabels.nameOf(senderId, _senderName);
+  final String? _senderName;
   final String kind;
   final String? body;
   final DateTime sentAt;

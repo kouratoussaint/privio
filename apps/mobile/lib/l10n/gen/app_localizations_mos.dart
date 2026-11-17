@@ -4521,4 +4521,146 @@ class AppLocalizationsMos extends AppLocalizations {
   String majVersionInstallee(String version) {
     return 'Version installée : $version';
   }
+
+  @override
+  String get verifieEnPersonne => 'Vérifié en personne';
+
+  @override
+  String get verifierEnPersonne => 'Vérifier en personne';
+
+  @override
+  String get verifyScanHint => 'Placez le code de vérification de votre contact dans le cadre';
+
+  @override
+  String get verifyScanInvalid => 'Ce QR code n’est pas un code de vérification Privio.';
+
+  @override
+  String verifyLapsedDevice(String name) {
+    return '$name utilise maintenant un nouveau téléphone.';
+  }
+
+  @override
+  String verifyLapsedPhone(String name) {
+    return '$name a changé de numéro.';
+  }
+
+  @override
+  String verifyLapsedBoth(String name) {
+    return '$name a changé de téléphone et de numéro.';
+  }
+
+  @override
+  String get verifyAgainHint => 'Revérifiez en personne dès que possible.';
+
+  @override
+  String get verifyAgain => 'Revérifier';
+
+  @override
+  String verifiedOn(String date) {
+    return 'Le $date';
+  }
+
+  @override
+  String verifyIntroTitle(String name) {
+    return 'Est-ce bien $name ?';
+  }
+
+  @override
+  String get verifyIntroText =>
+      'Retrouvez-vous face à face. L’un montre son code, l’autre le scanne : les deux téléphones verront « Vérifié en personne ».';
+
+  @override
+  String get verifyShowMyCode => 'Montrer mon code';
+
+  @override
+  String get verifyScanTheirCode => 'Scanner son code';
+
+  @override
+  String verifyBadgeNote(String name) {
+    return 'Le badge disparaît si $name se connecte sur un nouveau téléphone ou change de numéro.';
+  }
+
+  @override
+  String verifyShowTitle(String name) {
+    return 'Montrez ce code à $name';
+  }
+
+  @override
+  String get verifyQrLabel => 'Code de vérification Privio';
+
+  @override
+  String verifyValidFor(String time) {
+    return 'Valable encore $time';
+  }
+
+  @override
+  String verifyShowHelp(String name) {
+    return 'Sur le téléphone de $name : votre fiche → Vérifier en personne → Scanner son code.';
+  }
+
+  @override
+  String get verifyExpired => 'Ce code a expiré.';
+
+  @override
+  String get verifyNewCode => 'Nouveau code';
+
+  @override
+  String verifyDone(String name) {
+    return 'Vous et $name êtes vérifiés en personne';
+  }
+
+  @override
+  String get verifyDoneText => 'Le badge « Vérifié en personne » apparaît sur vos deux téléphones.';
+
+  @override
+  String get verifyFinished => 'Terminé';
+
+  @override
+  String get verifyRowHelp => 'Face à face, avec un QR code';
+
+  @override
+  String get verifyToRedo => 'Vérification à refaire';
+
+  @override
+  String get surnomPrive => 'Surnom privé';
+
+  @override
+  String surnomPriveAide(String name) {
+    return 'Visible par vous seul, partout dans Privio. $name ne le saura pas.';
+  }
+
+  @override
+  String get ajouterSurnom => 'Ajouter un surnom, visible par vous seul';
+
+  @override
+  String surnomEtVraiNom(String nickname, String name) {
+    return '$nickname · $name';
+  }
+
+  @override
+  String get retirer => 'Retirer';
+
+  @override
+  String get surnomEnregistre => 'Surnom enregistré';
+
+  @override
+  String get surnomRetire => 'Surnom retiré';
+
+  @override
+  String get verifyNotContactError => 'La vérification en personne se fait avec un contact.';
+
+  @override
+  String get verifyWrongPersonError => 'Ce code a été créé pour une autre personne.';
+
+  @override
+  String get verifyCodeInvalidError => 'Ce code n’est pas valable.';
+
+  @override
+  String get verifyCodeExpiredError => 'Ce code a expiré. Demandez-en un nouveau.';
+
+  @override
+  String get nicknameInvalidError => 'Un surnom fait 40 caractères au plus.';
+
+  @override
+  String get nicknameNotAllowedError => 'Vous ne pouvez pas donner de surnom à cette personne.';
 }
