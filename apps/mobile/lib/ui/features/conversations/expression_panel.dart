@@ -3,10 +3,16 @@ import '../../../l10n/l10n.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../domain/models/messaging.dart';
+import '../../../domain/models/stickers.dart';
+import '../../../state/sticker_providers.dart';
+import '../../core/widgets/success_snack.dart';
+import 'sticker_creator.dart';
 import 'gif_picker.dart';
 
 /// Lot 7.3a : émojis et autocollants Privio.
@@ -151,9 +157,13 @@ class ExpressionPanel extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onSticker,
+    this.onCustomSticker,
     this.onGif,
     this.height = 300,
   });
+
+  /// Lot 7.4 : mes autocollants (créer, envoyer, retirer) ; absent si null.
+  final ValueChanged<StickerItem>? onCustomSticker;
 
   /// Vrai pendant les tests automatiques (pas de canal natif).
   static bool inTests = false;
@@ -204,25 +214,7 @@ class ExpressionPanel extends StatelessWidget {
                         config: privioEmojiConfig(context, height: box.maxHeight),
                       ),
                     ),
-                    GridView.count(
-                      key: const Key('expression.stickers'),
-                      crossAxisCount: 4,
-                      padding: const EdgeInsets.all(PrivioSpacing.s),
-                      mainAxisSpacing: PrivioSpacing.s,
-                      crossAxisSpacing: PrivioSpacing.s,
-                      children: [
-                        for (final s in kPrivioStickers)
-                          InkWell(
-                            key: Key('sticker.${s.name}'),
-                            borderRadius: BorderRadius.circular(PrivioRadius.medium),
-                            onTap: () => onSticker(s),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: StickerImage(id: s.id, size: 72),
-                            ),
-                          ),
-                      ],
-                    ),
+                    StickersTab(onSticker: onSticker, onCustomSticker: onCustomSticker),
                     if (onGif case final onGif?) GifPicker(onGif: onGif),
                   ],
                 ),
@@ -250,3 +242,126 @@ Future<String?> pickReactionEmoji(BuildContext context) => showModalBottomSheet<
     ),
   ),
 );
+
+/// Onglet des autocollants : lot 7.4, mes autocollants (créer, envoyer, retirer par un
+/// appui long), puis ceux de Privio.
+class StickersTab extends ConsumerWidget {
+  const StickersTab({super.key, required this.onSticker, this.onCustomSticker});
+
+  final ValueChanged<StickerInfo> onSticker;
+  final ValueChanged<StickerItem>? onCustomSticker;
+
+  Future<void> _remove(BuildContext context, WidgetRef ref, StickerItem s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(L.t.retirerAutocollant),
+        content: Text(L.t.retirerAutocollantConfirm),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(L.t.annuler)),
+          FilledButton(
+            key: const Key('sticker.remove.confirm'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(L.t.retirer),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(myStickersProvider.notifier).remove(s.id);
+      messenger.showSnackBar(successSnack(L.t.autocollantRetire));
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final p = PrivioPalette.of(context);
+    final custom = onCustomSticker;
+    final mine = custom == null
+        ? const <StickerItem>[]
+        : (ref.watch(myStickersProvider).value ?? const <StickerItem>[]);
+    Widget title(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(PrivioSpacing.m, PrivioSpacing.s, PrivioSpacing.m, 0),
+      child: Text(text, style: theme.textTheme.labelLarge?.copyWith(color: p.accentText)),
+    );
+    return CustomScrollView(
+      key: const Key('expression.stickers'),
+      slivers: [
+        if (custom != null) ...[
+          SliverToBoxAdapter(child: title(L.t.mesAutocollants)),
+          // Bande horizontale : « + » puis mes autocollants (60 au plus).
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 84,
+              child: ListView.separated(
+                key: const Key('sticker.mine_strip'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: PrivioSpacing.s,
+                  vertical: PrivioSpacing.xs,
+                ),
+                itemCount: mine.length + 1,
+                separatorBuilder: (_, _) => const SizedBox(width: PrivioSpacing.s),
+                itemBuilder: (context, i) {
+                  if (i == 0) {
+                    return Semantics(
+                      button: true,
+                      label: L.t.creerAutocollant,
+                      child: InkWell(
+                        key: const Key('sticker.create'),
+                        borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                        onTap: () => createSticker(context, ref),
+                        child: Container(
+                          width: 72,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                            border: Border.all(color: theme.colorScheme.outlineVariant),
+                          ),
+                          child: Icon(Icons.add_photo_alternate_outlined, color: p.accentText),
+                        ),
+                      ),
+                    );
+                  }
+                  final s = mine[i - 1];
+                  return InkWell(
+                    key: Key('sticker.mine.${s.id}'),
+                    borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                    onTap: () => custom(s),
+                    onLongPress: () => _remove(context, ref, s),
+                    child: CustomStickerImage(path: s.path, size: 72),
+                  );
+                },
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(child: title(L.t.autocollantsPrivio)),
+        ],
+        SliverPadding(
+          padding: const EdgeInsets.all(PrivioSpacing.s),
+          sliver: SliverGrid.count(
+            crossAxisCount: 4,
+            mainAxisSpacing: PrivioSpacing.s,
+            crossAxisSpacing: PrivioSpacing.s,
+            children: [
+              for (final s in kPrivioStickers)
+                InkWell(
+                  key: Key('sticker.${s.name}'),
+                  borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                  onTap: () => onSticker(s),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: StickerImage(id: s.id, size: 72),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

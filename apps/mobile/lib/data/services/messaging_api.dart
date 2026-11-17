@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
 import '../../domain/models/contact_labels.dart';
+import '../../domain/models/stickers.dart';
 import '../../domain/models/messaging.dart';
 import '../../domain/models/moderation.dart';
 
@@ -127,6 +128,26 @@ abstract interface class MessagingApi {
 
   /// Lot 10.5 : fermer mon sondage.
   Future<void> closePoll(String messageId);
+
+  // ------------------------------------------------- autocollants personnels (lot 7.4)
+  Future<List<StickerItem>> listMyStickers();
+
+  /// Ajoute une image (PNG, 512 px et 512 Ko au plus) à ma collection.
+  Future<StickerItem> addSticker(Uint8List image, {bool shareable = false});
+  Future<void> removeSticker(String stickerId);
+
+  /// Envoie un autocollant de ma collection (le serveur en fait une copie pour le message).
+  Future<ChatMessage> sendCustomSticker({
+    required String conversationId,
+    required String clientMsgId,
+    required String stickerId,
+    String? replyToId,
+    int? ttlSeconds,
+  });
+
+  /// Ajoute à ma collection un autocollant partageable reçu.
+  Future<StickerItem> saveSharedSticker(String messageId);
+  Future<Uint8List> downloadSticker(String path);
 
   /// Invite des personnes (administrateurs) ; renvoie le nombre d'invitations envoyées.
   Future<int> inviteToGroup(String conversationId, List<String> userIds);
@@ -641,6 +662,70 @@ class SupabaseMessagingApi implements MessagingApi {
 
   @override
   Future<void> closePoll(String messageId) => _call('close_poll', {'p_message_id': messageId});
+
+  @override
+  Future<List<StickerItem>> listMyStickers() async =>
+      (await _rows('my_stickers')).map(StickerItem.fromJson).toList();
+
+  Future<Map<String, dynamic>> _sticker(Map<String, String> query, {Uint8List? body}) =>
+      _guard(() async {
+        final res = await _client.functions.invoke(
+          'sticker',
+          body: body,
+          headers: body == null ? null : const {'Content-Type': 'image/png'},
+          queryParameters: query,
+        );
+        return Map<String, dynamic>.from(res.data as Map);
+      });
+
+  @override
+  Future<StickerItem> addSticker(Uint8List image, {bool shareable = false}) async =>
+      StickerItem.fromJson(
+        await _sticker({'action': 'add', if (shareable) 'shareable': '1'}, body: image),
+      );
+
+  @override
+  Future<void> removeSticker(String stickerId) => _sticker({'action': 'remove', 'id': stickerId});
+
+  @override
+  Future<ChatMessage> sendCustomSticker({
+    required String conversationId,
+    required String clientMsgId,
+    required String stickerId,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    final row = await _sticker({
+      'action': 'send',
+      'conversation_id': conversationId,
+      'client_msg_id': clientMsgId,
+      'sticker_id': stickerId,
+      'reply_to_id': ?replyToId,
+      if (ttlSeconds != null) 'ttl_seconds': '$ttlSeconds',
+    });
+    final sentAt = DateTime.parse(row['sent_at'] as String);
+    return ChatMessage(
+      id: row['id'] as String,
+      kind: 'sticker',
+      senderId: _client.auth.currentUser?.id,
+      body: row['body'] as String?,
+      replyToId: replyToId,
+      sentAt: sentAt,
+      expiresAt: DateTime.parse(row['expires_at'] as String),
+      updatedAt: sentAt,
+      mediaPath: row['media_path'] as String?,
+      width: (row['media_width'] as num?)?.toInt(),
+      height: (row['media_height'] as num?)?.toInt(),
+    );
+  }
+
+  @override
+  Future<StickerItem> saveSharedSticker(String messageId) async =>
+      StickerItem.fromJson(await _sticker({'action': 'save', 'message_id': messageId}));
+
+  @override
+  Future<Uint8List> downloadSticker(String path) =>
+      _guard(() => _client.storage.from('stickers').download(path));
 
   @override
   Future<int> inviteToGroup(String conversationId, List<String> userIds) => _guard(

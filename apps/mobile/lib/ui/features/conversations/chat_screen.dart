@@ -55,6 +55,10 @@ import '../calls/call_screen.dart';
 import '../../../state/contact_labels_providers.dart';
 import 'verify_in_person.dart';
 import 'polls.dart';
+import 'sticker_creator.dart';
+import '../../core/widgets/success_snack.dart';
+import '../../../domain/models/stickers.dart';
+import '../../../state/sticker_providers.dart';
 import '../../core/widgets/privio_menu.dart';
 import '../../core/emoji/big_emojis.dart';
 
@@ -156,6 +160,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
     ref.read(feedbackProvider).sound(PrivioSound.sent);
     await _guard(() => _chat.sendSticker(s.id, replyToId: replyTo?.id, ttlSeconds: ttl));
+  }
+
+  /// Lot 7.4 : autocollant de ma collection.
+  Future<void> _sendCustomSticker(StickerItem s) async {
+    final replyTo = _replyTo;
+    final ttl = _nextTtl;
+    setState(() {
+      _replyTo = null;
+      _nextTtl = null;
+    });
+    ref.read(feedbackProvider).sound(PrivioSound.sent);
+    await _guard(() => _chat.sendCustomSticker(s, replyToId: replyTo?.id, ttlSeconds: ttl));
   }
 
   /// Lot 7.3b : GIF choisi dans la recherche.
@@ -1275,6 +1291,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   title: Text(L.t.repondre),
                   onTap: () => Navigator.pop(ctx, 'reply'),
                 ),
+              // Lot 7.4 : autocollant partageable reçu → ma collection.
+              if (!mine && isShareableSticker(m))
+                ListTile(
+                  key: const Key('action.save_sticker'),
+                  leading: const Icon(Icons.bookmark_add_outlined),
+                  title: Text(L.t.ajouterAMesAutocollants),
+                  onTap: () => Navigator.pop(ctx, 'save_sticker'),
+                ),
               // Lot 10.5 : le créateur ferme son sondage.
               if (mine && m.isPoll && m.poll != null && !m.poll!.closed)
                 ListTile(
@@ -1355,6 +1379,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await _guard(() => _chat.toggleReaction(m.id, action.substring(6)));
     } else if (action == 'reply') {
       _startReply(m);
+    } else if (action == 'save_sticker') {
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await ref.read(myStickersProvider.notifier).saveFromMessage(m.id);
+        messenger.showSnackBar(successSnack(L.t.autocollantAjoute));
+      } on Object catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+      }
     } else if (action == 'close_poll') {
       await confirmClosePoll(context, ref, m, widget.conversationId);
     } else if (action == 'pin') {
@@ -1968,6 +2000,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ExpressionPanel(
                     controller: _composer,
                     onSticker: (s) => unawaited(_sendSticker(s)),
+                    // Lot 7.4 : mes autocollants.
+                    onCustomSticker: (s) => unawaited(_sendCustomSticker(s)),
                     // Lot 10.3 : Mode éco → onglet GIF masqué.
                     onGif: features.gif && !ref.watch(ecoOnProvider)
                         ? (g) => unawaited(_sendGif(g))
@@ -2209,7 +2243,9 @@ class _MessageList extends StatelessWidget {
         attachment: m.linkPreview != null && !m.isDeleted && !eco
             ? LinkPreviewCard(preview: m.linkPreview!, outgoing: outgoing)
             : null,
-        content: m.isPoll && !m.isDeleted && summary != null
+        content: isCustomSticker(m) && m.mediaPath != null
+            ? CustomStickerImage(path: m.mediaPath!, size: 140)
+            : m.isPoll && !m.isDeleted && summary != null
             ? PollContent(
                 message: m,
                 conversationId: summary!.id,

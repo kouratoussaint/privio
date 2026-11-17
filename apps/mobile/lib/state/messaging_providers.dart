@@ -1,5 +1,7 @@
 import 'privacy_providers.dart';
 import 'contact_labels_providers.dart';
+import 'sticker_providers.dart';
+import '../domain/models/stickers.dart';
 import 'data_providers.dart';
 
 import 'dart:async';
@@ -799,6 +801,24 @@ class ChatController extends AsyncNotifier<ChatState> {
     final sent = await outbox.sendOne(item);
     if (sent == null) return;
     await _showSent(sent, item.replyToId);
+  }
+
+  /// Lot 7.4 : autocollant de ma collection (en ligne : le serveur en fait une copie).
+  Future<void> sendCustomSticker(StickerItem sticker, {String? replyToId, int? ttlSeconds}) async {
+    final sent = await ref
+        .read(messagingApiProvider)
+        .sendCustomSticker(
+          conversationId: conversationId,
+          clientMsgId: uuidV4(),
+          stickerId: sticker.id,
+          replyToId: replyToId,
+          ttlSeconds: ttlSeconds,
+        );
+    final cache = ref.read(stickerBytesCache);
+    final known = cache[sticker.path];
+    if (known != null && sent.mediaPath != null) cache[sent.mediaPath!] = known;
+    await _showSent(sent, replyToId);
+    ref.invalidate(conversationsProvider);
   }
 
   /// Lot 10.5 : sondage (en ligne seulement : il faut le serveur pour voter).

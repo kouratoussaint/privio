@@ -33,6 +33,7 @@ import 'package:privio/data/storage/local_flags.dart';
 import 'package:privio/domain/models/account.dart';
 import 'package:privio/domain/models/messaging.dart';
 import 'package:privio/domain/models/contact_labels.dart';
+import 'package:privio/domain/models/stickers.dart';
 import 'package:privio/state/messaging_providers.dart';
 import 'package:privio/state/providers.dart';
 import 'package:privio/state/push_providers.dart';
@@ -2226,6 +2227,114 @@ class FakeMessagingApi implements MessagingApi {
     bool anonymous = true,
   }) => _addPoll(conversationId, senderId, question, options, multi: multi, anonymous: anonymous);
 
+  // --- Lot 7.4 : autocollants personnels -------------------------------------------
+  final List<StickerItem> myStickers = [];
+  final Map<String, Uint8List> stickerFiles = {};
+  final List<String> sentCustomStickers = [];
+
+  @override
+  Future<List<StickerItem>> listMyStickers() async {
+    _net();
+    return List.of(myStickers);
+  }
+
+  @override
+  Future<StickerItem> addSticker(Uint8List image, {bool shareable = false}) async {
+    _net();
+    if (myStickers.length >= 60) throw const AppFailure(FailureCode.stickerLimit);
+    final id = 'st-${_seq++}';
+    final item = StickerItem(id: id, path: 'u1/$id', shareable: shareable, width: 512, height: 512);
+    stickerFiles[item.path] = image;
+    myStickers.insert(0, item);
+    return item;
+  }
+
+  @override
+  Future<void> removeSticker(String stickerId) async {
+    _net();
+    myStickers.removeWhere((s) => s.id == stickerId);
+  }
+
+  @override
+  Future<ChatMessage> sendCustomSticker({
+    required String conversationId,
+    required String clientMsgId,
+    required String stickerId,
+    String? replyToId,
+    int? ttlSeconds,
+  }) async {
+    _net();
+    final s = myStickers.firstWhere(
+      (x) => x.id == stickerId,
+      orElse: () => throw const AppFailure(FailureCode.stickerNotFound),
+    );
+    sentCustomStickers.add(stickerId);
+    final now = DateTime.now();
+    final path = 'msg/$conversationId/$clientMsgId';
+    stickerFiles[path] = stickerFiles[s.path] ?? testPng();
+    final m = ChatMessage(
+      id: 'srv-$clientMsgId',
+      senderId: me,
+      kind: 'sticker',
+      body: s.shareable ? kCustomStickerShareable : kCustomStickerPrivate,
+      replyToId: replyToId,
+      sentAt: now,
+      expiresAt: now.add(Duration(seconds: conversationTtl)),
+      updatedAt: now,
+      mediaPath: path,
+      width: 512,
+      height: 512,
+    );
+    (messages[conversationId] ??= []).add(m);
+    return m;
+  }
+
+  /// Autocollant personnel reçu d'un autre membre.
+  ChatMessage receiveCustomSticker(
+    String conversationId,
+    String senderId, {
+    bool shareable = true,
+  }) {
+    final now = DateTime.now();
+    final path = 'msg/$conversationId/r${_seq++}';
+    stickerFiles[path] = testPng();
+    final m = ChatMessage(
+      id: 'srv-${_seq++}',
+      senderId: senderId,
+      senderName: names[senderId],
+      kind: 'sticker',
+      body: shareable ? kCustomStickerShareable : kCustomStickerPrivate,
+      sentAt: now,
+      expiresAt: now.add(const Duration(hours: 72)),
+      updatedAt: now,
+      mediaPath: path,
+      width: 512,
+      height: 512,
+    );
+    (messages[conversationId] ??= []).add(m);
+    return m;
+  }
+
+  @override
+  Future<StickerItem> saveSharedSticker(String messageId) async {
+    _net();
+    final m = messages.values.expand((l) => l).firstWhere((x) => x.id == messageId);
+    if (m.body != kCustomStickerShareable) throw const AppFailure(FailureCode.stickerNotShareable);
+    final id = 'st-${_seq++}';
+    final item = StickerItem(id: id, path: 'u1/$id', shareable: true, width: 512, height: 512);
+    stickerFiles[item.path] = stickerFiles[m.mediaPath] ?? testPng();
+    myStickers.insert(0, item);
+    return item;
+  }
+
+  @override
+  Future<Uint8List> downloadSticker(String path) async {
+    _net();
+    final b = stickerFiles[path];
+    if (b == null) throw const AppFailure(FailureCode.mediaNotFound);
+    return b;
+  }
+
   /// Un autre membre vote.
   void peerVotes(String pollId, String userId, List<int> options) => options.isEmpty
       ? polls[pollId]!.votes.remove(userId)
@@ -2649,6 +2758,13 @@ class FakeGroup {
   final Set<String> invited = {};
 
   bool isAdmin(String userId) => roles[userId] == 'owner' || roles[userId] == 'admin';
+}
+
+/// Lot 7.4 : petite image PNG transparente pour les tests.
+Uint8List testPng({int size = 32}) {
+  final image = img.Image(width: size, height: size, numChannels: 4)
+    ..clear(img.ColorRgba8(200, 60, 120, 255));
+  return img.encodePng(image);
 }
 
 /// Petite photo JPEG valide (40 × 30) pour les tests.

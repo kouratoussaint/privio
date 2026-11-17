@@ -6537,5 +6537,89 @@
   "envoyerVocal": "Envoyer le vocal",
   "@envoyerVocal": {
     "description": "Lot 9.3 : vocaux et son des appels"
+  },
+  "nouvelAutocollant": "Nouvel autocollant",
+  "@nouvelAutocollant": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "nouvelAutocollantAide": "À partir d’une photo : le sujet est détouré sur votre téléphone.",
+  "@nouvelAutocollantAide": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantAjoute": "Autocollant ajouté à vos autocollants",
+  "@autocollantAjoute": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "detourageEnCours": "Détourage…",
+  "@detourageEnCours": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantRecadrerAide": "Pincez et glissez pour recadrer.",
+  "@autocollantRecadrerAide": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "detourerSujet": "Détourer le sujet",
+  "@detourerSujet": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "detourageImpossible": "Détourage impossible sur cette photo : recadrez-la.",
+  "@detourageImpossible": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "texteFacultatif": "Texte (facultatif)",
+  "@texteFacultatif": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantPartageable": "Partageable",
+  "@autocollantPartageable": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantPartageableOui": "Les personnes qui le reçoivent peuvent l’ajouter à leurs autocollants.",
+  "@autocollantPartageableOui": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantPartageableNon": "Personne ne peut l’ajouter à ses autocollants.",
+  "@autocollantPartageableNon": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "mesAutocollants": "Mes autocollants",
+  "@mesAutocollants": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantsPrivio": "Autocollants Privio",
+  "@autocollantsPrivio": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "creerAutocollant": "Créer un autocollant",
+  "@creerAutocollant": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "retirerAutocollant": "Retirer de mes autocollants",
+  "@retirerAutocollant": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "retirerAutocollantConfirm": "Cet autocollant disparaîtra de vos autocollants. Les messages déjà envoyés ne changent pas.",
+  "@retirerAutocollantConfirm": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "autocollantRetire": "Autocollant retiré",
+  "@autocollantRetire": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "ajouterAMesAutocollants": "Ajouter à mes autocollants",
+  "@ajouterAMesAutocollants": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "stickerLimitError": "Vous avez déjà 60 autocollants. Retirez-en un pour en ajouter.",
+  "@stickerLimitError": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "stickerNotFoundError": "Cet autocollant n’existe plus.",
+  "@stickerNotFoundError": {
+    "description": "Lot 7.4 : autocollants personnels"
+  },
+  "stickerNotShareableError": "Son auteur ne permet pas de l’ajouter à vos autocollants.",
+  "@stickerNotShareableError": {
+    "description": "Lot 7.4 : autocollants personnels"
   }
 }

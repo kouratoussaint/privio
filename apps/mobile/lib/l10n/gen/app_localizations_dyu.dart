@@ -4814,4 +4814,71 @@ class AppLocalizationsDyu extends AppLocalizations {
 
   @override
   String get envoyerVocal => 'Envoyer le vocal';
+
+  @override
+  String get nouvelAutocollant => 'Nouvel autocollant';
+
+  @override
+  String get nouvelAutocollantAide =>
+      'À partir d’une photo : le sujet est détouré sur votre téléphone.';
+
+  @override
+  String get autocollantAjoute => 'Autocollant ajouté à vos autocollants';
+
+  @override
+  String get detourageEnCours => 'Détourage…';
+
+  @override
+  String get autocollantRecadrerAide => 'Pincez et glissez pour recadrer.';
+
+  @override
+  String get detourerSujet => 'Détourer le sujet';
+
+  @override
+  String get detourageImpossible => 'Détourage impossible sur cette photo : recadrez-la.';
+
+  @override
+  String get texteFacultatif => 'Texte (facultatif)';
+
+  @override
+  String get autocollantPartageable => 'Partageable';
+
+  @override
+  String get autocollantPartageableOui =>
+      'Les personnes qui le reçoivent peuvent l’ajouter à leurs autocollants.';
+
+  @override
+  String get autocollantPartageableNon => 'Personne ne peut l’ajouter à ses autocollants.';
+
+  @override
+  String get mesAutocollants => 'Mes autocollants';
+
+  @override
+  String get autocollantsPrivio => 'Autocollants Privio';
+
+  @override
+  String get creerAutocollant => 'Créer un autocollant';
+
+  @override
+  String get retirerAutocollant => 'Retirer de mes autocollants';
+
+  @override
+  String get retirerAutocollantConfirm =>
+      'Cet autocollant disparaîtra de vos autocollants. Les messages déjà envoyés ne changent pas.';
+
+  @override
+  String get autocollantRetire => 'Autocollant retiré';
+
+  @override
+  String get ajouterAMesAutocollants => 'Ajouter à mes autocollants';
+
+  @override
+  String get stickerLimitError => 'Vous avez déjà 60 autocollants. Retirez-en un pour en ajouter.';
+
+  @override
+  String get stickerNotFoundError => 'Cet autocollant n’existe plus.';
+
+  @override
+  String get stickerNotShareableError =>
+      'Son auteur ne permet pas de l’ajouter à vos autocollants.';
 }

@@ -72,6 +72,9 @@ void main() {
       await tester.tap(find.byKey(const Key('expression.tab.stickers')));
       await tester.pumpAndSettle();
       deps.sounds.played.clear();
+      // Lot 7.4 : « Mes autocollants » au-dessus : on fait venir l'autocollant à l'écran.
+      await tester.ensureVisible(find.byKey(const Key('sticker.merci')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('sticker.merci')));
       await tester.pumpAndSettle();
       expect(deps.messaging.sentStickers, ['privio/merci']);
@@ -115,6 +118,9 @@ void main() {
       await tester.tap(find.byKey(const Key('composer.emoji')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('expression.tab.stickers')));
+      await tester.pumpAndSettle();
+      // Lot 7.4 : « Mes autocollants » au-dessus : on fait venir l'autocollant à l'écran.
+      await tester.ensureVisible(find.byKey(const Key('sticker.merci')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('sticker.merci')));
       await tester.pumpAndSettle();

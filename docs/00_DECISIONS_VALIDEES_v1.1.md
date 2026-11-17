@@ -312,3 +312,9 @@ Lot 10.5 (ADR-049).
   groupe « Annonces ») ; **sonnerie** chez tous si le groupe a 16 membres au plus, sinon
   notification et bandeau « Appel en cours — Rejoindre ».
 
+## Amendement 22 — Autocollants personnels livrés (17 novembre 2026)
+Lot 7.4 (ADR-051), selon l'amendement 21 : création sur le téléphone (détourage ML Kit,
+recadrage, texte), collection de 60 autocollants gardée sur le serveur, envoi par copie
+qui s'efface avec le message, ajout d'un autocollant reçu seulement s'il est
+« Partageable ». Ni la collection ni les messages ne quittent les comptes concernés.
+

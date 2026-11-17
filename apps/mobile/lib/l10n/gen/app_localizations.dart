@@ -8139,6 +8139,132 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Envoyer le vocal'**
   String get envoyerVocal;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvel autocollant'**
+  String get nouvelAutocollant;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'À partir d’une photo : le sujet est détouré sur votre téléphone.'**
+  String get nouvelAutocollantAide;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Autocollant ajouté à vos autocollants'**
+  String get autocollantAjoute;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourage…'**
+  String get detourageEnCours;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Pincez et glissez pour recadrer.'**
+  String get autocollantRecadrerAide;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourer le sujet'**
+  String get detourerSujet;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Détourage impossible sur cette photo : recadrez-la.'**
+  String get detourageImpossible;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Texte (facultatif)'**
+  String get texteFacultatif;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Partageable'**
+  String get autocollantPartageable;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Les personnes qui le reçoivent peuvent l’ajouter à leurs autocollants.'**
+  String get autocollantPartageableOui;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne ne peut l’ajouter à ses autocollants.'**
+  String get autocollantPartageableNon;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes autocollants'**
+  String get mesAutocollants;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Autocollants Privio'**
+  String get autocollantsPrivio;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un autocollant'**
+  String get creerAutocollant;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de mes autocollants'**
+  String get retirerAutocollant;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet autocollant disparaîtra de vos autocollants. Les messages déjà envoyés ne changent pas.'**
+  String get retirerAutocollantConfirm;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Autocollant retiré'**
+  String get autocollantRetire;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à mes autocollants'**
+  String get ajouterAMesAutocollants;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez déjà 60 autocollants. Retirez-en un pour en ajouter.'**
+  String get stickerLimitError;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet autocollant n’existe plus.'**
+  String get stickerNotFoundError;
+
+  /// Lot 7.4 : autocollants personnels
+  ///
+  /// In fr, this message translates to:
+  /// **'Son auteur ne permet pas de l’ajouter à vos autocollants.'**
+  String get stickerNotShareableError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
