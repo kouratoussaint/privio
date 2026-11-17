@@ -315,6 +315,8 @@ void main() {
       ..policyList.addAll(_healthPolicies)
       ..healthData = _sample();
     await _openHealth(tester, deps);
+    await tester.ensureVisible(find.byKey(const Key('health.version.0.1.0+69')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('health.version.0.1.0+69')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('health.version.recommend')));
@@ -330,6 +332,8 @@ void main() {
     expect(deps.admin.policyList.firstWhere((p) => p.key == 'app_recommended_build').value, 69);
 
     // Lien de mise à jour : https obligatoire.
+    await tester.ensureVisible(find.byKey(const Key('policy.app_update_url')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('policy.app_update_url')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('update_url.input')), 'http://privio.example');

@@ -738,7 +738,7 @@ class CallController extends Notifier<CallState?> {
 
   /// Affiche l'état final un instant, puis ferme l'écran d'appel.
   void _show(CallState ended) {
-    _stopMedia();
+    _stopMedia(ended.info.id);
     state = ended;
     _linger?.cancel();
     _linger = Timer(_t.endedLinger, () {
@@ -746,8 +746,9 @@ class CallController extends Notifier<CallState?> {
     });
   }
 
-  void _stopMedia() {
-    final callId = state?.info.id;
+  /// [callId] : appel qui se termine (compte rendu de fin d'appel, lot 5.7) ; jamais lu
+  /// depuis l'état ici, car _stopMedia sert aussi pendant la destruction du contrôleur.
+  void _stopMedia([String? callId]) {
     _poll?.cancel();
     _poll = null;
     _deniedClear?.cancel();
