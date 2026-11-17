@@ -4663,4 +4663,142 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get nicknameNotAllowedError => 'Vous ne pouvez pas donner de surnom à cette personne.';
+
+  @override
+  String get sondage => 'Sondage';
+
+  @override
+  String get nouveauSondage => 'Nouveau sondage';
+
+  @override
+  String get sondageQuestion => 'Question';
+
+  @override
+  String sondageChoix(int n) {
+    return 'Choix $n';
+  }
+
+  @override
+  String get sondageAjouterChoix => 'Ajouter un choix';
+
+  @override
+  String get sondagePlusieursReponses => 'Plusieurs réponses';
+
+  @override
+  String get sondageVoteAnonyme => 'Vote anonyme';
+
+  @override
+  String get sondageVotesVisibles => 'Votes visibles';
+
+  @override
+  String get sondageVoteAnonymeAide => 'Chacun voit les totaux, personne ne voit qui a voté quoi.';
+
+  @override
+  String get sondageVotesVisiblesAide => 'Les membres voient qui a choisi quoi.';
+
+  @override
+  String get sondageEphemereAide =>
+      'Le sondage s’efface avec les messages de la discussion. Vous pourrez le fermer à tout moment.';
+
+  @override
+  String get sondageInvalide => 'Écrivez une question et au moins deux choix différents.';
+
+  @override
+  String sondageVotes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count votes',
+      one: '1 vote',
+      zero: 'aucun vote',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sondageVotants(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes ont voté',
+      one: '1 personne a voté',
+      zero: 'Personne n’a encore voté',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sondageUneReponse => 'Une seule réponse';
+
+  @override
+  String get sondagePlusieursLabel => 'Plusieurs réponses possibles';
+
+  @override
+  String get sondageFerme => 'Sondage fermé';
+
+  @override
+  String get sondageFermer => 'Fermer le sondage';
+
+  @override
+  String get sondageFermerConfirm =>
+      'Plus personne ne pourra voter. Les résultats restent visibles jusqu’à l’effacement du sondage.';
+
+  @override
+  String get sondageRetirerVote => 'Retirer mon vote';
+
+  @override
+  String get sondageVoirVotes => 'Voir les votes';
+
+  @override
+  String sondageApercu(String who, String question) {
+    return '$who📊 $question';
+  }
+
+  @override
+  String get pollInvalidError => 'Ce sondage n’est pas valable.';
+
+  @override
+  String get pollClosedError => 'Ce sondage est fermé.';
+
+  @override
+  String get pollNotFoundError => 'Ce sondage n’existe plus.';
+
+  @override
+  String get pollGroupOnlyError => 'Les sondages se font dans les groupes.';
+
+  @override
+  String get announcementLockedError =>
+      'Dans un groupe d’annonces, seuls les administrateurs écrivent. Ce réglage ne change pas.';
+
+  @override
+  String get typeGroupe => 'Type de groupe';
+
+  @override
+  String get groupeDiscussion => 'Discussion';
+
+  @override
+  String get groupeDiscussionAide => 'Tout le monde peut écrire.';
+
+  @override
+  String get groupeAnnonces => 'Annonces';
+
+  @override
+  String get groupeAnnoncesAide =>
+      'Seuls les administrateurs écrivent. Les membres réagissent et votent, sans voir les autres membres. Ce choix est définitif.';
+
+  @override
+  String get annoncesComposer =>
+      'Groupe d’annonces : seuls les administrateurs écrivent. Vous pouvez réagir et voter.';
+
+  @override
+  String get annoncesMembresCaches =>
+      'Dans un groupe d’annonces, seuls les administrateurs voient la liste des membres.';
+
+  @override
+  String annoncesSousTitre(String members) {
+    return 'Annonces · $members';
+  }
+
+  @override
+  String get unMembre => 'Un membre';
 }

@@ -68,7 +68,9 @@ void main() {
     deps.messaging
       ..createGate = Completer<void>()
       ..listGate = Completer<void>();
-    await tester.ensureVisible(find.byKey(const Key('group.create')));
+    // Lot 10.5 : écran plus long (type de groupe) : on va en bas.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -800));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('group.create')));
     await tester.pump();
     expect(find.byKey(const Key('group.creating')), findsOneWidget);

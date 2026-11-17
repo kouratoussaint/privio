@@ -278,3 +278,20 @@ Lot 10.4 développé selon les décisions de l'amendement 18 (ADR-048).
 - **Surnom privé** : 40 caractères, pour une personne avec qui je partage une discussion
   (à deux ou de groupe) ; il remplace le nom partout pour moi ; la fiche montre
   « Surnom · vrai nom » ; une @mention insère toujours le vrai nom.
+
+## Amendement 20 — Groupes « Annonces » et sondages éphémères (17 novembre 2026)
+Lot 10.5 (ADR-049).
+- **A** : « Annonces » est un vrai type de groupe, choisi à la création et définitif : seuls
+  les administrateurs écrivent ; un membre ne voit ni la liste ni les numéros des autres
+  membres ; jusqu'à 500 membres, réglable dans la console.
+- **B** : les membres d'un groupe « Annonces » réagissent et votent aux sondages ; ils
+  n'écrivent pas.
+- **C** : sondages dans les groupes, par toute personne qui peut y écrire (seulement les
+  administrateurs dans un groupe « Annonces ») ; pas dans les discussions à deux.
+- **D** : le créateur choisit « vote anonyme » (par défaut : totaux seulement, même pour
+  lui) ou « votes visibles » (noms des votants ; jamais montrés à un simple membre d'un
+  groupe « Annonces »).
+- Par défaut (proposés le 17/11/2026) : 2 à 10 choix, une réponse ou plusieurs ; vote
+  modifiable tant que le sondage est ouvert ; fermeture par son créateur ; effacé avec les
+  messages, jamais par « Effacer après lecture ».
+

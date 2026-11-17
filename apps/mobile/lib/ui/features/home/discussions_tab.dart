@@ -688,6 +688,11 @@ class ConversationTile extends ConsumerWidget {
         '$who🙂 ${stickerOf(lastBody)?.label ?? L.t.stickerNoLabel}',
       // Lot 7.3b : GIF.
       ConversationSummary(lastKind: 'gif') => '${who}GIF',
+      // Lot 10.5 : sondage (sa question).
+      ConversationSummary(lastKind: 'poll', :final lastBody) => L.t.sondageApercu(
+        who,
+        lastBody ?? L.t.sondage,
+      ),
       ConversationSummary(lastKind: 'photo', :final lastBody) =>
         '$who📷 ${lastBody == null || lastBody.isEmpty ? 'Photo' : lastBody}',
       _ => '$who${summary.lastBody ?? ''}',

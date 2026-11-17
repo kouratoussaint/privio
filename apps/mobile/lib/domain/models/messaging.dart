@@ -65,9 +65,14 @@ class ConversationSummary {
     this.clearRequestDelete = false,
     this.readEraseSeconds,
     this.secret = false,
+    this.announcement = false,
   });
 
   final String id;
+
+  /// Lot 10.5 : groupe « Annonces » (seuls les administrateurs écrivent ; un membre ne voit
+  /// pas les autres membres). Choisi à la création, définitif.
+  final bool announcement;
 
   /// Lot 10.2 : discussion cachée (rangée à part, ouverte avec le code Privio).
   final bool secret;
@@ -148,6 +153,12 @@ class ConversationSummary {
   bool get isClosed => isGroup && posting == 'closed';
   bool get canPost => isGroup ? (!isClosed && (posting == 'all' || isAdmin)) : !blocked;
   bool get canEditInfo => isGroup ? (infoEditing == 'all' || isAdmin) : !blocked;
+
+  /// Lot 10.5 : un simple membre d'un groupe « Annonces » ne voit pas les autres membres.
+  bool get hidesMembers => announcement && !isAdmin;
+
+  /// Lot 10.5 : sondages dans les groupes, pour qui peut y écrire.
+  bool get canSendPoll => isGroup && canPost;
   bool isMuted(DateTime now) => mutedUntil != null && mutedUntil!.isAfter(now);
 
   /// Nom affiché : lot 10.4, le surnom privé du correspondant s'il en a un.
@@ -202,6 +213,7 @@ class ConversationSummary {
     'clear_request_delete': clearRequestDelete,
     'read_erase_seconds': readEraseSeconds,
     'secret': secret,
+    'announcement': announcement,
   };
 
   /// Copie dont le dernier message est effacé s'il a expiré (hors connexion aussi).
@@ -254,6 +266,7 @@ class ConversationSummary {
     clearRequestDelete: clearRequestDelete,
     readEraseSeconds: readEraseSeconds,
     secret: secret ?? this.secret,
+    announcement: announcement,
   );
 
   static DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
@@ -296,6 +309,7 @@ class ConversationSummary {
     clearRequestDelete: j['clear_request_delete'] as bool? ?? false,
     readEraseSeconds: (j['read_erase_seconds'] as num?)?.toInt(),
     secret: j['secret'] as bool? ?? false,
+    announcement: j['announcement'] as bool? ?? false,
   );
 }
 
@@ -411,10 +425,14 @@ class ChatMessage {
     this.openedCount,
     this.linkPreview,
     this.readEraseSeconds,
+    this.poll,
   });
 
   final String id;
   final String kind;
+
+  /// Lot 10.5 : état d'un sondage (question dans [body]) ; null s'il a été supprimé.
+  final PollState? poll;
 
   /// Lot 10.1 : effacer après lecture (30, 300 ou 3600 s), réglage de la discussion au
   /// moment de l'envoi ; null sinon. Une fois lu, [expiresAt] devient l'échéance.
@@ -473,6 +491,9 @@ class ChatMessage {
   /// Lot 7.3b : GIF (copié dans le stockage privé de Privio).
   bool get isGif => kind == 'gif';
 
+  /// Lot 10.5 : sondage éphémère.
+  bool get isPoll => kind == 'poll';
+
   /// Photo encore affichable (ni supprimée, ni sans fichier).
   bool get hasViewablePhoto => isPhoto && !viewOnce && !isDeleted && mediaPath != null;
 
@@ -516,6 +537,7 @@ class ChatMessage {
     'opened_count': openedCount,
     'link_preview': linkPreview?.toJson(),
     'read_erase_seconds': readEraseSeconds,
+    'poll': poll?.toJson(),
   };
 
   /// Règle d'or : un message expiré n'est jamais affiché, même sans réseau.
@@ -537,7 +559,8 @@ class ChatMessage {
       updatedAt: d('updated_at')!,
       reactions: [
         for (final r in (j['reactions'] as List<dynamic>? ?? const []))
-          Reaction(userId: (r as Map)['user_id'] as String, emoji: r['emoji'] as String),
+          // Lot 10.5 : dans un groupe « Annonces », un membre ne voit pas qui a réagi.
+          Reaction(userId: (r as Map)['user_id'] as String? ?? '', emoji: r['emoji'] as String),
       ],
       replyKind: j['reply_kind'] as String?,
       mediaPath: j['media_path'] as String?,
@@ -554,8 +577,93 @@ class ChatMessage {
           ? null
           : LinkPreview.fromJson(Map<String, dynamic>.from(j['link_preview'] as Map)),
       readEraseSeconds: (j['read_erase_seconds'] as num?)?.toInt(),
+      poll: j['poll'] == null
+          ? null
+          : PollState.fromJson(Map<String, dynamic>.from(j['poll'] as Map)),
     );
   }
+
+  /// Lot 10.5 : copie avec un nouvel état de sondage (après mon vote).
+  ChatMessage withPoll(PollState poll) => ChatMessage(
+    id: id,
+    kind: kind,
+    senderId: senderId,
+    sentAt: sentAt,
+    expiresAt: expiresAt,
+    updatedAt: DateTime.now(),
+    body: body,
+    replyToId: replyToId,
+    replyPreview: replyPreview,
+    editedAt: editedAt,
+    deletedAt: deletedAt,
+    reactions: reactions,
+    replyKind: replyKind,
+    senderName: _senderName,
+    mentions: mentions,
+    readEraseSeconds: readEraseSeconds,
+    poll: poll,
+  );
+}
+
+/// Lot 10.5 : sondage éphémère, tel que le voit l'utilisateur (`poll` de get_messages).
+class PollState {
+  const PollState({
+    required this.options,
+    required this.counts,
+    this.multi = false,
+    this.anonymous = true,
+    this.closedAt,
+    this.voters = 0,
+    this.mine = const [],
+    this.byOption,
+  });
+
+  final List<String> options;
+  final List<int> counts;
+  final bool multi;
+  final bool anonymous;
+  final DateTime? closedAt;
+
+  /// Nombre de personnes qui ont voté.
+  final int voters;
+
+  /// Mes choix (indices).
+  final List<int> mine;
+
+  /// Votants par choix : seulement pour un vote visible (et, dans un groupe « Annonces »,
+  /// pour les administrateurs).
+  final List<List<String>>? byOption;
+
+  bool get closed => closedAt != null;
+  bool get voted => mine.isNotEmpty;
+  int get totalVotes => counts.fold(0, (a, b) => a + b);
+
+  factory PollState.fromJson(Map<String, dynamic> j) => PollState(
+    options: [for (final o in (j['options'] as List<dynamic>? ?? const [])) o as String],
+    counts: [for (final c in (j['counts'] as List<dynamic>? ?? const [])) (c as num).toInt()],
+    multi: j['multi'] as bool? ?? false,
+    anonymous: j['anonymous'] as bool? ?? true,
+    closedAt: j['closed_at'] == null ? null : DateTime.parse(j['closed_at'] as String),
+    voters: (j['voters'] as num?)?.toInt() ?? 0,
+    mine: [for (final c in (j['mine'] as List<dynamic>? ?? const [])) (c as num).toInt()],
+    byOption: j['by_option'] == null
+        ? null
+        : [
+            for (final l in j['by_option'] as List<dynamic>)
+              [for (final u in (l as List<dynamic>? ?? const [])) u as String],
+          ],
+  );
+
+  Map<String, dynamic> toJson() => {
+    'options': options,
+    'counts': counts,
+    'multi': multi,
+    'anonymous': anonymous,
+    'closed_at': closedAt?.toUtc().toIso8601String(),
+    'voters': voters,
+    'mine': mine,
+    'by_option': byOption,
+  };
 }
 
 /// Lot 7.3b : aperçu d'un lien.

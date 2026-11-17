@@ -74,11 +74,16 @@ void main() {
     await tester.tap(find.byKey(const Key('groups.new')));
     await tester.pumpAndSettle();
     // Sans nom : refus clair, rien n'est créé.
+    // Lot 10.5 : écran plus long (type de groupe) : on va en bas.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -800));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('group.create')));
     await tester.pumpAndSettle();
     expect(deps.messaging.groups, isEmpty);
     expect(find.text('Le nom du groupe doit contenir entre 1 et 60 caractères.'), findsOneWidget);
     await tester.pump(const Duration(seconds: 6)); // le message s'efface
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 800));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('group.title')), 'Famille');
@@ -87,6 +92,7 @@ void main() {
     await tester.tap(find.byKey(const Key('picker.submit')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('picker.user.u3')), findsOneWidget);
+    await _scrollTo(tester, find.byKey(const Key('group.create')));
     expect(find.text('Créer et inviter 2 personnes'), findsOneWidget);
     await _tapVisible(tester, find.byKey(const Key('group.create')));
 

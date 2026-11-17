@@ -88,6 +88,9 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      // Lot 10.5 : écran plus long (type de groupe) ; le bouton entier à l'écran.
+      await tester.ensureVisible(find.byKey(const Key('group.create')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('group.create')));
       await tester.pumpAndSettle();
       final g = deps.messaging.groups.values.single;

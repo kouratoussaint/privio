@@ -216,6 +216,9 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
   Map<String, FoundUser> _selected = {};
   bool _busy = false;
 
+  /// Lot 10.5 : groupe « Annonces » (définitif).
+  bool _announcement = false;
+
   /// Lot 7.2c1 : photo choisie avant la création (déjà réduite, sans métadonnées).
   Uint8List? _photo;
 
@@ -287,7 +290,12 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
     try {
       final id = await ref
           .read(messagingApiProvider)
-          .createGroup(title: title, description: description, inviteeIds: _selected.keys.toList());
+          .createGroup(
+            title: title,
+            description: description,
+            inviteeIds: _selected.keys.toList(),
+            announcement: _announcement,
+          );
       // Lot 4.8 : le groupe s'affiche tout de suite (plus d'attente de la liste complète).
       ref
           .read(conversationsProvider.notifier)
@@ -296,6 +304,7 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
             title: title,
             description: description,
             ttlSeconds: ref.read(privacyProvider).value?.defaultTtlSeconds ?? 259200,
+            announcement: _announcement,
           );
       // Lot 7.2c1 : la photo choisie part juste après la création. Un échec n'annule pas
       // le groupe : elle pourra être ajoutée depuis la fiche.
@@ -402,6 +411,34 @@ class _NewGroupScreenState extends ConsumerState<NewGroupScreen> {
           minLines: 1,
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(labelText: L.t.descriptionFacultative),
+        ),
+        // Lot 10.5 : discussion (tout le monde écrit) ou annonces (définitif).
+        const SizedBox(height: PrivioSpacing.s),
+        Text(L.t.typeGroupe, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: PrivioSpacing.s),
+        SegmentedButton<bool>(
+          key: const Key('new_group.type'),
+          segments: [
+            ButtonSegment(
+              value: false,
+              label: Text(L.t.groupeDiscussion, key: const Key('new_group.type.group')),
+              icon: const Icon(Icons.forum_outlined),
+            ),
+            ButtonSegment(
+              value: true,
+              label: Text(L.t.groupeAnnonces, key: const Key('new_group.type.announcement')),
+              icon: const Icon(Icons.campaign_outlined),
+            ),
+          ],
+          selected: {_announcement},
+          onSelectionChanged: (v) => setState(() => _announcement = v.first),
+        ),
+        const SizedBox(height: PrivioSpacing.xs),
+        Text(
+          _announcement ? L.t.groupeAnnoncesAide : L.t.groupeDiscussionAide,
+          key: const Key('new_group.type.help'),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: PrivioSpacing.l),
         Text(L.t.inviter, style: Theme.of(context).textTheme.titleMedium),
@@ -854,7 +891,11 @@ class GroupInfoScreen extends ConsumerWidget {
               const SizedBox(height: PrivioSpacing.l),
               Text(s.title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
               Text(
-                L.t.membersCount(s.memberCount),
+                // Lot 10.5 : « Annonces · N membres ».
+                s.announcement
+                    ? L.t.annoncesSousTitre(L.t.membersCount(s.memberCount))
+                    : L.t.membersCount(s.memberCount),
+                key: const Key('group.subtitle'),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -942,22 +983,26 @@ class GroupInfoScreen extends ConsumerWidget {
             SettingsSectionTitle(L.t.reglagesGroupe),
             SettingsCard(
               children: [
-                SwitchListTile(
-                  key: const Key('group.posting'),
-                  value: s.posting == 'admins',
-                  secondary: Icon(Icons.campaign_outlined, color: p.accentText),
-                  title: Text(L.t.seulsAdministrateursEcrivent),
-                  onChanged: (v) => _run(
-                    context,
-                    ref,
-                    () => groupAction(
+                // Lot 10.5 : un groupe « Annonces » reste réservé aux administrateurs.
+                if (!s.announcement) ...[
+                  SwitchListTile(
+                    key: const Key('group.posting'),
+                    value: s.posting == 'admins',
+                    secondary: Icon(Icons.campaign_outlined, color: p.accentText),
+                    title: Text(L.t.seulsAdministrateursEcrivent),
+                    onChanged: (v) => _run(
+                      context,
                       ref,
-                      conversationId,
-                      (api) => api.setGroupSettings(conversationId, posting: v ? 'admins' : 'all'),
+                      () => groupAction(
+                        ref,
+                        conversationId,
+                        (api) =>
+                            api.setGroupSettings(conversationId, posting: v ? 'admins' : 'all'),
+                      ),
                     ),
                   ),
-                ),
-                const SettingsDivider(),
+                  const SettingsDivider(),
+                ],
                 SwitchListTile(
                   key: const Key('group.info_editing'),
                   value: s.infoEditing == 'admins',
@@ -1082,6 +1127,13 @@ class GroupInfoScreen extends ConsumerWidget {
                 const SettingsDivider(),
               ],
               if (members.isLoading && !members.hasValue) const LinearProgressIndicator(),
+              // Lot 10.5 : un membre d'un groupe « Annonces » ne voit que les administrateurs.
+              if (s.hidesMembers)
+                ListTile(
+                  key: const Key('group.members_hidden'),
+                  leading: Icon(Icons.visibility_off_outlined, color: p.accentText),
+                  subtitle: Text(L.t.annoncesMembresCaches),
+                ),
               for (final m in [...active, ...invited])
                 ListTile(
                   key: Key('member.${m.userId}'),

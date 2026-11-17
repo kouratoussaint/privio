@@ -397,6 +397,7 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
     required String title,
     String? description,
     int ttlSeconds = 259200,
+    bool announcement = false,
   }) {
     final before = state.value ?? const <ConversationSummary>[];
     if (before.any((c) => c.id == id)) return;
@@ -418,6 +419,8 @@ class ConversationsController extends AsyncNotifier<List<ConversationSummary>> {
         memberCount: 1,
         myRole: 'owner',
         ttlSeconds: ttlSeconds,
+        announcement: announcement,
+        posting: announcement ? 'admins' : 'all',
       ),
       ...before,
     ]);
@@ -796,6 +799,45 @@ class ChatController extends AsyncNotifier<ChatState> {
     final sent = await outbox.sendOne(item);
     if (sent == null) return;
     await _showSent(sent, item.replyToId);
+  }
+
+  /// Lot 10.5 : sondage (en ligne seulement : il faut le serveur pour voter).
+  Future<void> sendPoll({
+    required String question,
+    required List<String> options,
+    bool multi = false,
+    bool anonymous = true,
+    int? ttlSeconds,
+  }) async {
+    await ref
+        .read(messagingApiProvider)
+        .sendPoll(
+          conversationId: conversationId,
+          clientMsgId: uuidV4(),
+          question: question,
+          options: options,
+          multi: multi,
+          anonymous: anonymous,
+          ttlSeconds: ttlSeconds,
+        );
+    await reload();
+    ref.invalidate(conversationsProvider);
+  }
+
+  /// Lot 10.5 : voter (vide : retirer mon vote) ; le résultat s'affiche aussitôt.
+  Future<void> votePoll(String messageId, List<int> options) async {
+    final poll = await ref.read(messagingApiProvider).votePoll(messageId, options);
+    final now = state.value;
+    if (now == null) return;
+    final messages = [for (final m in now.messages) m.id == messageId ? m.withPoll(poll) : m];
+    state = AsyncData(now.copyWith(messages: messages));
+    await _cache.putMessages(conversationId, messages);
+  }
+
+  /// Lot 10.5 : fermer mon sondage (résultats figés).
+  Future<void> closePoll(String messageId) async {
+    await ref.read(messagingApiProvider).closePoll(messageId);
+    await reload();
   }
 
   /// Lot 7.3a : autocollant ; même parcours que le texte (file, reprise hors connexion).

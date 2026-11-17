@@ -108,7 +108,25 @@ abstract interface class MessagingApi {
     required String title,
     String? description,
     List<String> inviteeIds = const [],
+    bool announcement = false,
   });
+
+  /// Lot 10.5 : sondage dans un groupe ; renvoie l'identifiant du message.
+  Future<String> sendPoll({
+    required String conversationId,
+    required String clientMsgId,
+    required String question,
+    required List<String> options,
+    bool multi = false,
+    bool anonymous = true,
+    int? ttlSeconds,
+  });
+
+  /// Lot 10.5 : voter (remplace mes votes ; vide : retirer mon vote).
+  Future<PollState> votePoll(String messageId, List<int> options);
+
+  /// Lot 10.5 : fermer mon sondage.
+  Future<void> closePoll(String messageId);
 
   /// Invite des personnes (administrateurs) ; renvoie le nombre d'invitations envoyées.
   Future<int> inviteToGroup(String conversationId, List<String> userIds);
@@ -574,12 +592,55 @@ class SupabaseMessagingApi implements MessagingApi {
     required String title,
     String? description,
     List<String> inviteeIds = const [],
+    bool announcement = false,
   }) => _guard(
     () async => await _client.rpc<dynamic>(
       'create_group',
-      params: {'p_title': title, 'p_description': description, 'p_invitee_ids': inviteeIds},
+      params: {
+        'p_title': title,
+        'p_description': description,
+        'p_invitee_ids': inviteeIds,
+        'p_announcement': announcement,
+      },
     ) as String,
   );
+
+  @override
+  Future<String> sendPoll({
+    required String conversationId,
+    required String clientMsgId,
+    required String question,
+    required List<String> options,
+    bool multi = false,
+    bool anonymous = true,
+    int? ttlSeconds,
+  }) async {
+    final row = (await _rows('send_poll', {
+      'p_conversation_id': conversationId,
+      'p_client_msg_id': clientMsgId,
+      'p_question': question,
+      'p_options': options,
+      'p_multi': multi,
+      'p_anonymous': anonymous,
+      'p_ttl_seconds': ttlSeconds,
+    })).single;
+    return row['id'] as String;
+  }
+
+  @override
+  Future<PollState> votePoll(String messageId, List<int> options) => _guard(
+    () async => PollState.fromJson(
+      Map<String, dynamic>.from(
+        await _client.rpc<dynamic>(
+          'vote_poll',
+          params: {'p_message_id': messageId, 'p_options': options},
+        ) as Map,
+      ),
+    ),
+  );
+
+  @override
+  Future<void> closePoll(String messageId) => _call('close_poll', {'p_message_id': messageId});
 
   @override
   Future<int> inviteToGroup(String conversationId, List<String> userIds) => _guard(

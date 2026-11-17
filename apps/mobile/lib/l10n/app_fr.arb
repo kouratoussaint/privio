@@ -6349,5 +6349,177 @@
   "nicknameNotAllowedError": "Vous ne pouvez pas donner de surnom à cette personne.",
   "@nicknameNotAllowedError": {
     "description": "Écran : ui/features/conversations/verify_in_person.dart (lot 10.4)"
+  },
+  "sondage": "Sondage",
+  "@sondage": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "nouveauSondage": "Nouveau sondage",
+  "@nouveauSondage": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageQuestion": "Question",
+  "@sondageQuestion": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageChoix": "Choix {n}",
+  "@sondageChoix": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "sondageAjouterChoix": "Ajouter un choix",
+  "@sondageAjouterChoix": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondagePlusieursReponses": "Plusieurs réponses",
+  "@sondagePlusieursReponses": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageVoteAnonyme": "Vote anonyme",
+  "@sondageVoteAnonyme": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageVotesVisibles": "Votes visibles",
+  "@sondageVotesVisibles": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageVoteAnonymeAide": "Chacun voit les totaux, personne ne voit qui a voté quoi.",
+  "@sondageVoteAnonymeAide": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageVotesVisiblesAide": "Les membres voient qui a choisi quoi.",
+  "@sondageVotesVisiblesAide": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageEphemereAide": "Le sondage s’efface avec les messages de la discussion. Vous pourrez le fermer à tout moment.",
+  "@sondageEphemereAide": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageInvalide": "Écrivez une question et au moins deux choix différents.",
+  "@sondageInvalide": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageVotes": "{count, plural, =0{aucun vote} =1{1 vote} other{{count} votes}}",
+  "@sondageVotes": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sondageVotants": "{count, plural, =0{Personne n’a encore voté} =1{1 personne a voté} other{{count} personnes ont voté}}",
+  "@sondageVotants": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sondageUneReponse": "Une seule réponse",
+  "@sondageUneReponse": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondagePlusieursLabel": "Plusieurs réponses possibles",
+  "@sondagePlusieursLabel": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageFerme": "Sondage fermé",
+  "@sondageFerme": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageFermer": "Fermer le sondage",
+  "@sondageFermer": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageFermerConfirm": "Plus personne ne pourra voter. Les résultats restent visibles jusqu’à l’effacement du sondage.",
+  "@sondageFermerConfirm": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageRetirerVote": "Retirer mon vote",
+  "@sondageRetirerVote": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageVoirVotes": "Voir les votes",
+  "@sondageVoirVotes": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "sondageApercu": "{who}📊 {question}",
+  "@sondageApercu": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages",
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "pollInvalidError": "Ce sondage n’est pas valable.",
+  "@pollInvalidError": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "pollClosedError": "Ce sondage est fermé.",
+  "@pollClosedError": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "pollNotFoundError": "Ce sondage n’existe plus.",
+  "@pollNotFoundError": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "pollGroupOnlyError": "Les sondages se font dans les groupes.",
+  "@pollGroupOnlyError": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "announcementLockedError": "Dans un groupe d’annonces, seuls les administrateurs écrivent. Ce réglage ne change pas.",
+  "@announcementLockedError": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "typeGroupe": "Type de groupe",
+  "@typeGroupe": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "groupeDiscussion": "Discussion",
+  "@groupeDiscussion": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "groupeDiscussionAide": "Tout le monde peut écrire.",
+  "@groupeDiscussionAide": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "groupeAnnonces": "Annonces",
+  "@groupeAnnonces": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "groupeAnnoncesAide": "Seuls les administrateurs écrivent. Les membres réagissent et votent, sans voir les autres membres. Ce choix est définitif.",
+  "@groupeAnnoncesAide": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "annoncesComposer": "Groupe d’annonces : seuls les administrateurs écrivent. Vous pouvez réagir et voter.",
+  "@annoncesComposer": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "annoncesMembresCaches": "Dans un groupe d’annonces, seuls les administrateurs voient la liste des membres.",
+  "@annoncesMembresCaches": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
+  },
+  "annoncesSousTitre": "Annonces · {members}",
+  "@annoncesSousTitre": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages",
+    "placeholders": {
+      "members": {
+        "type": "String"
+      }
+    }
+  },
+  "unMembre": "Un membre",
+  "@unMembre": {
+    "description": "Lot 10.5 : groupes « Annonces » et sondages"
   }
 }

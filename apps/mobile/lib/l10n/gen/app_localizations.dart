@@ -7899,6 +7899,222 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Vous ne pouvez pas donner de surnom à cette personne.'**
   String get nicknameNotAllowedError;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Sondage'**
+  String get sondage;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau sondage'**
+  String get nouveauSondage;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Question'**
+  String get sondageQuestion;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Choix {n}'**
+  String sondageChoix(int n);
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un choix'**
+  String get sondageAjouterChoix;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Plusieurs réponses'**
+  String get sondagePlusieursReponses;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Vote anonyme'**
+  String get sondageVoteAnonyme;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Votes visibles'**
+  String get sondageVotesVisibles;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Chacun voit les totaux, personne ne voit qui a voté quoi.'**
+  String get sondageVoteAnonymeAide;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres voient qui a choisi quoi.'**
+  String get sondageVotesVisiblesAide;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Le sondage s’efface avec les messages de la discussion. Vous pourrez le fermer à tout moment.'**
+  String get sondageEphemereAide;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrivez une question et au moins deux choix différents.'**
+  String get sondageInvalide;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{aucun vote} =1{1 vote} other{{count} votes}}'**
+  String sondageVotes(int count);
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Personne n’a encore voté} =1{1 personne a voté} other{{count} personnes ont voté}}'**
+  String sondageVotants(int count);
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Une seule réponse'**
+  String get sondageUneReponse;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Plusieurs réponses possibles'**
+  String get sondagePlusieursLabel;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Sondage fermé'**
+  String get sondageFerme;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer le sondage'**
+  String get sondageFermer;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus personne ne pourra voter. Les résultats restent visibles jusqu’à l’effacement du sondage.'**
+  String get sondageFermerConfirm;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer mon vote'**
+  String get sondageRetirerVote;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir les votes'**
+  String get sondageVoirVotes;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'{who}📊 {question}'**
+  String sondageApercu(String who, String question);
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sondage n’est pas valable.'**
+  String get pollInvalidError;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sondage est fermé.'**
+  String get pollClosedError;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce sondage n’existe plus.'**
+  String get pollNotFoundError;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Les sondages se font dans les groupes.'**
+  String get pollGroupOnlyError;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans un groupe d’annonces, seuls les administrateurs écrivent. Ce réglage ne change pas.'**
+  String get announcementLockedError;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Type de groupe'**
+  String get typeGroupe;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion'**
+  String get groupeDiscussion;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout le monde peut écrire.'**
+  String get groupeDiscussionAide;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonces'**
+  String get groupeAnnonces;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les administrateurs écrivent. Les membres réagissent et votent, sans voir les autres membres. Ce choix est définitif.'**
+  String get groupeAnnoncesAide;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe d’annonces : seuls les administrateurs écrivent. Vous pouvez réagir et voter.'**
+  String get annoncesComposer;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans un groupe d’annonces, seuls les administrateurs voient la liste des membres.'**
+  String get annoncesMembresCaches;
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Annonces · {members}'**
+  String annoncesSousTitre(String members);
+
+  /// Lot 10.5 : groupes « Annonces » et sondages
+  ///
+  /// In fr, this message translates to:
+  /// **'Un membre'**
+  String get unMembre;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -54,6 +54,7 @@ import '../groups/group_screens.dart';
 import '../calls/call_screen.dart';
 import '../../../state/contact_labels_providers.dart';
 import 'verify_in_person.dart';
+import 'polls.dart';
 import '../../core/widgets/privio_menu.dart';
 import '../../core/emoji/big_emojis.dart';
 
@@ -468,6 +469,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final profile = ref.read(sessionControllerProvider).value?.account?.profile;
       return (name: profile?.displayName ?? L.t.vous, path: profile?.avatarPath, seed: userId);
     }
+    // Lot 10.5 : dans un groupe « Annonces », un membre ne voit pas qui d'autre a réagi.
+    if (userId.isEmpty) return (name: L.t.unMembre, path: null, seed: 'membre');
     final w = _avatarOf(userId, summary, members);
     if (w == null || w.name == '?') return (name: L.t.ancienMembre, path: null, seed: userId);
     return w;
@@ -891,7 +894,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   // ---------------------------------------------------------------- Lot 2.F : gestes
   void _startReply(ChatMessage m) {
-    if (m.isDeleted || m.isSystem) return;
+    // Lot 10.5 : on ne répond pas à un sondage (on y vote).
+    if (m.isDeleted || m.isSystem || m.isPoll) return;
     unawaited(HapticFeedback.lightImpact());
     setState(() {
       _editing = null;
@@ -977,6 +981,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         s.isGroup ? L.t.infosGroupe : L.t.voirFiche,
         tint: MenuTint.violet,
       ),
+      // Lot 10.5 : sondage éphémère (groupes, pour qui peut écrire).
+      if (s.canSendPoll) item('poll', Icons.poll_outlined, L.t.nouveauSondage, tint: MenuTint.teal),
       item('search', Icons.search, L.t.rechercher, tint: MenuTint.blue),
       item('media', Icons.perm_media_outlined, L.t.medias, tint: MenuTint.teal),
       item('favorites', Icons.star_outline_rounded, L.t.messagesFavoris, tint: MenuTint.pink),
@@ -1023,6 +1029,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     switch (v) {
       case 'info':
         await context.push(Routes.contact(s.id));
+      case 'poll':
+        final ttl = _nextTtl;
+        setState(() => _nextTtl = null);
+        await createPoll(context, ref, s.id, ttlSeconds: ttl);
       case 'search':
         setState(() {
           _searching = true;
@@ -1239,12 +1249,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
               const Divider(),
-              ListTile(
-                key: const Key('action.reply'),
-                leading: const Icon(Icons.reply),
-                title: Text(L.t.repondre),
-                onTap: () => Navigator.pop(ctx, 'reply'),
-              ),
+              if (!m.isPoll)
+                ListTile(
+                  key: const Key('action.reply'),
+                  leading: const Icon(Icons.reply),
+                  title: Text(L.t.repondre),
+                  onTap: () => Navigator.pop(ctx, 'reply'),
+                ),
+              // Lot 10.5 : le créateur ferme son sondage.
+              if (mine && m.isPoll && m.poll != null && !m.poll!.closed)
+                ListTile(
+                  key: const Key('action.close_poll'),
+                  leading: const Icon(Icons.lock_outline),
+                  title: Text(L.t.sondageFermer),
+                  onTap: () => Navigator.pop(ctx, 'close_poll'),
+                ),
               if (mine && rules.canEdit(m, now))
                 ListTile(
                   key: const Key('action.edit'),
@@ -1317,6 +1336,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await _guard(() => _chat.toggleReaction(m.id, action.substring(6)));
     } else if (action == 'reply') {
       _startReply(m);
+    } else if (action == 'close_poll') {
+      await confirmClosePoll(context, ref, m, widget.conversationId);
     } else if (action == 'pin') {
       await _togglePin(m, pinned: pinned);
     } else if (action == 'favorite') {
@@ -1634,7 +1655,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         )
                                       else if (isGroup)
                                         Text(
-                                          L.t.membersCount(summary!.memberCount),
+                                          summary!.announcement
+                                              ? L.t.annoncesSousTitre(
+                                                  L.t.membersCount(summary.memberCount),
+                                                )
+                                              : L.t.membersCount(summary.memberCount),
                                           key: const Key('chat.members'),
                                           style: Theme.of(context).textTheme.bodySmall
                                               ?.copyWith(color: p.onHeaderMuted),
@@ -1803,7 +1828,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   padding: const EdgeInsets.all(PrivioSpacing.l),
                   child: NoticeBanner(
                     key: const Key('chat.posting_restricted'),
-                    message: L.t.seulsAdministrateursPeuventEnvoyerMessages,
+                    message: summary?.announcement ?? false
+                        ? L.t.annoncesComposer
+                        : L.t.seulsAdministrateursPeuventEnvoyerMessages,
                   ),
                 )
               else if (summary?.blocked ?? false)
@@ -2154,7 +2181,20 @@ class _MessageList extends StatelessWidget {
         attachment: m.linkPreview != null && !m.isDeleted && !eco
             ? LinkPreviewCard(preview: m.linkPreview!, outgoing: outgoing)
             : null,
-        content: m.isSticker && !m.isDeleted
+        content: m.isPoll && !m.isDeleted && summary != null
+            ? PollContent(
+                message: m,
+                conversationId: summary!.id,
+                outgoing: outgoing,
+                nameOf: (id) {
+                  if (id == me) return L.t.vous;
+                  final w = avatarOf?.call(id);
+                  return w != null && w.name != '?'
+                      ? w.name
+                      : (memberNames[id] ?? L.t.ancienMembre);
+                },
+              )
+            : m.isSticker && !m.isDeleted
             ? StickerImage(id: m.body, size: 140)
             : m.viewOnce && !m.isDeleted
             ? ViewOnceContent(

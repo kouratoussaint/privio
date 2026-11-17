@@ -1481,7 +1481,10 @@ class FakeMessagingApi implements MessagingApi {
   List<ChatMessage> _messagesFor(String conversationId) => [
     for (final m in _visible(conversationId))
       if (!hiddenForMe.contains(m.id))
-        if (m.replyToId == null)
+        // Lot 10.5 : état du sondage vu par moi.
+        if (m.isPoll && polls.containsKey(m.id) && !m.isDeleted)
+          m.withPoll(pollState(m.id))
+        else if (m.replyToId == null)
           m
         else
           ChatMessage(
@@ -2078,9 +2081,11 @@ class FakeMessagingApi implements MessagingApi {
     String posting = 'all',
     String infoEditing = 'admins',
     String? description,
+    bool announcement = false,
   }) {
     final g = FakeGroup(id, title, description: description)
-      ..posting = posting
+      ..posting = announcement ? 'admins' : posting
+      ..announcement = announcement
       ..infoEditing = infoEditing
       ..roles[owner] = 'owner'
       ..roles.addAll(members);
@@ -2145,7 +2150,116 @@ class FakeMessagingApi implements MessagingApi {
       posting: g.posting,
       infoEditing: g.infoEditing,
       clearedBefore: clearedBefore[g.id],
+      announcement: g.announcement,
     );
+  }
+
+  // --- Lot 10.5 : sondages ---------------------------------------------------------
+  final Map<String, FakePoll> polls = {};
+  final List<(String, List<int>)> votes = [];
+
+  PollState pollState(String id) {
+    final p = polls[id]!;
+    final g = groups[p.conversationId];
+    final hides = g != null && g.announcement && !g.isAdmin(me);
+    return PollState(
+      options: p.options,
+      counts: [
+        for (var i = 0; i < p.options.length; i++)
+          p.votes.values.where((v) => v.contains(i)).length,
+      ],
+      multi: p.multi,
+      anonymous: p.anonymous,
+      closedAt: p.closedAt,
+      voters: p.votes.length,
+      mine: List.of(p.votes[me] ?? const <int>[]),
+      byOption: p.anonymous || hides
+          ? null
+          : [
+              for (var i = 0; i < p.options.length; i++)
+                [
+                  for (final e in p.votes.entries)
+                    if (e.value.contains(i)) e.key,
+                ],
+            ],
+    );
+  }
+
+  ChatMessage _addPoll(
+    String conversationId,
+    String senderId,
+    String question,
+    List<String> options, {
+    bool multi = false,
+    bool anonymous = true,
+  }) {
+    final now = DateTime.now();
+    final m = ChatMessage(
+      id: 'poll-${_seq++}',
+      kind: 'poll',
+      senderId: senderId,
+      senderName: names[senderId],
+      body: question,
+      sentAt: now,
+      expiresAt: now.add(Duration(seconds: conversationTtl)),
+      updatedAt: now,
+    );
+    (messages[conversationId] ??= []).add(m);
+    polls[m.id] = FakePoll(conversationId, options, multi: multi, anonymous: anonymous);
+    return m;
+  }
+
+  /// Sondage reçu d'un autre membre.
+  ChatMessage receivePoll(
+    String conversationId,
+    String senderId,
+    String question,
+    List<String> options, {
+    bool multi = false,
+    bool anonymous = true,
+  }) => _addPoll(conversationId, senderId, question, options, multi: multi, anonymous: anonymous);
+
+  /// Un autre membre vote.
+  void peerVotes(String pollId, String userId, List<int> options) => options.isEmpty
+      ? polls[pollId]!.votes.remove(userId)
+      : polls[pollId]!.votes[userId] = options;
+
+  @override
+  Future<String> sendPoll({
+    required String conversationId,
+    required String clientMsgId,
+    required String question,
+    required List<String> options,
+    bool multi = false,
+    bool anonymous = true,
+    int? ttlSeconds,
+  }) async {
+    _net();
+    final g = groups[conversationId];
+    if (g == null) throw const AppFailure(FailureCode.pollGroupOnly);
+    if (g.posting != 'all' && !g.isAdmin(me)) throw const AppFailure(FailureCode.postingRestricted);
+    if (question.trim().isEmpty || options.length < 2) {
+      throw const AppFailure(FailureCode.pollInvalid);
+    }
+    return _addPoll(conversationId, me, question, options, multi: multi, anonymous: anonymous).id;
+  }
+
+  @override
+  Future<PollState> votePoll(String messageId, List<int> options) async {
+    _net();
+    final p = polls[messageId];
+    if (p == null) throw const AppFailure(FailureCode.pollNotFound);
+    if (p.closedAt != null) throw const AppFailure(FailureCode.pollClosed);
+    if (!p.multi && options.length > 1) throw const AppFailure(FailureCode.pollInvalid);
+    votes.add((messageId, options));
+    peerVotes(messageId, me, options);
+    return pollState(messageId);
+  }
+
+  @override
+  Future<void> closePoll(String messageId) async {
+    _net();
+    polls[messageId]!.closedAt = DateTime.now();
   }
 
   @override
@@ -2153,6 +2267,7 @@ class FakeMessagingApi implements MessagingApi {
     required String title,
     String? description,
     List<String> inviteeIds = const [],
+    bool announcement = false,
   }) async {
     _net();
     if (title.trim().isEmpty || title.trim().length > 60) {
@@ -2160,7 +2275,12 @@ class FakeMessagingApi implements MessagingApi {
     }
     if (createGate != null) await createGate!.future;
     final id = 'grp-${_seq++}';
-    seedGroup(id, title.trim(), description: description).invited.addAll(inviteeIds);
+    seedGroup(
+      id,
+      title.trim(),
+      description: description,
+      announcement: announcement,
+    ).invited.addAll(inviteeIds);
     groupEvent(id, 'created', value: title.trim());
     return id;
   }
@@ -2206,9 +2326,12 @@ class FakeMessagingApi implements MessagingApi {
     const order = {'owner': 0, 'admin': 1, 'member': 2};
     final active = g.roles.entries.toList()
       ..sort((a, b) => order[a.value]!.compareTo(order[b.value]!));
+    // Lot 10.5 : un membre d'un groupe « Annonces » ne voit que les administrateurs.
+    final hides = g.announcement && !g.isAdmin(me);
     return [
       for (final e in active)
-        GroupMember(userId: e.key, displayName: names[e.key] ?? e.key, role: e.value),
+        if (!hides || e.value != 'member' || e.key == me)
+          GroupMember(userId: e.key, displayName: names[e.key] ?? e.key, role: e.value),
       if (g.isAdmin(me))
         for (final u in g.invited)
           GroupMember(userId: u, displayName: names[u] ?? u, role: 'member', invited: true),
@@ -2485,11 +2608,28 @@ class FakeMessagingApi implements MessagingApi {
 }
 
 /// État d'un groupe dans le faux serveur.
+/// Lot 10.5 : sondage côté « serveur » de test.
+class FakePoll {
+  FakePoll(this.conversationId, this.options, {this.multi = false, this.anonymous = true});
+
+  final String conversationId;
+  final List<String> options;
+  final bool multi;
+  final bool anonymous;
+  DateTime? closedAt;
+
+  /// Votes : personne → choix.
+  final Map<String, List<int>> votes = {};
+}
+
 class FakeGroup {
   FakeGroup(this.id, this.title, {this.description});
 
   final String id;
   String title;
+
+  /// Lot 10.5 : groupe « Annonces ».
+  bool announcement = false;
   String? description;
   String? avatarPath;
   String posting = 'all';
