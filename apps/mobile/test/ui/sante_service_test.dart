@@ -332,7 +332,17 @@ void main() {
     expect(deps.admin.policyList.firstWhere((p) => p.key == 'app_recommended_build').value, 69);
 
     // Lien de mise à jour : https obligatoire.
-    await tester.ensureVisible(find.byKey(const Key('policy.app_update_url')));
+    // La ligne est au-dessus de la liste des versions : on remonte.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('policy.app_update_url')),
+      -200,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('console.health')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('policy.app_update_url')));
     await tester.pumpAndSettle();
