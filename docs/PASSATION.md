@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 17/11/2026, après la livraison du lot 10.5 (version 0.1.0+77).*
+*Mise à jour : 18/11/2026, après la livraison des lots 9.3 et 7.4 (version 0.1.0+80).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -125,22 +125,36 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
     - type « Annonces » choisi à la création, définitif : seuls les admins écrivent, les
       membres réagissent et votent sans voir les autres membres ; 500 membres (console) ;
     - sondages dans les groupes : 2 à 10 choix, une ou plusieurs réponses, anonyme par
-      défaut ou votes visibles, vote modifiable, fermeture par le créateur.
-- **Dernier commit de code** : `ffcdb40` sur `main`. CI verte (run 77), staging déployé.
-- Les branches `lot-5.7`, `lot-10.4` et `lot-10.5` (identiques à des commits de `main`)
-  restent sur GitHub. Toussaint peut les supprimer.
+      défaut ou votes visibles, vote modifiable, fermeture par le créateur ;
+  - **9.3 Son des appels et vocaux** (version 78, ADR-050, application seulement) :
+    touches de volume sur le flux d'appel, volume très bas remonté, écouteurs et
+    Bluetooth d'office et en bascule automatique ; vocal envoyé dès qu'on lève le doigt
+    (réglage « Écouter les vocaux avant de les envoyer ») ;
+  - **7.4 Autocollants personnels** (version 80, ADR-051, migration `20261118000200`,
+    fonction `sticker`) : création depuis une photo détourée par ML Kit, texte,
+    « Partageable » ; collection de 60 gardée sur le serveur ; envoi par copie effacée
+    avec le message.
+- **Dernier commit de code** : `782a542` sur `main`. CI verte (run 80), staging déployé.
+- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5` et `lot-7.4` (identiques à des commits
+  de `main`) restent sur GitHub. Toussaint peut les supprimer.
 
 ## 7. Suite prévue
-1. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
+1. **9.4 Appels de groupe** (décisions du 17/11/2026) : audio et vidéo par **Cloudflare
+   Realtime SFU**, **8 participants** ; lancés par tout membre qui peut écrire
+   (administrateurs seulement dans un groupe « Annonces ») ; sonnerie chez tous si le
+   groupe a 16 membres au plus, sinon notification et bandeau « Rejoindre ». **Prérequis** :
+   Toussaint crée une « app Realtime » (SFU) dans Cloudflare et ajoute les secrets GitHub
+   `CLOUDFLARE_REALTIME_APP_ID` et `CLOUDFLARE_REALTIME_APP_TOKEN`.
+2. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
    des groupes, réponses types, statistiques de modération, sites bloqués pour les
    aperçus).
-2. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
+3. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
    préréglages, message programmé, export des statistiques).
-3. **Étape 6 en dernier**, juste avant le pilote :
+4. **Étape 6 en dernier**, juste avant le pilote :
    - 6.1 : version optimisée et non-régression ;
    - 6.2 : production, fournisseur SMS +226 (B7), retrait des numéros de test ;
    - 6.3 : documents légaux (B10), numéros recyclés (B9).
-4. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
+5. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
 
 **Décisions encore ouvertes** :
 - B6/B7 : sauvegardes, budget, fournisseur SMS ;
@@ -149,4 +163,4 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 
 ## 8. Phrase de reprise conseillée
 > « Lis docs/PASSATION.md et docs/SUIVI_LIVRAISONS.md du dépôt kouratoussaint/privio,
-> vérifie l'état de GitHub et de la CI, puis propose les décisions du lot 5.8 (console : équipe et modération). Voici le jeton GitHub : … »
+> vérifie l'état de GitHub et de la CI, puis continue avec le lot 9.4 (appels de groupe, décisions déjà prises). Voici le jeton GitHub : … »
