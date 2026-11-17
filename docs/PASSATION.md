@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 17/11/2026, après la livraison du lot 5.7 (version 0.1.0+73).*
+*Mise à jour : 17/11/2026, après la livraison du lot 10.4 (version 0.1.0+75).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -97,7 +97,7 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 - Textes de l'application dans `apps/mobile/lib/l10n/app_fr.arb`, lus via `L.t`. Les
   textes de la console restent en français dans le code.
 
-## 6. État au 17/11/2026
+## 6. État au 17/11/2026 (soir)
 - **Validés sur téléphone** :
   - étapes 1 à 4 (discussions, médias, groupes, notifications, confidentialité, demandes
     de connexion) ;
@@ -113,31 +113,30 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
     - santé des appels et du relais Cloudflare ;
     - codes SMS et coût estimé ;
     - diagnostics (notification de test, test du relais, état des tâches) ;
-    - alertes de l'administration.
-- **Dernier commit** : `750ebe2` sur `main`. CI verte, staging déployé.
-- Une branche `lot-5.7` (identique à `main`) reste sur GitHub. Toussaint peut la supprimer.
+    - alertes de l'administration ;
+  - **10.4 « Vérifié en personne » et surnom privé** (version 75, ADR-048, migration
+    `20261117000200`) :
+    - QR code de 2 minutes créé pour un contact, scanné face à face ; un scan vérifie les
+      deux téléphones ;
+    - badge retiré quand le contact se reconnecte ou change de numéro, avis « Revérifier » ;
+    - surnom privé partout, « Surnom · vrai nom » dans la fiche, gardé sur le serveur.
+- **Dernier commit de code** : `f34f3c0` sur `main`. CI verte (run 75), staging déployé.
+- Les branches `lot-5.7` et `lot-10.4` (identiques à des commits de `main`) restent sur
+  GitHub. Toussaint peut les supprimer.
 
 ## 7. Suite prévue
-1. **10.4 « Vérifié en personne » et surnom privé** — décisions déjà prises le 17/11/2026 :
-   - un QR code **temporaire (2 min)** affiché par l'un et scanné face à face par l'autre ;
-     **les deux** téléphones voient « Vérifié en personne » ;
-   - le badge **tombe** si le contact se connecte sur un nouveau téléphone ou change de
-     numéro, avec un avis proposant de revérifier ;
-   - un **surnom privé**, visible par moi seul et **partout** (liste, en-tête, groupes,
-     recherche, appels) ; le vrai nom reste dans la fiche (« Surnom · vrai nom ») ; il est
-     gardé sur le serveur pour mon compte.
-2. **10.5** : groupes « Annonces » (seuls les administrateurs écrivent) et sondages
+1. **10.5** : groupes « Annonces » (seuls les administrateurs écrivent) et sondages
    éphémères.
-3. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
+2. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
    des groupes, réponses types, statistiques de modération, sites bloqués pour les
    aperçus).
-4. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
+3. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
    préréglages, message programmé, export des statistiques).
-5. **Étape 6 en dernier**, juste avant le pilote :
+4. **Étape 6 en dernier**, juste avant le pilote :
    - 6.1 : version optimisée et non-régression ;
    - 6.2 : production, fournisseur SMS +226 (B7), retrait des numéros de test ;
    - 6.3 : documents légaux (B10), numéros recyclés (B9).
-6. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
+5. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
 
 **Décisions encore ouvertes** :
 - B6/B7 : sauvegardes, budget, fournisseur SMS ;
@@ -146,5 +145,4 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 
 ## 8. Phrase de reprise conseillée
 > « Lis docs/PASSATION.md et docs/SUIVI_LIVRAISONS.md du dépôt kouratoussaint/privio,
-> vérifie l'état de GitHub et de la CI, puis continue avec le lot 10.4 (décisions déjà
-> prises). Voici le jeton GitHub : … »
+> vérifie l'état de GitHub et de la CI, puis propose les décisions du lot 10.5. Voici le jeton GitHub : … »
