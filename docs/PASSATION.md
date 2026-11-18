@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 18/11/2026, après la livraison du lot 9.4 (version 0.1.0+82).*
+*Mise à jour : 18/11/2026, après la livraison des lots 9.4 et 5.8 (version 0.1.0+84).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -19,7 +19,9 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 - **Environnements** : `dev` = Supabase local (numéros de test +226 70 00 00 01 à 06, code
   123456) ; `staging` = projet Supabase hébergé gratuit ; `production` reste à créer au lot 6.2.
 - **Firebase** : projet `privio-e1ef4`, application `com.privio.app`.
-- **Compte administrateur** (console dans l'application) : +226 75 49 35 18.
+- **Compte administrateur** (console dans l'application) : +226 75 49 35 18. C'est le
+  **propriétaire** de la console ; depuis le lot 5.8, il ajoute des modérateurs et des
+  personnes d'assistance (rubrique « Équipe », deux étapes obligatoires pour eux).
 
 ## 2. Règles non négociables
 - Le nom est PRIVIO. Le **logo n° 1** a une recréation provisoire, encore à valider.
@@ -143,23 +145,27 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
     sortie du son ; un seul appel à la fois ; trace dans la discussion. Côté application :
     `state/group_call_controller.dart` (contrôleur, appels en cours),
     `data/services/group_call_engine.dart` (une liaison WebRTC vers le relais),
-    `ui/features/calls/group_call_screen.dart`.
-- **Dernier commit de code** : sur `main` (lot 9.4). CI verte (run 82), staging déployé.
-- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5`, `lot-7.4` et `lot-9.4` (identiques à des
-  commits de `main`) restent sur GitHub. Toussaint peut les supprimer.
+    `ui/features/calls/group_call_screen.dart` ;
+  - **5.8 Console : équipe et modération** (version 84, ADR-053, migration
+    `20261118000400`) : rôles Propriétaire / Modérateur / Assistance vérifiés par le
+    serveur (`private.require_console(rôles)` ; toute fonction de console non ouverte
+    explicitement reste au propriétaire) ; deux étapes obligatoires pour l'équipe ;
+    rubriques Équipe, Groupes (fermer, rouvrir, supprimer), Réponses types, Sites sans
+    aperçu, Suivi de la modération ; journal avec l'auteur ; alertes par rôle.
+- **Dernier commit de code** : sur `main` (lot 5.8). CI verte (run 84), staging déployé.
+- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5`, `lot-7.4`, `lot-9.4` et `lot-5.8`
+  (identiques à des commits de `main`) restent sur GitHub. Toussaint peut les supprimer.
 
 ## 7. Suite prévue
-1. **Retours des tests** de 10.3, 5.7, 10.4, 10.5, 9.3, 7.4 et 9.4 (corrections au besoin).
-2. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
-   des groupes, réponses types, statistiques de modération, sites bloqués pour les
-   aperçus).
-3. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
+1. **Retours des tests** de 10.3, 5.7, 10.4, 10.5, 9.3, 7.4, 9.4 et 5.8 (corrections au
+   besoin).
+2. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
    préréglages, message programmé, export des statistiques).
-4. **Étape 6 en dernier**, juste avant le pilote :
+3. **Étape 6 en dernier**, juste avant le pilote :
    - 6.1 : version optimisée et non-régression ;
    - 6.2 : production, fournisseur SMS +226 (B7), retrait des numéros de test ;
    - 6.3 : documents légaux (B10), numéros recyclés (B9).
-5. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
+4. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
 
 **Décisions encore ouvertes** :
 - B6/B7 : sauvegardes, budget, fournisseur SMS ;
@@ -168,5 +174,5 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 
 ## 8. Phrase de reprise conseillée
 > « Lis docs/PASSATION.md et docs/SUIVI_LIVRAISONS.md du dépôt kouratoussaint/privio,
-> vérifie l'état de GitHub et de la CI, puis continue (retours de tests, ou console 5.8 après
+> vérifie l'état de GitHub et de la CI, puis continue (retours de tests, ou console 5.9 après
 > ses décisions). Voici le jeton GitHub : … »
