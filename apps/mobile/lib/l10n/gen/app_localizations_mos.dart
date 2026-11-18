@@ -4881,4 +4881,116 @@ class AppLocalizationsMos extends AppLocalizations {
   @override
   String get stickerNotShareableError =>
       'Son auteur ne permet pas de l’ajouter à vos autocollants.';
+
+  @override
+  String get groupCallIncomingLocked => 'Appel de groupe Privio';
+
+  @override
+  String get groupCallVideoIncomingLocked => 'Appel vidéo de groupe Privio';
+
+  @override
+  String get groupCallTitle => 'Appel de groupe';
+
+  @override
+  String get groupCallIncoming => 'Appel de groupe…';
+
+  @override
+  String get groupCallVideoIncoming => 'Appel vidéo de groupe…';
+
+  @override
+  String get groupCallJoin => 'Rejoindre';
+
+  @override
+  String get groupCallLeave => 'Quitter';
+
+  @override
+  String get groupCallMe => 'Vous';
+
+  @override
+  String groupCallCount(int count, int max) {
+    return '$count/$max';
+  }
+
+  @override
+  String groupCallStartedBy(String name) {
+    return 'Lancé par $name';
+  }
+
+  @override
+  String groupCallInCall(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes dans l’appel',
+      one: '1 personne dans l’appel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String groupCallBar(String duration, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes',
+      one: '1 personne',
+    );
+    return 'Appel de groupe · $duration · $_temp0';
+  }
+
+  @override
+  String groupCallOngoing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes',
+      one: '1 personne',
+    );
+    return 'Appel de groupe en cours · $_temp0';
+  }
+
+  @override
+  String get groupCallFullShort => 'Complet';
+
+  @override
+  String get groupCallButton => 'Appel de groupe';
+
+  @override
+  String get groupCallVideoButton => 'Appel vidéo de groupe';
+
+  @override
+  String groupCallTrace(String duration) {
+    return 'Appel de groupe · $duration';
+  }
+
+  @override
+  String groupCallTraceVideo(String duration) {
+    return 'Appel vidéo de groupe · $duration';
+  }
+
+  @override
+  String get groupCallTraceNoAnswer => 'Appel de groupe sans réponse';
+
+  @override
+  String get groupCallTraceVideoNoAnswer => 'Appel vidéo de groupe sans réponse';
+
+  @override
+  String groupCallTraceMissed(String name) {
+    return 'Appel de groupe manqué de $name';
+  }
+
+  @override
+  String groupCallTraceVideoMissed(String name) {
+    return 'Appel vidéo de groupe manqué de $name';
+  }
+
+  @override
+  String get groupCallFullError => 'L’appel est complet (8 personnes au plus).';
+
+  @override
+  String get groupCallGroupOnlyError => 'Les appels de groupe se font dans un groupe.';
+
+  @override
+  String get groupCallUnavailableError =>
+      'Les appels de groupe sont momentanément indisponibles. Réessayez plus tard.';
 }

@@ -52,6 +52,7 @@ import 'package:flutter/semantics.dart';
 import '../../../state/session_controller.dart';
 import '../groups/group_screens.dart';
 import '../calls/call_screen.dart';
+import '../calls/group_call_screen.dart';
 import '../../../state/contact_labels_providers.dart';
 import 'verify_in_person.dart';
 import 'polls.dart';
@@ -1591,6 +1592,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       onPressed: () => startCallFrom(context, ref, summary.id),
                       icon: const Icon(Icons.call_outlined),
                     ),
+                  // Lot 9.4 : appel de groupe (membres qui peuvent écrire ; « Annonces » :
+                  // les administrateurs). Un appel déjà en cours : on le rejoint.
+                  if (summary != null &&
+                      summary.isGroup &&
+                      summary.canPost &&
+                      !_searching &&
+                      features.callsAudio &&
+                      features.video)
+                    IconButton(
+                      key: const Key('chat.group_video'),
+                      tooltip: L.t.groupCallVideoButton,
+                      onPressed: () => startGroupCallFrom(context, ref, summary.id, video: true),
+                      icon: const Icon(Icons.videocam_outlined),
+                    ),
+                  if (summary != null &&
+                      summary.isGroup &&
+                      summary.canPost &&
+                      !_searching &&
+                      features.callsAudio)
+                    IconButton(
+                      key: const Key('chat.group_call'),
+                      tooltip: L.t.groupCallButton,
+                      onPressed: () => startGroupCallFrom(context, ref, summary.id),
+                      icon: const Icon(Icons.call_outlined),
+                    ),
                   // Lot 8.5a : la loupe a quitté la barre (« Rechercher » est dans ⋮) ; seul
                   // le bouton pour fermer la recherche reste.
                   if (_searching)
@@ -1767,6 +1793,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ref.read(contactLabelsProvider.notifier).dismissNotice(label.userId),
                   ),
                 ),
+              // Lot 9.4 : appel de groupe en cours, « Rejoindre ».
+              if (isGroup) GroupCallBanner(conversationId: widget.conversationId),
               // Lot 7.2c2 : messages épinglés.
               if (pins.isNotEmpty && query.isEmpty && !_selecting)
                 PinnedBanner(pins: pins, index: _pinIndex, onTap: () => _openPinned(pins)),

@@ -13,7 +13,8 @@ import 'call_system.dart';
 /// Lot 9.1b — ce qui tourne quand Privio est fermé ou en arrière-plan (ADR-037).
 ///
 /// 1. Message de données « call » (push-dispatch) : l'écran d'appel du téléphone sonne,
-///    sans nom. « call_end » : il s'arrête (appel annulé ou expiré).
+///    sans nom. « call_end » : il s'arrête (appel annulé ou expiré). Lot 9.4 :
+///    « group_call » : appel de groupe (« Appel de groupe Privio »).
 /// 2. « Refuser » sur cet écran, Privio fermé : le refus part au serveur pour que
 ///    l'appelant l'entende tout de suite (sinon, son appel sonne jusqu'à l'expiration).
 ///    « Décrocher » ouvre Privio, qui reprend l'appel (CallController.checkOpenCall).
@@ -47,6 +48,14 @@ Future<void> handleCallPush(
           ? const Duration(seconds: 45)
           : const Duration(seconds: 45) - now().difference(created);
       await show(incomingCallParams(id, ring: left, video: data['kind'] == 'video'));
+    // Lot 9.4 : appel de groupe (groupe de 16 membres ou moins), toujours sans nom.
+    case 'group_call':
+      final created = DateTime.tryParse('${data['created_at']}');
+      if (created != null && now().difference(created) > _staleRing) return;
+      final left = created == null
+          ? const Duration(seconds: 45)
+          : const Duration(seconds: 45) - now().difference(created);
+      await show(incomingCallParams(id, ring: left, video: data['kind'] == 'video', group: true));
     case 'call_end':
       await end(id);
   }
@@ -69,7 +78,10 @@ Future<void> privioCallkitBackground(CallEvent event) async {
     final client = Supabase.instance.client;
     if (client.auth.currentSession == null) return;
     await client
-        .rpc<dynamic>('decline_call', params: {'p_call_id': e.callId})
+        .rpc<dynamic>(
+          e.group ? 'decline_group_call' : 'decline_call',
+          params: {'p_call_id': e.callId},
+        )
         .timeout(const Duration(seconds: 10));
   } on Object {
     // Sans réseau : l'appel de l'autre personne s'arrêtera seul (« Pas de réponse »).

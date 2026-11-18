@@ -71,10 +71,22 @@ jobs:
           supabase secrets set --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
             CLOUDFLARE_TURN_KEY_ID="$TURN_KEY_ID" CLOUDFLARE_TURN_API_TOKEN="$TURN_TOKEN" > /dev/null
           echo "✅ clé du relais d'appels transmise aux fonctions"
-      - name: Déployer les fonctions (vocaux, photos, photo de profil, effacement des fichiers, notifications, GIF, aperçus des liens, appels)
+      - name: Relais des appels de groupe Cloudflare Realtime (lot 9.4), si fourni
+        env:
+          RT_APP_ID: ${{ secrets.CLOUDFLARE_REALTIME_APP_ID }}
+          RT_APP_TOKEN: ${{ secrets.CLOUDFLARE_REALTIME_APP_TOKEN }}
+        run: |
+          if [ -z "$RT_APP_ID" ] || [ -z "$RT_APP_TOKEN" ]; then
+            echo "::warning::Secrets CLOUDFLARE_REALTIME_* absents : appels de groupe indisponibles."
+            exit 0
+          fi
+          supabase secrets set --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
+            CLOUDFLARE_REALTIME_APP_ID="$RT_APP_ID" CLOUDFLARE_REALTIME_APP_TOKEN="$RT_APP_TOKEN" > /dev/null
+          echo "✅ clé du relais des appels de groupe transmise aux fonctions"
+      - name: Déployer les fonctions (vocaux, photos, photo de profil, effacement des fichiers, notifications, GIF, aperçus des liens, appels, appels de groupe)
         # Authentification vérifiée par la base (jeton utilisateur / jeton de purge).
         run: >
-          supabase functions deploy voice-send photo-send avatar-set media-purge push-dispatch gif-search gif-send link-preview call-ice sticker --use-api --no-verify-jwt
+          supabase functions deploy voice-send photo-send avatar-set media-purge push-dispatch gif-search gif-send link-preview call-ice sticker call-sfu --use-api --no-verify-jwt
           --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
       - name: Déclarer l'adresse des fonctions à la base (purge planifiée)
         # media-purge appelée sans jeton : elle enregistre son adresse et ne fait rien d'autre.

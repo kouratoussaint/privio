@@ -6621,5 +6621,156 @@
   "stickerNotShareableError": "Son auteur ne permet pas de l’ajouter à vos autocollants.",
   "@stickerNotShareableError": {
     "description": "Lot 7.4 : autocollants personnels"
+  },
+  "groupCallIncomingLocked": "Appel de groupe Privio",
+  "@groupCallIncomingLocked": {
+    "description": "Écran d’appel du téléphone (sans nom, lot 9.4)"
+  },
+  "groupCallVideoIncomingLocked": "Appel vidéo de groupe Privio",
+  "@groupCallVideoIncomingLocked": {
+    "description": "Écran d’appel du téléphone (sans nom, lot 9.4)"
+  },
+  "groupCallTitle": "Appel de groupe",
+  "@groupCallTitle": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallIncoming": "Appel de groupe…",
+  "@groupCallIncoming": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallVideoIncoming": "Appel vidéo de groupe…",
+  "@groupCallVideoIncoming": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallJoin": "Rejoindre",
+  "@groupCallJoin": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallLeave": "Quitter",
+  "@groupCallLeave": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallMe": "Vous",
+  "@groupCallMe": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallCount": "{count}/{max}",
+  "@groupCallCount": {
+    "description": "Écran : Appel de groupe (lot 9.4)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "groupCallStartedBy": "Lancé par {name}",
+  "@groupCallStartedBy": {
+    "description": "Écran : Appel de groupe (lot 9.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupCallInCall": "{count, plural, =1{1 personne dans l’appel} other{{count} personnes dans l’appel}}",
+  "@groupCallInCall": {
+    "description": "Écran : Appel de groupe (lot 9.4)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupCallBar": "Appel de groupe · {duration} · {count, plural, =1{1 personne} other{{count} personnes}}",
+  "@groupCallBar": {
+    "description": "Écran : Appel de groupe (lot 9.4)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupCallOngoing": "Appel de groupe en cours · {count, plural, =1{1 personne} other{{count} personnes}}",
+  "@groupCallOngoing": {
+    "description": "Écran : Appel de groupe (lot 9.4)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupCallFullShort": "Complet",
+  "@groupCallFullShort": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallButton": "Appel de groupe",
+  "@groupCallButton": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallVideoButton": "Appel vidéo de groupe",
+  "@groupCallVideoButton": {
+    "description": "Écran : Appel de groupe (lot 9.4)"
+  },
+  "groupCallTrace": "Appel de groupe · {duration}",
+  "@groupCallTrace": {
+    "description": "Écran : Discussion (trace d’appel de groupe, lot 9.4)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "groupCallTraceVideo": "Appel vidéo de groupe · {duration}",
+  "@groupCallTraceVideo": {
+    "description": "Écran : Discussion (trace d’appel de groupe, lot 9.4)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "groupCallTraceNoAnswer": "Appel de groupe sans réponse",
+  "@groupCallTraceNoAnswer": {
+    "description": "Écran : Discussion (trace d’appel de groupe, lot 9.4)"
+  },
+  "groupCallTraceVideoNoAnswer": "Appel vidéo de groupe sans réponse",
+  "@groupCallTraceVideoNoAnswer": {
+    "description": "Écran : Discussion (trace d’appel de groupe, lot 9.4)"
+  },
+  "groupCallTraceMissed": "Appel de groupe manqué de {name}",
+  "@groupCallTraceMissed": {
+    "description": "Écran : Discussion (trace d’appel de groupe, lot 9.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupCallTraceVideoMissed": "Appel vidéo de groupe manqué de {name}",
+  "@groupCallTraceVideoMissed": {
+    "description": "Écran : Discussion (trace d’appel de groupe, lot 9.4)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupCallFullError": "L’appel est complet (8 personnes au plus).",
+  "@groupCallFullError": {
+    "description": "Erreur (appels de groupe, lot 9.4)"
+  },
+  "groupCallGroupOnlyError": "Les appels de groupe se font dans un groupe.",
+  "@groupCallGroupOnlyError": {
+    "description": "Erreur (appels de groupe, lot 9.4)"
+  },
+  "groupCallUnavailableError": "Les appels de groupe sont momentanément indisponibles. Réessayez plus tard.",
+  "@groupCallUnavailableError": {
+    "description": "Erreur (appels de groupe, lot 9.4)"
   }
 }

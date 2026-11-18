@@ -12,6 +12,7 @@ import '../data/services/calls_api.dart';
 import '../domain/models/call.dart';
 import '../data/services/device_services.dart' show NetKind;
 import 'data_providers.dart';
+import 'group_call_controller.dart';
 import 'messaging_providers.dart';
 import 'providers.dart';
 
@@ -191,7 +192,7 @@ class CallController extends Notifier<CallState?> {
       if (s.event == 'resume' || s.event == 'reconnected') unawaited(checkOpenCall());
     });
     // Lot 9.1b : actions faites sur l'écran d'appel du téléphone ou sa notification.
-    final events = _system.events.listen(_onSystem);
+    final events = _system.events.where((e) => !e.group).listen(_onSystem);
     // Changement de réseau pendant l'appel (Wi-Fi ↔ données) : renégocier la liaison.
     final net = ref.read(networkMonitorProvider).changes().listen(_onNetwork);
     // Lot 9.2 : petite fenêtre (Privio quitté pendant un appel avec image).
@@ -211,13 +212,16 @@ class CallController extends Notifier<CallState?> {
 
   bool get busy => state != null && state!.phase != CallPhase.ended;
 
+  /// Lot 9.4 : dans un appel de groupe (ou il sonne) : un seul appel à la fois.
+  bool get _groupBusy => ref.read(groupCallControllerProvider.notifier).busy;
+
   // ---------------------------------------------------------------------------
   // Appeler
   // ---------------------------------------------------------------------------
   /// Lance un appel audio dans une discussion à deux. Lève une [AppFailure] si impossible.
   /// [kind] : « audio » ou « video » (lot 9.2 : caméra allumée dès l'appel).
   Future<void> start(String conversationId, {String kind = 'audio'}) async {
-    if (busy) throw const AppFailure(FailureCode.callAlreadyActive);
+    if (busy || _groupBusy) throw const AppFailure(FailureCode.callAlreadyActive);
     await _ensureMic();
     final info = await _api.startCall(conversationId, kind: kind);
     if (!info.open) {
@@ -272,7 +276,8 @@ class CallController extends Notifier<CallState?> {
       await _pollNow();
       return;
     }
-    if (busy) return; // Un appel à la fois (le serveur répond « occupé »).
+    // Un appel à la fois (le serveur répond « occupé ») ; lot 9.4 : appel de groupe compris.
+    if (busy || _groupBusy) return;
     try {
       final snap = await _api.state(callId);
       if (!snap.call.outgoing && snap.call.status == 'ringing' && !busy) {

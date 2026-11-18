@@ -41,6 +41,10 @@ import 'package:privio/state/session_controller.dart';
 import 'package:privio/state/feedback_providers.dart';
 import 'package:privio/data/services/sound_service.dart';
 import 'package:privio/data/services/calls_api.dart';
+import 'package:privio/data/services/group_call_engine.dart';
+import 'package:privio/data/services/group_calls_api.dart';
+import 'package:privio/domain/models/group_call.dart';
+import 'package:privio/state/group_call_controller.dart';
 import 'package:privio/data/services/call_engine.dart';
 import 'package:privio/data/services/call_tones.dart';
 import 'package:privio/domain/models/call.dart';
@@ -2922,6 +2926,11 @@ class FakeRealtimeService implements RealtimeService {
   void emit(String conversationId, {String event = 'message'}) =>
       _controller.add(RealtimeSignal(event: event, conversationId: conversationId));
 
+  /// Lot 9.4 : signal d'appel de groupe.
+  void emitGroupCall(String conversationId, String callId) => _controller.add(
+    RealtimeSignal(event: 'group_call', conversationId: conversationId, callId: callId),
+  );
+
   /// Lot 9.1a : signal d'appel.
   void emitCall(String conversationId, String callId) => _controller.add(
     RealtimeSignal(event: 'call', conversationId: conversationId, callId: callId),
@@ -3555,6 +3564,9 @@ class TestDeps {
   final tones = FakeCallTones();
   // Lot 9.1b : écran d'appel du téléphone, premier plan.
   final callSystem = FakeCallSystem();
+  // Lot 9.4 : appels de groupe.
+  final groupCalls = FakeGroupCallsApi();
+  final groupEngine = FakeGroupCallEngine();
   bool foreground = true;
   DateTime Function() clock = DateTime.now;
 
@@ -3593,6 +3605,8 @@ class TestDeps {
     callEngineFactoryProvider.overrideWithValue(() => callEngine),
     callTonesProvider.overrideWithValue(tones),
     callSystemProvider.overrideWithValue(callSystem),
+    groupCallsApiProvider.overrideWithValue(groupCalls),
+    groupCallEngineFactoryProvider.overrideWithValue(() => groupEngine),
     appForegroundProvider.overrideWithValue(() => foreground),
     callTimingsProvider.overrideWithValue(
       const CallTimings(
@@ -3862,12 +3876,18 @@ class FakeCallSystem implements CallSystem {
   String? accepted;
   bool allowed = true;
 
-  void emit(CallSystemAction a, String id) => _events.add(CallSystemEvent(a, id));
+  void emit(CallSystemAction a, String id, {bool group = false}) =>
+      _events.add(CallSystemEvent(a, id, group: group));
 
   @override
   Stream<CallSystemEvent> get events => _events.stream;
   @override
   Future<String?> acceptedCall() async => accepted;
+
+  /// Lot 9.4 : appel de groupe décroché sur l'écran d'appel du téléphone.
+  String? acceptedGroup;
+  @override
+  Future<String?> acceptedGroupCall() async => acceptedGroup;
   final _pip = StreamController<bool>.broadcast();
   void emitPip(bool on) => _pip.add(on);
   @override
@@ -3875,12 +3895,13 @@ class FakeCallSystem implements CallSystem {
   @override
   Future<void> setPip(bool allowed) async => log.add('pip:$allowed');
   @override
-  Future<void> showIncoming(String callId, {bool video = false}) async =>
-      log.add(video ? 'show-video:$callId' : 'show:$callId');
+  Future<void> showIncoming(String callId, {bool video = false, bool group = false}) async =>
+      log.add('${group ? 'group-' : ''}${video ? 'show-video' : 'show'}:$callId');
   @override
   Future<void> hideIncoming(String callId) async => log.add('hide:$callId');
   @override
-  Future<void> activate(String callId, {bool video = false}) async => log.add('activate:$callId');
+  Future<void> activate(String callId, {bool video = false, bool group = false}) async =>
+      log.add('activate:$callId');
   @override
   Future<void> connected(String callId) async => log.add('connected:$callId');
   @override
@@ -3914,4 +3935,302 @@ class FakeDeviceInfo implements DeviceInfoSource {
 
   @override
   Future<DeviceInfo> read() async => const DeviceInfo(model: 'Tecno Spark 10', osVersion: '13');
+}
+
+// ---------------------------------------------------------------------------
+// Lot 9.4 : appels de groupe
+// ---------------------------------------------------------------------------
+/// Serveur des appels de groupe en mémoire, vu par « moi » (u1). Les autres personnes sont
+/// pilotées par le test (ringMe, peerJoin, peerLeave, peerMedia, endCall).
+class FakeGroupCallsApi implements GroupCallsApi {
+  final Map<String, GroupCallInfo> calls = {};
+  final List<String> log = [];
+  bool full = false;
+  AppFailure? failPush;
+  int _seq = 0;
+  int _mid = 0;
+  static const me = 'u1';
+
+  static GroupCallParticipant _p(
+    String id,
+    String state, {
+    String? name,
+    bool camera = false,
+    bool muted = false,
+    bool tracks = true,
+  }) => GroupCallParticipant(
+    userId: id,
+    state: state,
+    name: name ?? id,
+    camera: camera,
+    muted: muted,
+    session: state == 'joined' && tracks ? 'sess-$id' : null,
+    tracks: state == 'joined' && tracks
+        ? {'audio': 'audio-$id', if (camera) 'video': 'video-$id'}
+        : const {},
+  );
+
+  GroupCallInfo _with(
+    GroupCallInfo c, {
+    String? status,
+    List<GroupCallParticipant>? participants,
+    bool existing = false,
+  }) {
+    final ps = participants ?? c.participants;
+    String? mine;
+    for (final p in ps) {
+      if (p.userId == me) mine = p.state;
+    }
+    return GroupCallInfo(
+      id: c.id,
+      conversationId: c.conversationId,
+      status: status ?? c.status,
+      startedBy: c.startedBy,
+      kind: c.kind,
+      rings: c.rings,
+      createdAt: c.createdAt,
+      myState: mine,
+      joinedCount: ps.where((p) => p.joined).length,
+      participants: [
+        for (final p in ps)
+          if (p.state == 'joined' || p.state == 'ringing') p,
+      ],
+      existing: existing,
+    );
+  }
+
+  /// Participants (y compris partis) par appel.
+  final Map<String, List<GroupCallParticipant>> people = {};
+
+  GroupCallInfo _save(String id, {String? status, bool existing = false}) =>
+      calls[id] = _with(calls[id]!, status: status, participants: people[id], existing: existing);
+
+  void _set(String id, GroupCallParticipant p) {
+    final list = people[id]!;
+    list.removeWhere((x) => x.userId == p.userId);
+    list.add(p);
+  }
+
+  /// Bob (u2) lance un appel dans le groupe ; mon téléphone sonne.
+  GroupCallInfo ringMe({String conversationId = 'grp-1', String kind = 'audio'}) {
+    final id = 'gcall-${_seq++}';
+    calls[id] = GroupCallInfo(
+      id: id,
+      conversationId: conversationId,
+      status: 'active',
+      startedBy: 'u2',
+      kind: kind,
+      rings: true,
+      createdAt: DateTime.now(),
+    );
+    people[id] = [_p('u2', 'joined', name: 'Bob', camera: kind == 'video'), _p(me, 'ringing')];
+    return _save(id);
+  }
+
+  void peerJoin(String id, String userId, {String? name, bool camera = false}) {
+    _set(id, _p(userId, 'joined', name: name, camera: camera));
+    _save(id);
+  }
+
+  void peerMedia(
+    String id,
+    String userId, {
+    String? name,
+    bool camera = false,
+    bool muted = false,
+  }) {
+    _set(id, _p(userId, 'joined', name: name, camera: camera, muted: muted));
+    _save(id);
+  }
+
+  void peerLeave(String id, String userId) {
+    _set(id, _p(userId, 'left'));
+    _save(id);
+  }
+
+  void endCall(String id) {
+    people[id] = [for (final p in people[id]!) _p(p.userId, p.joined ? 'left' : 'missed')];
+    _save(id, status: 'ended');
+  }
+
+  @override
+  Future<GroupCallInfo> start(String conversationId, {String kind = 'audio'}) async {
+    log.add('start:$conversationId:$kind');
+    for (final c in calls.values) {
+      if (c.conversationId == conversationId && c.active) {
+        _set(c.id, _p(me, 'joined', name: 'Moi', tracks: false));
+        return _save(c.id, existing: true);
+      }
+    }
+    final id = 'gcall-${_seq++}';
+    calls[id] = GroupCallInfo(
+      id: id,
+      conversationId: conversationId,
+      status: 'active',
+      startedBy: me,
+      kind: kind,
+      rings: true,
+      createdAt: DateTime.now(),
+    );
+    people[id] = [_p(me, 'joined', name: 'Moi', tracks: false), _p('u2', 'ringing', name: 'Bob')];
+    return _save(id);
+  }
+
+  @override
+  Future<GroupCallInfo> join(String callId) async {
+    log.add('join:$callId');
+    if (full) throw const AppFailure(FailureCode.groupCallFull);
+    _set(callId, _p(me, 'joined', name: 'Moi', tracks: false));
+    return _save(callId);
+  }
+
+  @override
+  Future<GroupCallInfo> decline(String callId) async {
+    log.add('decline:$callId');
+    _set(callId, _p(me, 'declined'));
+    return _save(callId);
+  }
+
+  @override
+  Future<GroupCallInfo> leave(String callId) async {
+    log.add('leave:$callId');
+    _set(callId, _p(me, 'left'));
+    final left = people[callId]!.any((p) => p.joined);
+    return _save(callId, status: left ? null : 'ended');
+  }
+
+  @override
+  Future<GroupCallInfo> state(String callId) async => calls[callId]!;
+
+  @override
+  Future<GroupCallInfo> setMedia(String callId, {bool? camera, bool? muted}) async {
+    log.add('media:${camera ?? '-'}:${muted ?? '-'}');
+    return calls[callId]!;
+  }
+
+  @override
+  Future<List<GroupCallInfo>> active() async => [
+    for (final c in calls.values)
+      if (c.active) c,
+  ];
+
+  @override
+  Future<String> push(
+    String callId, {
+    required String sdp,
+    required List<({String mid, String kind})> tracks,
+    bool fresh = false,
+  }) async {
+    log.add('push:${tracks.map((t) => t.kind).join('+')}${fresh ? ':fresh' : ''}');
+    if (failPush != null) throw failPush!;
+    return 'answer';
+  }
+
+  @override
+  Future<SfuPull> pull(String callId, List<({String session, String name})> tracks) async {
+    log.add('pull:${tracks.map((t) => t.name).join('+')}');
+    return SfuPull(
+      sdp: 'offer',
+      renegotiate: true,
+      tracks: [
+        for (final t in tracks) SfuTrack(mid: 'm${_mid++}', session: t.session, name: t.name),
+      ],
+    );
+  }
+
+  @override
+  Future<void> answer(String callId, String sdp) async => log.add('answer');
+
+  @override
+  Future<void> close(String callId, List<String> mids) async => log.add('close:${mids.length}');
+}
+
+class FakeGroupCallEngine implements GroupCallEngine {
+  final List<String> log = [];
+  void Function(CallMediaState)? onState;
+  bool _video = false;
+  bool camera = false;
+  bool muted = false;
+  bool speaker = false;
+  bool? economy;
+  int flips = 0;
+  List<AudioRoute> routes = const [AudioRoute.earpiece, AudioRoute.speaker];
+  AudioRoute? selected;
+
+  @override
+  Future<void> open({
+    required List<Map<String, dynamic>> iceServers,
+    required void Function(CallMediaState state) onState,
+    void Function()? onRemoteChanged,
+    void Function()? onAudioDevicesChanged,
+    void Function(bool weak)? onQuality,
+  }) async {
+    log.add('open');
+    this.onState = onState;
+    _video = false;
+  }
+
+  @override
+  Future<({String sdp, List<PublishedTrack> tracks})> publishOffer({
+    bool audio = true,
+    bool video = false,
+    bool front = true,
+  }) async {
+    log.add('publish:${video ? 'audio+video' : 'audio'}');
+    final tracks = <PublishedTrack>[(mid: '0', kind: 'audio')];
+    if (video && !_video) {
+      _video = true;
+      camera = true;
+      tracks.add((mid: '1', kind: 'video'));
+    }
+    return (sdp: 'offer', tracks: tracks);
+  }
+
+  @override
+  Future<void> setAnswer(String sdp) async => log.add('answer:$sdp');
+
+  @override
+  Future<String> answerOffer(String sdp) async {
+    log.add('accept:$sdp');
+    return 'my-answer';
+  }
+
+  @override
+  bool get videoPublished => _video;
+
+  @override
+  Future<void> setCamera(bool on, {bool front = true}) async {
+    log.add('camera:$on');
+    camera = on;
+  }
+
+  @override
+  Future<void> switchCamera() async => flips++;
+
+  @override
+  Future<void> setEconomy(bool economy) async => this.economy = economy;
+
+  @override
+  Future<void> setMuted(bool m) async => muted = m;
+
+  @override
+  Future<void> setSpeaker(bool on) async => speaker = on;
+
+  @override
+  Future<List<AudioRoute>> audioRoutes() async => routes;
+
+  @override
+  Future<void> selectAudioRoute(AudioRoute route) async => selected = route;
+
+  @override
+  Widget localView({bool mirror = true}) => const SizedBox(key: Key('fake.group.local'));
+
+  @override
+  Widget? remoteView(String mid) => SizedBox(key: Key('fake.group.remote.$mid'));
+
+  @override
+  Future<int> trafficBytes() async => 0;
+
+  @override
+  Future<void> close() async => log.add('close');
 }

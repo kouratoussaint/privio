@@ -808,6 +808,20 @@ String? groupEventText(ChatMessage m, {required String? me}) {
       _ => mine ? L.t.callTraceNoAnswer : L.t.callTraceMissed,
     };
   }
+  // Lot 9.4 : trace d'un appel de groupe (auteur : la personne qui l'a lancé).
+  if (j['e'] == 'group_call') {
+    final value = v ?? '';
+    final video = j['k'] == 'video';
+    if (value.startsWith('ended:')) {
+      final secs = int.tryParse(value.substring(6)) ?? 0;
+      final d = secs >= 3600
+          ? '${secs ~/ 3600}:${((secs % 3600) ~/ 60).toString().padLeft(2, '0')}:${(secs % 60).toString().padLeft(2, '0')}'
+          : '${(secs ~/ 60).toString().padLeft(2, '0')}:${(secs % 60).toString().padLeft(2, '0')}';
+      return video ? L.t.groupCallTraceVideo(d) : L.t.groupCallTrace(d);
+    }
+    if (mine) return video ? L.t.groupCallTraceVideoNoAnswer : L.t.groupCallTraceNoAnswer;
+    return video ? L.t.groupCallTraceVideoMissed(a) : L.t.groupCallTraceMissed(a);
+  }
   return switch (j['e']) {
     'created' => ev(() => L.t.evtCreatedMine(title), () => L.t.evtCreatedOther(a, title)),
     'joined' => mine ? L.t.vousAvezRejointGroupe : L.t.rejointGroupe(a),

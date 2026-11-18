@@ -438,6 +438,10 @@ verify_jwt = false
 [functions.sticker]
 verify_jwt = false
 
+# Lot 9.4 : relais des appels de groupe (jeton vérifié par la base).
+[functions.call-sfu]
+verify_jwt = false
+
 [experimental]
 # Configures S3 bucket URL, eg. <bucket_name>.s3-<region>.amazonaws.com
 s3_host = "env(S3_HOST)"

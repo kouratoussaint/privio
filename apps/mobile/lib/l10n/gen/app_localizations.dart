@@ -8265,6 +8265,156 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Son auteur ne permet pas de l’ajouter à vos autocollants.'**
   String get stickerNotShareableError;
+
+  /// Écran d’appel du téléphone (sans nom, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe Privio'**
+  String get groupCallIncomingLocked;
+
+  /// Écran d’appel du téléphone (sans nom, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo de groupe Privio'**
+  String get groupCallVideoIncomingLocked;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe'**
+  String get groupCallTitle;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe…'**
+  String get groupCallIncoming;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo de groupe…'**
+  String get groupCallVideoIncoming;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre'**
+  String get groupCallJoin;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get groupCallLeave;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous'**
+  String get groupCallMe;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'{count}/{max}'**
+  String groupCallCount(int count, int max);
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancé par {name}'**
+  String groupCallStartedBy(String name);
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 personne dans l’appel} other{{count} personnes dans l’appel}}'**
+  String groupCallInCall(int count);
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe · {duration} · {count, plural, =1{1 personne} other{{count} personnes}}'**
+  String groupCallBar(String duration, int count);
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe en cours · {count, plural, =1{1 personne} other{{count} personnes}}'**
+  String groupCallOngoing(int count);
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Complet'**
+  String get groupCallFullShort;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe'**
+  String get groupCallButton;
+
+  /// Écran : Appel de groupe (lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo de groupe'**
+  String get groupCallVideoButton;
+
+  /// Écran : Discussion (trace d’appel de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe · {duration}'**
+  String groupCallTrace(String duration);
+
+  /// Écran : Discussion (trace d’appel de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo de groupe · {duration}'**
+  String groupCallTraceVideo(String duration);
+
+  /// Écran : Discussion (trace d’appel de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe sans réponse'**
+  String get groupCallTraceNoAnswer;
+
+  /// Écran : Discussion (trace d’appel de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo de groupe sans réponse'**
+  String get groupCallTraceVideoNoAnswer;
+
+  /// Écran : Discussion (trace d’appel de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de groupe manqué de {name}'**
+  String groupCallTraceMissed(String name);
+
+  /// Écran : Discussion (trace d’appel de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel vidéo de groupe manqué de {name}'**
+  String groupCallTraceVideoMissed(String name);
+
+  /// Erreur (appels de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'L’appel est complet (8 personnes au plus).'**
+  String get groupCallFullError;
+
+  /// Erreur (appels de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Les appels de groupe se font dans un groupe.'**
+  String get groupCallGroupOnlyError;
+
+  /// Erreur (appels de groupe, lot 9.4)
+  ///
+  /// In fr, this message translates to:
+  /// **'Les appels de groupe sont momentanément indisponibles. Réessayez plus tard.'**
+  String get groupCallUnavailableError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

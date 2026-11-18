@@ -318,3 +318,12 @@ recadrage, texte), collection de 60 autocollants gardée sur le serveur, envoi p
 qui s'efface avec le message, ajout d'un autocollant reçu seulement s'il est
 « Partageable ». Ni la collection ni les messages ne quittent les comptes concernés.
 
+
+## Amendement 23 — Appels de groupe livrés (18 novembre 2026)
+Lot 9.4 (ADR-052), selon l'amendement 21 : appels de groupe audio et vidéo par le relais
+Cloudflare Realtime, **8 personnes au plus** ; lancés par toute personne qui peut écrire
+dans le groupe (administrateurs seulement dans un groupe « Annonces »), rejoints par tout
+membre ; **sonnerie** chez les membres si le groupe en compte 16 au plus (sauf sourdine,
+appels refusés, blocage), sinon notification neutre et bandeau « Rejoindre ». Un seul
+appel à la fois par personne (à deux ou en groupe). Rien n'est enregistré ; la trace de
+l'appel s'efface comme les autres messages.

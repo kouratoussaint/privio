@@ -1,7 +1,7 @@
 // PRIVIO — notifications FCM sans contenu (lot 4.1 ; demandes de connexion : lot 4.7 ;
 // invitations de groupe : lot 4.8 ; administration : lot 5.3 ; réponses de l'assistance : lot 5.4 ;
 // demandes d'adhésion et @mentions : lot 7.1b ; rappel avant effacement : lot 8.4b ;
-// appels entrants et manqués : lot 9.1b ; alertes de la santé du service et test : lot 5.7).
+// appels entrants et manqués : lot 9.1b ; appels de groupe : lot 9.4 ; alertes de la santé du service et test : lot 5.7).
 //
 // Appelée par la base (déclencheur sur messages + pg_net) avec l'en-tête x-privio-push
 // (jeton aléatoire créé par la migration, vérifié par la base). Elle ne reçoit que
@@ -19,6 +19,9 @@ import {
   sendJoinEvent,
   sendCallMissed,
   sendCallRing,
+  sendGroupCallLive,
+  sendGroupCallMissed,
+  sendGroupCallRing,
   sendExpiryReminder,
   sendRequestEvent,
   sendSupportReply,
@@ -47,6 +50,8 @@ Deno.serve(async (req) => {
   let expiryReminderId = "";
   let callEvent = "";
   let callId = "";
+  let groupCallEvent = "";
+  let userIds: string[] = [];
   try {
     const body = (await req.json()) as {
       message_id?: string;
@@ -59,6 +64,8 @@ Deno.serve(async (req) => {
       expiry_reminder_id?: string;
       call_event?: string;
       call_id?: string;
+      group_call_event?: string;
+      user_ids?: unknown;
     };
     messageId = body.message_id ?? "";
     requestId = body.request_id ?? "";
@@ -70,6 +77,8 @@ Deno.serve(async (req) => {
     expiryReminderId = body.expiry_reminder_id ?? "";
     callEvent = body.call_event ?? "";
     callId = body.call_id ?? "";
+    groupCallEvent = body.group_call_event ?? "";
+    userIds = Array.isArray(body.user_ids) ? body.user_ids.filter((u) => typeof u === "string") : [];
   } catch {
     return json(400, { error: "BODY_INVALID" });
   }
@@ -129,6 +138,35 @@ Deno.serve(async (req) => {
       (sa, t) => callEvent === "ring"
         ? sendCallRing(sa, t.token, callId, t.conversation_id, t.created_at, t.kind)
         : sendCallMissed(sa, t.token, callId, t.conversation_id, muted, t.secret === true),
+    );
+  }
+  // Lot 9.4 : appel de groupe : sonnerie, arrêt + « Appel de groupe manqué », ou
+  // « Un appel de groupe a commencé » (grands groupes). La base choisit les téléphones.
+  if (groupCallEvent) {
+    if (!["ring", "missed", "live"].includes(groupCallEvent) || !UUID.test(callId) ||
+      userIds.length > 1024 || userIds.some((u) => !UUID.test(u))) {
+      return json(400, { error: "BODY_INVALID" });
+    }
+    return await dispatchTargets(
+      token,
+      callId,
+      () => rpc<
+        { token: string; conversation_id: string; created_at: string; kind: string; secret?: boolean }[]
+      >(
+        "push_group_call_targets",
+        {
+          p_token: token,
+          p_call_id: callId,
+          p_event: groupCallEvent,
+          p_users: groupCallEvent === "live" ? null : userIds,
+        },
+        serviceHeaders(),
+      ),
+      (sa, t) => groupCallEvent === "ring"
+        ? sendGroupCallRing(sa, t.token, callId, t.conversation_id, t.created_at, t.kind)
+        : groupCallEvent === "missed"
+        ? sendGroupCallMissed(sa, t.token, callId, t.conversation_id, t.secret === true)
+        : sendGroupCallLive(sa, t.token, t.conversation_id, t.secret === true),
     );
   }
   // Lot 8.4b : des messages non lus vont bientôt s'effacer.

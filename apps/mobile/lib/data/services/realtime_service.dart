@@ -67,6 +67,8 @@ class SupabaseRealtimeService implements RealtimeService {
     'call',
     // Lot 10.4 : vérification en personne faite, ou contact vérifié sur un nouveau téléphone.
     'labels_changed',
+    // Lot 9.4 : appel de groupe (lancé, rejoint, quitté, micro, caméra, fin).
+    'group_call',
   ];
   static const _retryDelays = [
     Duration(seconds: 2),

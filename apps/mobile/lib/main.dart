@@ -32,9 +32,11 @@ import 'state/messaging_providers.dart';
 import 'state/providers.dart';
 import 'state/push_providers.dart';
 import 'data/services/calls_api.dart';
+import 'data/services/group_calls_api.dart';
 import 'data/services/call_background.dart';
 import 'data/services/call_system.dart';
 import 'state/call_controller.dart';
+import 'state/group_call_controller.dart';
 import 'ui/core/emoji/big_emojis.dart';
 
 import 'package:flutter/foundation.dart';
@@ -90,6 +92,8 @@ Future<void> main() async {
         photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
         messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
         callsApiProvider.overrideWithValue(SupabaseCallsApi(client)),
+        // Lot 9.4 : appels de groupe.
+        groupCallsApiProvider.overrideWithValue(SupabaseGroupCallsApi(client)),
         if (Platform.isAndroid) callSystemProvider.overrideWithValue(DeviceCallSystem()),
         adminApiProvider.overrideWithValue(SupabaseAdminApi(client)),
         realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),

@@ -13,6 +13,8 @@ import '../../../state/app_lock_providers.dart';
 import '../../../state/call_controller.dart';
 import '../../../state/messaging_providers.dart';
 import '../../core/widgets/avatar.dart';
+import '../../../state/group_call_controller.dart';
+import 'group_call_screen.dart';
 
 /// Lot 9.1a — écran d'appel, posé AU-DESSUS de toute l'application (verrouillage compris :
 /// on peut décrocher sans saisir le code, le reste de Privio reste verrouillé — décision E).
@@ -33,6 +35,8 @@ class _CallOverlayState extends ConsumerState<CallOverlay> {
     // Un appel qui sonne déjà à l'ouverture de Privio.
     if (ref.read(currentUserIdProvider) != null) {
       Future.microtask(() => ref.read(callControllerProvider.notifier).checkOpenCall());
+      // Lot 9.4 : appel de groupe décroché sur l'écran d'appel du téléphone.
+      Future.microtask(() => ref.read(groupCallControllerProvider.notifier).checkOpen());
     }
   }
 
@@ -41,16 +45,25 @@ class _CallOverlayState extends ConsumerState<CallOverlay> {
     ref.listen(currentUserIdProvider, (prev, next) {
       if (next != null && next != prev) {
         unawaited(ref.read(callControllerProvider.notifier).checkOpenCall());
+        unawaited(ref.read(groupCallControllerProvider.notifier).checkOpen());
       }
     });
     final call = ref.watch(callControllerProvider);
-    final bar = call != null && call.minimized;
+    // Lot 9.4 : appel de groupe (un seul appel à la fois : l'un ou l'autre).
+    final group = ref.watch(groupCallControllerProvider);
+    final groupBar = call == null && group != null && group.minimized;
+    final bar = (call != null && call.minimized) || groupBar;
     // Structure constante : l'application (et son état) n'est jamais recréée pendant un appel.
     return Stack(
       children: [
         Column(
           children: [
-            if (bar) const _CallBar() else const SizedBox.shrink(),
+            if (groupBar)
+              const GroupCallBar()
+            else if (bar)
+              const _CallBar()
+            else
+              const SizedBox.shrink(),
             Expanded(
               child: MediaQuery.removePadding(
                 context: context,
@@ -66,6 +79,10 @@ class _CallOverlayState extends ConsumerState<CallOverlay> {
           Positioned.fill(
             // Écran autonome (posé au-dessus du navigateur de l'application).
             child: Overlay(initialEntries: [OverlayEntry(builder: (_) => const _CallView())]),
+          )
+        else if (group != null && !group.minimized)
+          Positioned.fill(
+            child: Overlay(initialEntries: [OverlayEntry(builder: (_) => const GroupCallView())]),
           ),
       ],
     );
@@ -80,17 +97,17 @@ String formatCallDuration(Duration d) {
 }
 
 /// Durée affichée, mise à jour chaque seconde.
-class _Ticker extends StatefulWidget {
-  const _Ticker({required this.since, required this.builder});
+class CallTicker extends StatefulWidget {
+  const CallTicker({super.key, required this.since, required this.builder});
 
   final DateTime since;
   final Widget Function(String duration) builder;
 
   @override
-  State<_Ticker> createState() => _TickerState();
+  State<CallTicker> createState() => _CallTickerState();
 }
 
-class _TickerState extends State<_Ticker> {
+class _CallTickerState extends State<CallTicker> {
   late final Timer _t;
 
   @override
@@ -135,7 +152,7 @@ class _CallBar extends ConsumerWidget {
                 Flexible(
                   child: call.connectedAt == null
                       ? Text(L.t.callBarRinging, style: style)
-                      : _Ticker(
+                      : CallTicker(
                           since: call.connectedAt!,
                           builder: (d) => Text(L.t.callBar(d), style: style),
                         ),
@@ -285,7 +302,7 @@ class _CallViewState extends ConsumerState<_CallView> {
       CallPhase.outgoingRinging => Text(L.t.callRinging, style: white),
       CallPhase.connecting => Text(L.t.callConnecting, style: white),
       CallPhase.reconnecting => Text(L.t.callReconnecting, style: white),
-      CallPhase.connected => _Ticker(
+      CallPhase.connected => CallTicker(
         since: call.connectedAt ?? DateTime.now(),
         builder: (d) => Column(
           mainAxisSize: MainAxisSize.min,
@@ -347,7 +364,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                     alignment: Alignment.topLeft,
                     child: call.phase == CallPhase.ended || call.phase == CallPhase.incomingRinging
                         ? const SizedBox(height: 48)
-                        : _RoundButton(
+                        : CallRoundButton(
                             key: const Key('call.minimize'),
                             icon: Icons.keyboard_arrow_down_rounded,
                             label: L.t.reduire,
@@ -403,14 +420,14 @@ class _CallViewState extends ConsumerState<_CallView> {
                       CallPhase.incomingRinging => Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _RoundButton(
+                          CallRoundButton(
                             key: const Key('call.decline'),
                             icon: Icons.call_end_rounded,
                             label: L.t.refuser2,
                             color: PrivioColors.error,
                             onTap: () => _run(context, ctrl.decline),
                           ),
-                          _RoundButton(
+                          CallRoundButton(
                             key: const Key('call.accept'),
                             icon: Icons.call_rounded,
                             label: L.t.decrocher,
@@ -426,7 +443,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _RoundButton(
+                              CallRoundButton(
                                 key: const Key('call.mute'),
                                 icon: call.muted ? Icons.mic_off_rounded : Icons.mic_none_rounded,
                                 label: call.muted ? L.t.microCoupe : L.t.micro,
@@ -434,7 +451,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                                 onTap: ctrl.toggleMute,
                               ),
                               // Lot 9.2 : ma caméra, à tout moment (décision A).
-                              _RoundButton(
+                              CallRoundButton(
                                 key: const Key('call.camera'),
                                 icon: call.camera
                                     ? Icons.videocam_rounded
@@ -443,7 +460,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                                 selected: call.camera,
                                 onTap: ctrl.toggleCamera,
                               ),
-                              _RoundButton(
+                              CallRoundButton(
                                 key: const Key('call.speaker'),
                                 icon: routeIcon(call.route),
                                 label: switch (call.route) {
@@ -457,7 +474,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                             ],
                           ),
                           const SizedBox(height: PrivioSpacing.l),
-                          _RoundButton(
+                          CallRoundButton(
                             key: const Key('call.hangup'),
                             icon: Icons.call_end_rounded,
                             label: L.t.raccrocher,
@@ -483,7 +500,7 @@ class _CallViewState extends ConsumerState<_CallView> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: _RoutePanel(routes: _routes!, current: call.route, onPick: _pick),
+                child: CallRoutePanel(routes: _routes!, current: call.route, onPick: _pick),
               ),
             ],
           ],
@@ -517,8 +534,13 @@ class _PipView extends StatelessWidget {
   );
 }
 
-class _RoutePanel extends StatelessWidget {
-  const _RoutePanel({required this.routes, required this.current, required this.onPick});
+class CallRoutePanel extends StatelessWidget {
+  const CallRoutePanel({
+    super.key,
+    required this.routes,
+    required this.current,
+    required this.onPick,
+  });
 
   final List<AudioRoute> routes;
   final AudioRoute current;
@@ -596,8 +618,8 @@ Future<void> offerFullScreenCalls(BuildContext context, WidgetRef ref) async {
   if (allow == true) await system.openFullScreenSettings();
 }
 
-class _RoundButton extends StatelessWidget {
-  const _RoundButton({
+class CallRoundButton extends StatelessWidget {
+  const CallRoundButton({
     super.key,
     required this.icon,
     required this.label,

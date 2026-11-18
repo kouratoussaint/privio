@@ -229,6 +229,59 @@ export async function sendCallMissed(
   });
 }
 
+/** Lot 9.4 : appel de groupe qui sonne (groupe de 16 membres ou moins), sans nom. */
+export async function sendGroupCallRing(
+  sa: ServiceAccount,
+  token: string,
+  callId: string,
+  conversationId: string,
+  createdAt: string,
+  kind: string,
+): Promise<SendResult> {
+  return await sendData(sa, token, {
+    type: "group_call",
+    call_id: callId,
+    conversation_id: conversationId,
+    created_at: createdAt,
+    kind: kind === "video" ? "video" : "audio",
+  }, "45s");
+}
+
+/** Lot 9.4 : sonnerie de groupe sans réponse. Arrêt, puis « Appel de groupe manqué ». */
+export const MISSED_GROUP_CALL_BODY = "Appel de groupe manqué";
+
+export async function sendGroupCallMissed(
+  sa: ServiceAccount,
+  token: string,
+  callId: string,
+  conversationId: string,
+  secret = false,
+): Promise<SendResult> {
+  const stop = await sendData(sa, token, { type: "call_end", call_id: callId }, "60s");
+  if (stop === "invalid_token") return stop;
+  return await sendNotification(sa, token, {
+    body: MISSED_GROUP_CALL_BODY,
+    data: secret ? { type: "message" } : { type: "message", conversation_id: conversationId },
+    tag: secret ? "privio-secret-call" : `privio-call-${conversationId}`,
+  });
+}
+
+/** Lot 9.4 : grand groupe (plus de 16 membres) : pas de sonnerie, une notification neutre. */
+export const LIVE_GROUP_CALL_BODY = "Un appel de groupe a commencé";
+
+export async function sendGroupCallLive(
+  sa: ServiceAccount,
+  token: string,
+  conversationId: string,
+  secret = false,
+): Promise<SendResult> {
+  return await sendNotification(sa, token, {
+    body: LIVE_GROUP_CALL_BODY,
+    data: secret ? { type: "message" } : { type: "message", conversation_id: conversationId },
+    tag: secret ? "privio-secret-call" : `privio-call-${conversationId}`,
+  });
+}
+
 async function sendData(
   sa: ServiceAccount,
   token: string,

@@ -13,10 +13,13 @@ import '../../l10n/l10n.dart';
 enum CallSystemAction { accept, decline, end }
 
 class CallSystemEvent {
-  const CallSystemEvent(this.action, this.callId);
+  const CallSystemEvent(this.action, this.callId, {this.group = false});
 
   final CallSystemAction action;
   final String callId;
+
+  /// Lot 9.4 : appel de groupe (géré par son propre contrôleur).
+  final bool group;
 }
 
 abstract interface class CallSystem {
@@ -26,14 +29,18 @@ abstract interface class CallSystem {
   /// Appel décroché depuis l'écran d'appel du téléphone pendant que Privio était fermé.
   Future<String?> acceptedCall();
 
+  /// Lot 9.4 : même chose pour un appel de groupe.
+  Future<String?> acceptedGroupCall();
+
   /// Privio en arrière-plan : l'écran d'appel du téléphone sonne (sans nom).
-  Future<void> showIncoming(String callId, {bool video = false});
+  /// [group] : appel de groupe (lot 9.4).
+  Future<void> showIncoming(String callId, {bool video = false, bool group = false});
 
   /// Privio revenu au premier plan : son propre écran d'appel prend le relais.
   Future<void> hideIncoming(String callId);
 
   /// Appel en cours : maintenu écran éteint ou Privio en arrière-plan.
-  Future<void> activate(String callId, {bool video = false});
+  Future<void> activate(String callId, {bool video = false, bool group = false});
   Future<void> connected(String callId);
   Future<void> end(String callId);
 
@@ -66,11 +73,13 @@ class NoCallSystem implements CallSystem {
   @override
   Future<String?> acceptedCall() async => null;
   @override
-  Future<void> showIncoming(String callId, {bool video = false}) async {}
+  Future<String?> acceptedGroupCall() async => null;
+  @override
+  Future<void> showIncoming(String callId, {bool video = false, bool group = false}) async {}
   @override
   Future<void> hideIncoming(String callId) async {}
   @override
-  Future<void> activate(String callId, {bool video = false}) async {}
+  Future<void> activate(String callId, {bool video = false, bool group = false}) async {}
   @override
   Future<void> setPip(bool allowed) async {}
   @override
@@ -94,17 +103,22 @@ class NoCallSystem implements CallSystem {
 
 /// Paramètres de l'écran d'appel du téléphone : JAMAIS de nom ni de numéro (décision C) —
 /// il s'affiche aussi téléphone verrouillé. Identifiant = celui de l'appel Privio.
+/// Lot 9.4 : [group] — « Appel de groupe Privio », reconnu ensuite par `extra`.
 CallKitParams incomingCallParams(
   String callId, {
   Duration ring = const Duration(seconds: 45),
   bool video = false,
+  bool group = false,
 }) => CallKitParams(
   id: callId,
-  nameCaller: video ? L.t.callVideoIncomingLocked : L.t.callIncomingLocked,
+  nameCaller: group
+      ? (video ? L.t.groupCallVideoIncomingLocked : L.t.groupCallIncomingLocked)
+      : (video ? L.t.callVideoIncomingLocked : L.t.callIncomingLocked),
   appName: 'Privio',
   handle: '',
   type: video ? 1 : 0,
   duration: ring.inMilliseconds,
+  extra: group ? const {'group': '1'} : null,
   missedCallNotification: const NotificationParams(showNotification: false),
   callingNotification: NotificationParams(
     showNotification: true,
@@ -130,20 +144,20 @@ CallKitParams incomingCallParams(
 
 /// Action faite sur l'écran d'appel du téléphone ou sa notification (null : sans intérêt).
 CallSystemEvent? callSystemEventOf(CallEvent? e) {
-  CallSystemEvent? of(CallSystemAction a, String id) =>
-      id.length == 36 ? CallSystemEvent(a, id) : null;
+  CallSystemEvent? of(CallSystemAction a, CallKitParams p) =>
+      p.id.length == 36 ? CallSystemEvent(a, p.id, group: isGroupCallParams(p)) : null;
   return switch (e) {
-    CallEventActionCallAccept(:final callKitParams) => of(
-      CallSystemAction.accept,
-      callKitParams.id,
-    ),
-    CallEventActionCallDecline(:final callKitParams) => of(
-      CallSystemAction.decline,
-      callKitParams.id,
-    ),
-    CallEventActionCallEnded(:final callKitParams) => of(CallSystemAction.end, callKitParams.id),
+    CallEventActionCallAccept(:final callKitParams) => of(CallSystemAction.accept, callKitParams),
+    CallEventActionCallDecline(:final callKitParams) => of(CallSystemAction.decline, callKitParams),
+    CallEventActionCallEnded(:final callKitParams) => of(CallSystemAction.end, callKitParams),
     _ => null,
   };
+}
+
+/// Lot 9.4 : écran d'appel d'un appel de groupe ?
+bool isGroupCallParams(CallKitParams p) {
+  final g = p.extra?['group'];
+  return g == '1' || g == true || g == 1;
 }
 
 class DeviceCallSystem implements CallSystem {
@@ -176,11 +190,16 @@ class DeviceCallSystem implements CallSystem {
   }
 
   @override
-  Future<String?> acceptedCall() async {
+  Future<String?> acceptedCall() => _accepted(group: false);
+
+  @override
+  Future<String?> acceptedGroupCall() => _accepted(group: true);
+
+  Future<String?> _accepted({required bool group}) async {
     try {
       final calls = await FlutterCallkitIncoming.activeCalls();
       for (final c in calls) {
-        if (c.isAccepted && c.id.length == 36) return c.id;
+        if (c.isAccepted && c.id.length == 36 && isGroupCallParams(c) == group) return c.id;
       }
     } on Object {
       // Ignoré.
@@ -189,8 +208,10 @@ class DeviceCallSystem implements CallSystem {
   }
 
   @override
-  Future<void> showIncoming(String callId, {bool video = false}) => _safe(
-    () => FlutterCallkitIncoming.showCallkitIncoming(incomingCallParams(callId, video: video)),
+  Future<void> showIncoming(String callId, {bool video = false, bool group = false}) => _safe(
+    () => FlutterCallkitIncoming.showCallkitIncoming(
+      incomingCallParams(callId, video: video, group: group),
+    ),
   );
 
   @override
@@ -198,10 +219,10 @@ class DeviceCallSystem implements CallSystem {
       _safe(() => FlutterCallkitIncoming.hideCallkitIncoming(incomingCallParams(callId)));
 
   @override
-  Future<void> activate(String callId, {bool video = false}) => _safe(() async {
+  Future<void> activate(String callId, {bool video = false, bool group = false}) => _safe(() async {
     final calls = await FlutterCallkitIncoming.activeCalls();
     if (calls.any((c) => c.id == callId && c.isAccepted)) return;
-    await FlutterCallkitIncoming.startCall(incomingCallParams(callId, video: video));
+    await FlutterCallkitIncoming.startCall(incomingCallParams(callId, video: video, group: group));
   });
 
   @override
