@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/services/admin_api.dart';
 import '../domain/models/console.dart';
+import '../domain/models/console_team.dart';
 import 'messaging_providers.dart';
 import '../domain/models/moderation.dart';
 
@@ -13,8 +14,41 @@ final adminApiProvider = Provider<AdminApi>(
 /// changement de compte. Aucune condition locale (numéro, etc.) dans l'application.
 final consoleAccessProvider = FutureProvider<bool>((ref) async {
   if (ref.watch(currentUserIdProvider) == null) return false;
+  // Lot 5.8 : ajouté à l'équipe ou retiré (signal « moderation ») : l'entrée suit.
+  ref.listen(realtimeSignalsProvider, (_, next) {
+    if (next.value?.event == 'moderation') ref.invalidateSelf();
+  });
   return ref.watch(adminApiProvider).consoleAccess();
 });
+
+/// Lot 5.8 : mon rôle dans la console (relu à chaque ouverture).
+final consoleMeProvider = FutureProvider.autoDispose<ConsoleMe>(
+  (ref) => ref.watch(adminApiProvider).me(),
+);
+
+final consoleTeamProvider = FutureProvider.autoDispose<List<StaffMember>>(
+  (ref) => ref.watch(adminApiProvider).team(),
+);
+
+/// Groupes : (recherche, filtre, page).
+final consoleGroupsPageProvider = FutureProvider.autoDispose
+    .family<ConsolePage<ConsoleGroup>, (String, String, int)>(
+      (ref, f) => ref
+          .watch(adminApiProvider)
+          .groupsPage(query: f.$1.isEmpty ? null : f.$1, filter: f.$2, page: f.$3),
+    );
+
+final consoleTemplatesProvider = FutureProvider.autoDispose<List<ConsoleTemplate>>(
+  (ref) => ref.watch(adminApiProvider).templates(),
+);
+
+final blockedSitesProvider = FutureProvider.autoDispose<List<String>>(
+  (ref) => ref.watch(adminApiProvider).blockedSites(),
+);
+
+final moderationStatsProvider = FutureProvider.autoDispose.family<ModerationStats, int>(
+  (ref, days) => ref.watch(adminApiProvider).moderationStats(days),
+);
 
 /// Lot 5.5 : page de la liste des comptes (A–Z). Lot 5.6 : (filtre, page).
 final consoleAccountsPageProvider = FutureProvider.autoDispose

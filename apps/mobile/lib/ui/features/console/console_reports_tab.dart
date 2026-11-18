@@ -13,7 +13,9 @@ import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
 import '../../../state/providers.dart';
 import '../../core/widgets/settings_card.dart';
+import 'console_moderation_tab.dart' show TemplatePicker;
 import 'console_screen.dart' show ConsoleBackHandler;
+import '../../../domain/models/console_team.dart';
 import '../../core/widgets/state_views.dart';
 
 /// Onglet « Signalements » de la console (lot 5.3) : files, dossiers, décisions,
@@ -46,6 +48,9 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> with Cons
       return DossierView(reports: dossier, onBack: () => setState(() => _dossier = null));
     }
     final theme = Theme.of(context);
+    // Lot 5.8 : l'assistance ne voit que ses demandes (ni contestations, ni filtres).
+    final role = ref.watch(consoleMeProvider).value?.role ?? ConsoleRole.owner;
+    if (role == ConsoleRole.support && _queue == 'appeals') _queue = 'open';
     return Column(
       children: [
         Padding(
@@ -61,17 +66,18 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> with Cons
                 ('closed', 'Traités'),
                 ('appeals', 'Contestations'),
               ])
-                consoleChip(
-                  context,
-                  key: Key('reports.queue.$q'),
-                  label: label,
-                  selected: _queue == q,
-                  onTap: () => setState(() => _queue = q),
-                ),
+                if (q != 'appeals' || role.moderates)
+                  consoleChip(
+                    context,
+                    key: Key('reports.queue.$q'),
+                    label: label,
+                    selected: _queue == q,
+                    onTap: () => setState(() => _queue = q),
+                  ),
             ],
           ),
         ),
-        if (_queue != 'appeals')
+        if (_queue != 'appeals' && role.moderates)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(
@@ -86,16 +92,17 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> with Cons
                   ('group', 'Groupes'),
                   ('support', 'Assistance'),
                 ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: PrivioSpacing.s),
-                    child: consoleChip(
-                      context,
-                      key: Key('reports.kind.$k'),
-                      label: label,
-                      selected: _kind == k,
-                      onTap: () => setState(() => _kind = _kind == k ? null : k),
+                  if (k != 'support' || role.isOwner)
+                    Padding(
+                      padding: const EdgeInsets.only(right: PrivioSpacing.s),
+                      child: consoleChip(
+                        context,
+                        key: Key('reports.kind.$k'),
+                        label: label,
+                        selected: _kind == k,
+                        onTap: () => setState(() => _kind = _kind == k ? null : k),
+                      ),
                     ),
-                  ),
                 PopupMenuButton<String?>(
                   key: const Key('reports.reason'),
                   tooltip: 'Filtrer par motif',
@@ -809,6 +816,14 @@ class _DecisionDialogState extends State<DecisionDialog> {
               ),
             ],
             const SizedBox(height: PrivioSpacing.m),
+            // Lot 5.8 : motifs de décision types.
+            TemplatePicker(
+              kind: 'decision',
+              onPick: (t) => setState(() {
+                _note.text = t;
+                _note.selection = TextSelection.collapsed(offset: t.length);
+              }),
+            ),
             TextField(
               key: const Key('decision.note'),
               controller: _note,
@@ -930,13 +945,6 @@ class _AppealsList extends ConsumerWidget {
   }
 }
 
-/// Modèles de réponse (lot 5.4), modifiables avant l'envoi.
-const kReplyTemplates = <String>[
-  'Merci, le problème est corrigé.',
-  'Mettez à jour l’application puis réessayez.',
-  'Nous avons besoin de plus de détails\u202F: que voyez-vous à l’écran\u202F?',
-];
-
 /// Réponse à une demande d'assistance (1 000 caractères au plus).
 class ReplyDialog extends StatefulWidget {
   const ReplyDialog({super.key});
@@ -971,18 +979,14 @@ class _ReplyDialogState extends State<ReplyDialog> {
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: PrivioSpacing.m),
-            Text('Modèles', style: theme.textTheme.labelLarge),
-            for (final (i, t) in kReplyTemplates.indexed)
-              TextButton(
-                key: Key('reply.template.$i'),
-                style: TextButton.styleFrom(alignment: Alignment.centerLeft),
-                onPressed: () => setState(() {
-                  _text.text = t;
-                  _text.selection = TextSelection.collapsed(offset: t.length);
-                }),
-                child: Text(t, textAlign: TextAlign.start),
-              ),
-            const SizedBox(height: PrivioSpacing.s),
+            // Lot 5.8 : réponses types gérées dans la console (« Réponses types »).
+            TemplatePicker(
+              kind: 'support',
+              onPick: (t) => setState(() {
+                _text.text = t;
+                _text.selection = TextSelection.collapsed(offset: t.length);
+              }),
+            ),
             TextField(
               key: const Key('reply.text'),
               controller: _text,

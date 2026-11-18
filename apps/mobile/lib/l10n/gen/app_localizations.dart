@@ -8415,6 +8415,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Les appels de groupe sont momentanément indisponibles. Réessayez plus tard.'**
   String get groupCallUnavailableError;
+
+  /// Écran : Discussion (événement de groupe, lot 5.8)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe a été rouvert par Privio'**
+  String get groupReopenedByPrivio;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

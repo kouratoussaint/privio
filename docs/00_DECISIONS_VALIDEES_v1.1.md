@@ -327,3 +327,15 @@ membre ; **sonnerie** chez les membres si le groupe en compte 16 au plus (sauf s
 appels refusés, blocage), sinon notification neutre et bandeau « Rejoindre ». Un seul
 appel à la fois par personne (à deux ou en groupe). Rien n'est enregistré ; la trace de
 l'appel s'efface comme les autres messages.
+
+## Amendement 24 — Console : équipe et modération (18 novembre 2026)
+Lot 5.8 (ADR-053), options recommandées validées :
+- **A** : trois rôles — Propriétaire (tout), Modérateur (signalements, sanctions, groupes),
+  Assistance (demandes d'assistance, fiches des comptes sans pouvoir sanctionner).
+- **B** : seul le propriétaire ajoute une personne, au numéro d'un compte Privio existant ;
+  vérification en deux étapes obligatoire pour l'équipe ; tout est journalisé.
+- **C** : liste des groupes (titre, membres, type, création, signalements), jamais les
+  messages ; fermer ou supprimer avec un motif journalisé.
+- **D** : réponses types pour l'assistance et les décisions, écrites par le propriétaire.
+- **E** : sites sans aperçu ; le lien reste envoyé.
+- **F** : suivi de la modération sur 7 et 30 jours.

@@ -396,9 +396,15 @@ class JournalEntry {
     this.before,
     this.after,
     this.detail = const {},
+    this.by,
+    this.byRole,
   });
 
   final int id;
+
+  /// Lot 5.8 : qui a agi (nom) et son rôle (owner, moderator, support).
+  final String? by;
+  final String? byRole;
 
   /// Détail brut (modération : action, @identifiant, durée…).
   final Map<String, dynamic> detail;
@@ -420,6 +426,8 @@ class JournalEntry {
     before: _plain(j['before']),
     after: _plain(j['after']),
     detail: j['detail'] is Map ? Map<String, dynamic>.from(j['detail'] as Map) : const {},
+    by: j['by'] as String?,
+    byRole: j['by_role'] as String?,
   );
 }
 
@@ -434,6 +442,8 @@ const kJournalTypes = <String, String>{
   'settings': 'Fonctionnalités et réglages',
   'security': 'Sécurité',
   'support': 'Assistance',
+  'groups': 'Groupes',
+  'team': 'Équipe',
   'views': 'Consultations',
 };
 
@@ -446,8 +456,10 @@ String journalTypeOf(String action) => switch (action) {
   'avatar_remove' ||
   'handle_reset' => 'accounts',
   'moderation' || 'evidence' || 'appeal' => 'reports',
-  'policy' || 'reserved_handle' => 'settings',
+  'group_close' || 'group_reopen' || 'group_delete' => 'groups',
+  'policy' || 'reserved_handle' || 'template' || 'site' => 'settings',
   'two_step_reset' || 'disconnect' => 'security',
+  'team_add' || 'team_role' || 'team_remove' => 'team',
   'reply' => 'support',
   _ => 'views',
 };

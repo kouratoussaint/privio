@@ -42,6 +42,7 @@ import 'package:privio/state/feedback_providers.dart';
 import 'package:privio/data/services/sound_service.dart';
 import 'package:privio/data/services/calls_api.dart';
 import 'package:privio/data/services/group_call_engine.dart';
+import 'package:privio/domain/models/console_team.dart';
 import 'package:privio/data/services/group_calls_api.dart';
 import 'package:privio/domain/models/group_call.dart';
 import 'package:privio/state/group_call_controller.dart';
@@ -3216,7 +3217,18 @@ class FakeAdminApi implements AdminApi {
   @override
   Future<List<ModerationReport>> reports(String status) async {
     if (!admin) throw const AppFailure(FailureCode.adminRequired);
-    return reportList.where((r) => r.status == status).toList();
+    // Lot 5.8 : chacun ses dossiers, comme le serveur.
+    return reportList
+        .where(
+          (r) =>
+              r.status == status &&
+              switch (role) {
+                ConsoleRole.support => r.reason == 'support',
+                ConsoleRole.moderator => r.reason != 'support',
+                ConsoleRole.owner => true,
+              },
+        )
+        .toList();
   }
 
   @override
@@ -3492,6 +3504,194 @@ class FakeAdminApi implements AdminApi {
     _audit('dashboard');
     return board;
   }
+
+  // -------------------------------------------------------------------------
+  // Lot 5.8 : équipe et modération
+  // -------------------------------------------------------------------------
+  ConsoleRole role = ConsoleRole.owner;
+  bool staffTwoStep = true;
+  final List<StaffMember> staff = [
+    const StaffMember(userId: 'u1', role: ConsoleRole.owner, name: 'Admin', handle: 'admin_privio'),
+  ];
+  final List<String> teamLog = [];
+
+  @override
+  Future<ConsoleMe> me() async {
+    if (!admin) throw const AppFailure(FailureCode.adminRequired);
+    return ConsoleMe(role: role, twoStep: role.isOwner || staffTwoStep);
+  }
+
+  @override
+  Future<List<StaffMember>> team() async => List.of(staff);
+
+  @override
+  Future<void> addStaff(String phoneE164, ConsoleRole role) async {
+    if (phoneE164 == '+22670009999') throw const AppFailure(FailureCode.staffNotFound);
+    teamLog.add('add:$phoneE164:${role.name}');
+    staff.add(
+      StaffMember(
+        userId: 'staff-${staff.length}',
+        role: role,
+        name: 'Nouvelle personne',
+        handle: 'nouveau',
+        phone: phoneE164,
+      ),
+    );
+  }
+
+  @override
+  Future<void> setStaffRole(String userId, ConsoleRole role) async {
+    teamLog.add('role:$userId:${role.name}');
+    final i = staff.indexWhere((m) => m.userId == userId);
+    final m = staff[i];
+    staff[i] = StaffMember(userId: m.userId, role: role, name: m.name, handle: m.handle);
+  }
+
+  @override
+  Future<void> removeStaff(String userId) async {
+    teamLog.add('remove:$userId');
+    staff.removeWhere((m) => m.userId == userId);
+  }
+
+  final Map<String, ConsoleGroup> groups = {
+    'g1': const ConsoleGroup(
+      id: 'g1',
+      title: 'Marché du soir',
+      members: 12,
+      admins: 1,
+      ownerHandle: 'dani',
+      reportsOpen: 2,
+      reports90d: 3,
+    ),
+    'g2': const ConsoleGroup(id: 'g2', title: 'Infos du quartier', announcement: true, members: 80),
+  };
+  final List<(String, String, String)> groupActions = [];
+
+  @override
+  Future<ConsolePage<ConsoleGroup>> groupsPage({
+    String? query,
+    String filter = 'all',
+    int page = 1,
+    int size = 30,
+  }) async {
+    final rows = [
+      for (final g in groups.values)
+        if ((query == null || g.title.toLowerCase().contains(query.toLowerCase())) &&
+            switch (filter) {
+              'reported' => g.reportsOpen > 0,
+              'closed' => g.closed,
+              'announcement' => g.announcement,
+              _ => true,
+            })
+          g,
+    ];
+    return ConsolePage(total: rows.length, page: page, size: size, rows: rows);
+  }
+
+  @override
+  Future<ConsoleGroup> group(String id) async =>
+      groups[id] ?? (throw const AppFailure(FailureCode.groupNotFound));
+
+  @override
+  Future<ConsoleGroup?> groupAction(String id, String action, String note) async {
+    groupActions.add((id, action, note));
+    final g = groups[id]!;
+    if (action == 'delete') {
+      groups.remove(id);
+      return null;
+    }
+    return groups[id] = ConsoleGroup(
+      id: g.id,
+      title: g.title,
+      members: g.members,
+      admins: g.admins,
+      ownerHandle: g.ownerHandle,
+      closed: action == 'close',
+    );
+  }
+
+  final List<ConsoleTemplate> templateList = [
+    const ConsoleTemplate(
+      id: 'tpl-s1',
+      kind: 'support',
+      title: 'Problème corrigé',
+      body: 'Merci, le problème est corrigé.',
+    ),
+    const ConsoleTemplate(
+      id: 'tpl-s2',
+      kind: 'support',
+      title: 'Mettre à jour',
+      body: 'Mettez à jour l’application puis réessayez.',
+    ),
+    const ConsoleTemplate(
+      id: 'tpl-d1',
+      kind: 'decision',
+      title: 'Arnaque confirmée',
+      body: 'Arnaque confirmée : même message envoyé à plusieurs personnes.',
+    ),
+  ];
+
+  @override
+  Future<List<ConsoleTemplate>> templates() async => List.of(templateList);
+
+  @override
+  Future<void> saveTemplate({
+    String? id,
+    required String kind,
+    required String title,
+    required String body,
+  }) async {
+    if (role != ConsoleRole.owner) throw const AppFailure(FailureCode.adminRequired);
+    templateList.removeWhere((t) => t.id == id);
+    templateList.add(
+      ConsoleTemplate(
+        id: id ?? 'tpl-${templateList.length + 10}',
+        kind: kind,
+        title: title,
+        body: body,
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteTemplate(String id) async => templateList.removeWhere((t) => t.id == id);
+
+  final List<String> sites = [];
+
+  @override
+  Future<List<String>> blockedSites() async => List.of(sites);
+
+  @override
+  Future<String> blockSite(String site, {required bool blocked}) async {
+    final d = site
+        .replaceFirst(RegExp(r'^[a-z]+://'), '')
+        .replaceFirst(RegExp(r'^www\.'), '')
+        .split('/')
+        .first
+        .toLowerCase();
+    if (!d.contains('.')) throw const AppFailure(FailureCode.siteInvalid);
+    if (blocked) {
+      if (!sites.contains(d)) sites.add(d);
+    } else {
+      sites.remove(d);
+    }
+    return d;
+  }
+
+  @override
+  Future<ModerationStats> moderationStats(int days) async => ModerationStats(
+    days: days,
+    received: days == 7 ? 4 : 15,
+    decided: days == 7 ? 3 : 12,
+    openNow: 1,
+    oldestOpenHours: 5,
+    avgHours: 2.5,
+    byReason: const {'spam': 3, 'harassment': 1},
+    byDecision: const {'warned': 2, 'dismissed': 1},
+    byPerson: const [
+      ModerationPerson(name: 'Modo', role: ConsoleRole.moderator, decided: 3, avgHours: 2),
+    ],
+  );
 }
 
 class FakePushService implements PushService {

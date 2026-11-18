@@ -5,6 +5,7 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/phone/phone_number.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
+import '../../../domain/models/console_team.dart';
 import '../../../domain/models/moderation.dart';
 import '../../../state/console_providers.dart';
 import '../../../state/moderation_providers.dart';
@@ -601,6 +602,8 @@ class _AccountViewState extends ConsumerState<AccountView> {
               ),
           ];
     final canAct = !a.protected && !a.deleted;
+    // Lot 5.8 : sanctions (modération) et sécurité du compte (assistance) selon le rôle.
+    final role = ref.watch(consoleMeProvider).value?.role ?? ConsoleRole.owner;
     return ListView(
       key: const Key('account.view'),
       padding: const EdgeInsets.fromLTRB(
@@ -640,7 +643,7 @@ class _AccountViewState extends ConsumerState<AccountView> {
                     _DeviceTile(
                       d: d,
                       first: i == 0,
-                      onDisconnect: canAct && d.active && d.id.isNotEmpty && !_busy
+                      onDisconnect: canAct && role.assists && d.active && d.id.isNotEmpty && !_busy
                           ? () => _act(a, 'disconnect_device', device: d)
                           : null,
                     ),
@@ -695,18 +698,19 @@ class _AccountViewState extends ConsumerState<AccountView> {
               child: _ActionGrid(
                 key: const Key('account.actions'),
                 actions: [
-                  const _Action(
-                    'account.warn',
-                    'Avertir',
-                    Icons.warning_amber_rounded,
-                    _amber,
-                    'warn',
-                  ),
-                  if (a.suspended)
+                  if (role.moderates)
+                    const _Action(
+                      'account.warn',
+                      'Avertir',
+                      Icons.warning_amber_rounded,
+                      _amber,
+                      'warn',
+                    ),
+                  if (role.moderates && a.suspended)
                     const _Action('account.lift', 'Réactiver', Icons.lock_open, _green, 'lift')
-                  else
+                  else if (role.moderates)
                     const _Action('account.suspend', 'Suspendre…', Icons.block, _red, 'suspend'),
-                  if (a.hasDevice || devices.any((d) => d.active))
+                  if (role.assists && (a.hasDevice || devices.any((d) => d.active)))
                     const _Action(
                       'account.disconnect',
                       'Déconnecter le téléphone',
@@ -714,7 +718,7 @@ class _AccountViewState extends ConsumerState<AccountView> {
                       _blue,
                       'disconnect',
                     ),
-                  if (twoStep?.enabled ?? false)
+                  if (role.assists && (twoStep?.enabled ?? false))
                     const _Action(
                       'account.two_step_reset',
                       'Réinitialiser les deux étapes',
@@ -722,7 +726,7 @@ class _AccountViewState extends ConsumerState<AccountView> {
                       _violet,
                       'two_step_reset',
                     ),
-                  if (a.avatarPath != null)
+                  if (role.moderates && a.avatarPath != null)
                     const _Action(
                       'account.remove_avatar',
                       'Retirer la photo',
@@ -730,7 +734,7 @@ class _AccountViewState extends ConsumerState<AccountView> {
                       null,
                       'remove_avatar',
                     ),
-                  if (!a.handleReset)
+                  if (role.moderates && !a.handleReset)
                     const _Action(
                       'account.reset_handle',
                       'Changer l’identifiant',

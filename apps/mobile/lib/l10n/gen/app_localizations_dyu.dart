@@ -4993,4 +4993,7 @@ class AppLocalizationsDyu extends AppLocalizations {
   @override
   String get groupCallUnavailableError =>
       'Les appels de groupe sont momentanément indisponibles. Réessayez plus tard.';
+
+  @override
+  String get groupReopenedByPrivio => 'Ce groupe a été rouvert par Privio';
 }

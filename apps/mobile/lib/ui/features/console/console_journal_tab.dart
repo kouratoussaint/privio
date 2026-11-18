@@ -235,6 +235,12 @@ String journalText(JournalEntry e, String unit) => switch (e.action) {
   _ => e.action,
 };
 
+String _role(Object? r) => switch (r) {
+  'moderator' => 'modérateur',
+  'support' => 'assistance',
+  _ => 'propriétaire',
+};
+
 class _EntryTile extends StatelessWidget {
   const _EntryTile({required this.e, required this.unit});
 
@@ -258,11 +264,17 @@ class _EntryTile extends StatelessWidget {
         'reply' => Icons.support_agent,
         'avatar_remove' => Icons.hide_image_outlined,
         'handle_reset' || 'reserved_handle' => Icons.alternate_email,
+        'team' || 'team_add' || 'team_role' || 'team_remove' => Icons.badge_outlined,
+        'group_close' || 'group_reopen' || 'group_delete' => Icons.groups_outlined,
+        'site' => Icons.link_off_rounded,
+        'template' => Icons.quickreply_outlined,
         _ => Icons.visibility_outlined,
       }),
       title: Text(journalText(e, unit)),
       subtitle: Text(
-        'Le ${two(l.day)}/${two(l.month)}/${l.year} à ${two(l.hour)}:${two(l.minute)}',
+        'Le ${two(l.day)}/${two(l.month)}/${l.year} à ${two(l.hour)}:${two(l.minute)}'
+        // Lot 5.8 : qui a agi.
+        '${e.by == null ? '' : ' · ${e.by} (${_role(e.byRole)})'}',
       ),
     );
   }

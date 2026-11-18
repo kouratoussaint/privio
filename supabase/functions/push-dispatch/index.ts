@@ -364,7 +364,12 @@ async function dispatchAdmin(token: string, event: string, refId: string): Promi
       p_invalid_tokens: invalid,
     }, serviceHeaders());
   try {
-    const targets = await rpc<{ token: string }[]>("push_admin_targets", { p_token: token }, serviceHeaders());
+    // Lot 5.8 : selon le rôle (signalements → modérateurs, assistance → assistance).
+    const targets = await rpc<{ token: string }[]>(
+      "push_admin_targets",
+      { p_token: token, p_event: event },
+      serviceHeaders(),
+    );
     if (targets.length === 0) {
       await report(0, 0, 0, "no_targets");
       return json(200, { recipients: 0 });

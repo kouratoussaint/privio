@@ -231,7 +231,7 @@ void main() {
     await tester.tap(find.byKey(const Key('dossier.reply')));
     await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(find.byKey(const Key('reply.send'))).onPressed, isNull);
-    await tester.tap(find.byKey(const Key('reply.template.1')));
+    await tester.tap(find.byKey(const Key('template.pick.tpl-s2')));
     await tester.pump();
     await tester.enterText(
       find.byKey(const Key('reply.text')),

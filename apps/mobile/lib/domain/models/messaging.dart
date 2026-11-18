@@ -842,6 +842,8 @@ String? groupEventText(ChatMessage m, {required String? me}) {
           ? ev(() => L.t.evtPostingAdminsMine, () => L.t.evtPostingAdminsOther(a))
           : ev(() => L.t.evtPostingAllMine, () => L.t.evtPostingAllOther(a)),
     'closed' => L.t.ceGroupeEteFermePar2,
+    // Lot 5.8 : groupe rouvert depuis la console.
+    'reopened' => L.t.groupReopenedByPrivio,
     'info_editing' =>
       v == 'admins'
           ? ev(() => L.t.evtInfoAdminsMine, () => L.t.evtInfoAdminsOther(a))

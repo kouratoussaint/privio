@@ -8,19 +8,24 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
+import '../../../domain/models/console_team.dart';
 import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
 import '../../core/motion/motion.dart';
 import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
+import '../settings/two_step_screens.dart';
 import 'console_accounts_tab.dart';
 import 'console_features_tab.dart';
+import 'console_groups_tab.dart';
+import 'console_moderation_tab.dart';
 import 'console_health_tab.dart';
 import 'console_journal_tab.dart';
 import 'console_policies_tab.dart';
 import 'console_reports_tab.dart';
 import 'console_stats_tab.dart';
+import 'console_team_tab.dart';
 
 /// Console d'administration (lot 5.1, amendement 6). Réservée au compte administrateur :
 /// le serveur le vérifie à chaque appel. À chaque ouverture : code Privio ou empreinte ;
@@ -110,7 +115,9 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
   }
 
   void _open() {
-    ref.invalidate(consoleDashboardProvider);
+    ref
+      ..invalidate(consoleDashboardProvider)
+      ..invalidate(consoleMeProvider);
     setState(() {
       _verified = true;
       _section = ConsoleSection.home;
@@ -151,11 +158,16 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
   @override
   Widget build(BuildContext context) {
     final lock = ref.watch(appLockProvider).value;
-    final open = _verified && (lock?.enabled ?? false);
+    // Lot 5.8 : rôle dans la console ; rubriques selon le rôle, deux étapes obligatoires
+    // pour l'équipe.
+    final me = _verified ? ref.watch(consoleMeProvider) : null;
+    final role = me?.value?.role;
+    final ready = me?.value != null && !me!.value!.blocked;
+    final open = _verified && (lock?.enabled ?? false) && ready;
     final scaffold = Scaffold(
-      drawer: open ? _ConsoleDrawer(current: _section, onSelect: _go) : null,
+      drawer: open ? _ConsoleDrawer(current: _section, role: role!, onSelect: _go) : null,
       appBar: AppBar(
-        title: Text(open ? _section.label : 'Administration'),
+        title: Text(open ? _section.labelFor(role!) : 'Administration'),
         // Lot 5.5 : menu latéral (plus d'onglets à faire défiler).
         leading: open
             ? Builder(
@@ -180,6 +192,17 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
       body: switch ((lock, _verified)) {
         (null, _) => const LoadingView(),
         (final l?, _) when !l.enabled => const _LockRequired(),
+        (_, true) when me?.value == null =>
+          me?.error != null
+              ? ErrorView(
+                  message: toAppFailure(me!.error!).message,
+                  onRetry: () => ref.invalidate(consoleMeProvider),
+                )
+              : const LoadingView(),
+        (_, true) when !ready => _TwoStepRequired(
+          role: role!,
+          onDone: () => ref.invalidate(consoleMeProvider),
+        ),
         (_, true) => Listener(
           onPointerDown: (_) => _touch(),
           child: AnimatedSwitcher(
@@ -195,7 +218,9 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
             child: KeyedSubtree(
               key: ValueKey(_section),
               child: switch (_section) {
-                ConsoleSection.home => _Dashboard(onOpen: _go),
+                // Rubrique hors de mon rôle (rôle changé entre-temps) : l'accueil.
+                _ when !_section.allowed(role!) => _Dashboard(role: role, onOpen: _go),
+                ConsoleSection.home => _Dashboard(role: role, onOpen: _go),
                 ConsoleSection.reports => const ConsoleReportsTab(),
                 ConsoleSection.accounts => const ConsoleAccountsTab(),
                 ConsoleSection.features => const ConsoleFeaturesTab(),
@@ -203,6 +228,11 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
                 ConsoleSection.stats => const ConsoleStatsTab(),
                 ConsoleSection.health => const ConsoleHealthTab(),
                 ConsoleSection.journal => const ConsoleJournalTab(),
+                ConsoleSection.groups => const ConsoleGroupsTab(),
+                ConsoleSection.moderation => const ConsoleModerationStatsTab(),
+                ConsoleSection.templates => ConsoleTemplatesTab(owner: role.isOwner),
+                ConsoleSection.sites => const ConsoleSitesTab(),
+                ConsoleSection.team => const ConsoleTeamTab(),
               },
             ),
           ),
@@ -245,12 +275,18 @@ enum ConsoleSection {
   home('dashboard', 'Accueil', Icons.space_dashboard_outlined, Color(0xFF6A3FD0)),
   reports('reports', 'Signalements', Icons.flag_outlined, Color(0xFFD85A30)),
   accounts('accounts', 'Comptes', Icons.people_outline, Color(0xFF2A73C9)),
+  // Lot 5.8 : groupes, suivi de la modération, réponses types, sites sans aperçu, équipe.
+  groups('groups', 'Groupes', Icons.groups_outlined, Color(0xFF0E7C86)),
+  moderation('moderation', 'Suivi de la modération', Icons.fact_check_outlined, Color(0xFFB26A00)),
+  templates('templates', 'Réponses types', Icons.quickreply_outlined, Color(0xFF6D4C41)),
+  sites('sites', 'Sites sans aperçu', Icons.link_off_rounded, Color(0xFF455A64)),
   features('features', 'Fonctionnalités', Icons.toggle_on_outlined, Color(0xFF8E44C9)),
   policies('policies', 'Réglages', Icons.tune_rounded, Color(0xFF3E8B1A)),
   stats('stats', 'Statistiques', Icons.insights_outlined, Color(0xFF138A6E)),
   // Lot 5.7 : versions, appels, inscriptions et SMS, diagnostics, alertes.
   health('health', 'Santé du service', Icons.monitor_heart_outlined, Color(0xFFC2185B)),
-  journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85));
+  journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85)),
+  team('team', 'Équipe', Icons.badge_outlined, Color(0xFF3949AB));
 
   const ConsoleSection(this.id, this.label, this.icon, this.color);
 
@@ -258,12 +294,27 @@ enum ConsoleSection {
   final String label;
   final IconData icon;
   final Color color;
+
+  /// Lot 5.8 : rubriques ouvertes à chaque rôle (le serveur vérifie de toute façon).
+  bool allowed(ConsoleRole role) => switch (this) {
+    home || reports || accounts || templates => true,
+    groups || moderation || sites => role.moderates,
+    _ => role.isOwner,
+  };
+
+  /// Tuile sur l'accueil (les autres rubriques sont dans le menu).
+  bool get tile => this != moderation && this != templates && this != sites && this != team;
+
+  /// L'assistance ne traite que les demandes d'assistance.
+  String labelFor(ConsoleRole role) =>
+      this == reports && role == ConsoleRole.support ? 'Demandes d’assistance' : label;
 }
 
 class _ConsoleDrawer extends StatelessWidget {
-  const _ConsoleDrawer({required this.current, required this.onSelect});
+  const _ConsoleDrawer({required this.current, required this.role, required this.onSelect});
 
   final ConsoleSection current;
+  final ConsoleRole role;
   final ValueChanged<ConsoleSection> onSelect;
 
   @override
@@ -295,7 +346,8 @@ class _ConsoleDrawer extends StatelessWidget {
                       children: [
                         Text('Console Privio', style: theme.textTheme.titleMedium),
                         Text(
-                          'Administration',
+                          role.label,
+                          key: const Key('console.role'),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -307,37 +359,38 @@ class _ConsoleDrawer extends StatelessWidget {
               ),
             ),
             for (final s in ConsoleSection.values)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                child: Material(
-                  color: s == current ? s.color.withValues(alpha: 0.12) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                  child: ListTile(
-                    key: Key('console.tab.${s.id}'),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    leading: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: s.color.withValues(alpha: 0.14),
-                        shape: BoxShape.circle,
+              if (s.allowed(role))
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  child: Material(
+                    color: s == current ? s.color.withValues(alpha: 0.12) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                    child: ListTile(
+                      key: Key('console.tab.${s.id}'),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: s.color.withValues(alpha: 0.14),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(s.icon, color: s.color, size: 20),
                       ),
-                      child: Icon(s.icon, color: s.color, size: 20),
-                    ),
-                    title: Text(
-                      s.label,
-                      style: TextStyle(
-                        fontWeight: s == current ? FontWeight.w700 : FontWeight.w500,
-                        color: s == current ? s.color : null,
+                      title: Text(
+                        s.labelFor(role),
+                        style: TextStyle(
+                          fontWeight: s == current ? FontWeight.w700 : FontWeight.w500,
+                          color: s == current ? s.color : null,
+                        ),
                       ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onSelect(s);
+                      },
                     ),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onSelect(s);
-                    },
                   ),
                 ),
-              ),
           ],
         ),
       ),
@@ -387,12 +440,63 @@ class _LockRequired extends StatelessWidget {
   }
 }
 
+/// Lot 5.8 : l'équipe doit activer la vérification en deux étapes pour ouvrir la console.
+class _TwoStepRequired extends StatelessWidget {
+  const _TwoStepRequired({required this.role, required this.onDone});
+
+  final ConsoleRole role;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(PrivioSpacing.xl),
+        child: Column(
+          key: const Key('console.two_step_required'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.verified_user_outlined, size: 56, color: theme.colorScheme.primary),
+            const SizedBox(height: PrivioSpacing.l),
+            Text(
+              'Vérification en deux étapes obligatoire',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: PrivioSpacing.s),
+            Text(
+              'Vous faites partie de l’équipe Privio (${role.label.toLowerCase()}). Pour ouvrir '
+              'la console, activez d’abord la vérification en deux étapes\u202F: un code à 6 chiffres '
+              'demandé si votre numéro est utilisé sur un autre téléphone.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: PrivioSpacing.xl),
+            FilledButton.icon(
+              key: const Key('console.enable_two_step'),
+              onPressed: () async {
+                await Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => const TwoStepSettingsScreen()));
+                onDone();
+              },
+              icon: const Icon(Icons.lock_outline),
+              label: const Text('Activer la vérification en deux étapes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tableau de bord
 // ---------------------------------------------------------------------------
 class _Dashboard extends ConsumerWidget {
-  const _Dashboard({required this.onOpen});
+  const _Dashboard({required this.role, required this.onOpen});
 
+  final ConsoleRole role;
   final ValueChanged<ConsoleSection> onOpen;
 
   @override
@@ -402,7 +506,7 @@ class _Dashboard extends ConsumerWidget {
       AsyncData(:final value) => RefreshIndicator(
         key: const Key('console.refresh'),
         onRefresh: () => ref.refresh(consoleDashboardProvider.future),
-        child: _DashboardList(d: value, onOpen: onOpen),
+        child: _DashboardList(d: value, role: role, onOpen: onOpen),
       ),
       AsyncError(:final error) => ErrorView(
         message: toAppFailure(error).message,
@@ -414,9 +518,10 @@ class _Dashboard extends ConsumerWidget {
 }
 
 class _DashboardList extends StatelessWidget {
-  const _DashboardList({required this.d, required this.onOpen});
+  const _DashboardList({required this.d, required this.role, required this.onOpen});
 
   final ConsoleDashboard d;
+  final ConsoleRole role;
   final ValueChanged<ConsoleSection> onOpen;
 
   @override
@@ -442,6 +547,7 @@ class _DashboardList extends StatelessWidget {
         const SizedBox(height: PrivioSpacing.m),
         _Tiles(
           onOpen: onOpen,
+          role: role,
           badges: {
             ConsoleSection.reports: d.reportsOpen > 0
                 ? '${d.reportsOpen} à traiter'
@@ -452,6 +558,11 @@ class _DashboardList extends StatelessWidget {
             ConsoleSection.stats: '30 derniers jours',
             ConsoleSection.health: 'Versions, appels, SMS',
             ConsoleSection.journal: 'Toutes les actions',
+            ConsoleSection.groups: '${d.groupsTotal} groupes',
+            ConsoleSection.moderation: '7 ou 30 jours',
+            ConsoleSection.templates: 'Assistance, décisions',
+            ConsoleSection.sites: 'Liens sans aperçu',
+            ConsoleSection.team: 'Rôles, deux étapes',
           },
           alert: {if (d.reportsOpen > 0) ConsoleSection.reports},
         ),
@@ -553,9 +664,15 @@ class _DashboardList extends StatelessWidget {
 
 /// Lot 5.5 : tuiles des rubriques (2 par ligne).
 class _Tiles extends StatelessWidget {
-  const _Tiles({required this.onOpen, required this.badges, this.alert = const {}});
+  const _Tiles({
+    required this.onOpen,
+    required this.role,
+    required this.badges,
+    this.alert = const {},
+  });
 
   final ValueChanged<ConsoleSection> onOpen;
+  final ConsoleRole role;
   final Map<ConsoleSection, String> badges;
   final Set<ConsoleSection> alert;
 
@@ -570,7 +687,8 @@ class _Tiles extends StatelessWidget {
           spacing: PrivioSpacing.m,
           runSpacing: PrivioSpacing.m,
           children: [
-            for (final (i, s) in ConsoleSection.values.skip(1).indexed)
+            for (final (i, s)
+                in ConsoleSection.values.skip(1).where((s) => s.tile && s.allowed(role)).indexed)
               AppearIn(
                 delay: Duration(milliseconds: 40 * i),
                 offset: const Offset(0, 0.15),
@@ -610,7 +728,7 @@ class _Tiles extends StatelessWidget {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              s.label,
+                              s.labelFor(role),
                               style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                               ),

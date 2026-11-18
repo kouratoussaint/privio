@@ -6772,5 +6772,9 @@
   "groupCallUnavailableError": "Les appels de groupe sont momentanément indisponibles. Réessayez plus tard.",
   "@groupCallUnavailableError": {
     "description": "Erreur (appels de groupe, lot 9.4)"
+  },
+  "groupReopenedByPrivio": "Ce groupe a été rouvert par Privio",
+  "@groupReopenedByPrivio": {
+    "description": "Écran : Discussion (événement de groupe, lot 5.8)"
   }
 }

@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/app_failure.dart';
 import '../../domain/models/console.dart';
+import '../../domain/models/console_team.dart';
 import '../../domain/models/moderation.dart';
 
 /// Console d'administration (lot 5.1). Le serveur vérifie le droit d'accès à CHAQUE appel ;
@@ -85,6 +86,46 @@ abstract interface class AdminApi {
   /// Lot 8.4a : vérification en deux étapes d'un compte ; réinitialisation (code oublié).
   Future<ConsoleTwoStep> twoStep(String userId);
   Future<void> resetTwoStep(String userId, String note);
+
+  // Lot 5.8 : équipe et modération
+  /// Mon rôle (et deux étapes activées ou non).
+  Future<ConsoleMe> me();
+  Future<List<StaffMember>> team();
+
+  /// Ajoute (ou change de rôle) le compte qui a ce numéro (+226…).
+  Future<void> addStaff(String phoneE164, ConsoleRole role);
+  Future<void> setStaffRole(String userId, ConsoleRole role);
+  Future<void> removeStaff(String userId);
+
+  /// [filter] : clé de [kGroupFilters].
+  Future<ConsolePage<ConsoleGroup>> groupsPage({
+    String? query,
+    String filter = 'all',
+    int page = 1,
+    int size = 30,
+  });
+  Future<ConsoleGroup> group(String id);
+
+  /// close, reopen, delete (renvoie null après une suppression).
+  Future<ConsoleGroup?> groupAction(String id, String action, String note);
+
+  Future<List<ConsoleTemplate>> templates();
+
+  /// [id] null : nouvelle réponse type.
+  Future<void> saveTemplate({
+    String? id,
+    required String kind,
+    required String title,
+    required String body,
+  });
+  Future<void> deleteTemplate(String id);
+
+  Future<List<String>> blockedSites();
+
+  /// Renvoie le domaine retenu (« www. » et chemin retirés).
+  Future<String> blockSite(String site, {required bool blocked});
+
+  Future<ModerationStats> moderationStats(int days);
 }
 
 /// Lot 8.4a : vérification en deux étapes vue par la console.
@@ -399,4 +440,106 @@ class SupabaseAdminApi implements AdminApi {
       throw toAppFailure(e);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Lot 5.8
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> _map(String fn, [Map<String, dynamic>? params]) => _guard(
+    () async => Map<String, dynamic>.from(await _client.rpc<dynamic>(fn, params: params) as Map),
+  );
+
+  Future<void> _call(String fn, Map<String, dynamic> params) =>
+      _guard(() => _client.rpc<dynamic>(fn, params: params));
+
+  @override
+  Future<ConsoleMe> me() async => ConsoleMe.fromJson(await _map('console_me'));
+
+  @override
+  Future<List<StaffMember>> team() async =>
+      (await _rows('console_team')).map(StaffMember.fromJson).toList();
+
+  @override
+  Future<void> addStaff(String phoneE164, ConsoleRole role) =>
+      _call('console_team_add', {'p_phone': phoneE164, 'p_role': role.name});
+
+  @override
+  Future<void> setStaffRole(String userId, ConsoleRole role) =>
+      _call('console_team_set_role', {'p_user_id': userId, 'p_role': role.name});
+
+  @override
+  Future<void> removeStaff(String userId) => _call('console_team_remove', {'p_user_id': userId});
+
+  @override
+  Future<ConsolePage<ConsoleGroup>> groupsPage({
+    String? query,
+    String filter = 'all',
+    int page = 1,
+    int size = 30,
+  }) async {
+    final j = await _map('console_groups_page', {
+      'p_query': query,
+      'p_filter': filter,
+      'p_page': page,
+      'p_size': size,
+    });
+    return ConsolePage(
+      total: (j['total'] as num).toInt(),
+      page: (j['page'] as num).toInt(),
+      size: (j['size'] as num).toInt(),
+      rows: [
+        for (final r in j['rows'] as List)
+          ConsoleGroup.fromJson(Map<String, dynamic>.from(r as Map)),
+      ],
+    );
+  }
+
+  @override
+  Future<ConsoleGroup> group(String id) async =>
+      ConsoleGroup.fromJson(await _map('console_group', {'p_id': id}));
+
+  @override
+  Future<ConsoleGroup?> groupAction(String id, String action, String note) => _guard(() async {
+    final r = await _client.rpc<dynamic>(
+      'console_group_action',
+      params: {'p_id': id, 'p_action': action, 'p_note': note},
+    );
+    return r == null ? null : ConsoleGroup.fromJson(Map<String, dynamic>.from(r as Map));
+  });
+
+  @override
+  Future<List<ConsoleTemplate>> templates() async =>
+      (await _rows('console_templates')).map(ConsoleTemplate.fromJson).toList();
+
+  @override
+  Future<void> saveTemplate({
+    String? id,
+    required String kind,
+    required String title,
+    required String body,
+  }) => _call('console_template_save', {
+    'p_id': id,
+    'p_kind': kind,
+    'p_title': title,
+    'p_body': body,
+  });
+
+  @override
+  Future<void> deleteTemplate(String id) => _call('console_template_delete', {'p_id': id});
+
+  @override
+  Future<List<String>> blockedSites() async => [
+    for (final r in await _rows('console_blocked_sites')) r['domain'] as String,
+  ];
+
+  @override
+  Future<String> blockSite(String site, {required bool blocked}) => _guard(
+    () async => await _client.rpc<dynamic>(
+      'console_block_site',
+      params: {'p_site': site, 'p_blocked': blocked},
+    ) as String,
+  );
+
+  @override
+  Future<ModerationStats> moderationStats(int days) async =>
+      ModerationStats.fromJson(await _map('console_moderation_stats', {'p_days': days}));
 }
