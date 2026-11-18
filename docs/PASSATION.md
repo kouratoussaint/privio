@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 18/11/2026, après la livraison des lots 9.4 et 5.8 (version 0.1.0+84).*
+*Mise à jour : 18/11/2026, après la livraison des lots 9.4, 5.8 et 5.9 (version 0.1.0+86).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -151,21 +151,26 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
     serveur (`private.require_console(rôles)` ; toute fonction de console non ouverte
     explicitement reste au propriétaire) ; deux étapes obligatoires pour l'équipe ;
     rubriques Équipe, Groupes (fermer, rouvrir, supprimer), Réponses types, Sites sans
-    aperçu, Suivi de la modération ; journal avec l'auteur ; alertes par rôle.
-- **Dernier commit de code** : sur `main` (lot 5.8). CI verte (run 84), staging déployé.
-- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5`, `lot-7.4`, `lot-9.4` et `lot-5.8`
-  (identiques à des commits de `main`) restent sur GitHub. Toussaint peut les supprimer.
+    aperçu, Suivi de la modération ; journal avec l'auteur ; alertes par rôle ;
+  - **5.9 Console : pilotage** (version 86, ADR-054, migration `20261118000500`) :
+    inscriptions Ouvertes / Sur liste (numéros, codes d'invitation demandés à
+    l'inscription) / Fermées ; exceptions par compte et par groupe (portées « user » et
+    « group » de `private.policies`, avec date de fin) ; préréglages Mode pilote / Mode
+    normal ; message programmé ; rétention, langue, usage ; export CSV ; alerte « console
+    ouverte sur un nouveau téléphone ».
+- **Dernier commit de code** : sur `main` (lot 5.9). CI verte (run 86), staging déployé.
+- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5`, `lot-7.4`, `lot-9.4`, `lot-5.8` et
+  `lot-5.9` (identiques à des commits de `main`) restent sur GitHub. Toussaint peut les
+  supprimer.
 
 ## 7. Suite prévue
-1. **Retours des tests** de 10.3, 5.7, 10.4, 10.5, 9.3, 7.4, 9.4 et 5.8 (corrections au
-   besoin).
-2. **Console 5.9** : pilotage (inscriptions sur liste, réglages par compte et par groupe,
-   préréglages, message programmé, export des statistiques).
-3. **Étape 6 en dernier**, juste avant le pilote :
+1. **Retours des tests** de 10.3, 5.7, 10.4, 10.5, 9.3, 7.4, 9.4, 5.8 et 5.9 (corrections
+   au besoin). La console est complète (5.1 à 5.9).
+2. **Étape 6 en dernier**, juste avant le pilote :
    - 6.1 : version optimisée et non-régression ;
    - 6.2 : production, fournisseur SMS +226 (B7), retrait des numéros de test ;
    - 6.3 : documents légaux (B10), numéros recyclés (B9).
-4. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
+3. **8.2b** : traductions mooré et dioula, mises de côté pour l'instant.
 
 **Décisions encore ouvertes** :
 - B6/B7 : sauvegardes, budget, fournisseur SMS ;
@@ -174,5 +179,5 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 
 ## 8. Phrase de reprise conseillée
 > « Lis docs/PASSATION.md et docs/SUIVI_LIVRAISONS.md du dépôt kouratoussaint/privio,
-> vérifie l'état de GitHub et de la CI, puis continue (retours de tests, ou console 5.9 après
+> vérifie l'état de GitHub et de la CI, puis continue (retours de tests, ou étape 6 après
 > ses décisions). Voici le jeton GitHub : … »
