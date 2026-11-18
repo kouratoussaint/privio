@@ -20,6 +20,7 @@ import 'console_accounts_tab.dart';
 import 'console_features_tab.dart';
 import 'console_groups_tab.dart';
 import 'console_moderation_tab.dart';
+import 'console_pilot_tab.dart';
 import 'console_health_tab.dart';
 import 'console_journal_tab.dart';
 import 'console_policies_tab.dart';
@@ -233,6 +234,8 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
                 ConsoleSection.templates => ConsoleTemplatesTab(owner: role.isOwner),
                 ConsoleSection.sites => const ConsoleSitesTab(),
                 ConsoleSection.team => const ConsoleTeamTab(),
+                ConsoleSection.signups => const ConsoleSignupsTab(),
+                ConsoleSection.pilot => const ConsolePilotTab(),
               },
             ),
           ),
@@ -286,7 +289,10 @@ enum ConsoleSection {
   // Lot 5.7 : versions, appels, inscriptions et SMS, diagnostics, alertes.
   health('health', 'Santé du service', Icons.monitor_heart_outlined, Color(0xFFC2185B)),
   journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85)),
-  team('team', 'Équipe', Icons.badge_outlined, Color(0xFF3949AB));
+  team('team', 'Équipe', Icons.badge_outlined, Color(0xFF3949AB)),
+  // Lot 5.9 : inscriptions et pilotage.
+  signups('signups', 'Inscriptions', Icons.how_to_reg_outlined, Color(0xFF00897B)),
+  pilot('pilot', 'Pilotage', Icons.tune_rounded, Color(0xFF7B1FA2));
 
   const ConsoleSection(this.id, this.label, this.icon, this.color);
 
@@ -303,7 +309,13 @@ enum ConsoleSection {
   };
 
   /// Tuile sur l'accueil (les autres rubriques sont dans le menu).
-  bool get tile => this != moderation && this != templates && this != sites && this != team;
+  bool get tile =>
+      this != moderation &&
+      this != templates &&
+      this != sites &&
+      this != team &&
+      this != signups &&
+      this != pilot;
 
   /// L'assistance ne traite que les demandes d'assistance.
   String labelFor(ConsoleRole role) =>

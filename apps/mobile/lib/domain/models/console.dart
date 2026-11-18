@@ -457,8 +457,16 @@ String journalTypeOf(String action) => switch (action) {
   'handle_reset' => 'accounts',
   'moderation' || 'evidence' || 'appeal' => 'reports',
   'group_close' || 'group_reopen' || 'group_delete' => 'groups',
-  'policy' || 'reserved_handle' || 'template' || 'site' => 'settings',
-  'two_step_reset' || 'disconnect' => 'security',
+  'policy' ||
+  'reserved_handle' ||
+  'template' ||
+  'site' ||
+  'signup_phones' ||
+  'signup_code' ||
+  'override' ||
+  'preset' ||
+  'scheduled_announcement' => 'settings',
+  'two_step_reset' || 'disconnect' || 'console_device' || 'export' => 'security',
   'team_add' || 'team_role' || 'team_remove' => 'team',
   'reply' => 'support',
   _ => 'views',
@@ -607,6 +615,7 @@ class HealthAlert {
     'sms' => 'Pic de codes SMS',
     'failures' => 'Échecs de notifications ou d’appels',
     'relay' => 'Relais des appels à 80 %',
+    'console_device' => 'Console ouverte sur un nouveau téléphone',
     _ => kind,
   };
 
@@ -619,6 +628,12 @@ class HealthAlert {
       'Notifications\u202F: ${_i(detail['push_failed'])} échecs sur ${_i(detail['push_total'])} (1 h) · '
           'appels\u202F: ${_i(detail['calls_failed'])} sur ${_i(detail['calls_total'])} (24 h)',
     'relay' => '${formatBytes(_i(detail['bytes']))} ce mois-ci',
+    'console_device' =>
+      '${detail['name'] ?? '—'} (${switch (detail['role']) {
+        'moderator' => 'modérateur',
+        'support' => 'assistance',
+        _ => 'propriétaire',
+      }})${detail['model'] == null ? '' : ' · ${detail['model']}'}',
     _ => '',
   };
 }

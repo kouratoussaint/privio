@@ -101,3 +101,22 @@ Future<void> savePolicy(WidgetRef ref, ConsolePolicy policy, Object value) async
 final consoleHealthProvider = FutureProvider.autoDispose<ConsoleHealth>(
   (ref) => ref.watch(adminApiProvider).health(),
 );
+
+// Lot 5.9 : pilotage
+final signupsProvider = FutureProvider.autoDispose<SignupsState>(
+  (ref) => ref.watch(adminApiProvider).signups(),
+);
+
+/// Exceptions : toutes (null, null), d'un compte (id, null) ou d'un groupe (null, id).
+final overridesProvider = FutureProvider.autoDispose
+    .family<List<PolicyOverride>, (String?, String?)>(
+      (ref, f) => ref.watch(adminApiProvider).overrides(userId: f.$1, conversationId: f.$2),
+    );
+
+final scheduledAnnouncementProvider = FutureProvider.autoDispose<ScheduledAnnouncement?>(
+  (ref) => ref.watch(adminApiProvider).scheduledAnnouncement(),
+);
+
+final statsExtraProvider = FutureProvider.autoDispose.family<StatsExtra, int>(
+  (ref, days) => ref.watch(adminApiProvider).statsExtra(days),
+);

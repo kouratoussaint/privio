@@ -231,6 +231,26 @@ class FakeAccountApi implements AccountApi {
   @override
   Future<bool> setExpiryReminder(bool on) async => expiryReminderOn = on;
 
+  // Lot 5.9
+  String signupMode = 'open';
+  bool signupAllowed = true;
+  final List<String> redeemedCodes = [];
+  final List<String> languages = [];
+
+  @override
+  Future<({String mode, bool allowed})> signupStatus() async =>
+      (mode: signupMode, allowed: signupAllowed);
+
+  @override
+  Future<void> redeemSignupCode(String code) async {
+    if (code.toUpperCase() != 'PILOTE23') throw const AppFailure(FailureCode.signupCodeInvalid);
+    redeemedCodes.add(code);
+    signupAllowed = true;
+  }
+
+  @override
+  Future<void> setDeviceLanguage(String language) async => languages.add(language);
+
   @override
   Future<Account> getMyAccount() async {
     if (_pending) throw const AppFailure(FailureCode.authRequired);
@@ -282,6 +302,10 @@ class FakeAccountApi implements AccountApi {
   @override
   Future<Profile> createProfile({required String handle, required String displayName}) async {
     if (takenHandles.contains(handle)) throw const AppFailure(FailureCode.handleTaken);
+    // Lot 5.9 : inscriptions sur liste.
+    if (signupMode == 'list' && !signupAllowed) {
+      throw const AppFailure(FailureCode.signupsListOnly);
+    }
     final profile = Profile(handle: handle, displayName: displayName);
     account = Account(
       userId: 'u1',
@@ -3677,6 +3701,142 @@ class FakeAdminApi implements AdminApi {
     }
     return d;
   }
+
+  // -------------------------------------------------------------------------
+  // Lot 5.9 : pilotage
+  // -------------------------------------------------------------------------
+  String signupMode = 'open';
+  final List<String> signupPhoneList = [];
+  final List<SignupCode> signupCodes = [];
+  final List<PolicyOverride> overrideList = [];
+  final List<String> pilotLog = [];
+  ScheduledAnnouncement? scheduled;
+  int exports = 0;
+
+  @override
+  Future<SignupsState> signups() async =>
+      SignupsState(mode: signupMode, phones: List.of(signupPhoneList), codes: List.of(signupCodes));
+
+  @override
+  Future<void> setSignups(String mode) async => signupMode = mode;
+
+  @override
+  Future<(int, List<String>)> signupPhones(String text, {required bool add}) async {
+    var n = 0;
+    final bad = <String>[];
+    for (final raw
+        in text.split(RegExp(r'[\n,;]+')).map((l) => l.trim()).where((l) => l.isNotEmpty)) {
+      var p = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+      if (RegExp(r'^\d{8}$').hasMatch(p)) p = '+226$p';
+      if (!RegExp(r'^\+\d{8,15}$').hasMatch(p)) {
+        bad.add(raw);
+        continue;
+      }
+      n++;
+      add ? signupPhoneList.add(p) : signupPhoneList.remove(p);
+    }
+    return (n, bad);
+  }
+
+  @override
+  Future<String> createSignupCode({String? label, required int maxUses, required int days}) async {
+    final code = 'PILOTE2${signupCodes.length + 3}';
+    signupCodes.add(
+      SignupCode(
+        code: code,
+        label: label,
+        maxUses: maxUses,
+        expiresAt: DateTime.now().add(Duration(days: days)),
+      ),
+    );
+    return code;
+  }
+
+  @override
+  Future<void> revokeSignupCode(String code) async =>
+      signupCodes.removeWhere((c) => c.code == code);
+
+  @override
+  Future<List<PolicyOverride>> overrides({String? userId, String? conversationId}) async => [
+    for (final o in overrideList)
+      if ((userId == null || (o.scope == 'user' && o.id == userId)) &&
+          (conversationId == null || (o.scope == 'group' && o.id == conversationId)))
+        o,
+  ];
+
+  @override
+  Future<void> setOverride({
+    required String scope,
+    required String id,
+    required String key,
+    Object? value,
+    int? days,
+    String? note,
+  }) async {
+    pilotLog.add('override:$scope:$id:$key:$value:${days ?? '-'}');
+    overrideList.removeWhere((o) => o.scope == scope && o.id == id && o.key == key);
+    if (value != null) {
+      final label = (scope == 'user' ? kUserOverrideKeys : kGroupOverrideKeys)[key]!.$1;
+      overrideList.add(
+        PolicyOverride(
+          scope: scope,
+          id: id,
+          key: key,
+          label: label,
+          value: value,
+          target: scope == 'user' ? '@compte' : 'Groupe',
+          note: note,
+          expiresAt: days == null ? null : DateTime.now().add(Duration(days: days)),
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<List<PresetChange>> preset(String name, {bool apply = false}) async {
+    final changes = name == 'pilot' && signupMode != 'list'
+        ? const [
+            PresetChange(key: 'signups_mode', label: 'Inscriptions', before: 'open', after: 'list'),
+            PresetChange(
+              key: 'group_max_members',
+              label: 'Membres au plus par groupe',
+              before: 50,
+              after: 25,
+            ),
+          ]
+        : const <PresetChange>[];
+    if (apply) {
+      pilotLog.add('preset:$name');
+      if (name == 'pilot') signupMode = 'list';
+    }
+    return changes;
+  }
+
+  @override
+  Future<ScheduledAnnouncement?> scheduledAnnouncement() async => scheduled;
+
+  @override
+  Future<void> setScheduledAnnouncement(String text, {DateTime? startsAt, DateTime? endsAt}) async {
+    pilotLog.add('scheduled:$text');
+    scheduled = text.isEmpty
+        ? null
+        : ScheduledAnnouncement(text: text, startsAt: startsAt!, endsAt: endsAt!);
+  }
+
+  @override
+  Future<StatsExtra> statsExtra(int days) async => StatsExtra(
+    retention: [
+      RetentionWeek(week: DateTime(2026, 11, 9), signups: 12, d1: 12, r1: 9, d7: 10, r7: 6),
+    ],
+    languages: const {'fr': 40, 'mos': 3},
+    usage: [
+      (DateTime(2026, 11, 17), const {'messages_voice': 30, 'messages_photo': 4}),
+      (DateTime(2026, 11, 18), const {'messages_voice': 12, 'group_calls_audio': 2}),
+    ],
+  );
+
+  @override
+  Future<void> logExport(int days) async => exports++;
 
   @override
   Future<ModerationStats> moderationStats(int days) async => ModerationStats(

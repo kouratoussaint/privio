@@ -8,6 +8,7 @@ import '../../../state/console_providers.dart';
 import '../../core/widgets/state_views.dart';
 import 'console_accounts_tab.dart' show ConsolePager;
 import 'console_moderation_tab.dart' show TemplatePicker;
+import 'console_pilot_tab.dart' show OverridesCard;
 import 'console_reports_tab.dart' show consoleChip;
 import 'console_screen.dart' show ConsoleBackHandler;
 
@@ -316,6 +317,9 @@ class _GroupViewState extends ConsumerState<_GroupView> {
               ],
             ),
           ),
+          // Lot 5.9 : exceptions (propriétaire).
+          if (ref.watch(consoleMeProvider).value?.role.isOwner ?? false)
+            OverridesCard(scope: 'group', id: g.id),
         ],
       ),
       AsyncError(:final error) => ErrorView(

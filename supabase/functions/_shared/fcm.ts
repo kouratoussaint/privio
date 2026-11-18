@@ -150,6 +150,8 @@ export const ADMIN_BODIES: Record<string, string> = {
   alert_sms: "Alerte : beaucoup de codes SMS demandés",
   alert_failures: "Alerte : des notifications ou des appels échouent",
   alert_relay: "Alerte : relais des appels à 80 % du volume gratuit",
+  // Lot 5.9 : console ouverte sur un téléphone jamais vu pour la console.
+  alert_console_device: "Console ouverte sur un nouveau téléphone",
   test: "Notification de test de la console Privio",
 };
 

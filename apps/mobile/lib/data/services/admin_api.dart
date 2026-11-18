@@ -126,6 +126,40 @@ abstract interface class AdminApi {
   Future<String> blockSite(String site, {required bool blocked});
 
   Future<ModerationStats> moderationStats(int days);
+
+  // Lot 5.9 : pilotage
+  Future<SignupsState> signups();
+
+  /// 'open', 'list' ou 'closed'.
+  Future<void> setSignups(String mode);
+
+  /// Ajoute ou retire des numéros (un par ligne) ; renvoie (pris en compte, refusés).
+  Future<(int, List<String>)> signupPhones(String text, {required bool add});
+  Future<String> createSignupCode({String? label, required int maxUses, required int days});
+  Future<void> revokeSignupCode(String code);
+
+  Future<List<PolicyOverride>> overrides({String? userId, String? conversationId});
+
+  /// [value] null : retire l'exception. [days] null : sans date de fin.
+  Future<void> setOverride({
+    required String scope,
+    required String id,
+    required String key,
+    Object? value,
+    int? days,
+    String? note,
+  });
+
+  /// Changements du préréglage (appliqués si [apply]).
+  Future<List<PresetChange>> preset(String name, {bool apply = false});
+
+  Future<ScheduledAnnouncement?> scheduledAnnouncement();
+
+  /// [text] vide : retire le message programmé.
+  Future<void> setScheduledAnnouncement(String text, {DateTime? startsAt, DateTime? endsAt});
+
+  Future<StatsExtra> statsExtra(int days);
+  Future<void> logExport(int days);
 }
 
 /// Lot 8.4a : vérification en deux étapes vue par la console.
@@ -542,4 +576,88 @@ class SupabaseAdminApi implements AdminApi {
   @override
   Future<ModerationStats> moderationStats(int days) async =>
       ModerationStats.fromJson(await _map('console_moderation_stats', {'p_days': days}));
+
+  // ---------------------------------------------------------------------------
+  // Lot 5.9
+  // ---------------------------------------------------------------------------
+  @override
+  Future<SignupsState> signups() async => SignupsState.fromJson(await _map('console_signups'));
+
+  @override
+  Future<void> setSignups(String mode) => _call('console_set_signups', {'p_mode': mode});
+
+  @override
+  Future<(int, List<String>)> signupPhones(String text, {required bool add}) async {
+    final j = await _map('console_signup_phones', {'p_text': text, 'p_add': add});
+    return (
+      (j['count'] as num).toInt(),
+      [for (final r in (j['rejected'] as List<dynamic>? ?? const [])) '$r'],
+    );
+  }
+
+  @override
+  Future<String> createSignupCode({String? label, required int maxUses, required int days}) =>
+      _guard(
+        () async => await _client.rpc<dynamic>(
+          'console_signup_code_create',
+          params: {'p_label': label, 'p_max_uses': maxUses, 'p_days': days},
+        ) as String,
+      );
+
+  @override
+  Future<void> revokeSignupCode(String code) =>
+      _call('console_signup_code_revoke', {'p_code': code});
+
+  @override
+  Future<List<PolicyOverride>> overrides({String? userId, String? conversationId}) async => [
+    for (final r in await _rows('console_overrides', {
+      'p_user_id': userId,
+      'p_conversation_id': conversationId,
+    }))
+      PolicyOverride.fromJson(r),
+  ];
+
+  @override
+  Future<void> setOverride({
+    required String scope,
+    required String id,
+    required String key,
+    Object? value,
+    int? days,
+    String? note,
+  }) => _call('console_set_override', {
+    'p_scope': scope,
+    'p_id': id,
+    'p_key': key,
+    'p_value': value,
+    'p_days': days,
+    'p_note': note,
+  });
+
+  @override
+  Future<List<PresetChange>> preset(String name, {bool apply = false}) async => [
+    for (final r in await _rows('console_preset', {'p_name': name, 'p_apply': apply}))
+      PresetChange.fromJson(r),
+  ];
+
+  @override
+  Future<ScheduledAnnouncement?> scheduledAnnouncement() => _guard(() async {
+    final r = await _client.rpc<dynamic>('console_scheduled_announcement');
+    return r == null ? null : ScheduledAnnouncement.fromJson(Map<String, dynamic>.from(r as Map));
+  });
+
+  @override
+  Future<void> setScheduledAnnouncement(String text, {DateTime? startsAt, DateTime? endsAt}) =>
+      _call('console_set_scheduled_announcement', {
+        'p_text': text,
+        'p_starts': startsAt?.toUtc().toIso8601String(),
+        'p_ends': endsAt?.toUtc().toIso8601String(),
+      });
+
+  @override
+  Future<StatsExtra> statsExtra(int days) async =>
+      StatsExtra.fromJson(await _map('console_stats_extra', {'p_days': days}));
+
+  @override
+  Future<void> logExport(int days) => _call('console_log_export', {'p_days': days});
 }

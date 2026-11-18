@@ -119,6 +119,9 @@ enum FailureCode {
   pollNotFound,
   pollGroupOnly,
   announcementLocked,
+  // Lot 5.9 : inscriptions sur liste.
+  signupsListOnly,
+  signupCodeInvalid,
   // Lot 5.8 : console, équipe.
   consoleTwoStepRequired,
   staffNotFound,
@@ -254,6 +257,8 @@ class AppFailure implements Exception {
     FailureCode.pollNotFound => L.t.pollNotFoundError,
     FailureCode.pollGroupOnly => L.t.pollGroupOnlyError,
     FailureCode.announcementLocked => L.t.announcementLockedError,
+    FailureCode.signupsListOnly => L.t.signupsListOnlyError,
+    FailureCode.signupCodeInvalid => L.t.signupCodeInvalidError,
     FailureCode.consoleTwoStepRequired =>
       'Pour la console, activez d’abord la vérification en deux étapes.',
     FailureCode.staffNotFound => 'Aucun compte Privio avec ce numéro.',
@@ -386,6 +391,8 @@ const _serverCodes = <String, FailureCode>{
   'POLL_NOT_FOUND': FailureCode.pollNotFound,
   'POLL_GROUP_ONLY': FailureCode.pollGroupOnly,
   'ANNOUNCEMENT_LOCKED': FailureCode.announcementLocked,
+  'SIGNUPS_LIST_ONLY': FailureCode.signupsListOnly,
+  'SIGNUP_CODE_INVALID': FailureCode.signupCodeInvalid,
   'CONSOLE_TWO_STEP_REQUIRED': FailureCode.consoleTwoStepRequired,
   'STAFF_NOT_FOUND': FailureCode.staffNotFound,
   'STAFF_OWNER': FailureCode.staffOwner,

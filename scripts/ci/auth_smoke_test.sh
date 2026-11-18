@@ -114,8 +114,10 @@ python3 "$(dirname "$0")/stickers_e2e.py" "$API" "$KEY" "$T2" "$TB" "$CONV" "$DB
 python3 "$(dirname "$0")/annonces_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Lot 9.4 : appels de groupe (temps réel, fonction « call-sfu »).
 python3 "$(dirname "$0")/appels_groupe_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
+# Lot 5.9 : console, pilotage (inscriptions, exceptions, message programmé, statistiques).
+python3 "$(dirname "$0")/console_pilotage_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Lot 5.8 : console, équipe et modération (B modérateur le temps du test).
 python3 "$(dirname "$0")/console_equipe_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
 # Dernier : déconnecte le téléphone de B.
 python3 "$(dirname "$0")/support_e2e.py" "$API" "$KEY" "$T2" "$TB" "$DB_URL"
-echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/codes et mentions/finitions/suppression/console/modération/assistance/santé du service/vérification en personne/annonces et sondages/autocollants personnels/appels de groupe/équipe de la console : OK"
+echo "Test d'intégration Auth/RPC/messagerie/temps réel/vocaux/photos/groupes/notifications/confidentialité/demandes de connexion/invitations/codes et mentions/finitions/suppression/console/modération/assistance/santé du service/vérification en personne/annonces et sondages/autocollants personnels/appels de groupe/équipe et pilotage de la console : OK"

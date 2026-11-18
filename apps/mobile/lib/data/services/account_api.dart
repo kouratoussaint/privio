@@ -54,6 +54,12 @@ abstract interface class AccountApi {
   /// Lot 8.4b : rappel avant effacement (activé par défaut).
   Future<bool> expiryReminder();
   Future<bool> setExpiryReminder(bool on);
+
+  /// Lot 5.9 : inscriptions « Sur liste » : état pour ce numéro (avant le profil), code
+  /// d'invitation, langue de ce téléphone (statistiques).
+  Future<({String mode, bool allowed})> signupStatus();
+  Future<void> redeemSignupCode(String code);
+  Future<void> setDeviceLanguage(String language);
 }
 
 class SupabaseAccountApi implements AccountApi {
@@ -188,4 +194,17 @@ class SupabaseAccountApi implements AccountApi {
   @override
   Future<bool> setExpiryReminder(bool on) async =>
       await _rpc('set_expiry_reminder', {'p_on': on}) as bool;
+
+  @override
+  Future<({String mode, bool allowed})> signupStatus() async {
+    final j = Map<String, dynamic>.from(await _rpc('signup_status', {}) as Map);
+    return (mode: j['mode'] as String? ?? 'open', allowed: j['allowed'] as bool? ?? true);
+  }
+
+  @override
+  Future<void> redeemSignupCode(String code) => _rpc('redeem_signup_code', {'p_code': code});
+
+  @override
+  Future<void> setDeviceLanguage(String language) =>
+      _rpc('set_device_language', {'p_language': language});
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../l10n/l10n.dart';
 
 import 'package:flutter/material.dart';
@@ -70,6 +72,8 @@ class AppearanceController extends AsyncNotifier<Appearance> {
   Future<void> setLanguage(String value) async {
     await ref.read(localFlagsProvider).setLanguage(value);
     state = AsyncData((state.value ?? const Appearance()).copyWith(language: value));
+    // Lot 5.9 : langue de ce téléphone (statistiques seulement).
+    unawaited(ref.read(accountApiProvider).setDeviceLanguage(value).catchError((Object _) {}));
   }
 
   Future<void> setTextSize(String value) async {

@@ -14,6 +14,7 @@ import '../../core/widgets/avatar.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import 'console_reports_tab.dart';
+import 'console_pilot_tab.dart' show OverridesCard;
 import 'console_screen.dart' show ConsoleBackHandler;
 
 const _blue = Color(0xFF2A73C9);
@@ -746,6 +747,8 @@ class _AccountViewState extends ConsumerState<AccountView> {
                 onTap: _busy ? null : (action) => _act(a, action),
               ),
             ),
+          // Lot 5.9 : exceptions (propriétaire).
+          if (role.isOwner && !a.deleted) OverridesCard(scope: 'user', id: a.userId),
           _History(a: a, sanctions: sanctions),
         ]),
       ],

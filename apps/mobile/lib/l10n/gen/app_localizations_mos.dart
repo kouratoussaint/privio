@@ -4996,4 +4996,25 @@ class AppLocalizationsMos extends AppLocalizations {
 
   @override
   String get groupReopenedByPrivio => 'Ce groupe a été rouvert par Privio';
+
+  @override
+  String get signupsListOnlyError =>
+      'Pour l’instant, Privio est ouvert sur invitation. Entrez votre code d’invitation.';
+
+  @override
+  String get signupCodeInvalidError =>
+      'Ce code d’invitation n’est pas valable (inconnu, expiré ou déjà utilisé).';
+
+  @override
+  String get signupCodeTitle => 'Code d’invitation';
+
+  @override
+  String get signupCodeHint => '8 caractères, reçus de l’équipe Privio';
+
+  @override
+  String get signupCodeExplain =>
+      'Pour l’instant, Privio est ouvert sur invitation. Votre numéro n’est pas encore sur la liste : entrez le code reçu.';
+
+  @override
+  String get signupCodeSubmit => 'Valider le code';
 }

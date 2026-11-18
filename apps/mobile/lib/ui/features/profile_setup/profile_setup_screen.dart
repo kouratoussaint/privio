@@ -87,6 +87,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     } on Object catch (e) {
       final failure = toAppFailure(e);
       if (!mounted) return;
+      // Lot 5.9 : inscriptions sur invitation : code demandé, puis nouvel essai.
+      if (failure.code == FailureCode.signupsListOnly) {
+        setState(() => _busy = false);
+        if (await _askCode() && mounted) return _submit();
+        return;
+      }
       setState(() {
         if (failure.code == FailureCode.handleTaken || failure.code == FailureCode.handleInvalid) {
           _handleError = failure.message;
@@ -98,6 +104,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Lot 5.9 : code d'invitation ; vrai s'il a été accepté.
+  Future<bool> _askCode() async {
+    final ok = await showDialog<bool>(context: context, builder: (_) => const _SignupCodeDialog());
+    return ok ?? false;
   }
 
   @override
@@ -163,4 +175,73 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       ),
     );
   }
+}
+
+/// Lot 5.9 : saisie du code d'invitation (inscriptions « Sur liste »).
+class _SignupCodeDialog extends ConsumerStatefulWidget {
+  const _SignupCodeDialog();
+
+  @override
+  ConsumerState<_SignupCodeDialog> createState() => _SignupCodeDialogState();
+}
+
+class _SignupCodeDialogState extends ConsumerState<_SignupCodeDialog> {
+  final _code = TextEditingController();
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(accountApiProvider).redeemSignupCode(_code.text.trim());
+      if (mounted) Navigator.pop(context, true);
+    } on Object catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = toAppFailure(e).message;
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    key: const Key('signup.code.dialog'),
+    title: Text(L.t.signupCodeTitle),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(L.t.signupCodeExplain),
+        const SizedBox(height: PrivioSpacing.m),
+        TextField(
+          key: const Key('signup.code'),
+          controller: _code,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 12,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(hintText: L.t.signupCodeHint, errorText: _error),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(L.t.annuler)),
+      FilledButton(
+        key: const Key('signup.code.submit'),
+        onPressed: _busy || _code.text.trim().length < 8 ? null : _send,
+        child: Text(L.t.signupCodeSubmit),
+      ),
+    ],
+  );
 }

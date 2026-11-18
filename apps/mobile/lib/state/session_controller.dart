@@ -169,6 +169,14 @@ class SessionController extends AsyncNotifier<SessionState> {
           model: info.model,
           osVersion: info.osVersion,
         );
+    // Lot 5.9 : langue choisie (statistiques seulement).
+    unawaited(
+      ref
+          .read(localFlagsProvider)
+          .language()
+          .then((l) => ref.read(accountApiProvider).setDeviceLanguage(l))
+          .catchError((Object _) {}),
+    );
   }
 
   /// Lot 5.6 : une fois par lancement, met à jour la version de l'app, le modèle et la

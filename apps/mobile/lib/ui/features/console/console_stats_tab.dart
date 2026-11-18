@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
+import '../../../domain/models/console_team.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/state_views.dart';
 import 'day_bars.dart';
+import 'stats_export.dart';
 
 /// Onglet « Statistiques » (lot 5.2) : 30 derniers jours, nombres anonymes seulement.
 class ConsoleStatsTab extends ConsumerWidget {
@@ -152,6 +154,8 @@ class _StatsList extends StatelessWidget {
                 ),
           ],
         ),
+        // Lot 5.9 : rétention, langues, usage des fonctions ; export.
+        _Extra(stats: s),
         const SizedBox(height: PrivioSpacing.m),
         ExpansionTile(
           key: const Key('stats.table'),
@@ -304,6 +308,99 @@ class _Line extends StatelessWidget {
           Text('${formatThousands(value)} · $share', style: theme.textTheme.bodyMedium),
         ],
       ),
+    );
+  }
+}
+
+/// Lot 5.9 : rétention par semaine d'inscription, langue des téléphones, usage des
+/// fonctions sur 30 jours, export CSV (nombres seulement).
+class _Extra extends ConsumerWidget {
+  const _Extra({required this.stats});
+
+  final ConsoleStats stats;
+
+  Future<void> _export(BuildContext context, WidgetRef ref, StatsExtra extra) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(adminApiProvider).logExport(30);
+      await ref.read(shareCsvProvider)(statsCsvName(DateTime.now()), statsCsv(stats, extra));
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(toAppFailure(e).message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final extra = ref.watch(statsExtraProvider(30)).value;
+    if (extra == null) return const SizedBox.shrink();
+    final langTotal = extra.languages.values.fold(0, (a, b) => a + b);
+    final usage = <String, int>{
+      for (final k in kUsageMetrics.keys) k: extra.usage.fold(0, (a, d) => a + (d.$2[k] ?? 0)),
+    };
+    final usageTotal = usage.values.fold(0, (a, b) => a + b);
+    String rate(int r, int d) => d == 0 ? '—' : '${(r * 100 / d).round()} %';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Card(
+          id: 'retention',
+          title: 'Rétention',
+          headline: extra.retention.isEmpty
+              ? '—'
+              : rate(
+                  extra.retention.fold(0, (a, w) => a + w.r7),
+                  extra.retention.fold(0, (a, w) => a + w.d7),
+                ),
+          headlineLabel: 'revenus au moins 7 jours après l’inscription',
+          children: [
+            Text(
+              'Par semaine d’inscription\u202F: revenus après 1, 7 et 30 jours (parmi les comptes '
+              'inscrits depuis assez longtemps).',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: PrivioSpacing.s),
+            for (final w in extra.retention)
+              Padding(
+                key: Key('stats.retention.${_dmy(w.week)}'),
+                padding: const EdgeInsets.only(bottom: PrivioSpacing.xs),
+                child: Row(
+                  children: [
+                    Expanded(child: Text('Sem. du ${_dmy(w.week)} · ${w.signups}')),
+                    Text('${rate(w.r1, w.d1)} · ${rate(w.r7, w.d7)} · ${rate(w.r30, w.d30)}'),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        _Card(
+          id: 'languages',
+          title: 'Langue choisie',
+          headline: formatThousands(langTotal),
+          headlineLabel: 'téléphones actifs sur 30 jours',
+          children: [
+            for (final e in extra.languages.entries)
+              _Share(kLanguages[e.key] ?? e.key, e.value, langTotal),
+          ],
+        ),
+        _Card(
+          id: 'usage',
+          title: 'Usage des fonctions',
+          headline: formatThousands(usageTotal),
+          headlineLabel: 'utilisations sur 30 jours',
+          children: [
+            for (final e in usage.entries)
+              if (e.value > 0) _Share(kUsageMetrics[e.key]!, e.value, usageTotal),
+          ],
+        ),
+        const SizedBox(height: PrivioSpacing.m),
+        OutlinedButton.icon(
+          key: const Key('stats.export'),
+          onPressed: () => _export(context, ref, extra),
+          icon: const Icon(Icons.file_download_outlined),
+          label: const Text('Exporter en CSV (nombres seulement)'),
+        ),
+      ],
     );
   }
 }

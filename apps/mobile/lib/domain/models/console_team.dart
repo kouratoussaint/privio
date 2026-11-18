@@ -225,3 +225,242 @@ class ModerationStats {
 }
 
 DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v as String);
+
+// ---------------------------------------------------------------------------
+// Lot 5.9 — pilotage
+// ---------------------------------------------------------------------------
+class SignupCode {
+  const SignupCode({
+    required this.code,
+    this.label,
+    this.maxUses = 1,
+    this.uses = 0,
+    this.expiresAt,
+    this.active = true,
+  });
+
+  final String code;
+  final String? label;
+  final int maxUses;
+  final int uses;
+  final DateTime? expiresAt;
+  final bool active;
+
+  factory SignupCode.fromJson(Map<String, dynamic> j) => SignupCode(
+    code: j['code'] as String,
+    label: j['label'] as String?,
+    maxUses: (j['max_uses'] as num?)?.toInt() ?? 1,
+    uses: (j['uses'] as num?)?.toInt() ?? 0,
+    expiresAt: _date(j['expires_at']),
+    active: j['active'] as bool? ?? false,
+  );
+}
+
+/// Inscriptions : 'open', 'list' ou 'closed' ; numéros autorisés ; codes d'invitation.
+class SignupsState {
+  const SignupsState({
+    required this.mode,
+    this.phones = const [],
+    this.codes = const [],
+    this.passes7d = 0,
+  });
+
+  final String mode;
+  final List<String> phones;
+  final List<SignupCode> codes;
+  final int passes7d;
+
+  factory SignupsState.fromJson(Map<String, dynamic> j) => SignupsState(
+    mode: j['mode'] as String? ?? 'open',
+    phones: [for (final p in (j['phones'] as List<dynamic>? ?? const [])) p as String],
+    codes: [
+      for (final c in (j['codes'] as List<dynamic>? ?? const []))
+        SignupCode.fromJson(Map<String, dynamic>.from(c as Map)),
+    ],
+    passes7d: (j['passes_7d'] as num?)?.toInt() ?? 0,
+  );
+}
+
+const kSignupModes = <String, String>{'open': 'Ouvertes', 'list': 'Sur liste', 'closed': 'Fermées'};
+
+/// Exception (réglage propre à un compte ou à un groupe).
+class PolicyOverride {
+  const PolicyOverride({
+    required this.scope,
+    required this.id,
+    required this.key,
+    required this.label,
+    required this.value,
+    this.globalValue,
+    this.target,
+    this.expiresAt,
+    this.note,
+  });
+
+  /// 'user' ou 'group'.
+  final String scope;
+  final String id;
+  final String key;
+  final String label;
+  final Object? value;
+  final Object? globalValue;
+  final String? target;
+  final DateTime? expiresAt;
+  final String? note;
+
+  factory PolicyOverride.fromJson(Map<String, dynamic> j) => PolicyOverride(
+    scope: j['scope'] as String,
+    id: j['id'] as String,
+    key: j['key'] as String,
+    label: j['label'] as String? ?? j['key'] as String,
+    value: j['value'],
+    globalValue: j['global'],
+    target: j['target'] as String?,
+    expiresAt: _date(j['expires_at']),
+    note: j['note'] as String?,
+  );
+}
+
+/// Réglages qu'une exception peut changer (clé → libellé, type).
+const kUserOverrideKeys = <String, (String, bool)>{
+  'photo_daily_limit': ('Photos par jour', false),
+  'group_create_enabled': ('Création de groupes', true),
+  'calls_video_enabled': ('Appels vidéo', true),
+};
+const kGroupOverrideKeys = <String, (String, bool)>{
+  'group_max_members': ('Membres au plus (jusqu’à 500)', false),
+  'photo_enabled': ('Photos', true),
+  'link_preview_enabled': ('Aperçus des liens', true),
+};
+
+String overrideValueText(Object? v) => switch (v) {
+  true => 'oui',
+  false => 'non',
+  null => '—',
+  _ => '$v',
+};
+
+class PresetChange {
+  const PresetChange({required this.key, required this.label, this.before, this.after});
+
+  final String key;
+  final String label;
+  final Object? before;
+  final Object? after;
+
+  factory PresetChange.fromJson(Map<String, dynamic> j) => PresetChange(
+    key: j['key'] as String,
+    label: j['label'] as String? ?? j['key'] as String,
+    before: j['before'],
+    after: j['after'],
+  );
+}
+
+const kPresets = <String, String>{'pilot': 'Mode pilote', 'normal': 'Mode normal'};
+
+class ScheduledAnnouncement {
+  const ScheduledAnnouncement({
+    required this.text,
+    required this.startsAt,
+    required this.endsAt,
+    this.live = false,
+  });
+
+  final String text;
+  final DateTime startsAt;
+  final DateTime endsAt;
+  final bool live;
+
+  factory ScheduledAnnouncement.fromJson(Map<String, dynamic> j) => ScheduledAnnouncement(
+    text: j['text'] as String,
+    startsAt: DateTime.parse(j['starts_at'] as String),
+    endsAt: DateTime.parse(j['ends_at'] as String),
+    live: j['live'] as bool? ?? false,
+  );
+}
+
+class RetentionWeek {
+  const RetentionWeek({
+    required this.week,
+    required this.signups,
+    this.d1 = 0,
+    this.r1 = 0,
+    this.d7 = 0,
+    this.r7 = 0,
+    this.d30 = 0,
+    this.r30 = 0,
+  });
+
+  final DateTime week;
+  final int signups;
+
+  /// dN : inscrits depuis au moins N jours ; rN : revenus au moins N jours après.
+  final int d1;
+  final int r1;
+  final int d7;
+  final int r7;
+  final int d30;
+  final int r30;
+}
+
+/// Statistiques en plus (lot 5.9) : rétention, langues, usage des fonctions par jour.
+class StatsExtra {
+  const StatsExtra({this.retention = const [], this.languages = const {}, this.usage = const []});
+
+  final List<RetentionWeek> retention;
+  final Map<String, int> languages;
+  final List<(DateTime, Map<String, int>)> usage;
+
+  factory StatsExtra.fromJson(Map<String, dynamic> j) {
+    int n(Object? v) => (v as num?)?.toInt() ?? 0;
+    return StatsExtra(
+      retention: [
+        for (final r in (j['retention'] as List<dynamic>? ?? const []))
+          RetentionWeek(
+            week: DateTime.parse((r as Map)['week'] as String),
+            signups: n(r['signups']),
+            d1: n(r['d1']),
+            r1: n(r['r1']),
+            d7: n(r['d7']),
+            r7: n(r['r7']),
+            d30: n(r['d30']),
+            r30: n(r['r30']),
+          ),
+      ],
+      languages: {
+        for (final e in Map<String, dynamic>.from(j['languages'] as Map? ?? const {}).entries)
+          e.key: n(e.value),
+      },
+      usage: [
+        for (final d in (j['usage'] as List<dynamic>? ?? const []))
+          (
+            DateTime.parse((d as Map)['day'] as String),
+            {
+              for (final e in Map<String, dynamic>.from(d['values'] as Map? ?? const {}).entries)
+                e.key: n(e.value),
+            },
+          ),
+      ],
+    );
+  }
+}
+
+const kUsageMetrics = <String, String>{
+  'messages_text': 'Textes',
+  'messages_voice': 'Vocaux',
+  'messages_photo': 'Photos',
+  'messages_gif': 'GIF',
+  'messages_sticker': 'Autocollants',
+  'messages_poll': 'Sondages',
+  'calls_audio': 'Appels audio',
+  'calls_video': 'Appels vidéo',
+  'group_calls_audio': 'Appels de groupe audio',
+  'group_calls_video': 'Appels de groupe vidéo',
+};
+
+const kLanguages = <String, String>{
+  'fr': 'Français',
+  'mos': 'Mooré',
+  'dyu': 'Dioula',
+  'unknown': 'Non indiquée',
+};

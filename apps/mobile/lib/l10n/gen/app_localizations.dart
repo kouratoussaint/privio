@@ -8421,6 +8421,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce groupe a été rouvert par Privio'**
   String get groupReopenedByPrivio;
+
+  /// Écran : Profil (inscriptions sur invitation, lot 5.9)
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour l’instant, Privio est ouvert sur invitation. Entrez votre code d’invitation.'**
+  String get signupsListOnlyError;
+
+  /// Écran : Profil (inscriptions sur invitation, lot 5.9)
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce code d’invitation n’est pas valable (inconnu, expiré ou déjà utilisé).'**
+  String get signupCodeInvalidError;
+
+  /// Écran : Profil (inscriptions sur invitation, lot 5.9)
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d’invitation'**
+  String get signupCodeTitle;
+
+  /// Écran : Profil (inscriptions sur invitation, lot 5.9)
+  ///
+  /// In fr, this message translates to:
+  /// **'8 caractères, reçus de l’équipe Privio'**
+  String get signupCodeHint;
+
+  /// Écran : Profil (inscriptions sur invitation, lot 5.9)
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour l’instant, Privio est ouvert sur invitation. Votre numéro n’est pas encore sur la liste : entrez le code reçu.'**
+  String get signupCodeExplain;
+
+  /// Écran : Profil (inscriptions sur invitation, lot 5.9)
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider le code'**
+  String get signupCodeSubmit;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

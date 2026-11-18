@@ -339,3 +339,11 @@ Lot 5.8 (ADR-053), options recommandées validées :
 - **D** : réponses types pour l'assistance et les décisions, écrites par le propriétaire.
 - **E** : sites sans aperçu ; le lien reste envoyé.
 - **F** : suivi de la modération sur 7 et 30 jours.
+
+## Amendement 25 — Console : pilotage (18 novembre 2026)
+Lot 5.9 (ADR-054), options recommandées validées : inscriptions « Ouvertes / Sur liste /
+Fermées » avec numéros autorisés et codes d'invitation (A) ; exceptions par compte et par
+groupe avec date de fin (B) ; préréglages « Mode pilote / Mode normal » montrés avant
+d'appliquer (C) ; message d'information programmé (D) ; rétention, langue et usage des
+fonctions (E) ; export CSV des nombres, journalisé (F) ; alerte quand la console s'ouvre sur
+un nouveau téléphone (G). Tout est réservé au propriétaire.
