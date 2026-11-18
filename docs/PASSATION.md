@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 18/11/2026, après la livraison des lots 9.3 et 7.4 (version 0.1.0+80).*
+*Mise à jour : 18/11/2026, après la livraison du lot 9.4 (version 0.1.0+82).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -50,7 +50,9 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 - Secrets GitHub déjà en place : `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
   `SUPABASE_PROJECT_REF`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
   `FCM_SERVICE_ACCOUNT_B64`, `KLIPY_API_KEY`, `CLOUDFLARE_TURN_KEY_ID`,
-  `CLOUDFLARE_TURN_API_TOKEN`.
+  `CLOUDFLARE_TURN_API_TOKEN`, `CLOUDFLARE_REALTIME_APP_ID`, `CLOUDFLARE_REALTIME_APP_TOKEN`
+  (relais des appels de groupe, lot 9.4). `gh secret list` est refusé dans les sessions :
+  le workflow de déploiement avertit si un secret manque.
 - **Clé de signature des APK stable**, à ne jamais changer. Empreinte SHA-256 :
   `B8:54:D7:5B:1B:E6:8E:23:B7:9B:FB:17:93:75:91:8A:72:4D:D6:FC:8E:76:87:06:39:14:CF:9F:A1:53:51:1B`
 
@@ -97,7 +99,7 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 - Textes de l'application dans `apps/mobile/lib/l10n/app_fr.arb`, lus via `L.t`. Les
   textes de la console restent en français dans le code.
 
-## 6. État au 17/11/2026 (soir)
+## 6. État au 18/11/2026
 - **Validés sur téléphone** :
   - étapes 1 à 4 (discussions, médias, groupes, notifications, confidentialité, demandes
     de connexion) ;
@@ -133,18 +135,21 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
   - **7.4 Autocollants personnels** (version 80, ADR-051, migration `20261118000200`,
     fonction `sticker`) : création depuis une photo détourée par ML Kit, texte,
     « Partageable » ; collection de 60 gardée sur le serveur ; envoi par copie effacée
-    avec le message.
-- **Dernier commit de code** : `782a542` sur `main`. CI verte (run 80), staging déployé.
-- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5` et `lot-7.4` (identiques à des commits
-  de `main`) restent sur GitHub. Toussaint peut les supprimer.
+    avec le message ;
+  - **9.4 Appels de groupe** (version 82, ADR-052, migration `20261118000300`, fonction
+    `call-sfu`) : audio et vidéo par le relais Cloudflare Realtime, 8 personnes au plus ;
+    boutons 📞 🎥 dans un groupe (qui peut écrire) ; sonnerie si le groupe a 16 membres
+    au plus, sinon notification neutre ; bandeau « Rejoindre » ; mosaïque, micro, caméra,
+    sortie du son ; un seul appel à la fois ; trace dans la discussion. Côté application :
+    `state/group_call_controller.dart` (contrôleur, appels en cours),
+    `data/services/group_call_engine.dart` (une liaison WebRTC vers le relais),
+    `ui/features/calls/group_call_screen.dart`.
+- **Dernier commit de code** : sur `main` (lot 9.4). CI verte (run 82), staging déployé.
+- Les branches `lot-5.7`, `lot-10.4`, `lot-10.5`, `lot-7.4` et `lot-9.4` (identiques à des
+  commits de `main`) restent sur GitHub. Toussaint peut les supprimer.
 
 ## 7. Suite prévue
-1. **9.4 Appels de groupe** (décisions du 17/11/2026) : audio et vidéo par **Cloudflare
-   Realtime SFU**, **8 participants** ; lancés par tout membre qui peut écrire
-   (administrateurs seulement dans un groupe « Annonces ») ; sonnerie chez tous si le
-   groupe a 16 membres au plus, sinon notification et bandeau « Rejoindre ». **Prérequis** :
-   Toussaint crée une « app Realtime » (SFU) dans Cloudflare et ajoute les secrets GitHub
-   `CLOUDFLARE_REALTIME_APP_ID` et `CLOUDFLARE_REALTIME_APP_TOKEN`.
+1. **Retours des tests** de 10.3, 5.7, 10.4, 10.5, 9.3, 7.4 et 9.4 (corrections au besoin).
 2. **Console 5.8** : équipe et modération (plusieurs administrateurs avec des rôles, liste
    des groupes, réponses types, statistiques de modération, sites bloqués pour les
    aperçus).
@@ -163,4 +168,5 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
 
 ## 8. Phrase de reprise conseillée
 > « Lis docs/PASSATION.md et docs/SUIVI_LIVRAISONS.md du dépôt kouratoussaint/privio,
-> vérifie l'état de GitHub et de la CI, puis continue avec le lot 9.4 (appels de groupe, décisions déjà prises). Voici le jeton GitHub : … »
+> vérifie l'état de GitHub et de la CI, puis continue (retours de tests, ou console 5.8 après
+> ses décisions). Voici le jeton GitHub : … »
