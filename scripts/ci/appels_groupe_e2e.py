@@ -130,7 +130,8 @@ check(s == 403 and r.get("error") == "SFU_FORBIDDEN", "pistes hors de l'appel re
 s, r = sfu({"action": "push", "call_id": C, "sdp": "v=0\r\n", "tracks": [{"mid": "0", "kind": "audio"}]}, TA)
 check((s == 503 and r.get("error") == "SFU_NOT_CONFIGURED") or (s == 502 and r.get("error") == "SFU_FAILED"),
       "A atteint le relais (non configuré en CI, ou description refusée)", r)
-s, r = post("/functions/v1/call-sfu", {"action": "push", "call_id": C}, "jeton-faux")
+s, r = post("/functions/v1/call-sfu", {"action": "push", "call_id": C, "sdp": "v=0\r\n",
+                                       "tracks": [{"mid": "0", "kind": "audio"}]}, "jeton-faux")
 check(s in (401, 403), "sans jeton valable : refusé", r)
 
 # ------------------------------------------------------------------ 3. Rejoindre
