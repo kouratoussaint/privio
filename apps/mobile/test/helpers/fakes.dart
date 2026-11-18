@@ -4274,6 +4274,8 @@ class FakeCallSystem implements CallSystem {
   @override
   Future<void> setCallAudio(bool on) async => log.add('audio:$on');
   @override
+  Future<void> setAudioRoute(String route) async => log.add('route:$route');
+  @override
   Future<bool> fullScreenAllowed() async => allowed;
   @override
   Future<void> openFullScreenSettings() async => log.add('settings');

@@ -108,6 +108,8 @@ void main() {
     await tester.tap(find.byKey(const Key('call.speaker')));
     await _tick(tester);
     expect(deps.callEngine.speaker, isTrue);
+    // Correctif du 18/11 : haut-parleur imposé aussi côté Android (et volume remonté).
+    expect(deps.callSystem.log.where((l) => l.startsWith('route:')).last, 'route:speaker');
     deps.callEngine.plug(const [AudioRoute.earpiece, AudioRoute.speaker]);
     await _tick(tester);
     expect(deps.callEngine.speaker, isTrue);

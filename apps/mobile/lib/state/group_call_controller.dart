@@ -559,6 +559,8 @@ class GroupCallController extends Notifier<GroupCallState?> {
     } on Object {
       return;
     }
+    // Sortie imposée aussi côté Android, et volume de cette sortie remonté s'il est bas.
+    unawaited(_system.setAudioRoute(route.name));
     state = state?.copyWith(route: route);
   }
 

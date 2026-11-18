@@ -52,6 +52,12 @@ abstract interface class CallSystem {
   /// volume d'appel très bas (moins de 40 %) est remonté à 60 %.
   Future<void> setCallAudio(bool on);
 
+  /// Correctif après les tests du 18/11/2026 : sortie imposée côté Android (haut-parleur
+  /// réellement activé sur Android 12 et plus) et volume d'appel de cette sortie remonté
+  /// (au moins 90 % au haut-parleur, 60 % à l'écouteur). [route] : speaker, earpiece,
+  /// bluetooth ou wired.
+  Future<void> setAudioRoute(String route);
+
   Future<void> setProximity(bool on);
 
   /// Lot 9.2 : petite fenêtre au-dessus des autres applications quand on quitte Privio
@@ -95,6 +101,9 @@ class NoCallSystem implements CallSystem {
 
   @override
   Future<void> setCallAudio(bool on) async {}
+
+  @override
+  Future<void> setAudioRoute(String route) async {}
   @override
   Future<bool> fullScreenAllowed() async => true;
   @override
@@ -240,6 +249,10 @@ class DeviceCallSystem implements CallSystem {
 
   @override
   Future<void> setCallAudio(bool on) => _safe(() => _channel.invokeMethod<void>('callAudio', on));
+
+  @override
+  Future<void> setAudioRoute(String route) =>
+      _safe(() => _channel.invokeMethod<void>('audioRoute', route));
 
   @override
   Future<bool> fullScreenAllowed() async {

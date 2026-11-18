@@ -6,9 +6,12 @@ import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.res.Configuration
 import android.content.Context
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Rational
 import android.view.WindowManager
@@ -71,6 +74,10 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "callAudio" -> {
                         setCallAudio(call.arguments == true)
+                        result.success(null)
+                    }
+                    "audioRoute" -> {
+                        setAudioRoute(call.arguments as? String ?: "earpiece")
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -150,8 +157,32 @@ class MainActivity : FlutterFragmentActivity() {
     private fun setCallAudio(on: Boolean) {
         if (!on) {
             volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE
+            audioHandler.removeCallbacksAndMessages(null)
+            try {
+                val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) am.clearCommunicationDevice()
+                @Suppress("DEPRECATION")
+                am.isSpeakerphoneOn = false
+            } catch (_: Exception) {
+                // Ignoré.
+            }
+            callAudioOn = false
+            lastRoute = null
+            // Après la fin de l'appel, le téléphone revient en mode normal (musique, vidéos).
+            audioHandler.postDelayed({
+                if (callAudioOn) return@postDelayed
+                try {
+                    val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    if (am.mode == AudioManager.MODE_IN_COMMUNICATION) am.mode = AudioManager.MODE_NORMAL
+                } catch (_: Exception) {
+                    // Ignoré.
+                }
+            }, 800)
             return
         }
+        callAudioOn = true
+        // Sortie choisie avant le début de l'appel (appel vidéo : haut-parleur d'emblée).
+        lastRoute?.let { setAudioRoute(it) }
         volumeControlStream = AudioManager.STREAM_VOICE_CALL
         try {
             val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -160,6 +191,72 @@ class MainActivity : FlutterFragmentActivity() {
             if (max > 0 && current * 10 < max * 4) {
                 am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, (max * 6 + 9) / 10, 0)
             }
+        } catch (_: Exception) {
+            // Volume non modifiable sur ce téléphone : l'appel continue.
+        }
+    }
+
+    private val audioHandler = Handler(Looper.getMainLooper())
+    private var callAudioOn = false
+    private var lastRoute: String? = null
+
+    /**
+     * Correctif du 18/11/2026 (haut-parleur faible) : la sortie choisie est imposée ici
+     * aussi. Sur Android 12 et plus, le haut-parleur passe par setCommunicationDevice
+     * (l'ancien réglage « speakerphone » est ignoré par certains téléphones). Android garde
+     * un volume d'appel par sortie : celui de la sortie choisie est remonté s'il est bas
+     * (haut-parleur : au moins 90 %, écouteur : 60 % s'il est sous 40 %). Appliqué deux
+     * fois, car la bibliothèque d'appel change elle aussi la sortie juste après.
+     */
+    private fun setAudioRoute(route: String) {
+        lastRoute = route
+        if (!callAudioOn) return
+        audioHandler.removeCallbacksAndMessages(null)
+        applyAudioRoute(route)
+        audioHandler.postDelayed({ applyAudioRoute(route) }, 350)
+        audioHandler.postDelayed({ raiseCallVolume(route == "speaker") }, 700)
+    }
+
+    private fun applyAudioRoute(route: String) {
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            if (am.mode != AudioManager.MODE_IN_COMMUNICATION) {
+                am.mode = AudioManager.MODE_IN_COMMUNICATION
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val types = when (route) {
+                    "speaker" -> setOf(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)
+                    "earpiece" -> setOf(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
+                    "bluetooth" -> setOf(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET)
+                    else -> setOf(
+                        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                        AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                        AudioDeviceInfo.TYPE_USB_HEADSET,
+                    )
+                }
+                val device = am.availableCommunicationDevices.firstOrNull { it.type in types }
+                if (device != null && am.communicationDevice?.id != device.id) {
+                    am.setCommunicationDevice(device)
+                }
+            }
+            if (route == "speaker" || route == "earpiece") {
+                @Suppress("DEPRECATION")
+                am.isSpeakerphoneOn = route == "speaker"
+            }
+        } catch (_: Exception) {
+            // Sortie non modifiable sur ce téléphone : la bibliothèque d'appel s'en charge.
+        }
+    }
+
+    private fun raiseCallVolume(speaker: Boolean) {
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+            val current = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+            if (max <= 0) return
+            val target = if (speaker) (max * 9 + 9) / 10 else (max * 6 + 9) / 10
+            val low = if (speaker) current < target else current * 10 < max * 4
+            if (low) am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, target, 0)
         } catch (_: Exception) {
             // Volume non modifiable sur ce téléphone : l'appel continue.
         }

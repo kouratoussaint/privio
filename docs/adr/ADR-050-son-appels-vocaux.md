@@ -42,3 +42,14 @@ Tests Flutter `son_appels_test.dart` (flux d'appel ouvert puis rendu, Bluetooth 
 casque puis AirPods branchés et retirés, choix manuel conservé, vidéo avec écouteurs,
 réglage des vocaux) et `voice_test.dart` (envoi direct en relâchant, bouton « Envoyer » de
 l'enregistrement verrouillé, préécoute avec le réglage).
+
+## Complément du 18/11/2026 (retour de test : haut-parleur faible)
+Le haut-parleur restait faible : sur Android 12 et plus, l'ancien réglage « speakerphone »
+de la bibliothèque d'appel est ignoré par certains téléphones, et Android garde un volume
+d'appel **par sortie** (le volume remonté au début de l'appel était celui de l'écouteur).
+Correctif, application seulement : à chaque changement de sortie, `privio/call`
+`audioRoute` impose la sortie côté Android (`setCommunicationDevice` sur Android 12 et
+plus, `isSpeakerphoneOn` avant), deux fois (0 et 350 ms, la bibliothèque change aussi la
+sortie), puis remonte le volume de la sortie choisie : **au moins 90 % au haut-parleur**,
+60 % à l'écouteur s'il est sous 40 %. À la fin de l'appel : sortie libérée et retour au
+mode normal. Test : `son_appels_test.dart` (haut-parleur transmis à Android).

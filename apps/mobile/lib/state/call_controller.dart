@@ -530,6 +530,8 @@ class CallController extends Notifier<CallState?> {
       // Sortie indisponible (appareil débranché entre-temps) : on garde la précédente.
       return;
     }
+    // Sortie imposée aussi côté Android, et volume de cette sortie remonté s'il est bas.
+    unawaited(_system.setAudioRoute(route.name));
     state = state?.copyWith(route: route);
   }
 

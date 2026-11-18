@@ -1,6 +1,6 @@
 # PRIVIO — Passation pour une nouvelle discussion
 
-*Mise à jour : 18/11/2026, après la livraison des lots 9.4, 5.8 et 5.9 (version 0.1.0+86).*
+*Mise à jour : 18/11/2026, après la livraison des lots 9.4, 5.8 et 5.9 (version 0.1.0+86) et le correctif du haut-parleur (version 88).*
 
 Ce document se lit en premier dans une nouvelle discussion. Il résume l'état du projet,
 les règles, la façon de travailler et la suite. Il ne contient **aucun secret**.
@@ -158,7 +158,11 @@ les règles, la façon de travailler et la suite. Il ne contient **aucun secret*
     « group » de `private.policies`, avec date de fin) ; préréglages Mode pilote / Mode
     normal ; message programmé ; rétention, langue, usage ; export CSV ; alerte « console
     ouverte sur un nouveau téléphone ».
-- **Dernier commit de code** : sur `main` (lot 5.9). CI verte (run 86), staging déployé.
+  - **Correctif haut-parleur** (version 88, complément d'ADR-050) : sortie imposée côté
+    Android (`privio/call` `audioRoute`, `setCommunicationDevice` sur Android 12+) et
+    volume d'appel du haut-parleur remonté à 90 % au moins.
+- **Dernier commit de code** : sur `main` (correctif haut-parleur). Staging inchangé
+  (application seulement).
 - Les branches `lot-5.7`, `lot-10.4`, `lot-10.5`, `lot-7.4`, `lot-9.4`, `lot-5.8` et
   `lot-5.9` (identiques à des commits de `main`) restent sur GitHub. Toussaint peut les
   supprimer.
