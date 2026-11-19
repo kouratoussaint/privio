@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -13,6 +16,9 @@ void main() {
   testWidgets('vitesse\u202F: démarrage, 300 discussions, discussion de 1 000 messages', (
     tester,
   ) async {
+    // Clavier simulé (le clavier réel ne reçoit pas les saisies du test, surtout en
+    // mode « profile » où les vérifications de débogage sont absentes).
+    tester.testTextInput.register();
     final mesures = <String, Object>{};
     binding.reportData = {'mesures': mesures};
     Future<int> depuisLancement() async =>
@@ -21,15 +27,17 @@ void main() {
     final dartPret = await depuisLancement();
     final overrides = await applicationSurEmulateur();
     final initialise = await depuisLancement();
+    mesures['demarrage_dart_ms'] = dartPret;
+    mesures['demarrage_initialise_ms'] = initialise;
     // Les mesures sont publiées même si un seuil est dépassé.
-    mesures.addAll(
-      await mesurerVitesse(
-        tester,
-        overrides: overrides,
-        depuisLancement: depuisLancement,
-        phases: {'demarrage_dart_ms': dartPret, 'demarrage_initialise_ms': initialise},
-      ),
+    await mesurerVitesse(
+      tester,
+      overrides: overrides,
+      depuisLancement: depuisLancement,
+      resultats: mesures,
     );
+    // Aussi dans le journal : le pilote ne publie les données que si tout réussit.
+    debugPrint('MESURES ${jsonEncode({'mesures': mesures})}');
     verifierSeuils(mesures);
   }, timeout: const Timeout(Duration(minutes: 10)));
 }

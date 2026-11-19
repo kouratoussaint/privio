@@ -45,9 +45,10 @@ Future<Map<String, Object>> mesurerVitesse(
   WidgetTester tester, {
   required List<Override> overrides,
   required Future<int> Function() depuisLancement,
-  Map<String, Object> phases = const {},
+  Map<String, Object>? resultats,
 }) async {
-  final mesures = <String, Object>{...phases};
+  // Rempli au fur et à mesure : publié même si une étape échoue.
+  final mesures = resultats ?? <String, Object>{};
   await tester.pumpWidget(
     ProviderScope(overrides: overrides, retry: (_, _) => null, child: const PrivioApp()),
   );

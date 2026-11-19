@@ -28,8 +28,18 @@ fi
 adb -s "$DEVICE" uninstall com.privio.app >/dev/null 2>&1 || true
 echo "### Android $VERSION — vitesse (émulateur d'entrée de gamme, mode profile)" >> "$RESUME"
 statut=0
+mkdir -p build && rm -f build/mesures.json
+set +e
 flutter drive --profile -d "$DEVICE" "${DEFINES[@]}" \
-  --driver=test_driver/mesures.dart --target=integration_test/vitesse_test.dart || statut=$?
+  --driver=test_driver/mesures.dart --target=integration_test/vitesse_test.dart \
+  2>&1 | tee build/drive.log
+statut=${PIPESTATUS[0]}
+set -e
+# Seuil dépassé : le pilote ne publie rien, les mesures sont reprises du journal.
+if [ ! -f build/mesures.json ]; then
+  grep -o 'MESURES {.*}' build/drive.log | tail -1 | sed 's/^MESURES //' > build/mesures.json || true
+  [ -s build/mesures.json ] || rm -f build/mesures.json
+fi
 if [ -f build/mesures.json ]; then
   python3 - build/mesures.json >> "$RESUME" <<'PY'
 import json, sys

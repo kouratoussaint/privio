@@ -13,6 +13,9 @@ void main() {
   testWidgets('inscription, demande, message, photo, vocal, effacement, groupe, verrouillage', (
     tester,
   ) async {
+    // Clavier simulé (le clavier réel ne reçoit pas les saisies du test, surtout en
+    // mode « profile » où les vérifications de débogage sont absentes).
+    tester.testTextInput.register();
     await parcoursComplet(
       tester,
       overrides: await applicationSurEmulateur(),
