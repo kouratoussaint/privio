@@ -49,6 +49,7 @@ List<Override> privioDeviceOverrides({
   PhotoPicker? photos,
   VoiceRecorder? recorder,
   PushService? push,
+  CallSystem? callSystem,
 }) => [
   localFlagsProvider.overrideWithValue(SharedPrefsLocalFlags()),
   localStoreProvider.overrideWithValue(EncryptedFileStore()),
@@ -57,7 +58,10 @@ List<Override> privioDeviceOverrides({
   voiceRecorderProvider.overrideWithValue(recorder ?? DeviceVoiceRecorder()),
   audioEngineProvider.overrideWithValue(DeviceAudioEngine()),
   photoPickerProvider.overrideWithValue(photos ?? DevicePhotoPicker()),
-  if (Platform.isAndroid) callSystemProvider.overrideWithValue(DeviceCallSystem()),
+  if (callSystem != null)
+    callSystemProvider.overrideWithValue(callSystem)
+  else if (Platform.isAndroid)
+    callSystemProvider.overrideWithValue(DeviceCallSystem()),
   appLockStoreProvider.overrideWithValue(SecureAppLockStore()),
   biometricGateProvider.overrideWithValue(DeviceBiometricGate()),
   networkMonitorProvider.overrideWithValue(DeviceNetworkMonitor()),

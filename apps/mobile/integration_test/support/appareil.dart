@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:privio/bootstrap.dart';
 import 'package:privio/core/config/env.dart';
+import 'package:privio/data/services/call_system.dart';
 import 'package:privio/data/storage/secure_session_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,6 +27,8 @@ Future<List<Override>> applicationSurEmulateur() async {
       photos: FakePhotoPicker()..photo = photoTest,
       recorder: FakeVoiceRecorder()..audio = vocalTest,
       push: FakePushService()..available = false,
+      // Les appels restent testés sur téléphone (écran d'appel du système absent ici).
+      callSystem: const NoCallSystem(),
     ),
   ];
 }

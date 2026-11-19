@@ -16,8 +16,13 @@ VERSION=$(adb -s "$DEVICE" shell getprop ro.build.version.release | tr -d '\r')
 
 echo "### Android $VERSION — parcours complet" >> "$RESUME"
 debut=$(date +%s)
-flutter test integration_test/parcours_test.dart -d "$DEVICE" "${DEFINES[@]}" --reporter expanded
-echo "✅ inscription, demande de connexion, message, photo, vocal, effacement, groupe, verrouillage ($(( $(date +%s) - debut )) s)" >> "$RESUME"
+parcours=0
+flutter test integration_test/parcours_test.dart -d "$DEVICE" "${DEFINES[@]}" --reporter expanded || parcours=$?
+if [ "$parcours" -eq 0 ]; then
+  echo "✅ inscription, demande de connexion, message, photo, vocal, effacement, groupe, verrouillage ($(( $(date +%s) - debut )) s)" >> "$RESUME"
+else
+  echo "❌ parcours en échec (voir le journal de l'étape)" >> "$RESUME"
+fi
 
 # Mesures : application neuve (aucune session du parcours précédent).
 adb -s "$DEVICE" uninstall com.privio.app >/dev/null 2>&1 || true
@@ -46,4 +51,5 @@ for nom, cle in (("Défilement de 300 discussions", "defilement_300"),
 PY
   cp build/mesures.json "$RUNNER_TEMP/mesures-android-$VERSION.json" 2>/dev/null || true
 fi
+[ "$parcours" -eq 0 ] || exit "$parcours"
 exit $statut
