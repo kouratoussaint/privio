@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/services/call_audio.dart' show CallAudioGate;
 import '../data/services/sound_service.dart';
 import 'providers.dart';
 
@@ -40,7 +41,8 @@ class PrivioFeedback {
   bool get _on => _ref.read(soundsEnabledProvider).value ?? false;
 
   void sound(PrivioSound s) {
-    if (_on) unawaited(_ref.read(soundPlayerProvider).play(s));
+    // Lot 9.3c : aucun son de Privio pendant un appel (il dérèglerait le son de l'appel).
+    if (_on && !CallAudioGate.active) unawaited(_ref.read(soundPlayerProvider).play(s));
   }
 
   void haptic(Haptic h) {

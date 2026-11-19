@@ -54,6 +54,9 @@ class TechLog {
     );
   }
 
+  /// Événement technique sans contenu ni nom (lot 9.3c : son des appels).
+  void note(String text) => _add(text);
+
   /// Erreur non rattrapée : type et emplacement seulement.
   void error(String origin, Object error, StackTrace? stack) {
     final lines = <String>['Erreur $origin · ${error.runtimeType}'];

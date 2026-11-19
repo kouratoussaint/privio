@@ -5,6 +5,7 @@ import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 
 import '../../l10n/l10n.dart';
+import 'call_audio.dart' show PhoneAudioState;
 
 /// Lot 9.1b — intégration de l'appel au téléphone (ADR-037) : écran d'appel plein écran
 /// quand Privio est fermé ou le téléphone verrouillé, appel maintenu écran éteint (service
@@ -58,6 +59,10 @@ abstract interface class CallSystem {
   /// bluetooth ou wired.
   Future<void> setAudioRoute(String route);
 
+  /// Lot 9.3c : état du son du téléphone pendant l'appel (mode, sortie réelle, volume),
+  /// pour le journal technique. Null si inconnu.
+  Future<PhoneAudioState?> audioState();
+
   Future<void> setProximity(bool on);
 
   /// Lot 9.2 : petite fenêtre au-dessus des autres applications quand on quitte Privio
@@ -104,6 +109,9 @@ class NoCallSystem implements CallSystem {
 
   @override
   Future<void> setAudioRoute(String route) async {}
+
+  @override
+  Future<PhoneAudioState?> audioState() async => null;
   @override
   Future<bool> fullScreenAllowed() async => true;
   @override
@@ -253,6 +261,17 @@ class DeviceCallSystem implements CallSystem {
   @override
   Future<void> setAudioRoute(String route) =>
       _safe(() => _channel.invokeMethod<void>('audioRoute', route));
+
+  @override
+  Future<PhoneAudioState?> audioState() async {
+    try {
+      return PhoneAudioState.fromMap(
+        await _channel.invokeMethod<Map<Object?, Object?>>('audioState'),
+      );
+    } on Object {
+      return null;
+    }
+  }
 
   @override
   Future<bool> fullScreenAllowed() async {

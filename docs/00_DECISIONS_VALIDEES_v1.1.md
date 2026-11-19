@@ -459,3 +459,12 @@ d'amendement ici. Les amendements suivants reprennent leurs décisions, telles q
   demande d'assistance **seulement avec l'accord** de la personne, lu dans la console.
 - **Distribution** (F) : Firebase App Distribution (gratuit, projet `privio-e1ef4`),
   lancée à la main.
+
+## Amendement 34 — Volume des appels (19 novembre 2026, lot 9.3c)
+Après audit (son faible des deux côtés au haut-parleur malgré les correctifs du 17 et du
+18/11) : **traitement du son de la bibliothèque d'appel** au lieu de celui du téléphone ;
+**mode « appel » protégé** (tonalité d'attente sans quitter ce mode, aucun son de Privio
+pendant un appel, sortie et mode réimposés à la connexion) ; **mesure du son** de chaque
+appel au journal technique (niveaux reçu et envoyé, état réel d'Android ; aucun contenu,
+aucun nom). La suite (une seule autorité pour la sortie, renfort du son reçu) se décide
+sur ces mesures (ADR-056).

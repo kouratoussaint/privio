@@ -82,6 +82,7 @@ class MainActivity : FlutterFragmentActivity() {
                         setAudioRoute(call.arguments as? String ?: "earpiece")
                         result.success(null)
                     }
+                    "audioState" -> result.success(audioState())
                     else -> result.notImplemented()
                 }
             }
@@ -250,6 +251,47 @@ class MainActivity : FlutterFragmentActivity() {
             }
         } catch (_: Exception) {
             // Sortie non modifiable sur ce téléphone : la bibliothèque d'appel s'en charge.
+        }
+    }
+
+    /**
+     * Lot 9.3c : état du son pendant l'appel, pour le journal technique (mode, sortie
+     * réellement utilisée, volume d'appel). Aucune donnée personnelle.
+     */
+    private fun audioState(): Map<String, Any?>? {
+        return try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val mode = when (am.mode) {
+                AudioManager.MODE_IN_COMMUNICATION -> "communication"
+                AudioManager.MODE_IN_CALL -> "appel"
+                AudioManager.MODE_RINGTONE -> "sonnerie"
+                AudioManager.MODE_NORMAL -> "normal"
+                else -> "autre (${am.mode})"
+            }
+            @Suppress("DEPRECATION")
+            val speakerOn = am.isSpeakerphoneOn
+            val output = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                when (am.communicationDevice?.type) {
+                    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "haut-parleur"
+                    AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "écouteur"
+                    AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET -> "bluetooth"
+                    AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                    AudioDeviceInfo.TYPE_USB_HEADSET -> "casque"
+                    null -> "aucune"
+                    else -> "autre"
+                }
+            } else {
+                if (speakerOn) "haut-parleur" else "écouteur ou accessoire"
+            }
+            mapOf(
+                "mode" to mode,
+                "output" to output,
+                "speakerphone" to speakerOn,
+                "volume" to am.getStreamVolume(AudioManager.STREAM_VOICE_CALL),
+                "max" to am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL),
+            )
+        } catch (_: Exception) {
+            null
         }
     }
 

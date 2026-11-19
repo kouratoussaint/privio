@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart' show AppLifecycleState, Widget, WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/diagnostics/tech_log.dart';
 import '../core/errors/app_failure.dart';
 import '../data/services/audio/voice_recorder.dart' show MicPermission;
+import '../data/services/call_audio.dart';
 import '../data/services/call_engine.dart';
 import '../data/services/call_system.dart';
 import '../data/services/call_tones.dart';
@@ -177,12 +179,19 @@ class CallController extends Notifier<CallState?> {
   // Lu une fois (build) : utilisable aussi à la destruction, où Ref est interdit.
   late CallTones _tones;
   late CallSystem _system;
+  late TechLog _techLog;
   CallTimings get _t => ref.read(callTimingsProvider);
+
+  /// Lot 9.3c : état du son du téléphone relevé pendant l'appel, et fin d'appel à noter.
+  PhoneAudioState? _phoneAudio;
+  Timer? _audioProbe;
+  ({Duration duration, String route})? _audioEnd;
 
   @override
   CallState? build() {
     _tones = ref.read(callTonesProvider);
     _system = ref.read(callSystemProvider);
+    _techLog = ref.read(techLogProvider);
     // Appel annoncé par le canal temps réel (nouvel appel, réponse, signal, fin).
     ref.listen(realtimeSignalsProvider, (_, next) {
       final s = next.value;
@@ -233,7 +242,7 @@ class CallController extends Notifier<CallState?> {
     }
     state = CallState(info: info, phase: CallPhase.outgoingRinging);
     _startPolling();
-    unawaited(_tones.ringback());
+    unawaited(_tones.ringback(speaker: kind == 'video'));
     await _ensureNearby();
     try {
       await _openEngine();
@@ -533,6 +542,20 @@ class CallController extends Notifier<CallState?> {
     // Sortie imposée aussi côté Android, et volume de cette sortie remonté s'il est bas.
     unawaited(_system.setAudioRoute(route.name));
     state = state?.copyWith(route: route);
+    _probeAudio();
+  }
+
+  /// Lot 9.3c : relève l'état du son du téléphone un peu après un changement (le temps
+  /// qu'Android applique la sortie), pour le journal technique de fin d'appel.
+  void _probeAudio() {
+    _audioProbe?.cancel();
+    _audioProbe = Timer(const Duration(seconds: 3), () {
+      unawaited(
+        _system.audioState().then((p) {
+          if (p != null) _phoneAudio = p;
+        }),
+      );
+    });
   }
 
   void setMinimized(bool value) {
@@ -598,6 +621,10 @@ class CallController extends Notifier<CallState?> {
     switch (m) {
       case CallMediaState.connected:
         unawaited(_tones.stop());
+        // Lot 9.3c : mode « appel » et sortie choisie réimposés une fois la voix établie
+        // (la tonalité ou une autre application ont pu les changer), puis état relevé.
+        unawaited(_system.setAudioRoute(s.route.name));
+        _probeAudio();
         _restart?.cancel();
         _giveUp?.cancel();
         _giveUp = null;
@@ -687,6 +714,7 @@ class CallController extends Notifier<CallState?> {
         next != null && next.phase != CallPhase.ended && next.phase != CallPhase.incomingRinging;
     if (audio != _callAudio) {
       _callAudio = audio;
+      CallAudioGate.set('appel', audio);
       unawaited(_system.setCallAudio(audio));
     }
     final proximity = active && next.route == AudioRoute.earpiece && !next.hasVideo;
@@ -795,6 +823,10 @@ class CallController extends Notifier<CallState?> {
 
   /// Affiche l'état final un instant, puis ferme l'écran d'appel.
   void _show(CallState ended) {
+    final at = ended.connectedAt;
+    _audioEnd = at == null
+        ? null
+        : (duration: DateTime.now().difference(at), route: ended.route.name);
     _stopMedia(ended.info.id);
     state = ended;
     _linger?.cancel();
@@ -817,19 +849,46 @@ class CallController extends Notifier<CallState?> {
     _lastRestart = null;
     _systemRinging = false;
     unawaited(_tones.stop());
+    _audioProbe?.cancel();
+    _audioProbe = null;
+    final audioEnd = _audioEnd;
+    final phone = _phoneAudio;
+    _audioEnd = null;
+    _phoneAudio = null;
     final engine = _engine;
     _engine = null;
     _engineOpen = false;
     _pendingOffer = null;
     _pendingIce.clear();
     _after = 0;
-    if (engine != null) unawaited(_closeEngine(engine, callId));
+    if (engine != null) unawaited(_closeEngine(engine, callId, audioEnd, phone));
   }
 
   /// Lot 10.3 : données de l'appel comptées (type « appels »), puis fermeture.
   /// Lot 5.7 : compte rendu à la console (relais ou non, volume) ; le serveur ne le
   /// garde que pour un appel décroché. Aucun contenu.
-  Future<void> _closeEngine(CallEngine engine, String? callId) async {
+  Future<void> _closeEngine(
+    CallEngine engine,
+    String? callId, [
+    ({Duration duration, String route})? audioEnd,
+    PhoneAudioState? phone,
+  ]) async {
+    // Lot 9.3c : son de l'appel noté au journal technique (niveaux, sortie, mode Android).
+    if (audioEnd != null) {
+      try {
+        _techLog.note(
+          callAudioLine(
+            group: false,
+            duration: audioEnd.duration,
+            route: audioEnd.route,
+            levels: await engine.audioLevels(),
+            phone: phone,
+          ),
+        );
+      } on Object {
+        // Mesure indicative.
+      }
+    }
     try {
       final bytes = await engine.trafficBytes();
       if (bytes > 0) countData(ref, received: bytes, kind: 'call');

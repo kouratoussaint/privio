@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart' show Widget;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/diagnostics/tech_log.dart';
 import '../core/errors/app_failure.dart';
 import '../data/services/audio/voice_recorder.dart' show MicPermission;
+import '../data/services/call_audio.dart';
 import '../data/services/call_engine.dart' show AudioRoute, CallMediaState;
 import '../data/services/call_system.dart';
 import '../data/services/call_tones.dart';
@@ -189,12 +191,19 @@ class GroupCallController extends Notifier<GroupCallState?> {
   GroupCallsApi get _api => ref.read(groupCallsApiProvider);
   late CallTones _tones;
   late CallSystem _system;
+  late TechLog _techLog;
   CallTimings get _t => ref.read(callTimingsProvider);
+
+  /// Lot 9.3c : état du son du téléphone relevé pendant l'appel, et fin d'appel à noter.
+  PhoneAudioState? _phoneAudio;
+  Timer? _audioProbe;
+  ({Duration duration, String route})? _audioEnd;
 
   @override
   GroupCallState? build() {
     _tones = ref.read(callTonesProvider);
     _system = ref.read(callSystemProvider);
+    _techLog = ref.read(techLogProvider);
     ref.listen(realtimeSignalsProvider, (_, next) {
       final s = next.value;
       if (s == null) return;
@@ -399,6 +408,7 @@ class GroupCallController extends Notifier<GroupCallState?> {
     final s = state;
     if (s == null || !s.live) return;
     if (s.phase == GroupCallPhase.ringing) return decline();
+    _markAudioEnd(s);
     _stopMedia();
     _finish(switch (reason) {
       'failed' => 'failed',
@@ -562,6 +572,25 @@ class GroupCallController extends Notifier<GroupCallState?> {
     // Sortie imposée aussi côté Android, et volume de cette sortie remonté s'il est bas.
     unawaited(_system.setAudioRoute(route.name));
     state = state?.copyWith(route: route);
+    _probeAudio();
+  }
+
+  /// Lot 9.3c : relève l'état du son du téléphone un peu après un changement.
+  void _probeAudio() {
+    _audioProbe?.cancel();
+    _audioProbe = Timer(const Duration(seconds: 3), () {
+      unawaited(
+        _system.audioState().then((p) {
+          if (p != null) _phoneAudio = p;
+        }),
+      );
+    });
+  }
+
+  /// Lot 9.3c : fin d'un appel établi, à noter au journal technique.
+  void _markAudioEnd(GroupCallState s) {
+    final at = s.connectedAt;
+    _audioEnd = at == null ? null : (duration: DateTime.now().difference(at), route: s.route.name);
   }
 
   // ---------------------------------------------------------------------------
@@ -634,6 +663,9 @@ class GroupCallController extends Notifier<GroupCallState?> {
         _giveUp?.cancel();
         _giveUp = null;
         _rebuild?.cancel();
+        // Lot 9.3c : mode « appel » et sortie choisie réimposés, puis état relevé.
+        unawaited(_system.setAudioRoute(s.route.name));
+        _probeAudio();
         state = s.copyWith(
           phase: GroupCallPhase.connected,
           connectedAt: s.connectedAt ?? DateTime.now(),
@@ -723,6 +755,7 @@ class GroupCallController extends Notifier<GroupCallState?> {
       return;
     }
     if (info == null || !info.joinedMe) {
+      _markAudioEnd(s);
       _stopMedia();
       _finish('ended');
       return;
@@ -814,13 +847,39 @@ class GroupCallController extends Notifier<GroupCallState?> {
     unawaited(_tones.stop());
     _pulled.clear();
     _queue = Future.value();
+    _audioProbe?.cancel();
+    _audioProbe = null;
+    final audioEnd = _audioEnd;
+    final phone = _phoneAudio;
+    _audioEnd = null;
+    _phoneAudio = null;
     final engine = _engine;
     _engine = null;
-    if (engine != null) unawaited(_closeEngine(engine));
+    if (engine != null) unawaited(_closeEngine(engine, audioEnd, phone));
   }
 
   /// Lot 10.3 : données de l'appel comptées (type « appels »), puis fermeture.
-  Future<void> _closeEngine(GroupCallEngine engine) async {
+  Future<void> _closeEngine(
+    GroupCallEngine engine, [
+    ({Duration duration, String route})? audioEnd,
+    PhoneAudioState? phone,
+  ]) async {
+    // Lot 9.3c : son de l'appel noté au journal technique (niveaux, sortie, mode Android).
+    if (audioEnd != null) {
+      try {
+        _techLog.note(
+          callAudioLine(
+            group: true,
+            duration: audioEnd.duration,
+            route: audioEnd.route,
+            levels: await engine.audioLevels(),
+            phone: phone,
+          ),
+        );
+      } on Object {
+        // Mesure indicative.
+      }
+    }
     try {
       final bytes = await engine.trafficBytes();
       if (bytes > 0) countData(ref, received: bytes, kind: 'call');
@@ -846,6 +905,7 @@ class GroupCallController extends Notifier<GroupCallState?> {
     }
     if (inCall != _callAudio) {
       _callAudio = inCall;
+      CallAudioGate.set('groupe', inCall);
       unawaited(_system.setCallAudio(inCall));
     }
     final proximity = active && next.route == AudioRoute.earpiece && !next.camera && !next.video;

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:image/image.dart' as img;
 import 'package:privio/core/diagnostics/tech_log.dart';
+import 'package:privio/data/services/call_audio.dart';
 import 'package:privio/core/media/photo_processing.dart';
 import 'package:privio/core/errors/app_failure.dart';
 import 'package:privio/core/theme/privio_theme.dart';
@@ -3899,6 +3900,8 @@ class TestDeps {
        messaging = messaging ?? FakeMessagingApi() {
     // Lot 10.4 : rien ne passe d'un test à l'autre (étiquettes lues par les modèles).
     ContactLabels.reset();
+    // Lot 9.3c : aucun appel en cours au début d'un test.
+    CallAudioGate.reset();
     // Une photo de profil déposée est ensuite téléchargeable, comme sur le serveur.
     this.api.avatars = this.messaging.storedAvatars;
   }
@@ -4187,6 +4190,11 @@ class FakeCallEngine implements CallEngine {
   @override
   Future<int> trafficBytes() async => traffic;
 
+  /// Lot 9.3c : niveaux du son de l'appel.
+  CallAudioLevels levels = const CallAudioLevels(receivedDb: -24, sentDb: -30);
+  @override
+  Future<CallAudioLevels> audioLevels() async => levels;
+
   /// Lot 5.7 : liaison par le relais.
   bool relay = false;
   @override
@@ -4283,6 +4291,17 @@ class FakeCallSystem implements CallSystem {
   Future<void> setCallAudio(bool on) async => log.add('audio:$on');
   @override
   Future<void> setAudioRoute(String route) async => log.add('route:$route');
+
+  /// Lot 9.3c : état du son du téléphone.
+  PhoneAudioState? phoneAudio = const PhoneAudioState(
+    mode: 'communication',
+    output: 'haut-parleur',
+    speakerphone: true,
+    volume: 13,
+    maxVolume: 15,
+  );
+  @override
+  Future<PhoneAudioState?> audioState() async => phoneAudio;
   @override
   Future<bool> fullScreenAllowed() async => allowed;
   @override
@@ -4294,7 +4313,8 @@ class FakeCallTones implements CallTones {
   @override
   Future<void> ring() async => log.add('ring');
   @override
-  Future<void> ringback() async => log.add('ringback');
+  Future<void> ringback({bool speaker = false}) async =>
+      log.add(speaker ? 'ringback:speaker' : 'ringback');
   @override
   Future<void> stop() async => log.add('stop');
 }
@@ -4600,6 +4620,10 @@ class FakeGroupCallEngine implements GroupCallEngine {
 
   @override
   Future<int> trafficBytes() async => 0;
+
+  @override
+  Future<CallAudioLevels> audioLevels() async =>
+      const CallAudioLevels(receivedDb: -26, sentDb: -31);
 
   @override
   Future<void> close() async => log.add('close');

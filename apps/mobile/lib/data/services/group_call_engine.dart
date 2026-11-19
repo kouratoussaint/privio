@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import 'call_audio.dart';
+
 import 'call_engine.dart' show AudioRoute, CallMediaState;
 
 /// Lot 9.4 — liaison d'un appel de groupe (ADR-052) : UNE liaison WebRTC vers le relais
@@ -53,6 +55,9 @@ abstract interface class GroupCallEngine {
   Widget? remoteView(String mid);
 
   Future<int> trafficBytes();
+
+  /// Lot 9.3c : niveaux moyens du son reçu (tous les participants) et envoyé.
+  Future<CallAudioLevels> audioLevels();
   Future<void> close();
 }
 
@@ -79,6 +84,8 @@ class WebRtcGroupCallEngine implements GroupCallEngine {
     void Function()? onAudioDevicesChanged,
     void Function(bool weak)? onQuality,
   }) async {
+    // Lot 9.3c : traitement du son de la bibliothèque, avant tout autre usage.
+    await prepareCallAudio();
     await _localR.initialize();
     _onRemoteChanged = onRemoteChanged;
     // Lot 9.3 : mode « communication » (touches de volume = son de l'appel).
@@ -335,6 +342,13 @@ class WebRtcGroupCallEngine implements GroupCallEngine {
     final r = _remote[mid];
     if (r == null || r.srcObject == null) return null;
     return RTCVideoView(r, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover);
+  }
+
+  @override
+  Future<CallAudioLevels> audioLevels() async {
+    final pc = _pc;
+    if (pc == null) return CallAudioLevels.unknown;
+    return audioLevelsFromStats(await pc.getStats());
   }
 
   @override

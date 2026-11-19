@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 /// Lot 9.1a — sonnerie (appel reçu) et tonalité d'attente (appel émis), en boucle.
 abstract interface class CallTones {
   Future<void> ring();
-  Future<void> ringback();
+
+  /// [speaker] : appel vidéo (haut-parleur d'emblée).
+  Future<void> ringback({bool speaker = false});
   Future<void> stop();
 }
 
@@ -40,14 +42,19 @@ class DeviceCallTones implements CallTones {
     _vibrate = Timer.periodic(const Duration(seconds: 2), (_) => HapticFeedback.vibrate());
   }
 
+  // Lot 9.3c : la bibliothèque des sons règle le mode et le haut-parleur de TOUT le
+  // téléphone en préparant un son : la tonalité d'attente garde donc le mode « appel » et
+  // la sortie de l'appel (sinon le téléphone repassait en mode normal, écouteur).
   @override
-  Future<void> ringback() => _loop(
+  Future<void> ringback({bool speaker = false}) => _loop(
     'sounds/tonalite.wav',
     AudioContext(
-      android: const AudioContextAndroid(
+      android: AudioContextAndroid(
         usageType: AndroidUsageType.voiceCommunication,
         contentType: AndroidContentType.speech,
         audioFocus: AndroidAudioFocus.gainTransient,
+        audioMode: AndroidAudioMode.inCommunication,
+        isSpeakerphoneOn: speaker,
       ),
     ),
   );

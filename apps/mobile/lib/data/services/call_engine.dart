@@ -4,6 +4,10 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import 'call_audio.dart';
+
+export 'call_audio.dart' show CallAudioLevels;
+
 /// Lot 9.1a — liaison audio d'un appel (WebRTC). Interface : remplacée dans les tests.
 enum CallMediaState { connecting, connected, reconnecting, failed }
 
@@ -60,6 +64,9 @@ abstract interface class CallEngine {
   /// compteur de données ; 0 si inconnu.
   Future<int> trafficBytes();
 
+  /// Lot 9.3c : niveaux moyens du son reçu et envoyé depuis le début de l'appel.
+  Future<CallAudioLevels> audioLevels();
+
   /// Lot 5.7 : la liaison passe-t-elle par le relais (candidat « relay » d'un côté) ?
   Future<bool> usesRelay();
 
@@ -92,6 +99,8 @@ class WebRtcCallEngine implements CallEngine {
     void Function(bool on)? onPeerCamera,
     void Function()? onAudioDevicesChanged,
   }) async {
+    // Lot 9.3c : traitement du son de la bibliothèque, avant tout autre usage.
+    await prepareCallAudio();
     await _localR.initialize();
     await _remoteR.initialize();
     _onPeerCamera = onPeerCamera;
@@ -404,6 +413,13 @@ class WebRtcCallEngine implements CallEngine {
 
   @override
   Future<void> setSpeaker(bool on) => Helper.setSpeakerphoneOn(on);
+
+  @override
+  Future<CallAudioLevels> audioLevels() async {
+    final pc = _pc;
+    if (pc == null) return CallAudioLevels.unknown;
+    return audioLevelsFromStats(await pc.getStats());
+  }
 
   @override
   Future<int> trafficBytes() async {
