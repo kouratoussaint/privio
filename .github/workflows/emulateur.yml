@@ -63,7 +63,7 @@ jobs:
             postgresql://postgres:postgres@127.0.0.1:54322/postgres
       - run: flutter pub get
         working-directory: apps/mobile
-      - name: Parcours et mesures sur l'émulateur (entrée de gamme : 2 cœurs, 2 Go)
+      - name: "Parcours et mesures sur l'émulateur (entrée de gamme, 2 cœurs, 2 Go)"
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
