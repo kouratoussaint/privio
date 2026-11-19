@@ -37,4 +37,13 @@ class PlatformDeviceInfo implements DeviceInfoSource {
   }
 }
 
+/// Lot 6.1 : temps écoulé depuis le lancement du processus (null si indisponible).
+Future<int?> millisecondsSinceProcessStart() async {
+  try {
+    return await const MethodChannel('privio/device').invokeMethod<int>('sinceStart');
+  } on Object {
+    return null;
+  }
+}
+
 final deviceInfoProvider = Provider<DeviceInfoSource>((ref) => const PlatformDeviceInfo());

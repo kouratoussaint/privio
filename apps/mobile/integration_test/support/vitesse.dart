@@ -14,7 +14,8 @@ import 'parcours.dart';
 /// scripts/emulateur/preparer_mesure.py : 300 discussions, dont une de 1 000 messages.
 ///
 /// Seuils (au-delà, la CI échoue) :
-const seuilDemarrageMs = 3000; // lancement → premier écran affiché
+// Démarrage à froid < 3 000 ms : mesuré sur la vraie application (scripts/emulateur/jouer.sh),
+// pas ici (sous « flutter drive », le moteur attend l'outil de test avant de lancer Dart).
 const seuilOuvertureMs = 2000; // toucher la discussion → messages affichés
 const seuilImageP90Ms = 20; // 90 % des images construites en moins de 20 ms (défilement)
 
@@ -160,7 +161,6 @@ Future<Map<String, Object>> mesurerVitesse(
 /// Échoue si une mesure dépasse son seuil (après publication des mesures).
 void verifierSeuils(Map<String, Object> m) {
   num p90(String cle) => ((m[cle] as Map?)?['construction_p90_ms'] as num?) ?? 9999;
-  expect(m['demarrage_ms'] as int, lessThan(seuilDemarrageMs), reason: 'démarrage à froid');
   expect(m['ouverture_1000_ms'] as int, lessThan(seuilOuvertureMs), reason: 'ouverture');
   expect(p90('defilement_300'), lessThan(seuilImageP90Ms), reason: 'défilement, 300 discussions');
   expect(p90('defilement_1000'), lessThan(seuilImageP90Ms), reason: 'défilement, 1 000 messages');

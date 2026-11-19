@@ -24,9 +24,38 @@ else
   echo "❌ parcours en échec (voir le journal de l'étape)" >> "$RESUME"
 fi
 
-# Mesures : application neuve (aucune session du parcours précédent).
-adb -s "$DEVICE" uninstall com.privio.app >/dev/null 2>&1 || true
+# Démarrage à froid de la vraie application (mode profile, comme une version publiée) :
+# du lancement du processus au premier écran dessiné, noté par l'application elle-même.
 echo "### Android $VERSION — vitesse (émulateur d'entrée de gamme, mode profile)" >> "$RESUME"
+flutter build apk --profile --target-platform android-x64 "${DEFINES[@]}"
+adb -s "$DEVICE" uninstall com.privio.app >/dev/null 2>&1 || true
+adb -s "$DEVICE" install -r build/app/outputs/flutter-apk/app-profile.apk >/dev/null
+temps=()
+for essai in 1 2 3 4; do
+  adb -s "$DEVICE" shell am force-stop com.privio.app
+  sleep 3
+  adb -s "$DEVICE" logcat -c
+  adb -s "$DEVICE" shell am start -n com.privio.app/.MainActivity >/dev/null
+  ms=""
+  for _ in $(seq 1 60); do
+    ms=$(adb -s "$DEVICE" logcat -d -s flutter:I | grep -a 'Privio' | grep -aoE '[0-9]+ ms' | tail -1 | grep -oE '[0-9]+' || true)
+    [ -n "$ms" ] && break
+    sleep 0.5
+  done
+  echo "Démarrage à froid n° $essai : ${ms:-?} ms"
+  temps+=("${ms:-99999}")
+done
+# Le 1er lancement suit l'installation (préparation du code par Android) : médiane des 3 suivants.
+mediane=$(printf '%s\n' "${temps[@]:1}" | sort -n | sed -n 2p)
+echo "| Démarrage à froid → premier écran (médiane de 3 ; 1er lancement : ${temps[0]} ms) | $mediane ms | < 3 000 ms |" > build/demarrage.md
+demarrage=0
+if [ "$mediane" -ge 3000 ]; then
+  echo "::error::Démarrage à froid trop lent sur Android $VERSION : $mediane ms (seuil 3 000 ms)"
+  demarrage=1
+fi
+
+# Mesures dans l'application : neuve (aucune session du parcours précédent).
+adb -s "$DEVICE" uninstall com.privio.app >/dev/null 2>&1 || true
 statut=0
 mkdir -p build && rm -f build/mesures.json
 set +e
@@ -49,9 +78,7 @@ def ligne(nom, cle, seuil):
     if v is None: return f"| {nom} | — | {seuil} |"
     return f"| {nom} | {v} ms | {seuil} |"
 print("| Mesure | Résultat | Seuil |\n|---|---|---|")
-print(ligne("Démarrage : moteur Flutter et Dart prêts", "demarrage_dart_ms", "(détail)"))
-print(ligne("Démarrage : Privio initialisé (serveur, stockage sécurisé)", "demarrage_initialise_ms", "(détail)"))
-print(ligne("Démarrage à froid → premier écran", "demarrage_ms", "< 3 000 ms"))
+print(open("build/demarrage.md").read().strip())
 print(ligne("Connexion → liste de 300 discussions", "liste_300_ms", "(suivi)"))
 print(ligne("Ouverture d'une discussion de 1 000 messages", "ouverture_1000_ms", "< 2 000 ms"))
 for nom, cle in (("Défilement de 300 discussions", "defilement_300"),
@@ -62,6 +89,9 @@ for nom, cle in (("Défilement de 300 discussions", "defilement_300"),
           f"{d.get('rendu_p90_ms', '—')} ms) | < 20 ms |")
 PY
   cp build/mesures.json "$RUNNER_TEMP/mesures-android-$VERSION.json" 2>/dev/null || true
+else
+  { echo "| Mesure | Résultat | Seuil |"; echo "|---|---|---|"; cat build/demarrage.md; } >> "$RESUME"
 fi
 [ "$parcours" -eq 0 ] || exit "$parcours"
+[ "$demarrage" -eq 0 ] || exit 1
 exit $statut

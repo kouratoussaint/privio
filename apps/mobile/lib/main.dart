@@ -37,11 +37,6 @@ Future<void> main() async {
   final techLog = TechLog.instance;
   await techLog.load();
   techLog.install();
-  unawaited(
-    const PlatformDeviceInfo().read().then(
-      (d) => techLog.started(appVersion: Env.appVersion, android: d.osVersion, model: d.model),
-    ),
-  );
 
   await Supabase.initialize(
     url: Env.supabaseUrl,
@@ -74,4 +69,15 @@ Future<void> main() async {
       child: const PrivioApp(),
     ),
   );
+  unawaited(_noterDemarrage(techLog));
+}
+
+/// Lot 6.1 : durée du démarrage à froid (lancement du processus → premier écran dessiné),
+/// notée au journal technique et dans le journal d'Android (mesurée par la CI).
+Future<void> _noterDemarrage(TechLog techLog) async {
+  await WidgetsBinding.instance.waitUntilFirstFrameRasterized;
+  final ms = await millisecondsSinceProcessStart();
+  final d = await const PlatformDeviceInfo().read();
+  techLog.started(appVersion: Env.appVersion, android: d.osVersion, model: d.model, startupMs: ms);
+  if (ms != null) debugPrint('Privio — démarrage : $ms ms');
 }

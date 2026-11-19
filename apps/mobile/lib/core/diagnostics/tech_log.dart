@@ -43,12 +43,13 @@ class TechLog {
     }
   }
 
-  void started({required String appVersion, String? android, String? model}) {
+  void started({required String appVersion, String? android, String? model, int? startupMs}) {
     _add(
       [
         'Démarrage · Privio $appVersion',
         if (android != null && android.isNotEmpty) 'Android $android',
         if (model != null && model.isNotEmpty) model,
+        if (startupMs != null && startupMs >= 0) 'premier écran en $startupMs ms',
       ].join(' · '),
     );
   }
