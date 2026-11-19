@@ -21,10 +21,18 @@ service de rapport de plantage externe, et un canal de distribution simple et gr
   2 Go, Android 7 et 14) en mode « profile » (comme une version publiée), avec un compte
   de mesure de **300 discussions dont une de 1 000 messages** (base locale seulement :
   `scripts/emulateur/`). Seuils qui font échouer la CI : **démarrage à froid < 3 s**
-  (du lancement du processus au premier écran) ; **ouverture de la discussion de
+  (du lancement du processus au premier écran dessiné, noté par l'application elle-même
+  dans le journal technique et le journal d'Android ; la CI installe la version
+  « profile », la lance 4 fois et prend la médiane des 3 derniers lancements — sous
+  « flutter drive », le moteur attend l'outil de test ≈ 3 s avant de lancer Dart, ce qui
+  faussait la mesure) ; **ouverture de la discussion de
   1 000 messages < 2 s** ; **défilement** des 300 discussions et des 1 000 messages :
   90 % des images construites en **moins de 20 ms**. Le temps de rendu graphique est
   publié mais pas soumis à seuil (l'émulateur dessine sans carte graphique).
+  Premiers résultats (émulateur 2 cœurs, 2 Go ; Android 7 / Android 14) : démarrage à
+  froid ≈ 1,0 s / 1,7 s ; liste de 300 discussions affichée en 154 / 159 ms ; ouverture
+  de la discussion de 1 000 messages en 1,5 s / 0,7 s ; défilement : 90 % des images
+  construites en 2,6 / 0,4 ms (300 discussions) et 4,1 / 8,4 ms (1 000 messages).
   Ce que les mesures ont révélé et corrigé : la liste des discussions dépassait le délai
   du serveur (8 s) tant que les statistiques de la base n'étaient pas à jour après un
   remplissage massif ; les données de mesure sont donc analysées comme le ferait la base
