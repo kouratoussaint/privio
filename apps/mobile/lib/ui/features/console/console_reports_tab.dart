@@ -15,6 +15,7 @@ import '../../../state/providers.dart';
 import '../../core/widgets/settings_card.dart';
 import 'console_moderation_tab.dart' show TemplatePicker;
 import 'console_screen.dart' show ConsoleBackHandler;
+import 'console_ui.dart';
 import '../../../domain/models/console_team.dart';
 import '../../core/widgets/state_views.dart';
 
@@ -52,75 +53,67 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> with Cons
     final role = ref.watch(consoleMeProvider).value?.role ?? ConsoleRole.owner;
     if (role == ConsoleRole.support && _queue == 'appeals') _queue = 'open';
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(PrivioSpacing.m, PrivioSpacing.m, PrivioSpacing.m, 0),
-          child: Wrap(
-            key: const Key('reports.queue'),
-            spacing: PrivioSpacing.s,
-            runSpacing: PrivioSpacing.xs,
+        // Lot 5.10 : filtres en rangées alignées, à la couleur de la rubrique.
+        const SizedBox(height: PrivioSpacing.m),
+        ConsoleFilterRow(
+          key: const Key('reports.queue'),
+          children: [
+            for (final (q, label) in const [
+              ('open', 'À traiter'),
+              ('reviewing', 'En cours'),
+              ('closed', 'Traités'),
+              ('appeals', 'Contestations'),
+            ])
+              if (q != 'appeals' || role.moderates)
+                consoleChip(
+                  context,
+                  key: Key('reports.queue.$q'),
+                  label: label,
+                  selected: _queue == q,
+                  onTap: () => setState(() => _queue = q),
+                ),
+          ],
+        ),
+        if (_queue != 'appeals' && role.moderates) ...[
+          const SizedBox(height: PrivioSpacing.s),
+          ConsoleFilterRow(
+            leading: Icons.filter_list,
             children: [
-              for (final (q, label) in const [
-                ('open', 'À traiter'),
-                ('reviewing', 'En cours'),
-                ('closed', 'Traités'),
-                ('appeals', 'Contestations'),
+              for (final (k, label) in const [
+                ('account', 'Comptes'),
+                ('message', 'Messages'),
+                ('group', 'Groupes'),
+                ('support', 'Assistance'),
               ])
-                if (q != 'appeals' || role.moderates)
+                if (k != 'support' || role.isOwner)
                   consoleChip(
                     context,
-                    key: Key('reports.queue.$q'),
+                    key: Key('reports.kind.$k'),
                     label: label,
-                    selected: _queue == q,
-                    onTap: () => setState(() => _queue = q),
+                    selected: _kind == k,
+                    onTap: () => setState(() => _kind = _kind == k ? null : k),
                   ),
+              PopupMenuButton<String?>(
+                key: const Key('reports.reason'),
+                tooltip: 'Filtrer par motif',
+                initialValue: _reason,
+                onSelected: (v) => setState(() => _reason = v == '' ? null : v),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: '', child: Text('Tous les motifs')),
+                  for (final e in kReportReasons.entries)
+                    if (e.key != 'support') PopupMenuItem(value: e.key, child: Text(e.value)),
+                ],
+                child: Chip(
+                  avatar: const Icon(Icons.arrow_drop_down, size: 18),
+                  label: Text(_reason == null ? 'Motif' : reasonLabel(_reason)),
+                ),
+              ),
             ],
           ),
-        ),
-        if (_queue != 'appeals' && role.moderates)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: PrivioSpacing.m,
-              vertical: PrivioSpacing.s,
-            ),
-            child: Row(
-              children: [
-                for (final (k, label) in const [
-                  ('account', 'Comptes'),
-                  ('message', 'Messages'),
-                  ('group', 'Groupes'),
-                  ('support', 'Assistance'),
-                ])
-                  if (k != 'support' || role.isOwner)
-                    Padding(
-                      padding: const EdgeInsets.only(right: PrivioSpacing.s),
-                      child: consoleChip(
-                        context,
-                        key: Key('reports.kind.$k'),
-                        label: label,
-                        selected: _kind == k,
-                        onTap: () => setState(() => _kind = _kind == k ? null : k),
-                      ),
-                    ),
-                PopupMenuButton<String?>(
-                  key: const Key('reports.reason'),
-                  tooltip: 'Filtrer par motif',
-                  initialValue: _reason,
-                  onSelected: (v) => setState(() => _reason = v == '' ? null : v),
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(value: '', child: Text('Tous les motifs')),
-                    for (final e in kReportReasons.entries)
-                      if (e.key != 'support') PopupMenuItem(value: e.key, child: Text(e.value)),
-                  ],
-                  child: Chip(
-                    avatar: const Icon(Icons.filter_list, size: 18),
-                    label: Text(_reason == null ? 'Motif' : reasonLabel(_reason)),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        ],
+        const SizedBox(height: PrivioSpacing.s),
         Expanded(
           child: _queue == 'appeals'
               ? const _AppealsList()
@@ -134,33 +127,15 @@ class _ConsoleReportsTabState extends ConsumerState<ConsoleReportsTab> with Cons
         if (_queue == 'closed')
           Padding(
             padding: const EdgeInsets.all(PrivioSpacing.s),
-            child: Text('Signalements gardés 90 jours.', style: theme.textTheme.bodySmall),
+            child: Text(
+              'Signalements gardés 90 jours.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
           ),
       ],
     );
   }
-}
-
-/// Puce aux couleurs de Privio (violet quand elle est choisie), comme le sélecteur de durée.
-Widget consoleChip(
-  BuildContext context, {
-  required Key key,
-  required String label,
-  required bool selected,
-  required VoidCallback onTap,
-}) {
-  final dark = Theme.of(context).brightness == Brightness.dark;
-  final fill = dark ? PrivioColors.lilac : PrivioColors.purple;
-  final onFill = dark ? PrivioColors.navy : Colors.white;
-  return ChoiceChip(
-    key: key,
-    label: Text(label),
-    selected: selected,
-    showCheckmark: false,
-    selectedColor: fill,
-    labelStyle: selected ? TextStyle(color: onFill, fontWeight: FontWeight.w600) : null,
-    onSelected: (_) => onTap(),
-  );
 }
 
 String _date(DateTime t) {
@@ -253,7 +228,7 @@ class _DossierList extends ConsumerWidget {
 
   Widget _dossierTile(BuildContext context, List<ModerationReport> d) {
     final theme = Theme.of(context);
-    const coral = Color(0xFFD85A30);
+    final coral = theme.colorScheme.primary;
     final first = d.first;
     final reasons = {for (final r in d) reasonLabel(r.reason)}.join(', ');
     final people = {for (final r in d) r.reporterHandle}.length;

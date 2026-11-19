@@ -7,6 +7,7 @@ import '../../../domain/models/console.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
+import 'console_ui.dart';
 import 'console_accounts_tab.dart' show ConsolePager;
 
 /// Onglet « Journal » (lot 5.2) : consultations et changements, du plus récent au plus
@@ -18,8 +19,6 @@ class ConsoleJournalTab extends ConsumerStatefulWidget {
   @override
   ConsumerState<ConsoleJournalTab> createState() => _ConsoleJournalTabState();
 }
-
-const _slate = Color(0xFF5A6B85);
 
 class _ConsoleJournalTabState extends ConsumerState<ConsoleJournalTab> {
   String? _type;
@@ -38,73 +37,54 @@ class _ConsoleJournalTabState extends ConsumerState<ConsoleJournalTab> {
       for (final p in ref.watch(consolePoliciesProvider).value ?? const <ConsolePolicy>[])
         p.key: p.unit,
     };
-    Widget chip(String key, String label, bool selected, VoidCallback onTap) => Padding(
-      padding: const EdgeInsets.only(right: PrivioSpacing.s),
-      child: ChoiceChip(
-        key: Key(key),
-        label: Text(label),
-        selected: selected,
-        selectedColor: _slate.withValues(alpha: 0.18),
-        onSelected: (_) => onTap(),
-      ),
-    );
+    Widget chip(String key, String label, bool selected, VoidCallback onTap) =>
+        consoleChip(context, key: Key(key), label: label, selected: selected, onTap: onTap);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 52,
-          child: ListView(
-            key: const Key('journal.types'),
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              PrivioSpacing.m,
-              PrivioSpacing.s,
-              PrivioSpacing.m,
-              0,
+        // Lot 5.10 : filtres en rangées alignées, à la couleur de la rubrique.
+        const SizedBox(height: PrivioSpacing.m),
+        ConsoleFilterRow(
+          key: const Key('journal.types'),
+          children: [
+            chip(
+              'journal.type.all',
+              'Tout',
+              _type == null,
+              () => setState(() {
+                _type = null;
+                _page = 1;
+              }),
             ),
-            children: [
+            for (final e in kJournalTypes.entries)
               chip(
-                'journal.type.all',
-                'Tout',
-                _type == null,
+                'journal.type.${e.key}',
+                e.value,
+                _type == e.key,
                 () => setState(() {
-                  _type = null;
+                  _type = e.key;
                   _page = 1;
                 }),
               ),
-              for (final e in kJournalTypes.entries)
-                chip(
-                  'journal.type.${e.key}',
-                  e.value,
-                  _type == e.key,
-                  () => setState(() {
-                    _type = e.key;
-                    _page = 1;
-                  }),
-                ),
-            ],
-          ),
+          ],
         ),
+        const SizedBox(height: PrivioSpacing.s),
         // Période : défile si l'écran est étroit.
-        SingleChildScrollView(
+        ConsoleFilterRow(
           key: const Key('journal.periods'),
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(PrivioSpacing.m, 0, PrivioSpacing.m, 0),
-          child: Row(
-            children: [
-              Icon(Icons.date_range_outlined, size: 18, color: theme.colorScheme.onSurfaceVariant),
-              const SizedBox(width: 6),
-              for (final e in _periods.entries)
-                chip(
-                  'journal.days.${e.key ?? 'all'}',
-                  e.value,
-                  _days == e.key,
-                  () => setState(() {
-                    _days = e.key;
-                    _page = 1;
-                  }),
-                ),
-            ],
-          ),
+          leading: Icons.date_range_outlined,
+          children: [
+            for (final e in _periods.entries)
+              chip(
+                'journal.days.${e.key ?? 'all'}',
+                e.value,
+                _days == e.key,
+                () => setState(() {
+                  _days = e.key;
+                  _page = 1;
+                }),
+              ),
+          ],
         ),
         Expanded(
           child: switch (journal) {
@@ -164,7 +144,7 @@ class _ConsoleJournalTabState extends ConsumerState<ConsoleJournalTab> {
           ConsolePager(
             page: v.page,
             pages: v.pages,
-            color: _slate,
+            color: theme.colorScheme.primary,
             onPage: (p) => setState(() => _page = p),
           ),
       ],

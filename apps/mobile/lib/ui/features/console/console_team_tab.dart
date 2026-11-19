@@ -6,8 +6,9 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console_team.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/avatar.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
-import 'console_reports_tab.dart' show consoleChip;
+import 'console_ui.dart';
 
 /// Lot 5.8 — « Équipe » (propriétaire) : qui a accès à la console, avec quel rôle. Ajout
 /// par le numéro d'un compte Privio existant ; deux étapes obligatoires pour l'équipe.
@@ -107,51 +108,54 @@ class ConsoleTeamTab extends ConsumerWidget {
         child: ListView(
           key: const Key('team.list'),
           padding: const EdgeInsets.fromLTRB(
+            PrivioSpacing.l,
             PrivioSpacing.m,
-            PrivioSpacing.m,
-            PrivioSpacing.m,
+            PrivioSpacing.l,
             PrivioSpacing.xxl,
           ),
           children: [
-            Text(
+            const ConsoleIntro(
               'Modérateur\u202F: signalements, sanctions, groupes, sites sans aperçu. '
               'Assistance\u202F: demandes d’assistance, fiches des comptes sans sanction. '
               'La vérification en deux étapes est obligatoire pour l’équipe.',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            // Lot 5.10 : liste dans une carte, action d'ajout en dessous (comme ailleurs).
+            ConsoleHeading('Membres (${value.length})', first: true),
+            SettingsCard(
+              children: [
+                for (final (i, m) in value.indexed) ...[
+                  if (i > 0) const SettingsDivider(),
+                  ListTile(
+                    key: Key('team.member.${m.userId}'),
+                    leading: UserAvatar(
+                      name: m.name ?? m.handle ?? '?',
+                      avatarPath: m.avatar,
+                      seed: m.userId,
+                      radius: 20,
+                    ),
+                    title: Text(m.name ?? '@${m.handle ?? '—'}'),
+                    subtitle: Text(
+                      [
+                        '${m.role.label}${m.handle == null ? '' : ' · @${m.handle}'}',
+                        if (m.phone != null) m.phone!,
+                        if (!m.role.isOwner)
+                          m.twoStep ? 'Deux étapes activées' : 'Deux étapes à activer',
+                        if (m.lastActionAt != null)
+                          'Dernière action\u202F: ${_day(m.lastActionAt!)}',
+                      ].join('\n'),
+                    ),
+                    trailing: m.role.isOwner
+                        ? Icon(Icons.verified_rounded, color: theme.colorScheme.primary)
+                        : !m.twoStep
+                        ? Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error)
+                        : const Icon(Icons.more_vert),
+                    onTap: m.role.isOwner ? null : () => _manage(context, ref, m),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: PrivioSpacing.m),
-            for (final m in value)
-              Card(
-                key: Key('team.member.${m.userId}'),
-                margin: const EdgeInsets.only(bottom: PrivioSpacing.s),
-                child: ListTile(
-                  leading: UserAvatar(
-                    name: m.name ?? m.handle ?? '?',
-                    avatarPath: m.avatar,
-                    seed: m.userId,
-                    radius: 20,
-                  ),
-                  title: Text(m.name ?? '@${m.handle ?? '—'}'),
-                  subtitle: Text(
-                    [
-                      '${m.role.label}${m.handle == null ? '' : ' · @${m.handle}'}',
-                      if (m.phone != null) m.phone!,
-                      if (!m.role.isOwner)
-                        m.twoStep ? 'Deux étapes activées' : 'Deux étapes à activer',
-                      if (m.lastActionAt != null) 'Dernière action\u202F: ${_day(m.lastActionAt!)}',
-                    ].join('\n'),
-                  ),
-                  isThreeLine: true,
-                  trailing: m.role.isOwner
-                      ? Icon(Icons.verified_rounded, color: theme.colorScheme.primary)
-                      : !m.twoStep
-                      ? Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error)
-                      : const Icon(Icons.more_vert),
-                  onTap: m.role.isOwner ? null : () => _manage(context, ref, m),
-                ),
-              ),
-            const SizedBox(height: PrivioSpacing.m),
-            FilledButton.icon(
+            OutlinedButton.icon(
               key: const Key('team.add'),
               onPressed: () => _add(context, ref),
               icon: const Icon(Icons.person_add_alt_1_outlined),

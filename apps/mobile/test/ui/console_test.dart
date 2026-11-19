@@ -180,10 +180,21 @@ void main() {
     await _type(tester, _pin);
     expect(find.byKey(const Key('console.dashboard')), findsOneWidget);
     expect(deps.admin.dashboardCalls, 1);
+    // Lot 5.10 : les chiffres viennent après les tuiles (l'accueil défile).
+    await tester.scrollUntilVisible(
+      find.text('Actifs (24\u00A0h)'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('console.dashboard')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('42'), findsOneWidget); // comptes
     expect(find.text('Actifs (24\u00A0h)'), findsOneWidget);
     // Lot 5.5 : tuiles des rubriques en haut de l'accueil.
-    expect(find.byKey(const Key('console.tile.reports')), findsOneWidget);
+    expect(find.byKey(const Key('console.tile.reports'), skipOffstage: false), findsOneWidget);
     await tester.scrollUntilVisible(find.text('860'), 200, scrollable: _dashScroll);
     expect(find.text('860'), findsOneWidget); // messages sur 7 jours
     await tester.scrollUntilVisible(
@@ -299,8 +310,9 @@ void main() {
 
   testWidgets('réglages : par thème, cadenas sur les invariants', (tester) async {
     await openTab(tester, 'policies');
-    expect(find.text('Médias'), findsOneWidget);
-    expect(find.text('Groupes'), findsOneWidget);
+    // Lot 5.10 : titres de section en capitales, comme les Paramètres.
+    expect(find.text('MÉDIAS'), findsOneWidget);
+    expect(find.text('GROUPES'), findsOneWidget);
     expect(find.text('Photos par compte et par jour'), findsOneWidget);
     expect(find.text('Membres au plus par groupe'), findsOneWidget);
     // Lot 5.5 : invariants dans « Fonctionnalités » (cadenas), plus dans Réglages.
@@ -313,7 +325,7 @@ void main() {
       const Offset(0, -200),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Durée de vie maximale d’un message : 72 h'), findsOneWidget);
+    expect(find.text('Durée de vie maximale d’un message'), findsOneWidget);
     await tester.tap(find.byKey(const Key('feature.message_ttl_hours')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('feature.confirm')), findsNothing, reason: 'non modifiable');
@@ -435,7 +447,7 @@ void main() {
   testWidgets('statistiques : 30 jours, parts, versions, tableau', (tester) async {
     final deps = await openTab(tester, 'stats');
     expect(deps.admin.statsCalls, 1);
-    expect(find.text('Messages par jour'), findsOneWidget);
+    expect(find.text('MESSAGES PAR JOUR'), findsOneWidget);
     expect(find.text('Texte'), findsOneWidget);
     expect(find.text('123 · 84 %'), findsOneWidget); // 40+41+42 sur 147
     // Toucher la dernière barre : le jour et la valeur.
@@ -455,6 +467,8 @@ void main() {
     );
     expect(find.text('12 · 80 %'), findsOneWidget);
     await tester.scrollUntilVisible(find.byKey(const Key('stats.table')), 300, scrollable: list);
+    await tester.ensureVisible(find.byKey(const Key('stats.table')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('stats.table')));
     await tester.pumpAndSettle();
     expect(find.byType(DataTable), findsOneWidget);

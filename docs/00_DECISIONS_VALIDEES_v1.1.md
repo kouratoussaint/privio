@@ -468,3 +468,10 @@ pendant un appel, sortie et mode réimposés à la connexion) ; **mesure du son*
 appel au journal technique (niveaux reçu et envoyé, état réel d'Android ; aucun contenu,
 aucun nom). La suite (une seule autorité pour la sortie, renfort du son reçu) se décide
 sur ces mesures (ADR-056).
+
+## Amendement 35 — Console : organisation et présentation (19 novembre 2026, lot 5.10)
+Les rubriques de la console sont rangées en **trois parties** (Modération, Suivi du
+service, Configuration), dans le menu comme sur l'accueil, qui montre désormais toutes les
+rubriques permises au rôle. Chaque rubrique applique **sa couleur** à ses commandes. Une
+seule présentation, celle des Paramètres : introduction, titres de section, cartes,
+filtres alignés, listes vides discrètes, actions d'ajout sous les listes (ADR-057).

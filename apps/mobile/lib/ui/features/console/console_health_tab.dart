@@ -10,6 +10,7 @@ import '../../../domain/models/console.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
+import 'console_ui.dart';
 import 'console_policies_tab.dart';
 
 /// Lot 5.7 (ADR-047) — rubrique « Santé du service » : versions de l'application,
@@ -105,14 +106,21 @@ class _HealthList extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: PrivioSpacing.m),
-        SettingsCard(
-          children: [
-            for (final key in ['app_recommended_build', 'app_min_build'])
-              if (policy(key) case final p?) _PolicyRow(policy: p),
-            if (policy('app_update_url') case final p?) _UrlRow(policy: p),
-          ],
-        ),
+        // Lot 5.10 : pas de carte vide (réglages absents de ce serveur).
+        if ([
+          'app_recommended_build',
+          'app_min_build',
+          'app_update_url',
+        ].any((k) => policy(k) != null)) ...[
+          const SizedBox(height: PrivioSpacing.m),
+          SettingsCard(
+            children: [
+              for (final key in ['app_recommended_build', 'app_min_build'])
+                if (policy(key) case final p?) _PolicyRow(policy: p),
+              if (policy('app_update_url') case final p?) _UrlRow(policy: p),
+            ],
+          ),
+        ],
         const SettingsNote(
           'Le numéro de version est celui après le «\u202F+\u202F» (0.1.0+69 → 69). Touchez une version '
           'installée pour la conseiller ou l’imposer.',
@@ -121,7 +129,10 @@ class _HealthList extends ConsumerWidget {
         SettingsCard(
           children: [
             if (h.installed.isEmpty)
-              const ListTile(title: Text('Aucun téléphone actif ces 30 derniers jours')),
+              const ConsoleEmptyLine(
+                'Aucun téléphone actif ces 30 derniers jours',
+                icon: Icons.smartphone_outlined,
+              ),
             for (final v in h.installed)
               _VersionRow(
                 v: v,
@@ -233,7 +244,10 @@ class _HealthList extends ConsumerWidget {
         SettingsCard(
           children: [
             if (h.jobs.isEmpty)
-              const ListTile(title: Text('Tâches automatiques indisponibles sur ce serveur')),
+              const ConsoleEmptyLine(
+                'Tâches automatiques indisponibles sur ce serveur',
+                icon: Icons.schedule_outlined,
+              ),
             for (final j in h.jobs)
               ListTile(
                 key: Key('health.job.${j.job}'),
@@ -259,12 +273,13 @@ class _HealthList extends ConsumerWidget {
         ),
         // ------------------------------------------------------------------ Alertes
         const SettingsSectionTitle('Alertes'),
-        SettingsCard(
-          children: [
-            if (policy('health_alerts_enabled') case final p?) _AlertSwitch(policy: p),
-            if (policy('sms_alert_per_hour') case final p?) _PolicyRow(policy: p),
-          ],
-        ),
+        if (policy('health_alerts_enabled') != null || policy('sms_alert_per_hour') != null)
+          SettingsCard(
+            children: [
+              if (policy('health_alerts_enabled') case final p?) _AlertSwitch(policy: p),
+              if (policy('sms_alert_per_hour') case final p?) _PolicyRow(policy: p),
+            ],
+          ),
         SettingsNote(
           'Effacement en retard, pic de codes SMS, échecs de notifications (20 % sur 1 h) '
           'ou d’appels (30 % sur 24 h), relais à 80 %\u202F: une notification sans contenu, au '

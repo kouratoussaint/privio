@@ -104,9 +104,22 @@ void main() {
   testWidgets('menu latéral et tuiles de l’accueil', (tester) async {
     final deps = _deps(admin: true);
     await _openConsoleTab(tester, deps, 'dashboard');
-    for (final s in ['reports', 'accounts', 'features', 'policies', 'stats', 'journal']) {
+    // Lot 5.10 : toutes les rubriques en tuiles, par partie (l'accueil défile).
+    for (final s in ['reports', 'accounts', 'stats', 'journal', 'features', 'policies']) {
+      await tester.scrollUntilVisible(
+        find.byKey(Key('console.tile.$s')),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('console.dashboard')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(find.byKey(Key('console.tile.$s')), findsOneWidget, reason: s);
     }
+    await tester.ensureVisible(find.byKey(const Key('console.tile.features')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('console.tile.features')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('console.features')), findsOneWidget);
@@ -183,7 +196,9 @@ void main() {
       find.byKey(const Key('console.features')),
       const Offset(0, -200),
     );
-    expect(find.text('Durée de vie maximale d’un message : 72 h'), findsOneWidget);
+    // Lot 5.10 : titre, puis la valeur avec la mention.
+    expect(find.text('Durée de vie maximale d’un message'), findsOneWidget);
+    expect(find.textContaining('72 h · Fixé'), findsOneWidget);
   });
 
   testWidgets('journal : par type d’action, par période, pages', (tester) async {

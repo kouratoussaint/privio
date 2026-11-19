@@ -6,6 +6,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/settings_card.dart';
+import 'console_ui.dart';
 import '../../core/widgets/state_views.dart';
 
 /// Lot 5.5 — rubrique « Fonctionnalités » de la console : interrupteurs appliqués tout de
@@ -84,21 +85,23 @@ class _FeatureList extends StatelessWidget {
         PrivioSpacing.xxl,
       ),
       children: [
-        Text(
+        const ConsoleIntro(
           'Appliqué tout de suite à tous les comptes. Le serveur refuse ce qui est coupé\u202F; '
           'l’application masque les boutons au prochain retour. Chaque changement est '
           'inscrit au journal.',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        const SizedBox(height: PrivioSpacing.m),
-        SettingsCard(
-          children: [
-            for (final (i, p) in switches.indexed) ...[
-              if (i > 0) const SettingsDivider(),
-              _FeatureSwitch(policy: p),
+        // Lot 5.10 : titre de section aussi pour les fonctions (pas de carte vide).
+        if (switches.isNotEmpty) ...[
+          const ConsoleHeading('Fonctions', first: true),
+          SettingsCard(
+            children: [
+              for (final (i, p) in switches.indexed) ...[
+                if (i > 0) const SettingsDivider(),
+                _FeatureSwitch(policy: p),
+              ],
             ],
-          ],
-        ),
+          ),
+        ],
         if (announcement != null) ...[
           const SettingsSectionTitle('Message d’information'),
           SettingsCard(children: [_AnnouncementTile(policy: announcement)]),
@@ -111,11 +114,16 @@ class _FeatureList extends StatelessWidget {
               ListTile(
                 key: Key('feature.${p.key}'),
                 leading: Icon(_featureIcon(p.key), color: theme.colorScheme.onSurfaceVariant),
-                title: Text(p.label),
+                // Lot 5.10 : « Durée de vie maximale d’un message : 72 h » → titre, puis
+                // valeur avec la mention (plus de « : 72 h » seul à la ligne).
+                title: Text(p.label.split(RegExp(r'\s:\s')).first),
                 subtitle: Text(
-                  p.isBool
-                      ? 'Promis à l’inscription\u202F: non modifiable'
-                      : 'Fixé\u202F: non modifiable',
+                  [
+                    ...p.label.split(RegExp(r'\s:\s')).skip(1),
+                    p.isBool
+                        ? 'Promis à l’inscription\u202F: non modifiable'
+                        : 'Fixé\u202F: non modifiable',
+                  ].join(' · '),
                 ),
                 trailing: const Icon(Icons.lock_outline),
               ),

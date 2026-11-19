@@ -6,8 +6,9 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console_team.dart';
 import '../../../state/console_providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
-import 'console_reports_tab.dart' show consoleChip;
+import 'console_ui.dart';
 
 // Lot 5.9 — pilotage (propriétaire) : inscriptions, préréglages, message programmé,
 // exceptions par compte et par groupe.
@@ -35,22 +36,21 @@ String _dmy(DateTime t) {
 }
 
 const _padding = EdgeInsets.fromLTRB(
+  PrivioSpacing.l,
   PrivioSpacing.m,
-  PrivioSpacing.m,
-  PrivioSpacing.m,
+  PrivioSpacing.l,
   PrivioSpacing.xxl,
 );
 
+/// Lot 5.10 : titre de section commun à toute la console.
 class _Title extends StatelessWidget {
-  const _Title(this.text);
+  const _Title(this.text, {this.first = false});
 
   final String text;
+  final bool first;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: PrivioSpacing.l, bottom: PrivioSpacing.s),
-    child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-  );
+  Widget build(BuildContext context) => ConsoleHeading(text, first: first);
 }
 
 // ---------------------------------------------------------------------------
@@ -131,12 +131,12 @@ class _ConsoleSignupsTabState extends ConsumerState<ConsoleSignupsTab> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(signupsProvider);
-    final theme = Theme.of(context);
     return switch (state) {
       AsyncData(value: final s) => ListView(
         key: const Key('signups.view'),
         padding: _padding,
         children: [
+          const _Title('Qui peut créer un compte', first: true),
           Wrap(
             spacing: PrivioSpacing.s,
             children: [
@@ -154,21 +154,14 @@ class _ConsoleSignupsTabState extends ConsumerState<ConsoleSignupsTab> {
             ],
           ),
           const SizedBox(height: PrivioSpacing.s),
-          Text(
-            switch (s.mode) {
-              'list' =>
-                'Seuls les numéros de la liste et les personnes qui ont un code d’invitation '
-                    'peuvent créer un compte.',
-              'closed' => 'Personne ne peut créer de compte.',
-              _ => 'Tout le monde peut créer un compte.',
-            },
-            key: const Key('signups.explain'),
-            style: theme.textTheme.bodySmall,
-          ),
-          Text(
-            'Les comptes déjà créés ne sont jamais touchés.',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
+          ConsoleIntro(switch (s.mode) {
+            'list' =>
+              'Seuls les numéros de la liste et les personnes qui ont un code d’invitation '
+                  'peuvent créer un compte.',
+            'closed' => 'Personne ne peut créer de compte.',
+            _ => 'Tout le monde peut créer un compte.',
+          }, key: const Key('signups.explain')),
+          const ConsoleIntro('Les comptes déjà créés ne sont jamais touchés.'),
           _Title('Numéros autorisés (${s.phones.length})'),
           TextField(
             key: const Key('signups.phones'),
@@ -208,32 +201,39 @@ class _ConsoleSignupsTabState extends ConsumerState<ConsoleSignupsTab> {
               ],
             ),
           const _Title('Codes d’invitation'),
-          for (final c in s.codes)
-            Card(
-              key: Key('signups.code.${c.code}'),
-              margin: const EdgeInsets.only(bottom: PrivioSpacing.s),
-              child: ListTile(
-                title: Text(
-                  c.code,
-                  style: const TextStyle(letterSpacing: 2, fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  '${c.label == null ? '' : '${c.label} · '}${c.uses}/${c.maxUses} utilisé'
-                  '${c.uses > 1 ? 's' : ''}'
-                  '${c.expiresAt == null ? '' : ' · jusqu’au ${_dmy(c.expiresAt!)}'}'
-                  '${c.active ? '' : ' · épuisé ou expiré'}',
-                ),
-                trailing: IconButton(
-                  key: Key('signups.code.revoke.${c.code}'),
-                  tooltip: 'Annuler ce code',
-                  icon: const Icon(Icons.block),
-                  onPressed: () => _guarded(context, () async {
-                    await ref.read(adminApiProvider).revokeSignupCode(c.code);
-                    _refresh();
-                  }, done: 'Code annulé.'),
-                ),
-              ),
-            ),
+          SettingsCard(
+            children: [
+              if (s.codes.isEmpty)
+                const ConsoleEmptyLine('Aucun code d’invitation.', icon: Icons.key_outlined)
+              else
+                for (final (i, c) in s.codes.indexed) ...[
+                  if (i > 0) const Divider(height: 1, indent: PrivioSpacing.l),
+                  ListTile(
+                    key: Key('signups.code.${c.code}'),
+                    title: Text(
+                      c.code,
+                      style: const TextStyle(letterSpacing: 2, fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      '${c.label == null ? '' : '${c.label} · '}${c.uses}/${c.maxUses} utilisé'
+                      '${c.uses > 1 ? 's' : ''}'
+                      '${c.expiresAt == null ? '' : ' · jusqu’au ${_dmy(c.expiresAt!)}'}'
+                      '${c.active ? '' : ' · épuisé ou expiré'}',
+                    ),
+                    trailing: IconButton(
+                      key: Key('signups.code.revoke.${c.code}'),
+                      tooltip: 'Annuler ce code',
+                      icon: const Icon(Icons.block),
+                      onPressed: () => _guarded(context, () async {
+                        await ref.read(adminApiProvider).revokeSignupCode(c.code);
+                        _refresh();
+                      }, done: 'Code annulé.'),
+                    ),
+                  ),
+                ],
+            ],
+          ),
+          const SizedBox(height: PrivioSpacing.s),
           OutlinedButton.icon(
             key: const Key('signups.code.new'),
             onPressed: _newCode,
@@ -399,20 +399,17 @@ class ConsolePilotTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final scheduled = ref.watch(scheduledAnnouncementProvider);
     final overrides = ref.watch(overridesProvider((null, null)));
     return ListView(
       key: const Key('pilot.view'),
       padding: _padding,
       children: [
-        Text('Préréglages', style: theme.textTheme.titleMedium),
-        const SizedBox(height: PrivioSpacing.s),
-        Text(
+        const _Title('Préréglages', first: true),
+        const ConsoleIntro(
           'Mode pilote\u202F: inscriptions sur liste, groupes de 25, Annonces de 200, liens '
           'd’invitation coupés. Mode normal\u202F: inscriptions ouvertes, groupes de 50, Annonces '
           'de 500, liens d’invitation. Les changements sont montrés avant d’appliquer.',
-          style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: PrivioSpacing.s),
         Wrap(
@@ -427,29 +424,31 @@ class ConsolePilotTab extends ConsumerWidget {
           ],
         ),
         const _Title('Message d’information programmé'),
+        const ConsoleIntro('Pendant sa période, il remplace le message d’information immédiat.'),
         switch (scheduled) {
-          AsyncData(value: final a?) => Card(
+          AsyncData(value: final a?) => SettingsCard(
             key: const Key('scheduled.current'),
-            child: ListTile(
-              title: Text(a.text),
-              subtitle: Text(
-                '${a.live ? 'Affiché maintenant · ' : ''}Du ${_dmyHm(a.startsAt)} '
-                'au ${_dmyHm(a.endsAt)}',
+            children: [
+              ListTile(
+                title: Text(a.text),
+                subtitle: Text(
+                  '${a.live ? 'Affiché maintenant · ' : ''}Du ${_dmyHm(a.startsAt)} '
+                  'au ${_dmyHm(a.endsAt)}',
+                ),
+                trailing: IconButton(
+                  key: const Key('scheduled.remove'),
+                  tooltip: 'Retirer',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _guarded(context, () async {
+                    await ref.read(adminApiProvider).setScheduledAnnouncement('');
+                    ref.invalidate(scheduledAnnouncementProvider);
+                  }, done: 'Message programmé retiré.'),
+                ),
               ),
-              trailing: IconButton(
-                key: const Key('scheduled.remove'),
-                tooltip: 'Retirer',
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _guarded(context, () async {
-                  await ref.read(adminApiProvider).setScheduledAnnouncement('');
-                  ref.invalidate(scheduledAnnouncementProvider);
-                }, done: 'Message programmé retiré.'),
-              ),
-            ),
+            ],
           ),
-          AsyncData() => Text(
-            'Aucun. Pendant sa période, il remplace le message d’information immédiat.',
-            style: theme.textTheme.bodySmall,
+          AsyncData() => const SettingsCard(
+            children: [ConsoleEmptyLine('Aucun message programmé.', icon: Icons.schedule)],
           ),
           _ => const SizedBox.shrink(),
         },
@@ -473,17 +472,17 @@ class ConsolePilotTab extends ConsumerWidget {
           label: const Text('Programmer un message'),
         ),
         const _Title('Exceptions en cours'),
-        Text(
+        const ConsoleIntro(
           'Posées depuis la fiche d’un compte (Comptes) ou d’un groupe (Groupes).',
-          style: theme.textTheme.bodySmall,
         ),
         switch (overrides) {
-          AsyncData(:final value) when value.isEmpty => const Padding(
-            padding: EdgeInsets.all(PrivioSpacing.m),
-            child: Text('Aucune exception.'),
-          ),
-          AsyncData(:final value) => Column(
-            children: [for (final o in value) _OverrideTile(o: o, showTarget: true)],
+          AsyncData(:final value) => SettingsCard(
+            children: [
+              if (value.isEmpty)
+                const ConsoleEmptyLine('Aucune exception.', icon: Icons.tune)
+              else
+                for (final o in value) _OverrideTile(o: o, showTarget: true),
+            ],
           ),
           AsyncError(:final error) => Text(toAppFailure(error).message),
           _ => const LoadingView(),

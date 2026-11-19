@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_failure.dart';
-import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
 import '../../../domain/models/console_team.dart';
@@ -13,6 +12,7 @@ import '../../../router/routes.dart';
 import '../../../state/app_lock_providers.dart';
 import '../../../state/console_providers.dart';
 import '../../core/motion/motion.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../lock/app_lock_screens.dart';
 import '../settings/two_step_screens.dart';
@@ -27,6 +27,7 @@ import 'console_policies_tab.dart';
 import 'console_reports_tab.dart';
 import 'console_stats_tab.dart';
 import 'console_team_tab.dart';
+import 'console_ui.dart';
 
 /// Console d'administration (lot 5.1, amendement 6). Réservée au compte administrateur :
 /// le serveur le vérifie à chaque appel. À chaque ouverture : code Privio ou empreinte ;
@@ -218,25 +219,29 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
             ),
             child: KeyedSubtree(
               key: ValueKey(_section),
-              child: switch (_section) {
-                // Rubrique hors de mon rôle (rôle changé entre-temps) : l'accueil.
-                _ when !_section.allowed(role!) => _Dashboard(role: role, onOpen: _go),
-                ConsoleSection.home => _Dashboard(role: role, onOpen: _go),
-                ConsoleSection.reports => const ConsoleReportsTab(),
-                ConsoleSection.accounts => const ConsoleAccountsTab(),
-                ConsoleSection.features => const ConsoleFeaturesTab(),
-                ConsoleSection.policies => const ConsolePoliciesTab(),
-                ConsoleSection.stats => const ConsoleStatsTab(),
-                ConsoleSection.health => const ConsoleHealthTab(),
-                ConsoleSection.journal => const ConsoleJournalTab(),
-                ConsoleSection.groups => const ConsoleGroupsTab(),
-                ConsoleSection.moderation => const ConsoleModerationStatsTab(),
-                ConsoleSection.templates => ConsoleTemplatesTab(owner: role.isOwner),
-                ConsoleSection.sites => const ConsoleSitesTab(),
-                ConsoleSection.team => const ConsoleTeamTab(),
-                ConsoleSection.signups => const ConsoleSignupsTab(),
-                ConsoleSection.pilot => const ConsolePilotTab(),
-              },
+              // Lot 5.10 : la rubrique applique sa couleur à ses commandes.
+              child: Theme(
+                data: consoleSectionTheme(Theme.of(context), _section.color),
+                child: switch (_section) {
+                  // Rubrique hors de mon rôle (rôle changé entre-temps) : l'accueil.
+                  _ when !_section.allowed(role!) => _Dashboard(role: role, onOpen: _go),
+                  ConsoleSection.home => _Dashboard(role: role, onOpen: _go),
+                  ConsoleSection.reports => const ConsoleReportsTab(),
+                  ConsoleSection.accounts => const ConsoleAccountsTab(),
+                  ConsoleSection.features => const ConsoleFeaturesTab(),
+                  ConsoleSection.policies => const ConsolePoliciesTab(),
+                  ConsoleSection.stats => const ConsoleStatsTab(),
+                  ConsoleSection.health => const ConsoleHealthTab(),
+                  ConsoleSection.journal => const ConsoleJournalTab(),
+                  ConsoleSection.groups => const ConsoleGroupsTab(),
+                  ConsoleSection.moderation => const ConsoleModerationStatsTab(),
+                  ConsoleSection.templates => ConsoleTemplatesTab(owner: role.isOwner),
+                  ConsoleSection.sites => const ConsoleSitesTab(),
+                  ConsoleSection.team => const ConsoleTeamTab(),
+                  ConsoleSection.signups => const ConsoleSignupsTab(),
+                  ConsoleSection.pilot => const ConsolePilotTab(),
+                },
+              ),
             ),
           ),
         ),
@@ -273,33 +278,90 @@ class _ConsoleScreenState extends ConsumerState<ConsoleScreen> with WidgetsBindi
   }
 }
 
-/// Lot 5.5 — rubriques de la console, chacune avec sa couleur.
-enum ConsoleSection {
-  home('dashboard', 'Accueil', Icons.space_dashboard_outlined, Color(0xFF6A3FD0)),
-  reports('reports', 'Signalements', Icons.flag_outlined, Color(0xFFD85A30)),
-  accounts('accounts', 'Comptes', Icons.people_outline, Color(0xFF2A73C9)),
-  // Lot 5.8 : groupes, suivi de la modération, réponses types, sites sans aperçu, équipe.
-  groups('groups', 'Groupes', Icons.groups_outlined, Color(0xFF0E7C86)),
-  moderation('moderation', 'Suivi de la modération', Icons.fact_check_outlined, Color(0xFFB26A00)),
-  templates('templates', 'Réponses types', Icons.quickreply_outlined, Color(0xFF6D4C41)),
-  sites('sites', 'Sites sans aperçu', Icons.link_off_rounded, Color(0xFF455A64)),
-  features('features', 'Fonctionnalités', Icons.toggle_on_outlined, Color(0xFF8E44C9)),
-  policies('policies', 'Réglages', Icons.tune_rounded, Color(0xFF3E8B1A)),
-  stats('stats', 'Statistiques', Icons.insights_outlined, Color(0xFF138A6E)),
-  // Lot 5.7 : versions, appels, inscriptions et SMS, diagnostics, alertes.
-  health('health', 'Santé du service', Icons.monitor_heart_outlined, Color(0xFFC2185B)),
-  journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85)),
-  team('team', 'Équipe', Icons.badge_outlined, Color(0xFF3949AB)),
-  // Lot 5.9 : inscriptions et pilotage.
-  signups('signups', 'Inscriptions', Icons.how_to_reg_outlined, Color(0xFF00897B)),
-  pilot('pilot', 'Pilotage', Icons.tune_rounded, Color(0xFF7B1FA2));
+/// Lot 5.10 : les rubriques en trois parties, dans le menu comme sur l'accueil.
+enum ConsolePart {
+  moderation('Modération'),
+  service('Suivi du service'),
+  setup('Configuration');
 
-  const ConsoleSection(this.id, this.label, this.icon, this.color);
+  const ConsolePart(this.label);
+
+  final String label;
+}
+
+/// Lot 5.5 — rubriques de la console, chacune avec sa couleur (lot 5.10 : rangées par
+/// partie, dans l'ordre du menu et de l'accueil).
+enum ConsoleSection {
+  home('dashboard', 'Accueil', Icons.space_dashboard_outlined, Color(0xFF6A3FD0), null),
+  reports(
+    'reports',
+    'Signalements',
+    Icons.flag_outlined,
+    Color(0xFFD85A30),
+    ConsolePart.moderation,
+  ),
+  accounts('accounts', 'Comptes', Icons.people_outline, Color(0xFF2A73C9), ConsolePart.moderation),
+  // Lot 5.8 : groupes, suivi de la modération, réponses types, sites sans aperçu, équipe.
+  groups('groups', 'Groupes', Icons.groups_outlined, Color(0xFF0E7C86), ConsolePart.moderation),
+  templates(
+    'templates',
+    'Réponses types',
+    Icons.quickreply_outlined,
+    Color(0xFF6D4C41),
+    ConsolePart.moderation,
+  ),
+  sites(
+    'sites',
+    'Sites sans aperçu',
+    Icons.link_off_rounded,
+    Color(0xFF455A64),
+    ConsolePart.moderation,
+  ),
+  moderation(
+    'moderation',
+    'Suivi de la modération',
+    Icons.fact_check_outlined,
+    Color(0xFFB26A00),
+    ConsolePart.moderation,
+  ),
+  stats('stats', 'Statistiques', Icons.insights_outlined, Color(0xFF138A6E), ConsolePart.service),
+  // Lot 5.7 : versions, appels, inscriptions et SMS, diagnostics, alertes.
+  health(
+    'health',
+    'Santé du service',
+    Icons.monitor_heart_outlined,
+    Color(0xFFC2185B),
+    ConsolePart.service,
+  ),
+  journal('journal', 'Journal', Icons.history_rounded, Color(0xFF5A6B85), ConsolePart.service),
+  features(
+    'features',
+    'Fonctionnalités',
+    Icons.toggle_on_outlined,
+    Color(0xFF8E44C9),
+    ConsolePart.setup,
+  ),
+  policies('policies', 'Réglages', Icons.tune_rounded, Color(0xFF3E8B1A), ConsolePart.setup),
+  // Lot 5.9 : inscriptions et pilotage.
+  signups(
+    'signups',
+    'Inscriptions',
+    Icons.how_to_reg_outlined,
+    Color(0xFF00897B),
+    ConsolePart.setup,
+  ),
+  pilot('pilot', 'Pilotage', Icons.rocket_launch_outlined, Color(0xFF7B1FA2), ConsolePart.setup),
+  team('team', 'Équipe', Icons.badge_outlined, Color(0xFF3949AB), ConsolePart.setup);
+
+  const ConsoleSection(this.id, this.label, this.icon, this.color, this.group);
 
   final String id;
   final String label;
   final IconData icon;
   final Color color;
+
+  /// Partie du menu (null : l'accueil, en tête).
+  final ConsolePart? group;
 
   /// Lot 5.8 : rubriques ouvertes à chaque rôle (le serveur vérifie de toute façon).
   bool allowed(ConsoleRole role) => switch (this) {
@@ -307,15 +369,6 @@ enum ConsoleSection {
     groups || moderation || sites => role.moderates,
     _ => role.isOwner,
   };
-
-  /// Tuile sur l'accueil (les autres rubriques sont dans le menu).
-  bool get tile =>
-      this != moderation &&
-      this != templates &&
-      this != sites &&
-      this != team &&
-      this != signups &&
-      this != pilot;
 
   /// L'assistance ne traite que les demandes d'assistance.
   String labelFor(ConsoleRole role) =>
@@ -371,7 +424,25 @@ class _ConsoleDrawer extends StatelessWidget {
               ),
             ),
             for (final s in ConsoleSection.values)
-              if (s.allowed(role))
+              if (s.allowed(role)) ...[
+                // Lot 5.10 : titre de la partie avant sa première rubrique.
+                if (s.group != null &&
+                    ConsoleSection.values.firstWhere(
+                          (x) => x.group == s.group && x.allowed(role),
+                        ) ==
+                        s)
+                  Padding(
+                    key: Key('console.group.${s.group!.name}'),
+                    padding: const EdgeInsets.fromLTRB(28, PrivioSpacing.l, 20, PrivioSpacing.xs),
+                    child: Text(
+                      s.group!.label.toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                   child: Material(
@@ -403,6 +474,7 @@ class _ConsoleDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
           ],
         ),
       ),
@@ -551,33 +623,43 @@ class _DashboardList extends StatelessWidget {
         PrivioSpacing.xxl,
       ),
       children: [
-        Text(
+        ConsoleIntro(
           'Mis à jour à ${_hm(d.generatedAt.toLocal())} · tirez vers le bas pour actualiser',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        // Lot 5.5 : rubriques en tuiles colorées (ce qui attend une action en avant).
-        const SizedBox(height: PrivioSpacing.m),
-        _Tiles(
-          onOpen: onOpen,
-          role: role,
-          badges: {
-            ConsoleSection.reports: d.reportsOpen > 0
-                ? '${d.reportsOpen} à traiter'
-                : 'Rien à traiter',
-            ConsoleSection.accounts: '${d.accountsTotal} comptes',
-            ConsoleSection.features: 'Activer, couper',
-            ConsoleSection.policies: 'Limites et délais',
-            ConsoleSection.stats: '30 derniers jours',
-            ConsoleSection.health: 'Versions, appels, SMS',
-            ConsoleSection.journal: 'Toutes les actions',
-            ConsoleSection.groups: '${d.groupsTotal} groupes',
-            ConsoleSection.moderation: '7 ou 30 jours',
-            ConsoleSection.templates: 'Assistance, décisions',
-            ConsoleSection.sites: 'Liens sans aperçu',
-            ConsoleSection.team: 'Rôles, deux étapes',
-          },
-          alert: {if (d.reportsOpen > 0) ConsoleSection.reports},
-        ),
+        // Lot 5.10 : les rubriques en tuiles, par partie, dans l'ordre du menu.
+        for (final (i, g)
+            in ConsolePart.values
+                .where((g) => ConsoleSection.values.any((s) => s.group == g && s.allowed(role)))
+                .indexed) ...[
+          ConsoleHeading(g.label, first: i == 0, key: Key('console.dashboard.group.${g.name}')),
+          _Tiles(
+            onOpen: onOpen,
+            role: role,
+            sections: [
+              for (final s in ConsoleSection.values)
+                if (s.group == g && s.allowed(role)) s,
+            ],
+            badges: {
+              ConsoleSection.reports: d.reportsOpen > 0
+                  ? '${d.reportsOpen} à traiter'
+                  : 'Rien à traiter',
+              ConsoleSection.accounts: '${d.accountsTotal} comptes',
+              ConsoleSection.groups: '${d.groupsTotal} groupes',
+              ConsoleSection.templates: 'Assistance, décisions',
+              ConsoleSection.sites: 'Liens sans aperçu',
+              ConsoleSection.moderation: '7 ou 30 jours',
+              ConsoleSection.stats: '30 derniers jours',
+              ConsoleSection.health: 'Versions, appels, SMS',
+              ConsoleSection.journal: 'Toutes les actions',
+              ConsoleSection.features: 'Activer, couper',
+              ConsoleSection.policies: 'Limites et délais',
+              ConsoleSection.signups: 'Ouvertes, sur liste',
+              ConsoleSection.pilot: 'Préréglages, messages',
+              ConsoleSection.team: 'Rôles, deux étapes',
+            },
+            alert: {if (d.reportsOpen > 0) ConsoleSection.reports},
+          ),
+        ],
         _Section(
           title: 'Comptes',
           icon: Icons.people_outline,
@@ -597,7 +679,7 @@ class _DashboardList extends StatelessWidget {
             _Stat('activity.voice', 'Vocaux (7\u00A0jours)', d.voice7d),
             _Stat('activity.photos', 'Photos (7\u00A0jours)', d.photos7d),
           ],
-          footnote: 'Messages en cours de conservation : ${d.messagesLive}',
+          footnote: 'Messages en cours de conservation\u202F: ${d.messagesLive}',
         ),
         _Section(
           title: 'Groupes et demandes',
@@ -634,15 +716,9 @@ class _DashboardList extends StatelessWidget {
             _Stat.text('health.photos', 'Stockage photos', formatBytes(d.storagePhotoBytes)),
           ],
           footnote:
-              'Effacement des messages : ${_run(d.purgeMessages)}\n'
-              'Effacement des fichiers : ${_run(d.purgeMedia)}'
+              'Effacement des messages\u202F: ${_run(d.purgeMessages)}\n'
+              'Effacement des fichiers\u202F: ${_run(d.purgeMedia)}'
               '${d.pushNotConfigured24h > 0 ? '\nNotifications non configurées sur ce serveur (${d.pushNotConfigured24h} en 24 h)' : ''}',
-        ),
-        _Section(
-          title: 'Signalements',
-          icon: Icons.flag_outlined,
-          warn: d.reportsOpen > 0,
-          stats: [_Stat('reports.open', 'En attente', d.reportsOpen, warn: d.reportsOpen > 0)],
         ),
         const SizedBox(height: PrivioSpacing.l),
         Text(
@@ -674,17 +750,19 @@ class _DashboardList extends StatelessWidget {
   }
 }
 
-/// Lot 5.5 : tuiles des rubriques (2 par ligne).
+/// Lot 5.5 : tuiles des rubriques (2 par ligne) ; lot 5.10 : celles d'une partie.
 class _Tiles extends StatelessWidget {
   const _Tiles({
     required this.onOpen,
     required this.role,
+    required this.sections,
     required this.badges,
     this.alert = const {},
   });
 
   final ValueChanged<ConsoleSection> onOpen;
   final ConsoleRole role;
+  final List<ConsoleSection> sections;
   final Map<ConsoleSection, String> badges;
   final Set<ConsoleSection> alert;
 
@@ -699,8 +777,7 @@ class _Tiles extends StatelessWidget {
           spacing: PrivioSpacing.m,
           runSpacing: PrivioSpacing.m,
           children: [
-            for (final (i, s)
-                in ConsoleSection.values.skip(1).where((s) => s.tile && s.allowed(role)).indexed)
+            for (final (i, s) in sections.indexed)
               AppearIn(
                 delay: Duration(milliseconds: 40 * i),
                 offset: const Offset(0, 0.15),
@@ -797,71 +874,63 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final p = PrivioPalette.of(context);
-    final accent = warn ? theme.colorScheme.error : p.accentText;
-    return Padding(
-      padding: const EdgeInsets.only(top: PrivioSpacing.l),
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ConsoleHeading(title, icon: warn ? Icons.warning_amber_rounded : icon),
+        SettingsCard(
           padding: const EdgeInsets.all(PrivioSpacing.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 20, color: accent),
-                  const SizedBox(width: PrivioSpacing.s),
-                  Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
-                ],
-              ),
-              const SizedBox(height: PrivioSpacing.m),
-              LayoutBuilder(
-                builder: (context, c) {
-                  final w = (c.maxWidth - PrivioSpacing.m) / 2;
-                  return Wrap(
-                    spacing: PrivioSpacing.m,
-                    runSpacing: PrivioSpacing.m,
-                    children: [
-                      for (final s in stats)
-                        SizedBox(
-                          width: w,
-                          child: Column(
-                            key: Key('console.${s.id}'),
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  s.text,
-                                  style: theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: s.warn ? theme.colorScheme.error : null,
-                                  ),
+          children: [
+            LayoutBuilder(
+              builder: (context, c) {
+                final w = (c.maxWidth - PrivioSpacing.m) / 2;
+                return Wrap(
+                  spacing: PrivioSpacing.m,
+                  runSpacing: PrivioSpacing.m,
+                  children: [
+                    for (final s in stats)
+                      SizedBox(
+                        width: w,
+                        child: Column(
+                          key: Key('console.${s.id}'),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                s.text,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: s.warn ? theme.colorScheme.error : null,
                                 ),
                               ),
-                              Text(
-                                s.label,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
+                            ),
+                            Text(
+                              s.label,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                    ],
-                  );
-                },
+                      ),
+                  ],
+                );
+              },
+            ),
+            if (footnote != null) ...[
+              const SizedBox(height: PrivioSpacing.m),
+              Text(
+                footnote!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-              if (footnote != null) ...[
-                const SizedBox(height: PrivioSpacing.m),
-                Text(footnote!, style: theme.textTheme.bodySmall),
-              ],
             ],
-          ),
+          ],
         ),
-      ),
+      ],
     );
   }
 }

@@ -6,7 +6,9 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
 import '../../../domain/models/console_team.dart';
 import '../../../state/console_providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
+import 'console_ui.dart';
 import 'day_bars.dart';
 import 'stats_export.dart';
 
@@ -60,10 +62,9 @@ class _StatsList extends StatelessWidget {
         PrivioSpacing.xxl,
       ),
       children: [
-        Text(
+        ConsoleIntro(
           '30 derniers jours, en nombres seulement'
           '${since == null ? '' : ' · activité comptée depuis le ${_dmy(since)}'}.',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         _Card(
           id: 'messages',
@@ -214,35 +215,36 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: PrivioSpacing.l),
-      child: Card(
-        key: Key('stats.$id'),
-        margin: EdgeInsets.zero,
-        child: Padding(
+    // Lot 5.10 : titre au-dessus de la carte, comme dans les autres rubriques.
+    return Column(
+      key: Key('stats.$id'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ConsoleHeading(title),
+        SettingsCard(
           padding: const EdgeInsets.all(PrivioSpacing.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title, style: theme.textTheme.titleMedium),
-              const SizedBox(height: PrivioSpacing.xs),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: headline,
-                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: headline,
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(
+                    text: '  $headlineLabel',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    TextSpan(text: '  $headlineLabel', style: theme.textTheme.bodySmall),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: PrivioSpacing.m),
-              ...children,
-            ],
-          ),
+            ),
+            const SizedBox(height: PrivioSpacing.m),
+            ...children,
+          ],
         ),
-      ),
+      ],
     );
   }
 }

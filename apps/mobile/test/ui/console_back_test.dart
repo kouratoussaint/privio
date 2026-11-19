@@ -97,6 +97,8 @@ void main() {
     final deps = _deps(admin: true);
     deps.admin.accounts['x1'] = _acc(1, 'Amina');
     await _openConsoleTab(tester, deps, 'dashboard');
+    await tester.ensureVisible(find.byKey(const Key('console.tile.journal')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('console.tile.journal')));
     await tester.pumpAndSettle();
     await openConsoleSection(tester, 'accounts');

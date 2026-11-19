@@ -5,11 +5,12 @@ import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console_team.dart';
 import '../../../state/console_providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
 import 'console_accounts_tab.dart' show ConsolePager;
 import 'console_moderation_tab.dart' show TemplatePicker;
 import 'console_pilot_tab.dart' show OverridesCard;
-import 'console_reports_tab.dart' show consoleChip;
+import 'console_ui.dart';
 import 'console_screen.dart' show ConsoleBackHandler;
 
 /// Lot 5.8 — « Groupes » (propriétaire et modérateurs) : titre, type, membres, création,
@@ -86,27 +87,20 @@ class _ConsoleGroupsTabState extends ConsumerState<ConsoleGroupsTab> with Consol
             ),
           ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            horizontal: PrivioSpacing.m,
-            vertical: PrivioSpacing.s,
-          ),
-          child: Row(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: PrivioSpacing.s),
+          child: ConsoleFilterRow(
             children: [
               for (final e in kGroupFilters.entries)
-                Padding(
-                  padding: const EdgeInsets.only(right: PrivioSpacing.s),
-                  child: consoleChip(
-                    context,
-                    key: Key('groups.filter.${e.key}'),
-                    label: e.value,
-                    selected: _filter == e.key,
-                    onTap: () => setState(() {
-                      _filter = e.key;
-                      _page = 1;
-                    }),
-                  ),
+                consoleChip(
+                  context,
+                  key: Key('groups.filter.${e.key}'),
+                  label: e.value,
+                  selected: _filter == e.key,
+                  onTap: () => setState(() {
+                    _filter = e.key;
+                    _page = 1;
+                  }),
                 ),
             ],
           ),
@@ -132,44 +126,59 @@ class _ConsoleGroupsTabState extends ConsumerState<ConsoleGroupsTab> with Consol
                     child: Text(
                       '${value.total} groupe${value.total > 1 ? 's' : ''}',
                       key: const Key('groups.total'),
-                      style: theme.textTheme.bodySmall,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
                 Expanded(
                   child: ListView(
                     key: const Key('groups.list'),
+                    padding: const EdgeInsets.fromLTRB(
+                      PrivioSpacing.m,
+                      PrivioSpacing.s,
+                      PrivioSpacing.m,
+                      PrivioSpacing.l,
+                    ),
                     children: [
-                      for (final g in value.rows)
-                        ListTile(
-                          key: Key('group.${g.id}'),
-                          leading: CircleAvatar(
-                            child: Icon(
-                              g.announcement ? Icons.campaign_outlined : Icons.groups_outlined,
+                      // Lot 5.10 : liste dans une carte, comme les comptes.
+                      SettingsCard(
+                        children: [
+                          for (final (i, g) in value.rows.indexed) ...[
+                            if (i > 0) const SettingsDivider(),
+                            ListTile(
+                              key: Key('group.${g.id}'),
+                              leading: CircleAvatar(
+                                child: Icon(
+                                  g.announcement ? Icons.campaign_outlined : Icons.groups_outlined,
+                                ),
+                              ),
+                              title: Text(g.title),
+                              subtitle: Text(
+                                [
+                                  '${g.members} membre${g.members > 1 ? 's' : ''}'
+                                      '${g.announcement ? ' · Annonces' : ''}'
+                                      '${g.closed ? ' · fermé' : ''}',
+                                  if (g.reportsOpen > 0)
+                                    '${g.reportsOpen} signalement${g.reportsOpen > 1 ? 's' : ''} en attente',
+                                ].join('\n'),
+                              ),
+                              trailing: g.reportsOpen > 0
+                                  ? Icon(Icons.flag, color: theme.colorScheme.error)
+                                  : const Icon(Icons.chevron_right),
+                              onTap: () => setState(() => _open = g.id),
                             ),
-                          ),
-                          title: Text(g.title),
-                          subtitle: Text(
-                            [
-                              '${g.members} membre${g.members > 1 ? 's' : ''}'
-                                  '${g.announcement ? ' · Annonces' : ''}'
-                                  '${g.closed ? ' · fermé' : ''}',
-                              if (g.reportsOpen > 0)
-                                '${g.reportsOpen} signalement${g.reportsOpen > 1 ? 's' : ''} en attente',
-                            ].join('\n'),
-                          ),
-                          trailing: g.reportsOpen > 0
-                              ? Icon(Icons.flag, color: theme.colorScheme.error)
-                              : const Icon(Icons.chevron_right),
-                          onTap: () => setState(() => _open = g.id),
-                        ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
                 ConsolePager(
                   page: value.page,
                   pages: value.pages,
-                  color: const Color(0xFF0E7C86),
+                  color: theme.colorScheme.primary,
                   onPage: (p) => setState(() => _page = p),
                 ),
               ],

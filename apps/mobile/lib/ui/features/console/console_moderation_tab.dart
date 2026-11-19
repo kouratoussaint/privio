@@ -6,8 +6,9 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console_team.dart';
 import '../../../domain/models/moderation.dart';
 import '../../../state/console_providers.dart';
+import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
-import 'console_reports_tab.dart' show consoleChip;
+import 'console_ui.dart';
 
 /// Lot 5.8 — suivi de la modération, réponses types, sites sans aperçu.
 
@@ -79,7 +80,6 @@ class _ModerationStatsState extends ConsumerState<ConsoleModerationStatsTab> {
   @override
   Widget build(BuildContext context) {
     final stats = ref.watch(moderationStatsProvider(_days));
-    final theme = Theme.of(context);
     return ListView(
       key: const Key('modstats.view'),
       padding: const EdgeInsets.fromLTRB(
@@ -102,50 +102,88 @@ class _ModerationStatsState extends ConsumerState<ConsoleModerationStatsTab> {
               ),
           ],
         ),
-        const SizedBox(height: PrivioSpacing.m),
         switch (stats) {
+          // Lot 5.10 : chiffres et détails en cartes sous des titres, comme ailleurs.
           AsyncData(value: final s) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Figures(
-                items: [
-                  ('modstats.received', 'Signalements reçus', '${s.received}'),
-                  ('modstats.decided', 'Dossiers traités', '${s.decided}'),
-                  ('modstats.open', 'En attente', '${s.openNow}'),
-                  ('modstats.avg', 'Délai moyen', s.avgHours == null ? '—' : _hours(s.avgHours!)),
-                  (
-                    'modstats.oldest',
-                    'Plus ancien en attente',
-                    s.oldestOpenHours == null ? '—' : _hours(s.oldestOpenHours!.toDouble()),
+              const ConsoleHeading('Vue d’ensemble'),
+              SettingsCard(
+                padding: const EdgeInsets.all(PrivioSpacing.l),
+                children: [
+                  _Figures(
+                    items: [
+                      ('modstats.received', 'Signalements reçus', '${s.received}'),
+                      ('modstats.decided', 'Dossiers traités', '${s.decided}'),
+                      ('modstats.open', 'En attente', '${s.openNow}'),
+                      (
+                        'modstats.avg',
+                        'Délai moyen',
+                        s.avgHours == null ? '—' : _hours(s.avgHours!),
+                      ),
+                      (
+                        'modstats.oldest',
+                        'Plus ancien en attente',
+                        s.oldestOpenHours == null ? '—' : _hours(s.oldestOpenHours!.toDouble()),
+                      ),
+                      ('modstats.appeals', 'Contestations', '${s.appeals}'),
+                      ('modstats.support', 'Demandes d’assistance', '${s.supportReceived}'),
+                      ('modstats.answered', 'Réponses envoyées', '${s.supportAnswered}'),
+                    ],
                   ),
-                  ('modstats.appeals', 'Contestations', '${s.appeals}'),
-                  ('modstats.support', 'Demandes d’assistance', '${s.supportReceived}'),
-                  ('modstats.answered', 'Réponses envoyées', '${s.supportAnswered}'),
                 ],
               ),
               if (s.byReason.isNotEmpty) ...[
-                const SizedBox(height: PrivioSpacing.l),
-                Text('Par motif', style: theme.textTheme.titleMedium),
-                for (final e in s.byReason.entries)
-                  _Row(label: reasonLabel(e.key), value: '${e.value}'),
+                const ConsoleHeading('Par motif'),
+                SettingsCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: PrivioSpacing.l,
+                    vertical: PrivioSpacing.s,
+                  ),
+                  children: [
+                    for (final e in s.byReason.entries)
+                      _Row(label: reasonLabel(e.key), value: '${e.value}'),
+                  ],
+                ),
               ],
               if (s.byDecision.isNotEmpty) ...[
-                const SizedBox(height: PrivioSpacing.l),
-                Text('Par décision', style: theme.textTheme.titleMedium),
-                for (final e in s.byDecision.entries)
-                  _Row(label: _decisions[e.key] ?? e.key, value: '${e.value}'),
-              ],
-              const SizedBox(height: PrivioSpacing.l),
-              Text('Par personne', style: theme.textTheme.titleMedium),
-              if (s.byPerson.isEmpty)
-                const Text('Aucune décision sur la période.')
-              else
-                for (final p in s.byPerson)
-                  _Row(
-                    key: Key('modstats.person.${p.name}'),
-                    label: '${p.name}${p.role == null ? '' : ' · ${p.role!.label.toLowerCase()}'}',
-                    value: '${p.decided}${p.avgHours == null ? '' : ' · ${_hours(p.avgHours!)}'}',
+                const ConsoleHeading('Par décision'),
+                SettingsCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: PrivioSpacing.l,
+                    vertical: PrivioSpacing.s,
                   ),
+                  children: [
+                    for (final e in s.byDecision.entries)
+                      _Row(label: _decisions[e.key] ?? e.key, value: '${e.value}'),
+                  ],
+                ),
+              ],
+              const ConsoleHeading('Par personne'),
+              SettingsCard(
+                padding: s.byPerson.isEmpty
+                    ? null
+                    : const EdgeInsets.symmetric(
+                        horizontal: PrivioSpacing.l,
+                        vertical: PrivioSpacing.s,
+                      ),
+                children: [
+                  if (s.byPerson.isEmpty)
+                    const ConsoleEmptyLine(
+                      'Aucune décision sur la période.',
+                      icon: Icons.person_outline,
+                    )
+                  else
+                    for (final p in s.byPerson)
+                      _Row(
+                        key: Key('modstats.person.${p.name}'),
+                        label:
+                            '${p.name}${p.role == null ? '' : ' · ${p.role!.label.toLowerCase()}'}',
+                        value:
+                            '${p.decided}${p.avgHours == null ? '' : ' · ${_hours(p.avgHours!)}'}',
+                      ),
+                ],
+              ),
             ],
           ),
           AsyncError(:final error) => ErrorView(
@@ -212,7 +250,7 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
+    padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
       children: [
         Expanded(child: Text(label)),
@@ -269,59 +307,58 @@ class ConsoleTemplatesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final list = ref.watch(consoleTemplatesProvider);
-    final theme = Theme.of(context);
     return switch (list) {
       AsyncData(:final value) => ListView(
         key: const Key('templates.list'),
         padding: const EdgeInsets.fromLTRB(
+          PrivioSpacing.l,
           PrivioSpacing.m,
-          PrivioSpacing.m,
-          PrivioSpacing.m,
+          PrivioSpacing.l,
           PrivioSpacing.xxl,
         ),
         children: [
-          Text(
+          ConsoleIntro(
             owner
                 ? 'Textes proposés à l’équipe pour répondre aux demandes d’assistance et pour '
                       'motiver les décisions. Toujours modifiables avant l’envoi.'
                 : 'Textes proposés quand vous répondez ou décidez. Seul le propriétaire les modifie.',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
-          for (final k in _kinds.entries) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: PrivioSpacing.l, bottom: PrivioSpacing.s),
-              child: Row(
-                children: [
-                  Expanded(child: Text(k.value, style: theme.textTheme.titleMedium)),
-                  if (owner)
-                    IconButton(
-                      key: Key('templates.add.${k.key}'),
-                      tooltip: 'Ajouter',
-                      icon: const Icon(Icons.add),
-                      onPressed: () => _edit(context, ref, kind: k.key),
+          // Lot 5.10 : un titre et une carte par sorte de réponse, comme les Paramètres.
+          for (final (i, k) in _kinds.entries.indexed) ...[
+            ConsoleHeading(k.value, first: i == 0),
+            SettingsCard(
+              children: [
+                if (!value.any((t) => t.kind == k.key))
+                  const ConsoleEmptyLine('Aucune réponse type.', icon: Icons.quickreply_outlined)
+                else
+                  for (final (j, t) in value.where((t) => t.kind == k.key).indexed) ...[
+                    if (j > 0) const Divider(height: 1, indent: PrivioSpacing.l),
+                    ListTile(
+                      key: Key('template.${t.id}'),
+                      title: Text(t.title),
+                      subtitle: Text(t.body),
+                      onTap: owner ? () => _edit(context, ref, t: t) : null,
+                      trailing: owner
+                          ? IconButton(
+                              key: Key('template.delete.${t.id}'),
+                              tooltip: 'Retirer',
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _delete(context, ref, t),
+                            )
+                          : null,
                     ),
-                ],
-              ),
+                  ],
+              ],
             ),
-            for (final t in value)
-              if (t.kind == k.key)
-                Card(
-                  key: Key('template.${t.id}'),
-                  margin: const EdgeInsets.only(bottom: PrivioSpacing.s),
-                  child: ListTile(
-                    title: Text(t.title),
-                    subtitle: Text(t.body),
-                    onTap: owner ? () => _edit(context, ref, t: t) : null,
-                    trailing: owner
-                        ? IconButton(
-                            key: Key('template.delete.${t.id}'),
-                            tooltip: 'Retirer',
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () => _delete(context, ref, t),
-                          )
-                        : null,
-                  ),
-                ),
+            if (owner) ...[
+              const SizedBox(height: PrivioSpacing.s),
+              OutlinedButton.icon(
+                key: Key('templates.add.${k.key}'),
+                onPressed: () => _edit(context, ref, kind: k.key),
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter une réponse type'),
+              ),
+            ],
           ],
         ],
       ),
@@ -443,22 +480,20 @@ class _ConsoleSitesTabState extends ConsumerState<ConsoleSitesTab> {
   @override
   Widget build(BuildContext context) {
     final list = ref.watch(blockedSitesProvider);
-    final theme = Theme.of(context);
     return ListView(
       key: const Key('sites.view'),
       padding: const EdgeInsets.fromLTRB(
+        PrivioSpacing.l,
         PrivioSpacing.m,
-        PrivioSpacing.m,
-        PrivioSpacing.m,
+        PrivioSpacing.l,
         PrivioSpacing.xxl,
       ),
       children: [
-        Text(
+        const ConsoleIntro(
           'Un lien vers ces sites (et leurs sous-domaines) est envoyé normalement, mais sans '
           'aperçu\u202F: Privio ne lit pas la page.',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        const SizedBox(height: PrivioSpacing.m),
+        const SizedBox(height: PrivioSpacing.s),
         Row(
           children: [
             Expanded(
@@ -483,26 +518,28 @@ class _ConsoleSitesTabState extends ConsumerState<ConsoleSitesTab> {
             ),
           ],
         ),
-        const SizedBox(height: PrivioSpacing.m),
+        // Lot 5.10 : la liste sous un titre, dans une carte.
+        const ConsoleHeading('Sites sans aperçu'),
         switch (list) {
-          AsyncData(:final value) when value.isEmpty => const Padding(
-            padding: EdgeInsets.all(PrivioSpacing.l),
-            child: Text('Aucun site pour l’instant.'),
-          ),
-          AsyncData(:final value) => Column(
+          AsyncData(:final value) => SettingsCard(
             children: [
-              for (final d in value)
-                ListTile(
-                  key: Key('site.$d'),
-                  leading: const Icon(Icons.link_off_rounded),
-                  title: Text(d),
-                  trailing: IconButton(
-                    key: Key('site.remove.$d'),
-                    tooltip: 'Rétablir les aperçus',
-                    icon: const Icon(Icons.close),
-                    onPressed: _busy ? null : () => _set(d, false),
+              if (value.isEmpty)
+                const ConsoleEmptyLine('Aucun site pour l’instant.', icon: Icons.link_rounded)
+              else
+                for (final (i, d) in value.indexed) ...[
+                  if (i > 0) const SettingsDivider(),
+                  ListTile(
+                    key: Key('site.$d'),
+                    leading: const Icon(Icons.link_off_rounded),
+                    title: Text(d),
+                    trailing: IconButton(
+                      key: Key('site.remove.$d'),
+                      tooltip: 'Rétablir les aperçus',
+                      icon: const Icon(Icons.close),
+                      onPressed: _busy ? null : () => _set(d, false),
+                    ),
                   ),
-                ),
+                ],
             ],
           ),
           AsyncError(:final error) => ErrorView(

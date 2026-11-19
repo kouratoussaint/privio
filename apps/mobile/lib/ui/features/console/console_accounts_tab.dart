@@ -13,6 +13,7 @@ import '../../core/motion/motion.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/widgets/state_views.dart';
+import 'console_ui.dart';
 import 'console_reports_tab.dart';
 import 'console_pilot_tab.dart' show OverridesCard;
 import 'console_screen.dart' show ConsoleBackHandler;
@@ -124,40 +125,31 @@ class _ConsoleAccountsTabState extends ConsumerState<ConsoleAccountsTab> with Co
               IconButton(
                 key: const Key('accounts.reserved'),
                 tooltip: 'Identifiants réservés',
-                icon: const Icon(Icons.alternate_email, color: _blue),
+                icon: Icon(Icons.alternate_email, color: Theme.of(context).colorScheme.primary),
                 onPressed: () => setState(() => _reserved = true),
               ),
             ],
           ),
         ),
         if (q == null)
-          SizedBox(
-            height: 48,
-            child: ListView(
+          Padding(
+            padding: const EdgeInsets.only(bottom: PrivioSpacing.s),
+            child: ConsoleFilterRow(
               key: const Key('accounts.filters'),
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: PrivioSpacing.m),
               children: [
                 for (final e in kAccountFilters.entries)
-                  Padding(
-                    padding: const EdgeInsets.only(right: PrivioSpacing.s),
-                    child: ChoiceChip(
-                      key: Key('accounts.filter.${e.key}'),
-                      label: Text(switch (page?.value?.counts[e.key]) {
-                        final n? => '${e.value} · $n',
-                        _ => e.value,
-                      }),
-                      selected: _filter == e.key,
-                      selectedColor: _blue.withValues(alpha: 0.16),
-                      checkmarkColor: _blue,
-                      labelStyle: _filter == e.key
-                          ? const TextStyle(color: _blue, fontWeight: FontWeight.w700)
-                          : null,
-                      onSelected: (_) => setState(() {
-                        _filter = e.key;
-                        _page = 1;
-                      }),
-                    ),
+                  consoleChip(
+                    context,
+                    key: Key('accounts.filter.${e.key}'),
+                    label: switch (page?.value?.counts[e.key]) {
+                      final n? => '${e.value} · $n',
+                      _ => e.value,
+                    },
+                    selected: _filter == e.key,
+                    onTap: () => setState(() {
+                      _filter = e.key;
+                      _page = 1;
+                    }),
                   ),
               ],
             ),
@@ -338,45 +330,54 @@ class _AlphabetList extends StatelessWidget {
                   ],
                 ),
               ),
-              // Index A–Z : toucher une lettre ouvre la page où elle commence.
-              SizedBox(
-                width: 28,
-                child: LayoutBuilder(
-                  builder: (context, c) {
-                    final h = (c.maxHeight / _letters.length).clamp(10.0, 22.0);
-                    return Column(
-                      key: const Key('accounts.index'),
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (final l in _letters)
-                          SizedBox(
-                            height: h,
-                            child: InkWell(
-                              key: Key('accounts.letter.$l'),
-                              onTap: page.pageOf(l) == null ? null : () => onPage(page.pageOf(l)!),
-                              child: Center(
-                                child: Text(
-                                  l,
-                                  style: TextStyle(
-                                    fontSize: (h * 0.62).clamp(8.0, 12.0),
-                                    fontWeight: FontWeight.w700,
-                                    color: page.pageOf(l) == null
-                                        ? theme.colorScheme.outlineVariant
-                                        : _blue,
+              // Index A–Z : toucher une lettre ouvre la page où elle commence (lot 5.10 :
+              // seulement quand il y a des comptes).
+              if (page.rows.isNotEmpty)
+                SizedBox(
+                  width: 28,
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final h = (c.maxHeight / _letters.length).clamp(10.0, 22.0);
+                      return Column(
+                        key: const Key('accounts.index'),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (final l in _letters)
+                            SizedBox(
+                              height: h,
+                              child: InkWell(
+                                key: Key('accounts.letter.$l'),
+                                onTap: page.pageOf(l) == null
+                                    ? null
+                                    : () => onPage(page.pageOf(l)!),
+                                child: Center(
+                                  child: Text(
+                                    l,
+                                    style: TextStyle(
+                                      fontSize: (h * 0.62).clamp(8.0, 12.0),
+                                      fontWeight: FontWeight.w700,
+                                      color: page.pageOf(l) == null
+                                          ? theme.colorScheme.outlineVariant
+                                          : theme.colorScheme.primary,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
             ],
           ),
         ),
-        ConsolePager(page: page.page, pages: page.pages, onPage: onPage, color: _blue),
+        ConsolePager(
+          page: page.page,
+          pages: page.pages,
+          onPage: onPage,
+          color: theme.colorScheme.primary,
+        ),
       ],
     );
   }

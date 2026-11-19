@@ -110,6 +110,31 @@ class PrivioPalette extends ThemeExtension<PrivioPalette> {
       PrivioColors.avatars[seed.codeUnits.fold(0, (a, b) => (a * 31 + b) & 0x7fffffff) %
           PrivioColors.avatars.length];
 
+  /// Lot 5.10 : même palette, autre couleur d'accent (rubriques de la console).
+  PrivioPalette withAccent(Color accent) => PrivioPalette(
+    header: header,
+    onHeader: onHeader,
+    onHeaderMuted: onHeaderMuted,
+    sheet: sheet,
+    chatBackground: chatBackground,
+    bubbleIn: bubbleIn,
+    onBubbleIn: onBubbleIn,
+    bubbleInMeta: bubbleInMeta,
+    bubbleOut: bubbleOut,
+    onBubbleOut: onBubbleOut,
+    bubbleOutMeta: bubbleOutMeta,
+    quoteIn: quoteIn,
+    quoteOut: quoteOut,
+    accentText: accent,
+    field: field,
+    divider: divider,
+    warn: warn,
+    success: success,
+    notice: notice,
+    navigation: navigation,
+    pattern: pattern,
+  );
+
   @override
   PrivioPalette copyWith() => this;
 

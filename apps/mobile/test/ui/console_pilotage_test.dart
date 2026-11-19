@@ -104,6 +104,12 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    for (final m in tester.stateList<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))) {
+      m.clearSnackBars();
+    }
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('signups.code.new')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('signups.code.new')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('signups.code.label')), 'Pilote Bobo');
@@ -213,6 +219,12 @@ void main() {
     expect(find.byKey(const Key('override.group.group_max_members')), findsOneWidget);
 
     await openConsoleSection(tester, 'pilot');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('override.remove.group.group_max_members')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('override.group.group_max_members')), findsOneWidget);
     await tester.tap(find.byKey(const Key('override.remove.group.group_max_members')));
     await tester.pumpAndSettle();
@@ -233,7 +245,7 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(find.text('Rétention'), findsOneWidget);
+    expect(find.text('RÉTENTION'), findsOneWidget, reason: 'titre de section (lot 5.10)');
     expect(find.textContaining('Mooré'), findsOneWidget);
     expect(find.textContaining('Vocaux'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('stats.export')));

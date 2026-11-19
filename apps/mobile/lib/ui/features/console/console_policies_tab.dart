@@ -7,6 +7,7 @@ import '../../../core/theme/privio_tokens.dart';
 import '../../../domain/models/console.dart';
 import '../../../state/console_providers.dart';
 import '../../core/widgets/settings_card.dart';
+import 'console_ui.dart';
 import '../../core/widgets/state_views.dart';
 
 /// Onglet « Réglages » de la console (lot 5.2) : tous les réglages globaux, par thème.
@@ -52,7 +53,6 @@ class _PolicyList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     List<ConsolePolicy> of(String c) =>
         policies.where((p) => p.category == c).toList()
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -67,47 +67,30 @@ class _PolicyList extends StatelessWidget {
         PrivioSpacing.xxl,
       ),
       children: [
-        Text(
+        const ConsoleIntro(
           'Réglages appliqués à tous les comptes. Chaque changement est vérifié par le serveur '
           'et inscrit au journal.',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        for (final entry in kPolicyCategories.entries)
-          if (!elsewhere.contains(entry.key) && of(entry.key).isNotEmpty)
-            Column(
-              key: Key('console.category.${entry.key}'),
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, PrivioSpacing.l, 4, PrivioSpacing.s),
-                  child: Row(
-                    children: [
-                      Icon(
-                        policyCategoryStyle(entry.key).$1,
-                        size: 18,
-                        color: policyCategoryStyle(entry.key).$2,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        entry.value,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: policyCategoryStyle(entry.key).$2,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SettingsCard(
-                  children: [
-                    for (final (i, p) in of(entry.key).indexed) ...[
-                      if (i > 0) const SettingsDivider(),
-                      _PolicyTile(policy: p),
-                    ],
+        // Lot 5.10 : titres de section comme dans les autres rubriques.
+        for (final (n, entry)
+            in kPolicyCategories.entries
+                .where((e) => !elsewhere.contains(e.key) && of(e.key).isNotEmpty)
+                .indexed)
+          Column(
+            key: Key('console.category.${entry.key}'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConsoleHeading(entry.value, first: n == 0, icon: policyCategoryStyle(entry.key).$1),
+              SettingsCard(
+                children: [
+                  for (final (i, p) in of(entry.key).indexed) ...[
+                    if (i > 0) const SettingsDivider(),
+                    _PolicyTile(policy: p),
                   ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
+          ),
       ],
     );
   }
@@ -136,7 +119,8 @@ class _PolicyTile extends StatelessWidget {
             if (changed) 'par défaut : ${policy.format(policy.defaultValue)}',
             if (changed && policy.updatedAt != null) 'modifié le ${_date(policy.updatedAt!)}',
           ].join(' · ');
-    final (icon, color) = policyCategoryStyle(policy.category);
+    final (icon, _) = policyCategoryStyle(policy.category);
+    final color = theme.colorScheme.primary;
     return ListTile(
       key: Key('policy.${policy.key}'),
       leading: Container(
