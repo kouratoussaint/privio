@@ -46,3 +46,12 @@ et 512 Ko, collection privée, 60 au plus, envoi idempotent après copie, partag
 privé, lecture par le destinataire seulement, ajout refusé pour un privé, copie effacée
 avec le message, collection intacte, retrait) ; `scripts/ci/stickers_e2e.py` (vrai
 Storage et fonction « sticker ») ; tests Flutter `autocollants_perso_test.dart`.
+
+## Correctif du 19/11/2026 (7.4-bis)
+Sur téléphone, rien ne se passait après le choix de la photo. Pendant le choix, Privio
+passe en arrière-plan ; au retour, le panneau des autocollants peut s'être refermé (le
+champ de saisie reprend le focus). Le parcours dépendait du bouton « + » de ce panneau et
+s'arrêtait en silence avant d'ouvrir l'éditeur. Désormais, tout ce dont il a besoin
+(navigation, annonces, verrou, sélecteur et préparation de la photo) est pris dès le
+toucher du « + » ; seul l'écran de la discussion doit rester ouvert. Nouveau test
+`le panneau se referme pendant le choix de la photo` (il échoue avec l'ancienne version).

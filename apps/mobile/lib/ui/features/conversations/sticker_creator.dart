@@ -90,7 +90,16 @@ Uint8List shrinkSticker(Uint8List png) {
 
 /// Parcours complet depuis le panneau des autocollants : source, détourage, édition,
 /// enregistrement dans ma collection. Renvoie l'autocollant créé, ou null.
+///
+/// Tout ce dont le parcours a besoin est pris dès le toucher du « + » : pendant le
+/// choix de la photo, Privio passe en arrière-plan et le panneau des autocollants
+/// (donc ce bouton et son `ref`) peut se refermer. Seul l'écran qui l'accueille compte.
 Future<StickerItem?> createSticker(BuildContext context, WidgetRef ref) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final nav = Navigator.of(context);
+  final lock = ref.read(appLockProvider.notifier);
+  final picker = ref.read(photoPickerProvider);
+  final prepare = ref.read(photoPreparerProvider);
   final source = await showModalBottomSheet<PhotoSource>(
     context: context,
     showDragHandle: true,
@@ -118,17 +127,13 @@ Future<StickerItem?> createSticker(BuildContext context, WidgetRef ref) async {
       ),
     ),
   );
-  if (source == null || !context.mounted) return null;
-  final messenger = ScaffoldMessenger.of(context);
-  final nav = Navigator.of(context);
+  if (source == null || !nav.mounted) return null;
   try {
-    final raw = await ref
-        .read(appLockProvider.notifier)
-        .runExternal(() => ref.read(photoPickerProvider).pick(source));
-    if (raw == null || !context.mounted) return null;
+    final raw = await lock.runExternal(() => picker.pick(source));
+    if (raw == null || !nav.mounted) return null;
     // Photo réduite et sans métadonnées, comme pour un envoi.
-    final photo = await ref.read(photoPreparerProvider)(raw);
-    if (!context.mounted) return null;
+    final photo = await prepare(raw);
+    if (!nav.mounted) return null;
     final item = await nav.push<StickerItem>(
       MaterialPageRoute(
         builder: (_) => StickerEditorScreen(photo: photo.bytes),

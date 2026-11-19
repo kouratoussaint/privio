@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,6 +87,31 @@ void main() {
     final sent = deps.messaging.messages['conv-bob']!.last;
     expect(sent.body, kCustomStickerShareable);
     expect(find.byType(CustomStickerImage), findsWidgets);
+  });
+
+  testWidgets('le panneau se referme pendant le choix de la photo : l’éditeur s’ouvre quand même', (
+    tester,
+  ) async {
+    final deps = await _openBob(tester);
+    await _openStickers(tester);
+    final hold = deps.photos.hold = Completer<void>();
+    await _tap(tester, 'sticker.create');
+    await tester.tap(find.byKey(const Key('sticker.source.gallery')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    // Au retour de la galerie, le champ reprend le focus : le panneau se ferme.
+    await tester.tap(find.byKey(const Key('chat.input')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('sticker.create')), findsNothing, reason: 'panneau fermé');
+
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('sticker.cutout')), findsOneWidget, reason: 'éditeur ouvert');
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'sticker.save');
+    expect(deps.messaging.myStickers, hasLength(1));
+    expect(find.text('Autocollant ajouté à vos autocollants'), findsOneWidget);
   });
 
   testWidgets('détourage impossible : recadrage de la photo seulement', (tester) async {

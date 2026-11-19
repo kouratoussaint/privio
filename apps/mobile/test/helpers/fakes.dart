@@ -2812,9 +2812,13 @@ class FakePhotoPicker implements PhotoPicker {
   final List<PhotoSource> sources = [];
   AppFailure? failure;
 
+  /// Retient la sélection jusqu’à ce que le test la complète (Privio en arrière-plan).
+  Completer<void>? hold;
+
   @override
   Future<Uint8List?> pick(PhotoSource source) async {
     sources.add(source);
+    if (hold != null) await hold!.future;
     if (failure != null) throw failure!;
     return photo;
   }
