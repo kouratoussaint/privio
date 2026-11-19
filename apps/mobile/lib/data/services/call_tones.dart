@@ -16,7 +16,8 @@ class DeviceCallTones implements CallTones {
 
   Future<void> _loop(String asset, AudioContext context) async {
     await stop();
-    final p = AudioPlayer();
+    // Lot 6.1 : pas de suivi de position (il redessinait l'écran à chaque image).
+    final p = AudioPlayer()..positionUpdater = null;
     _player = p;
     await p.setAudioContext(context);
     await p.setReleaseMode(ReleaseMode.loop);

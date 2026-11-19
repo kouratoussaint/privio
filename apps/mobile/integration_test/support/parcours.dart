@@ -108,6 +108,7 @@ Future<void> retourAccueil(WidgetTester tester) async {
 
 /// Fait défiler la page jusqu'à [f] (sans attendre la fin des animations).
 Future<void> defilerJusqua(WidgetTester tester, Finder f) async {
+  await poser(tester);
   for (var i = 0; i < 30 && f.hitTestable().evaluate().isEmpty; i++) {
     if (f.evaluate().isNotEmpty) {
       await tester.ensureVisible(f.first);
@@ -360,7 +361,10 @@ Future<void> parcoursComplet(
   await toucher(tester, cle('groups.new'));
   await attendre(tester, cle('group.title'));
   await saisir(tester, cle('group.title'), 'Famille parcours');
+  // Petit écran (Android 7) : la liste des contacts et le bouton sont plus bas.
+  await defilerJusqua(tester, cle('picker.user.${bob.id}'));
   await toucher(tester, cle('picker.user.${bob.id}'));
+  await defilerJusqua(tester, cle('group.create'));
   await toucher(tester, cle('group.create'));
   await attendre(tester, cle('chat.members'), quoi: 'discussion de groupe ouverte');
   final invitation = await serveur(tester, () async {
@@ -410,4 +414,7 @@ Future<void> parcoursComplet(
   await attendreAbsence(tester, cle('lock.screen'), max: const Duration(seconds: 60));
   etape('terminé');
   await bob.client.dispose();
+  // Fermer l'application proprement (minuteries et animations arrêtées).
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump(const Duration(seconds: 1));
 }

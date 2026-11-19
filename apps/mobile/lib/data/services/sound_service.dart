@@ -51,7 +51,10 @@ class DeviceSoundPlayer implements SoundPlayer {
   }
 
   Future<AudioPlayer> _create(PrivioSound sound) async {
-    final p = AudioPlayer();
+    // Lot 6.1 : aucune position à suivre. En mode « faible latence », Android ne signale
+    // jamais la fin d'un son : le suivi de position d'audioplayers redemandait alors une
+    // image à chaque rafraîchissement de l'écran, indéfiniment (batterie, fluidité).
+    final p = AudioPlayer()..positionUpdater = null;
     await p.setAudioContext(_context);
     await p.setReleaseMode(ReleaseMode.stop);
     await p.setPlayerMode(PlayerMode.lowLatency);

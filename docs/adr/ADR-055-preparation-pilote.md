@@ -30,7 +30,11 @@ service de rapport de plantage externe, et un canal de distribution simple et gr
   remplissage massif ; les données de mesure sont donc analysées comme le ferait la base
   en service (`analyze`) ; avec des statistiques à jour, la liste de 300 discussions répond
   en ≈ 0,25 s et une page de 50 messages en ≈ 10 ms. Une bulle de vocal en attente
-  débordait avec de grands caractères (corrigé).
+  débordait avec de grands caractères (corrigé). Les sons de l'application (envoi,
+  réception, sonnerie) faisaient redessiner l'écran à chaque image, indéfiniment après le
+  premier son : le suivi de position du lecteur audio n'était jamais arrêté en mode
+  « faible latence » (Android ne signale pas la fin du son) ; il est désactivé, ces sons
+  n'en ont pas besoin (batterie, fluidité).
 - **C. Parcours complets sur émulateur** (Android 7 et 14, à chaque version, workflow
   « Émulateur Android ») contre le serveur local : inscription, demande de connexion,
   message, photo, vocal, effacement après lecture, groupe, verrouillage par code.
