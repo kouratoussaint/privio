@@ -347,3 +347,96 @@ groupe avec date de fin (B) ; préréglages « Mode pilote / Mode normal » mont
 d'appliquer (C) ; message d'information programmé (D) ; rétention, langue et usage des
 fonctions (E) ; export CSV des nombres, journalisé (F) ; alerte quand la console s'ouvre sur
 un nouveau téléphone (G). Tout est réservé au propriétaire.
+
+## Amendements 26 à 32 — Rattrapage (19 novembre 2026)
+Les lots 8.1a à 10.3, livrés du 15 au 16 novembre 2026, avaient leur ADR mais pas
+d'amendement ici. Les amendements suivants reprennent leurs décisions, telles que validées
+à l'époque. Ils sont rangés par thème ; chacun renvoie à ses ADR pour le détail.
+
+## Amendement 26 — Cartes, discussion, numéro, langues (15 novembre 2026, lots 8.1a à 8.2a)
+- **Carte d'une personne** (ADR-027) : toucher un nom ou une photo ouvre « Ma fiche », la
+  fiche du contact, ou une feuille (photo, nom, identifiant, « À propos » selon ses
+  réglages). **Apparence** gardée sur le téléphone. **QR code** de l'identifiant
+  (`privio:@identifiant`) dans Ma fiche.
+- **Discussion** (ADR-028) : photo de l'auteur sur le premier message d'une suite ; bulles à
+  queue ; coches « lu » jaune doux ; menu ⋮ ; liste des réactions par émoji.
+- **Changer de numéro** par code SMS sur le nouveau numéro ; **inviter un ami** par un
+  message à partager (ADR-029).
+- **Langues** (ADR-030) : tous les textes regroupés pour la traduction ; mooré et dioula
+  déclarés mais grisés tant que les traductions ne sont pas relues (lot 8.2b) ; la console
+  reste en français.
+
+## Amendement 27 — Paramètres, menus et nouvelle discussion (15 novembre 2026, lots 8.3a et 8.3b)
+- **Paramètres** en une page courte, une ligne par écran ; écrans Sécurité et
+  Confidentialité (« Qui voit quoi ») ; menus ⋮ en haut des listes ; « Tout marquer comme
+  lu » ; favoris de toutes les discussions ; « Verrouiller maintenant » (ADR-031).
+- **Contacts** = personnes avec qui j'ai une discussion à deux acceptée. Nouvelle
+  discussion : champ « Nom, @identifiant ou numéro », filtre local immédiat, recherche sur
+  Privio à la demande (ADR-032).
+
+## Amendement 28 — Deux étapes, rappel, anti-usurpation (15 novembre 2026, lots 8.4a à 8.4c)
+- **Vérification en deux étapes** facultative (ADR-033) : code de sécurité à 6 chiffres
+  demandé après le SMS ; 5 erreurs puis attente qui double (24 h au plus) ; code exigé pour
+  changer de numéro, changer ou désactiver le code ; « Code oublié ? » traité par
+  l'assistance.
+- **Rappel avant effacement** (ADR-034) : 4 h avant (D), activé par défaut (E) ; compte à
+  rebours mis en valeur dans la bulle ; notification sans contenu ni nom.
+- **Alerte anti-usurpation** calculée sur le téléphone, y compris sur la carte d'un membre de
+  groupe (C) ; écran **« Ce que Privio garde »** avec l'engagement « pas de publicité, pas de
+  revente de vos données » (A, B) ; aucune mention du chiffrement (ADR-035).
+
+## Amendement 29 — Appels audio et vidéo à deux (15 novembre 2026, lots 9.1a, 9.1b, 9.2)
+- **Relais Cloudflare** seulement si la liaison directe échoue (A, E) ; **seuls les contacts
+  appellent**, réglage « Recevoir des appels » (B) ; **pas de nom** à l'écran de sonnerie
+  tant que Privio ou le téléphone est verrouillé (C) ; **une trace** dans la discussion, pas
+  d'historique d'appels (D) ; on décroche sans le code Privio, le reste reste verrouillé (E)
+  (ADR-036).
+- **Privio fermé ou téléphone verrouillé** (ADR-037) : réveil par notification, écran d'appel
+  du téléphone ; appel non décroché signalé sans contenu ; reprise après changement de
+  réseau ; plein écran des appels à autoriser sur Android 14+.
+- **Vidéo** (ADR-038) : chacun allume ou coupe sa caméra à tout moment (A) ; qualité selon le
+  réseau (B) ; on décroche toujours caméra coupée (C) ; petite fenêtre quand on quitte
+  Privio (D).
+
+## Amendement 30 — Menus, émojis animés, guide (16 novembre 2026, lots 8.5a à 8.5c)
+- **Menus en carte flottante** (A) ; « Voir plus » au-delà de 6 actions, sauf l'appui long
+  sur un message (B) ; animations discrètes et rapides (C) ; « Supprimer mon compte » avant
+  « Se déconnecter » (ADR-039).
+- **Émojis animés** Noto Animated Emoji (licence CC BY 4.0, 150 émojis intégrés, aucun
+  téléchargement) (D) ; grands quand le message n'a que 1, 2 ou 3 émojis, animation jouée
+  2 fois, toucher la rejoue (E) (ADR-040).
+- **Guide « Découvrir Privio »** de 6 écrans après la création du compte, montré une fois
+  aux testeurs existants, accessible depuis Paramètres et Aide (F) ; aucune promesse sur le
+  chiffrement (ADR-041).
+
+## Amendement 31 — Console complète, comptes (16 novembre 2026, lots 5.5 et 5.6)
+- **Console** (ADR-042) : menu latéral et accueil en tuiles colorées (G) ; rubrique
+  « Fonctionnalités » avec un interrupteur par fonction et un message d'information (H) ;
+  comptes A–Z en pages numérotées (I) ; réglages en tuiles, journal et signalements
+  filtrables (J). Le bouton retour suit le chemin parcouru dans la console.
+- **Comptes** (ADR-043) : **le numéro et la photo de profil sont visibles dans la console
+  seulement**, dans la liste et la fiche (A) — ceci remplace, pour la console, la règle
+  « numéro jamais affiché » du lot 5.4 (amendement 11) ; recherche par numéro dès
+  4 chiffres (B) ; nouvelle fiche (C) ; téléphones avec modèle, Android, version et
+  « Déconnecter cet appareil » (D) ; identifiants réservés gérés dans la console, mots
+  toujours réservés sous cadenas (E) ; filtres Suspendus, Supprimés, Nouveaux, Inactifs,
+  Deux étapes (F) ; actions « Retirer la photo » et « Changer l'identifiant ».
+
+## Amendement 32 — Effacer après lecture, discussions cachées, Mode éco (16 novembre 2026, lots 10.1 à 10.3)
+- **Effacer après lecture** (ADR-044) : 30 s, 5 min ou 1 h après la lecture (A) ; activé par
+  l'une ou l'autre personne d'une discussion à deux, par les administrateurs d'un groupe
+  (B) ; dans un groupe, délai propre à chaque lecteur, suppression pour tous quand tout le
+  monde a lu (C) ; la copie de l'expéditeur disparaît aussi (D) ; seulement les messages
+  envoyés après l'activation (E). La limite de 72 h reste la règle de fond.
+- **Discussions cachées** (ADR-045) : appui long sur le logo Privio (A), puis le code Privio,
+  jamais l'empreinte, demandé à chaque fois ; code créé au premier masquage sans imposer le
+  verrouillage (B) ; masquer et réafficher (C) ; absentes des listes, de la recherche, des
+  contacts et des non-lus (D) ; notifications neutres (E) et sonnerie neutre (F) ; liste
+  refermée en la quittant, en arrière-plan ou après 1 min (G) ; état gardé sur le serveur
+  pour mon compte seulement, l'autre personne n'en sait rien (H).
+- **Mode éco** (ADR-046) : un interrupteur dans Stockage et données et une feuille verte en
+  haut de Discussions (A), activé à la main seulement (B) ; photos envoyées en 1 024 px,
+  qualité 65 (C) ; vocaux en 16 kb/s (D) ; photos, vocaux et GIF reçus au toucher (E) ;
+  onglet GIF masqué et aperçus des liens coupés (F) ; vidéo des appels toujours réduite (G) ;
+  consommation détaillée par type, avec une estimation de l'économie (H) ; réglage gardé sur
+  le téléphone (I).
