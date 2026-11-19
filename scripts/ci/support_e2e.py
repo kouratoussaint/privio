@@ -44,6 +44,7 @@ def sql(query):
 
 
 B = rpc("get_my_account", {}, TB)[1]["user_id"]
+A = rpc("get_my_account", {}, TA)[1]["user_id"]
 before = sql("select value from private.runtime_settings where key = 'admin_phone_e164'")
 sql("update private.runtime_settings set value = '+22670000001' where key = 'admin_phone_e164'")
 try:
@@ -75,6 +76,18 @@ try:
     _, mine = rpc("my_support_requests", {}, TB)
     check(any(m["id"] == rid and m["reply"].startswith("Mettez à jour") for m in mine),
           "« Mes demandes » : la réponse est visible", mine)
+
+    # Lot 6.1 : journal technique joint (avec accord), lu dans la console.
+    status, rid2 = rpc("report", {"p_reason": "support", "p_details": "Privio se ferme",
+                                  "p_tech_log": "19/11 10:42 Erreur application · StateError"}, TB)
+    check(status == 200, "demande avec journal technique", rid2)
+    status, data = rpc("report", {"p_reason": "spam", "p_reported_user_id": A,
+                                  "p_tech_log": "journal"}, TB)
+    check(isinstance(data, dict) and data.get("message") == "REPORT_INVALID",
+          "journal refusé hors assistance", data)
+    _, opened = rpc("console_reports", {"p_status": "open"}, TA)
+    check(any(r["id"] == rid2 and r.get("tech_log", "").startswith("19/11") for r in opened),
+          "la console lit le journal joint", opened)
 
     # --- Déconnecter le téléphone -------------------------------------------------------
     status, n = rpc("console_disconnect_device", {"p_user_id": B, "p_note": "Téléphone volé"}, TA)

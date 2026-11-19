@@ -8457,6 +8457,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Valider le code'**
   String get signupCodeSubmit;
+
+  /// No description provided for @lecteurQrEnPreparation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le lecteur de QR code se prépare sur ce téléphone. Vérifiez la connexion, puis réessayez dans un instant.'**
+  String get lecteurQrEnPreparation;
+
+  /// No description provided for @joindreJournalTechnique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Joindre le journal technique'**
+  String get joindreJournalTechnique;
+
+  /// No description provided for @journalTechniqueContenu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Versions de Privio et d’Android, erreurs de l’application. Aucun message, aucun nom, aucun numéro.'**
+  String get journalTechniqueContenu;
+
+  /// No description provided for @voirJournalTechnique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir'**
+  String get voirJournalTechnique;
+
+  /// No description provided for @journalTechnique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Journal technique'**
+  String get journalTechnique;
+
+  /// No description provided for @journalTechniqueVide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le journal est vide.'**
+  String get journalTechniqueVide;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

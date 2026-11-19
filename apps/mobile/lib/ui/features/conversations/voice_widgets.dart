@@ -298,9 +298,16 @@ class PendingVoiceContent extends StatelessWidget {
       children: [
         Icon(Icons.mic_rounded, size: 20, color: p.onBubbleOut),
         const SizedBox(width: 6),
-        Text(
-          L.t.messageVocalDurationms2(formatVoiceDuration(Duration(milliseconds: durationMs ?? 0))),
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: p.onBubbleOut),
+        // Lot 6.1 : grands caractères / bulle étroite → le texte se coupe au lieu de déborder.
+        Flexible(
+          child: Text(
+            L.t.messageVocalDurationms2(
+              formatVoiceDuration(Duration(milliseconds: durationMs ?? 0)),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: p.onBubbleOut),
+          ),
         ),
       ],
     );

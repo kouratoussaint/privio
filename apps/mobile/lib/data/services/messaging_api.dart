@@ -204,6 +204,7 @@ abstract interface class MessagingApi {
     String? messageId,
     String? details,
     bool includeMessage = false,
+    String? techLog,
   });
 
   /// Lot 5.4 : mes demandes d'assistance (90 jours) et les réponses de l'équipe.
@@ -962,6 +963,7 @@ class SupabaseMessagingApi implements MessagingApi {
     String? messageId,
     String? details,
     bool includeMessage = false,
+    String? techLog,
   }) => _call('report', {
     'p_reason': reason,
     'p_reported_user_id': reportedUserId,
@@ -969,6 +971,7 @@ class SupabaseMessagingApi implements MessagingApi {
     'p_message_id': messageId,
     'p_details': details,
     'p_include_message': includeMessage,
+    'p_tech_log': ?techLog,
   });
 
   @override

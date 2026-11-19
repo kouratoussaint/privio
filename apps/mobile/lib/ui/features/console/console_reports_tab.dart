@@ -602,6 +602,32 @@ class _ReportCardState extends ConsumerState<_ReportCard> {
                 const SizedBox(height: PrivioSpacing.s),
                 Text('« ${r.details} »'),
               ],
+              if (r.techLog != null) ...[
+                const SizedBox(height: PrivioSpacing.s),
+                ExpansionTile(
+                  key: Key('report.techlog.${r.id}'),
+                  tilePadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.bug_report_outlined),
+                  title: const Text('Journal technique joint'),
+                  subtitle: const Text(
+                    'Ni message ni nom\u202F: versions et erreurs de l’application.',
+                  ),
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(PrivioSpacing.m),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(PrivioRadius.medium),
+                      ),
+                      child: SelectableText(
+                        r.techLog!,
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               if (r.reply != null) ...[
                 const SizedBox(height: PrivioSpacing.s),
                 Text(

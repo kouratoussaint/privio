@@ -1,0 +1,86 @@
+name: Émulateur Android — parcours et vitesse
+
+# Lot 6.1 (ADR-055) : à chaque version, parcours complets de l'application sur émulateur
+# (Android 7 et 14) contre le serveur local, puis mesures de vitesse avec seuils.
+# Les appels restent testés sur téléphone.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
+  workflow_dispatch:
+
+concurrency:
+  group: emulateur-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.8"
+  SUPABASE_CLI_VERSION: "2.122.1"
+
+jobs:
+  emulateur:
+    name: Android ${{ matrix.android }} — parcours complets et vitesse
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - android: "7"
+            api: 24
+          - android: "14"
+            api: 34
+    steps:
+      - uses: actions/checkout@v4
+      - name: Accélération matérielle de l'émulateur (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Serveur local (base, Auth, API, Storage, temps réel, fonctions)
+        run: supabase start -x imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
+      - name: Clé publique locale et compte de mesure (300 discussions)
+        run: |
+          KEY=$(supabase status -o env | grep '^PUBLISHABLE_KEY=' | cut -d= -f2- | tr -d '"')
+          echo "SB_KEY=$KEY" >> "$GITHUB_ENV"
+          python3 scripts/emulateur/preparer_mesure.py http://127.0.0.1:54321 "$KEY" \
+            postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - name: Parcours et mesures sur l'émulateur (entrée de gamme : 2 cœurs, 2 Go)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: google_apis
+          profile: Nexus 5X
+          ram-size: 2048M
+          cores: 2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          script: bash scripts/emulateur/jouer.sh
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesures-android-${{ matrix.android }}
+          path: ${{ runner.temp }}/mesures-android-*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - if: always()
+        run: supabase stop --no-backup

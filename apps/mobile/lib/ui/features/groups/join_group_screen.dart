@@ -416,8 +416,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
             errorBuilder: (context, error) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(PrivioSpacing.xl),
+                // Lot 6.1 : lecteur fourni par les services Google ; au tout premier
+                // usage, il peut être encore en téléchargement.
                 child: Text(
-                  L.t.cameraIndisponibleAutorisezAppareilPhoto,
+                  error.errorCode == MobileScannerErrorCode.permissionDenied
+                      ? L.t.cameraIndisponibleAutorisezAppareilPhoto
+                      : L.t.lecteurQrEnPreparation,
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white),
                 ),

@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Lot 6.1 : serveur local de la CI (voir res/xml/reseau_local.xml). -->
+    <application android:networkSecurityConfig="@xml/reseau_local" />
 </manifest>

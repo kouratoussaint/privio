@@ -13,6 +13,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
+import android.os.SystemClock
 import android.util.Rational
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -91,6 +93,9 @@ class MainActivity : FlutterFragmentActivity() {
                     val model = Build.MODEL.orEmpty()
                     val name = if (model.startsWith(maker, ignoreCase = true)) model else "$maker $model"
                     result.success(mapOf("model" to name.trim().take(64), "os" to Build.VERSION.RELEASE))
+                } else if (call.method == "sinceStart") {
+                    // Lot 6.1 : temps écoulé depuis le lancement du processus (mesures de vitesse).
+                    result.success(SystemClock.uptimeMillis() - Process.getStartUptimeMillis())
                 } else {
                     result.notImplemented()
                 }

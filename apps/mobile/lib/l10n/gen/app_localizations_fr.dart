@@ -5017,4 +5017,24 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signupCodeSubmit => 'Valider le code';
+
+  @override
+  String get lecteurQrEnPreparation =>
+      'Le lecteur de QR code se prépare sur ce téléphone. Vérifiez la connexion, puis réessayez dans un instant.';
+
+  @override
+  String get joindreJournalTechnique => 'Joindre le journal technique';
+
+  @override
+  String get journalTechniqueContenu =>
+      'Versions de Privio et d’Android, erreurs de l’application. Aucun message, aucun nom, aucun numéro.';
+
+  @override
+  String get voirJournalTechnique => 'Voir';
+
+  @override
+  String get journalTechnique => 'Journal technique';
+
+  @override
+  String get journalTechniqueVide => 'Le journal est vide.';
 }

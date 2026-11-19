@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:image/image.dart' as img;
+import 'package:privio/core/diagnostics/tech_log.dart';
 import 'package:privio/core/media/photo_processing.dart';
 import 'package:privio/core/errors/app_failure.dart';
 import 'package:privio/core/theme/privio_theme.dart';
@@ -919,9 +920,11 @@ class FakeMessagingApi implements MessagingApi {
     String? messageId,
     String? details,
     bool includeMessage = false,
+    String? techLog,
   }) async {
     _net();
     reports.add({
+      'techLog': techLog,
       'reason': reason,
       'user': reportedUserId,
       'conversation': conversationId,
@@ -3236,6 +3239,7 @@ class FakeAdminApi implements AdminApi {
     suspendedUntil: r.suspendedUntil,
     sanctionsCount: r.sanctionsCount,
     protected: r.protected,
+    techLog: r.techLog,
   );
 
   @override
@@ -3918,6 +3922,9 @@ class TestDeps {
   final lockStore = MemoryAppLockStore();
   final biometrics = FakeBiometricGate();
   final network = FakeNetworkMonitor();
+
+  /// Lot 6.1 : journal technique propre à chaque test.
+  final techLog = TechLog();
   // Lot 9.1a : appels.
   final calls = FakeCallsApi();
   final callEngine = FakeCallEngine();
@@ -3936,6 +3943,7 @@ class TestDeps {
   final List<Uri> openedUrls = [];
 
   List<Override> get overrides => [
+    techLogProvider.overrideWithValue(techLog),
     appLockStoreProvider.overrideWithValue(lockStore),
     biometricGateProvider.overrideWithValue(biometrics),
     pinHasherProvider.overrideWithValue(const FastPinHasher()),

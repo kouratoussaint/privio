@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/diagnostics/tech_log.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../core/theme/privio_palette.dart';
 import '../../../core/theme/privio_tokens.dart';
@@ -11,6 +12,7 @@ import '../../../data/services/realtime_service.dart';
 import '../../../router/routes.dart';
 import '../../../state/messaging_providers.dart';
 import '../../../state/moderation_providers.dart';
+import '../../../state/providers.dart';
 import '../../core/widgets/settings_card.dart';
 import '../../core/motion/illustrations.dart';
 import 'what_privio_keeps_screen.dart';
@@ -131,15 +133,19 @@ class HelpScreen extends ConsumerWidget {
   }
 
   Future<void> _contact(BuildContext context, WidgetRef ref) async {
-    final text =
-        (await showDialog<String>(
-          context: context,
-          builder: (_) => const _SupportDialog(),
-        ))?.trim() ??
-        '';
+    final techLog = ref.read(techLogProvider);
+    final answer = await showDialog<(String, bool)>(
+      context: context,
+      builder: (_) => _SupportDialog(techLog: techLog),
+    );
+    final text = answer?.$1.trim() ?? '';
     if (text.isEmpty || !context.mounted) return;
+    // Lot 6.1 : le journal technique ne part qu'avec l'accord explicite (case cochée).
+    final log = answer!.$2 ? techLog.export() : '';
     try {
-      await ref.read(messagingApiProvider).report(reason: 'support', details: text);
+      await ref
+          .read(messagingApiProvider)
+          .report(reason: 'support', details: text, techLog: log.isEmpty ? null : log);
       ref.invalidate(mySupportRequestsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context)
@@ -157,7 +163,9 @@ class HelpScreen extends ConsumerWidget {
 /// Fenêtre « Contacter l'assistance » : elle possède et libère elle-même son champ
 /// (libérer le champ pendant l'animation de fermeture ferait planter l'application).
 class _SupportDialog extends StatefulWidget {
-  const _SupportDialog();
+  const _SupportDialog({required this.techLog});
+
+  final TechLog techLog;
 
   @override
   State<_SupportDialog> createState() => _SupportDialogState();
@@ -165,6 +173,28 @@ class _SupportDialog extends StatefulWidget {
 
 class _SupportDialogState extends State<_SupportDialog> {
   final _controller = TextEditingController();
+  bool _attach = false;
+
+  void _showLog() {
+    final log = widget.techLog.export();
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(L.t.journalTechnique),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              log.isEmpty ? L.t.journalTechniqueVide : log,
+              key: const Key('help.techlog.text'),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(L.t.fermer))],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -175,20 +205,45 @@ class _SupportDialogState extends State<_SupportDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(L.t.contacterAssistance),
-    content: TextField(
-      key: const Key('help.message'),
-      controller: _controller,
-      autofocus: true,
-      maxLength: 1000,
-      minLines: 3,
-      maxLines: 6,
-      decoration: InputDecoration(hintText: L.t.decrivezVotreProblemeSansDonnees),
+    content: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            key: const Key('help.message'),
+            controller: _controller,
+            autofocus: true,
+            maxLength: 1000,
+            minLines: 3,
+            maxLines: 6,
+            decoration: InputDecoration(hintText: L.t.decrivezVotreProblemeSansDonnees),
+          ),
+          // Lot 6.1 : journal technique, décoché par défaut, consultable avant envoi.
+          CheckboxListTile(
+            key: const Key('help.techlog'),
+            value: _attach,
+            onChanged: (v) => setState(() => _attach = v ?? false),
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(L.t.joindreJournalTechnique),
+            subtitle: Text(L.t.journalTechniqueContenu),
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton(
+              key: const Key('help.techlog.show'),
+              onPressed: _showLog,
+              child: Text(L.t.voirJournalTechnique),
+            ),
+          ),
+        ],
+      ),
     ),
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(L.t.annuler)),
       FilledButton(
         key: const Key('help.send'),
-        onPressed: () => Navigator.pop(context, _controller.text),
+        onPressed: () => Navigator.pop(context, (_controller.text, _attach)),
         child: Text(L.t.envoyer),
       ),
     ],

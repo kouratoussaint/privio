@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config/env.dart';
+import '../core/diagnostics/tech_log.dart';
 import '../core/media/photo_processing.dart';
 import '../data/services/account_api.dart';
 import '../data/services/audio/audio_engine.dart';
@@ -30,6 +31,9 @@ final permissionGatewayProvider = Provider<PermissionGateway>(
   (ref) => const DevicePermissionGateway(),
 );
 final appVersionProvider = Provider<String>((ref) => Env.appVersion);
+
+/// Lot 6.1 : journal technique local (remplacé dans les tests).
+final techLogProvider = Provider<TechLog>((ref) => TechLog.instance);
 
 /// Lot 5.7 : ouvre un lien dans le navigateur du téléphone (remplacé dans les tests).
 final openExternalUrlProvider = Provider<Future<bool> Function(Uri uri)>(

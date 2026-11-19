@@ -186,6 +186,7 @@ void main() {
         createdAt: DateTime(2026, 11, 18, 9),
         details: 'Les vocaux ne partent plus',
         reporterHandle: 'bob_ouaga',
+        techLog: '19/11 10:42 Erreur application · StateError',
       ),
     );
     await _openConsole(tester, deps);
@@ -198,6 +199,12 @@ void main() {
     expect(find.byKey(const Key('reports.queue.appeals')), findsNothing);
     expect(find.byKey(const Key('reports.kind.account')), findsNothing);
     await tester.tap(find.byKey(const Key('dossier.support:sup1')));
+    await tester.pumpAndSettle();
+    // Lot 6.1 : le journal technique joint se lit dans le dossier.
+    await tester.tap(find.byKey(const Key('report.techlog.sup1')));
+    await tester.pumpAndSettle();
+    expect(find.text('19/11 10:42 Erreur application · StateError'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('dossier.reply')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('dossier.reply')));
     await tester.pumpAndSettle();

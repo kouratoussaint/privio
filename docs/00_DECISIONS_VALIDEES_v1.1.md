@@ -440,3 +440,22 @@ d'amendement ici. Les amendements suivants reprennent leurs décisions, telles q
   onglet GIF masqué et aperçus des liens coupés (F) ; vidéo des appels toujours réduite (G) ;
   consommation détaillée par type, avec une estimation de l'économie (H) ; réglage gardé sur
   le téléphone (I).
+
+## Amendement 33 — Préparation du pilote, logo (19 novembre 2026, lot 6.1)
+- **Logo** : la recréation provisoire est **validée** et reste le logo de Privio.
+- **Taille** (A) : lecteur de QR code fourni par les services Google au lieu d'être
+  embarqué, polices réduites aux écritures utiles ; la CI échoue au-delà de 45 Mo (arm64)
+  et 40 Mo (32 bits) (ADR-055).
+- **Vitesse** (B) : mesurée à chaque version sur un émulateur d'entrée de gamme ; seuils
+  qui font échouer la CI : démarrage < 3 s, ouverture d'une discussion de 1 000 messages
+  < 2 s, défilement (300 discussions, 1 000 messages) avec 90 % des images en moins de
+  20 ms ; ce que les mesures révèlent est corrigé.
+- **Parcours complets** (C) sur émulateur Android 7 et 14 à chaque version, contre un
+  serveur local : inscription, demande de connexion, message, photo, vocal, effacement,
+  groupe, verrouillage. Les appels restent testés sur téléphone.
+- **Recette** (D) : `docs/RECETTE_PILOTE.md`, 84 points par thème, sur 2 ou 3 téléphones.
+- **Journal technique** (E) : aucun service externe de rapport de plantage ; journal local
+  court, sans contenu ni nom (versions, types et emplacements d'erreurs), joint à une
+  demande d'assistance **seulement avec l'accord** de la personne, lu dans la console.
+- **Distribution** (F) : Firebase App Distribution (gratuit, projet `privio-e1ef4`),
+  lancée à la main.

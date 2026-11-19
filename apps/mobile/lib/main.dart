@@ -1,5 +1,6 @@
 import 'l10n/l10n.dart';
 
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -9,34 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'bootstrap.dart';
 import 'core/config/env.dart';
-import 'data/services/account_api.dart';
-import 'data/services/admin_api.dart';
-import 'data/services/audio/audio_engine.dart';
-import 'data/services/device_services.dart';
-import 'data/services/audio/voice_recorder.dart';
-import 'data/services/auth_service.dart';
-import 'data/services/messaging_api.dart';
-import 'data/services/push_service.dart';
-import 'data/services/photo_picker.dart';
-import 'data/services/realtime_service.dart';
-import 'data/storage/app_lock_store.dart';
-import 'data/storage/local_flags.dart';
-import 'data/storage/local_store.dart';
-import 'data/storage/media_vault.dart';
+import 'core/diagnostics/tech_log.dart';
+import 'data/services/device_info.dart';
 import 'data/storage/secure_session_storage.dart';
-import 'state/app_lock_providers.dart';
-import 'state/console_providers.dart';
-import 'state/data_providers.dart';
-import 'state/messaging_providers.dart';
-import 'state/providers.dart';
-import 'state/push_providers.dart';
-import 'data/services/calls_api.dart';
-import 'data/services/group_calls_api.dart';
 import 'data/services/call_background.dart';
-import 'data/services/call_system.dart';
-import 'state/call_controller.dart';
-import 'state/group_call_controller.dart';
 import 'ui/core/emoji/big_emojis.dart';
 
 import 'package:flutter/foundation.dart';
@@ -52,6 +31,17 @@ Future<void> main() async {
     runApp(ConfigErrorApp(reason: L.t.cleRefuseeCleSecreteSupabase));
     return;
   }
+
+  // Lot 6.1 : journal technique local (sans contenu ni nom), joint seulement avec
+  // l'accord de la personne à une demande d'assistance.
+  final techLog = TechLog.instance;
+  await techLog.load();
+  techLog.install();
+  unawaited(
+    const PlatformDeviceInfo().read().then(
+      (d) => techLog.started(appVersion: Env.appVersion, android: d.osVersion, model: d.model),
+    ),
+  );
 
   await Supabase.initialize(
     url: Env.supabaseUrl,
@@ -80,27 +70,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       retry: (_, _) => null,
-      overrides: [
-        authServiceProvider.overrideWithValue(SupabaseAuthService(client.auth)),
-        accountApiProvider.overrideWithValue(SupabaseAccountApi(client)),
-        localFlagsProvider.overrideWithValue(SharedPrefsLocalFlags()),
-        localStoreProvider.overrideWithValue(EncryptedFileStore()),
-        pushServiceProvider.overrideWithValue(FirebasePushService()),
-        mediaVaultProvider.overrideWithValue(EncryptedMediaVault()),
-        voiceRecorderProvider.overrideWithValue(DeviceVoiceRecorder()),
-        audioEngineProvider.overrideWithValue(DeviceAudioEngine()),
-        photoPickerProvider.overrideWithValue(DevicePhotoPicker()),
-        messagingApiProvider.overrideWithValue(SupabaseMessagingApi(client)),
-        callsApiProvider.overrideWithValue(SupabaseCallsApi(client)),
-        // Lot 9.4 : appels de groupe.
-        groupCallsApiProvider.overrideWithValue(SupabaseGroupCallsApi(client)),
-        if (Platform.isAndroid) callSystemProvider.overrideWithValue(DeviceCallSystem()),
-        adminApiProvider.overrideWithValue(SupabaseAdminApi(client)),
-        realtimeServiceProvider.overrideWithValue(SupabaseRealtimeService(client)),
-        appLockStoreProvider.overrideWithValue(SecureAppLockStore()),
-        biometricGateProvider.overrideWithValue(DeviceBiometricGate()),
-        networkMonitorProvider.overrideWithValue(DeviceNetworkMonitor()),
-      ],
+      overrides: [...privioServerOverrides(client), ...privioDeviceOverrides()],
       child: const PrivioApp(),
     ),
   );

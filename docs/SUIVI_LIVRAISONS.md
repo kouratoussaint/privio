@@ -75,7 +75,7 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 ## Étape 6 — Préparation du pilote (en dernier, juste avant le pilote : décision du 15/11/2026)
 | Lot | Contenu | Statut |
 |---|---|---|
-| 6.1 | Clé de signature stable, version optimisée, tests de non-régression | ⏳ |
+| 6.1 | Préparation du pilote (ADR-055, décisions A–F du 19/11/2026) : **APK allégé** (lecteur de QR code fourni par les services Google, polices réduites ; la CI échoue au-delà de 45 Mo arm64 / 40 Mo 32 bits) ; **vitesse mesurée** à chaque version sur émulateur d'entrée de gamme (démarrage < 3 s, discussion de 1 000 messages < 2 s, défilement de 300 discussions) ; **parcours complets sur émulateur Android 7 et 14** contre un serveur local (inscription, demande, message, photo, vocal, effacement, groupe, verrouillage) — workflow « Émulateur Android » ; **recette** `docs/RECETTE_PILOTE.md` (84 points) ; **journal technique** sans contenu ni nom, joint avec accord à une demande d'assistance (Aide → Contacter l'assistance → « Joindre le journal technique », « Voir »), lu dans le dossier de la console ; **distribution** Firebase App Distribution (workflow manuel, secret `FIREBASE_DISTRIBUTION_SA` à créer). Corrections révélées : bulle de vocal en attente qui débordait. Migration `20261119000100`. **Tests (téléphone)** : vérifier la taille de l'APK ; Aide → Contacter l'assistance : case décochée, « Voir » le journal (versions, aucune donnée personnelle), envoyer avec le journal ; dans la console, ouvrir la demande : « Journal technique joint » ; rejoindre un groupe par QR code (le lecteur peut se préparer au premier usage) | 🧪 |
 | 6.2 | Projet de production, vrai fournisseur SMS (B7), retrait des numéros de test | ⏳ |
 | 6.3 | Conditions d'utilisation, confidentialité (B10), numéros recyclés (B9) | ⏳ |
 
@@ -143,4 +143,4 @@ Prérequis de test à partir du lot 2.2 : **deux téléphones** avec deux numér
 | B14 | ✅ Vérification en deux étapes avant le pilote, facultative ; code oublié : assistance (15/11/2026) | lot 8.4a |
 | B6/B7 | Sauvegardes, budget, fournisseur SMS +226 | lot 6.2 |
 | B9/B10 | Numéros recyclés, documents légaux | lot 6.3 |
-| Logo | Validation de la recréation provisoire | lot 6.1 |
+| Logo | ✅ Recréation provisoire validée (19/11/2026) | lot 6.1 |

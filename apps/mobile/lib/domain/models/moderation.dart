@@ -57,9 +57,13 @@ class ModerationReport {
     this.protected = false,
     this.reply,
     this.repliedAt,
+    this.techLog,
   });
 
   final String id;
+
+  /// Lot 6.1 : journal technique joint par la personne (ni message ni nom).
+  final String? techLog;
 
   /// Lot 5.4 : réponse de l'équipe à une demande d'assistance.
   final String? reply;
@@ -138,6 +142,7 @@ class ModerationReport {
     protected: j['protected'] as bool? ?? false,
     reply: j['reply'] as String?,
     repliedAt: _d(j['replied_at']),
+    techLog: j['tech_log'] as String?,
   );
 }
 

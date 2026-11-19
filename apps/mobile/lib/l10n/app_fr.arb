@@ -6800,5 +6800,11 @@
   "signupCodeSubmit": "Valider le code",
   "@signupCodeSubmit": {
     "description": "Écran : Profil (inscriptions sur invitation, lot 5.9)"
-  }
+  },
+  "lecteurQrEnPreparation": "Le lecteur de QR code se prépare sur ce téléphone. Vérifiez la connexion, puis réessayez dans un instant.",
+  "joindreJournalTechnique": "Joindre le journal technique",
+  "journalTechniqueContenu": "Versions de Privio et d’Android, erreurs de l’application. Aucun message, aucun nom, aucun numéro.",
+  "voirJournalTechnique": "Voir",
+  "journalTechnique": "Journal technique",
+  "journalTechniqueVide": "Le journal est vide."
 }

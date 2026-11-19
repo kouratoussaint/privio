@@ -128,6 +128,20 @@ jobs:
             "$GITHUB_WORKSPACE/apk/privio-0.1.0+${{ github.run_number }}-arm64.apk"
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
             "$GITHUB_WORKSPACE/apk/privio-0.1.0+${{ github.run_number }}-32bits.apk"
+      # Lot 6.1 : taille surveillée (réseaux modestes). Au-delà du seuil, la CI échoue.
+      - name: Taille des APK
+        run: |
+          check() {
+            local f=$1 max=$2
+            local size=$(stat -c %s "$f")
+            local mo=$(awk "BEGIN{printf \"%.1f\", $size/1048576}")
+            echo "$(basename "$f") : $mo Mo (seuil $max Mo)" | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ "$size" -gt $((max * 1048576)) ]; then
+              echo "::error::$(basename "$f") dépasse $max Mo"; return 1
+            fi
+          }
+          check "$GITHUB_WORKSPACE/apk/privio-0.1.0+${{ github.run_number }}-arm64.apk" 45
+          check "$GITHUB_WORKSPACE/apk/privio-0.1.0+${{ github.run_number }}-32bits.apk" 40
       - uses: actions/upload-artifact@v7
         with:
           path: apk/privio-0.1.0+${{ github.run_number }}-arm64.apk
