@@ -86,7 +86,9 @@ Future<Map<String, Object>> mesurerVitesse(
     tester,
     find.byWidgetPredicate(
       (w) =>
-          w.key == const Key('permissions.later') || (w is Text && w.data == 'Discussion longue'),
+          w.key == const Key('permissions.later') ||
+          w.key == const Key('discover.skip') ||
+          (w is Text && w.data == 'Discussion longue'),
     ),
     max: const Duration(seconds: 60),
   );
@@ -95,7 +97,14 @@ Future<Map<String, Object>> mesurerVitesse(
     await tester.tap(cle('permissions.later'));
     liste.reset();
   }
-  while (find.text('Discussion longue').evaluate().isEmpty) {
+  while (find.text('Discussion longue').hitTestable().evaluate().isEmpty) {
+    // Guide « Découvrir Privio » (premier lancement) : son temps ne compte pas.
+    if (cle('discover.skip').evaluate().isNotEmpty) {
+      liste.stop();
+      await toucher(tester, cle('discover.skip'));
+      liste.start();
+      continue;
+    }
     await tester.pump(const Duration(milliseconds: 16));
     if (liste.elapsed > const Duration(seconds: 60)) {
       fail('Liste des discussions non affichée en 60 s\nÉcran\u202F: ${ecran()}');

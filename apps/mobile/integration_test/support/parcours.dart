@@ -253,6 +253,16 @@ Future<void> parcoursComplet(
   await tester.pump(const Duration(seconds: 2)); // vérification de disponibilité
   await toucher(tester, cle('profile.submit'));
   await toucher(tester, cle('permissions.later'));
+  // Guide « Découvrir Privio » (une fois après la création du compte) : on le passe.
+  await attendre(
+    tester,
+    find.byWidgetPredicate(
+      (w) =>
+          w.key == const Key('discover.skip') ||
+          (w is Text && w.data == 'Aucune discussion pour l’instant'),
+    ),
+  );
+  if (cle('discover.skip').evaluate().isNotEmpty) await toucher(tester, cle('discover.skip'));
   await attendre(tester, find.text('Aucune discussion pour l’instant'));
 
   final bob = await Pair.connecter(
