@@ -15,13 +15,19 @@ void main() {
   ) async {
     final mesures = <String, Object>{};
     binding.reportData = {'mesures': mesures};
+    Future<int> depuisLancement() async =>
+        await const MethodChannel('privio/device').invokeMethod<int>('sinceStart') ?? -1;
+    // Étapes du démarrage : moteur et Dart prêts, puis initialisation de Privio.
+    final dartPret = await depuisLancement();
+    final overrides = await applicationSurEmulateur();
+    final initialise = await depuisLancement();
     // Les mesures sont publiées même si un seuil est dépassé.
     mesures.addAll(
       await mesurerVitesse(
         tester,
-        overrides: await applicationSurEmulateur(),
-        depuisLancement: () async =>
-            await const MethodChannel('privio/device').invokeMethod<int>('sinceStart') ?? -1,
+        overrides: overrides,
+        depuisLancement: depuisLancement,
+        phases: {'demarrage_dart_ms': dartPret, 'demarrage_initialise_ms': initialise},
       ),
     );
     verifierSeuils(mesures);

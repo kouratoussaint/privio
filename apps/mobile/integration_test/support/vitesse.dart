@@ -45,8 +45,9 @@ Future<Map<String, Object>> mesurerVitesse(
   WidgetTester tester, {
   required List<Override> overrides,
   required Future<int> Function() depuisLancement,
+  Map<String, Object> phases = const {},
 }) async {
-  final mesures = <String, Object>{};
+  final mesures = <String, Object>{...phases};
   await tester.pumpWidget(
     ProviderScope(overrides: overrides, retry: (_, _) => null, child: const PrivioApp()),
   );
@@ -67,8 +68,7 @@ Future<Map<String, Object>> mesurerVitesse(
   await toucher(tester, cle('onboarding.consent'));
   await toucher(tester, cle('onboarding.continue'));
   await toucher(tester, cle('welcome.phone'));
-  await attendre(tester, cle('phone.input'));
-  await tester.enterText(cle('phone.input'), '70000003');
+  await saisir(tester, cle('phone.input'), '70000003');
   await toucher(tester, cle('phone.submit'));
   // Un code a pu être demandé pour ce numéro il y a moins d'une minute (préparation du
   // compte de mesure) : on redemande alors une fois.

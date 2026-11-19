@@ -39,6 +39,8 @@ def ligne(nom, cle, seuil):
     if v is None: return f"| {nom} | — | {seuil} |"
     return f"| {nom} | {v} ms | {seuil} |"
 print("| Mesure | Résultat | Seuil |\n|---|---|---|")
+print(ligne("Démarrage : moteur Flutter et Dart prêts", "demarrage_dart_ms", "(détail)"))
+print(ligne("Démarrage : Privio initialisé (serveur, stockage sécurisé)", "demarrage_initialise_ms", "(détail)"))
 print(ligne("Démarrage à froid → premier écran", "demarrage_ms", "< 3 000 ms"))
 print(ligne("Connexion → liste de 300 discussions", "liste_300_ms", "(suivi)"))
 print(ligne("Ouverture d'une discussion de 1 000 messages", "ouverture_1000_ms", "< 2 000 ms"))
